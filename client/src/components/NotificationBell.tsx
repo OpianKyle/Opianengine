@@ -66,7 +66,7 @@ const NotificationBell = () => {
               }`}
             >
               <div className="flex-1">
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start mb-1">
                   <div className="font-medium">
                     {notification.type === "POINTS_ALLOCATION" || notification.type === "POINTS_AWARDED" ? (
                       <span className={notification.points && notification.points >= 0 ? "text-green-600" : "text-red-600"}>
@@ -81,9 +81,11 @@ const NotificationBell = () => {
                     size="icon"
                     className="h-6 w-6 -my-1 -mr-2 hover:bg-muted"
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       markAsRead(notification.id);
                     }}
+                    aria-label="Clear notification"
                   >
                     <X className="h-4 w-4" />
                   </Button>

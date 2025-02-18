@@ -4,12 +4,12 @@ import { useToast } from "./use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface PointsNotification {
+  id: string;
   type: string;
   points?: number;
   description: string;
   timestamp: string;
   read?: boolean;
-  id: string;
 }
 
 export function useNotifications() {
@@ -75,7 +75,7 @@ export function useNotifications() {
       socket.onopen = () => {
         console.log('WebSocket connected');
         setIsConnected(true);
-        setReconnectAttempts(0);  // Reset reconnection attempts on successful connection
+        setReconnectAttempts(0);
         toast({
           title: "Connected",
           description: "Successfully connected to notification service",
@@ -97,29 +97,20 @@ export function useNotifications() {
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
           // Show toast for different notification types
-          if (data.type === "POINTS_ALLOCATION") {
+          if (data.type === "POINTS_ALLOCATION" || data.type === "POINTS_AWARDED") {
             const points = data.points ?? 0;
             const sign = points >= 0 ? '+' : '';
             toast({
-              title: `${sign}${points} Points Allocated`,
+              title: `${sign}${points} Points ${data.type === "POINTS_ALLOCATION" ? "Allocated" : "Awarded"}`,
               description: data.description,
-              duration: 0, // Keep until user dismisses
-              variant: points >= 0 ? "default" : "destructive",
-            });
-          } else if (data.type === "POINTS_AWARDED") {
-            const points = data.points ?? 0;
-            const sign = points >= 0 ? '+' : '';
-            toast({
-              title: `${sign}${points} Points Awarded`,
-              description: data.description,
-              duration: 0, // Keep until user dismisses
+              duration: 5000,
               variant: points >= 0 ? "default" : "destructive",
             });
           } else {
             toast({
               title: "Notification",
-              description: data.message || data.description,
-              duration: 0, // Keep until user dismisses
+              description: data.description || data.message,
+              duration: 5000,
             });
           }
         } catch (error) {
@@ -150,7 +141,7 @@ export function useNotifications() {
             title: "Connection Error",
             description: "Unable to establish connection to notification service. Please refresh the page.",
             variant: "destructive",
-            duration: 0, // Keep toast until user dismisses
+            duration: 0,
           });
         }
       };
@@ -191,10 +182,38 @@ export function useNotifications() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notificationId })
       });
-      if (!response.ok) throw new Error('Failed to mark notifications as read');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to mark notifications as read');
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, notificationId) => {
+      // Optimistically update the notifications in the cache
+      queryClient.setQueryData(['notifications'], (oldData: PointsNotification[] | undefined) => {
+        if (!oldData) return [];
+        // If notificationId is provided, remove that specific notification
+        // Otherwise, mark all as read
+        return notificationId
+          ? oldData.filter(n => n.id !== notificationId)
+          : [];
+      });
+      // Also invalidate the query to ensure server-side sync
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+      // Show success toast for better UX
+      toast({
+        title: "Success",
+        description: notificationId ? "Notification removed" : "All notifications cleared",
+        duration: 3000,
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to mark notification as read:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove notification. Please try again.",
+        variant: "destructive",
+      });
     }
   });
 

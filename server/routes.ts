@@ -492,7 +492,6 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-
   // Export customers to CSV
   app.get("/api/admin/customers/export", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
@@ -996,6 +995,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Product not found or not available" });
       }
 
+      
       // Create the quote request
       const [quoteRequest] = await db
         .insert(quoteRequests)
@@ -1624,6 +1624,7 @@ export function registerRoutes(app: Express): Server {
       const userNotifications = await db.query.notifications.findMany({
         where: eq(notifications.userId, req.user.id),
         orderBy: desc(notifications.createdAt),
+        limit: 50 // Limit to recent 50 notifications
       });
 
       res.json(userNotifications);
@@ -1633,6 +1634,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Update the mark-read endpoint to handle notification deletion
   app.post("/api/notifications/mark-read", async (req, res) => {
     if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -1642,23 +1644,31 @@ export function registerRoutes(app: Express): Server {
 
     try {
       if (notificationId) {
-        // Mark specific notification as read
-        await db
-          .update(notifications)
-          .set({ isRead: true })
-          .where(eq(notifications.id, notificationId));
+        // Delete specific notification
+        const [deletedNotification] = await db
+          .delete(notifications)
+          .where(
+            and(
+              eq(notifications.id, parseInt(notificationId)),
+              eq(notifications.userId, req.user.id)
+            )
+          )
+          .returning();
+
+        if (!deletedNotification) {
+          return res.status(404).json({ error: "Notification not found" });
+        }
       } else {
-        // Mark all user's notifications as read
+        // Delete all user's notifications
         await db
-          .update(notifications)
-          .set({ isRead: true })
+          .delete(notifications)
           .where(eq(notifications.userId, req.user.id));
       }
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Error marking notifications as read:', error);
-      res.status(500).json({ error: 'Failed to mark notifications as read' });
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ error: 'Failed to mark notification as read' });
     }
   });
 
