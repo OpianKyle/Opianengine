@@ -933,7 +933,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update the quote requests endpoint to include email notifications
+  // Update the quote requests endpoint to include duplicate request check
   app.post("/api/quote-requests", async (req, res) => {
     if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -942,6 +942,18 @@ export function registerRoutes(app: Express): Server {
     const { productId } = req.body;
 
     try {
+      // Check for existing active quote requests
+      const existingRequest = await db.query.quoteRequests.findFirst({
+        where: sql`${quoteRequests.userId} = ${req.user.id} AND 
+                  ${quoteRequests.status} IN ('PENDING', 'IN_PROGRESS')`,
+      });
+
+      if (existingRequest) {
+        return res.status(400).json({ 
+          error: "You already have an active quote request. Please wait for it to be processed." 
+        });
+      }
+
       // Verify the product exists and is enabled
       const [product] = await db
         .select()
@@ -955,14 +967,12 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Product not found or not available" });
       }
 
-      // Create a transaction to track the quote request
-      const [transaction] = await db
-        .insert(transactions)
+      // Create the quote request
+      const [quoteRequest] = await db
+        .insert(quoteRequests)
         .values({
           userId: req.user.id,
-          points: 0,
-          type: "QUOTE_REQUEST",
-          description: `Quote request for ${product.name}`,
+          productId,
           status: "PENDING",
         })
         .returning();
@@ -988,7 +998,7 @@ export function registerRoutes(app: Express): Server {
       // Send email to all admin users
       for(const admin of adminUsers) {
         const adminEmailContent = formatAdminQuoteRequestEmail(
-          `${req.user.firstName} ${req.user.lastName}`,
+          `req.user.firstName} ${req.user.lastName}`,
           req.user.email,
           product.name,
           admin.firstName
@@ -1001,22 +1011,49 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Log the admin action
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "POINT_ADJUSTMENT",
-        targetUserId: req.user.id,
-        details: `Created quote request for product: ${product.name}`,
-      });
-
-
-      res.json({
-        message: "Quote request submitted successfully",
-        transactionId: transaction.id,
-      });
+      res.json(quoteRequest);
     } catch (error) {
-      console.error('Error submitting quote request:', error);
-      res.status(500).json({ error: 'Failed to submit quote request' });
+      console.error('Error creating quote request:', error);
+      res.status(500).json({ error: 'Failed to create quote request' });
+    }
+  });
+
+  // Add GET endpoint for admin to fetch quote requests
+  app.get("/api/quote-requests", async (req, res) => {
+    if (!req.user?.isAdmin) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const allQuoteRequests = await db.query.quoteRequests.findMany({
+        orderBy: desc(quoteRequests.createdAt),
+        with: {
+          user: {
+            columns: {
+              firstName: true,
+              lastName: true,
+              email: true,
+            }
+          },
+          product: {
+            columns: {
+              name: true,
+              description: true,
+            }
+          },
+          completedByUser: {
+            columns: {
+              firstName: true,
+              lastName: true,
+            }
+          }
+        }
+      });
+
+      res.json(allQuoteRequests);
+    } catch (error) {
+      console.error('Error fetching quote requests:', error);
+      res.status(500).json({ error: 'Failed to fetch quote requests' });
     }
   });
 
@@ -1566,205 +1603,6 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error in password reset:', error);
       res.status(500).json({ error: "Failed to reset password" });
-    }
-  });
-
-  // Inside the registerRoutes function, after the existing quote request endpoint
-
-  // Get all quote requests (admin only)
-  app.get("/api/quote-requests", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-
-    try {
-      const allRequests = await db.query.quoteRequests.findMany({
-        orderBy: desc(quoteRequests.createdAt),
-        with: {
-          user: {
-            columns: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            }
-          },
-          product: true,
-          completedByUser: {
-            columns: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            }
-          }
-        }
-      });
-
-      res.json(allRequests);
-    } catch (error) {
-      console.error('Error fetching quote requests:', error);
-      res.status(500).json({ error: 'Failed to fetch quote requests' });
-    }
-  });
-
-  // Update quote request status (admin only)
-  app.put("/api/quote-requests/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-
-    const { id } = req.params;
-    const { status, notes } = req.body;
-
-    try {
-      const [quoteRequest] = await db
-        .select()
-        .from(quoteRequests)
-        .where(eq(quoteRequests.id, parseInt(id)))
-        .limit(1);
-
-      if (!quoteRequest) {
-        return res.status(404).json({ error: "Quote request not found" });
-      }
-
-      const updates: any = {
-        status,
-        notes,
-        updatedAt: new Date(),
-      };
-
-      if (status === "COMPLETED") {
-        updates.completedAt = new Date();
-        updates.completedBy = req.user.id;
-      }
-
-      const [updatedRequest] = await db
-        .update(quoteRequests)
-        .set(updates)
-        .where(eq(quoteRequests.id, parseInt(id)))
-        .returning();
-
-      // Log the status update
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "ADMIN_UPDATED",
-        targetUserId: quoteRequest.userId,
-        details: `Updated quote request status to ${status}`,
-      });
-
-      // Get the complete request with relations
-      const completeRequest = await db.query.quoteRequests.findFirst({
-        where: eq(quoteRequests.id, parseInt(id)),
-        with: {
-          user: true,
-          product: true,
-          completedByUser: true,
-        }
-      });
-
-      res.json(completeRequest);
-    } catch (error) {
-      console.error('Error updating quote request:', error);
-      res.status(500).json({ error: 'Failed to update quote request' });
-    }
-  });
-
-  // Update the existing quote request creation endpoint to use the new table
-  app.post("/api/quote-requests", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const { productId } = req.body;
-
-    try {
-      // Get the product details
-      const [product] = await db
-        .select()
-        .from(products)
-        .where(eq(products.id, productId))
-        .limit(1);
-
-      if (!product) {
-        return res.status(404).json({ error: "Product not found" });
-      }
-
-      if (!product.isEnabled) {
-        return res.status(400).json({ error: "Product is not available for quotes" });
-      }
-
-      // Create the quote request
-      const [request] = await db
-        .insert(quoteRequests)
-        .values({
-          userId: req.user.id,
-          productId,
-          status: "PENDING",
-        })
-        .returning();
-
-      // Send email to customer
-      const customerEmailContent = formatQuoteRequestEmail(
-        req.user.firstName,
-        product.name
-      );
-      await sendEmail({
-        to: req.user.email,
-        subject: "Quote Request Confirmation",
-        text: customerEmailContent.text,
-        html: customerEmailContent.html
-      });
-
-      // Get admin users to notify
-      const adminUsers = await db
-        .select()
-        .from(users)
-        .where(eq(users.isAdmin, true))
-        .where(eq(users.isEnabled, true)); // Only notify active admins
-
-      // Send email to all active admin users
-      for (const admin of adminUsers) {
-        const adminEmailContent = formatAdminQuoteRequestEmail(
-          `${req.user.firstName} ${req.user.lastName}`,
-          req.user.email,
-          product.name,
-          admin.firstName
-        );
-
-        try {
-          await sendEmail({
-            to: admin.email,
-            subject: `New Quote Request - ${product.name}`,
-            text: adminEmailContent.text,
-            html: adminEmailContent.html
-          });
-        } catch (emailError) {
-          console.error(`Failed to send admin notification to ${admin.email}:`, emailError);
-          // Continue with other admins even if one email fails
-        }
-      }
-
-      // Add transaction for quote request points
-      await db
-        .insert(transactions)
-        .values({
-          userId: req.user.id,
-          points: 100, // Award points for quote request
-          type: "QUOTE_REQUEST",
-          description: `Quote request submitted for ${product.name}`,
-          status: "PROCESSED",
-          processedAt: new Date(),
-        });
-
-      // Update user points
-      await db
-        .update(users)
-        .set({
-          points: sql`${users.points} + 100`,
-        })
-        .where(eq(users.id, req.user.id));
-
-      res.json(request);
-    } catch (error) {
-      console.error('Error creating quote request:', error);
-      res.status(500).json({ error: 'Failed to create quote request' });
     }
   });
 
