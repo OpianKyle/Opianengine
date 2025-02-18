@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
+import { setupWebSocketServer } from "./websocket";
 import { db } from "@db";
 import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, referralStats, quoteRequests, notifications } from "@db/schema";
 import { eq, desc, sql, inArray, and } from "drizzle-orm";
@@ -24,6 +25,7 @@ const crypto = {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
   const httpServer = createServer(app);
+  const wsServer = setupWebSocketServer(httpServer);
 
   // Add new endpoint to fetch admin logs
   app.get("/api/admin/logs", async (req, res) => {

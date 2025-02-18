@@ -13,7 +13,7 @@ export function setupWebSocketServer(server: Server) {
     server,
     path: '/ws',
     // Ignore Vite HMR connections
-    verifyClient: (info) => {
+    verifyClient: (info: any) => {
       return info.req.headers['sec-websocket-protocol'] !== 'vite-hmr';
     }
   });

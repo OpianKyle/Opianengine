@@ -17,9 +17,16 @@ export function useNotifications() {
   const socketRef = useRef<WebSocket>();
   const [notifications, setNotifications] = useState<PointsNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
   const connectWebSocket = useCallback(() => {
     if (!user) return;
+
+    // Clear any existing connection
+    if (socketRef.current) {
+      socketRef.current.close();
+      socketRef.current = null;
+    }
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -41,9 +48,14 @@ export function useNotifications() {
       try {
         const notification: PointsNotification = JSON.parse(event.data);
 
+        if (notification.type === 'auth_success') {
+          console.log('WebSocket authentication successful');
+          return;
+        }
+
         // Update notifications list
         setNotifications(prev => [
-          { ...notification, read: false, id: Date.now().toString() },
+          { ...notification, read: false, id: notification.id || Date.now().toString() },
           ...prev
         ]);
 
@@ -71,17 +83,28 @@ export function useNotifications() {
 
     socket.onerror = (error) => {
       console.error('WebSocket error:', error);
+      toast({
+        title: "Connection Error",
+        description: "Failed to connect to notification service",
+        variant: "destructive",
+      });
     };
 
     socket.onclose = () => {
       console.log('WebSocket connection closed');
       // Attempt to reconnect after a delay
-      setTimeout(connectWebSocket, 5000);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
     };
 
     return () => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.close();
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
       }
     };
   }, [user, toast]);
@@ -92,6 +115,9 @@ export function useNotifications() {
       cleanup?.();
       if (socketRef.current) {
         socketRef.current.close();
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
       }
     };
   }, [connectWebSocket]);
