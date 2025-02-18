@@ -10,7 +10,7 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { ScrollArea } from "./ui/scroll-area";
 import { format } from "date-fns";
 
-export function NotificationBell() {
+const NotificationBell = () => {
   const { notifications, unreadCount, markAsRead } = useNotifications();
 
   return (
@@ -78,3 +78,5 @@ export function NotificationBell() {
     </DropdownMenu>
   );
 }
+
+export default NotificationBell;

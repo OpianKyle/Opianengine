@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { Home, Gift, Users, User, Menu, X, ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const { logoutMutation } = useUser();
@@ -30,15 +31,18 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      {/* Mobile menu button */}
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed top-4 right-6 z-50 lg:hidden h-10 w-10 bg-background shadow-md"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
+      {/* Header with Notification Bell */}
+      <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-2">
+        <NotificationBell />
+        <Button
+          variant="outline"
+          size="icon"
+          className="lg:hidden h-10 w-10 bg-background shadow-md"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </Button>
+      </div>
 
       {/* Overlay for mobile */}
       {sidebarOpen && (
@@ -104,7 +108,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
-        <div className="h-full p-4 lg:p-8">
+        <div className="h-full p-4 lg:p-8 mt-16">
           {children}
         </div>
       </main>
