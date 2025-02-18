@@ -27,9 +27,9 @@ export function useNotifications() {
     }
 
     try {
-      // Get the correct WebSocket URL based on window.location
+      // Construct WebSocket URL with specific path to avoid Vite HMR conflicts
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const wsUrl = `${protocol}//${window.location.host}/notifications-ws`;
       console.log('Attempting WebSocket connection to:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
@@ -55,15 +55,24 @@ export function useNotifications() {
             return;
           }
 
+          // Create notification object
           const notification: PointsNotification = {
             ...data,
             read: false,
             id: data.id || Date.now().toString()
           };
 
-          setNotifications(prev => [notification, ...prev]);
+          // Update notifications state, preventing duplicates
+          setNotifications(prev => {
+            if (prev.some(n => n.id === notification.id)) {
+              return prev;
+            }
+            return [notification, ...prev];
+          });
+
           setUnreadCount(count => count + 1);
 
+          // Show toast for different notification types
           if (data.type === "POINTS_ALLOCATION" && data.points !== undefined) {
             toast({
               title: "Points Update",
@@ -86,18 +95,14 @@ export function useNotifications() {
       socket.onerror = (error) => {
         console.error('WebSocket error:', error);
         setIsConnected(false);
-        toast({
-          title: "Connection Error",
-          description: "Failed to connect to notification service. Retrying...",
-          variant: "destructive",
-        });
       };
 
       socket.onclose = (event) => {
         console.log('WebSocket connection closed:', event);
         setIsConnected(false);
+        socketRef.current = null;
 
-        // Only attempt to reconnect if we still have a user and no reconnection is pending
+        // Attempt to reconnect if we have a user and no pending reconnection
         if (user && !reconnectTimeoutRef.current) {
           console.log('Scheduling reconnection attempt...');
           reconnectTimeoutRef.current = setTimeout(() => {
@@ -110,11 +115,6 @@ export function useNotifications() {
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
       setIsConnected(false);
-      toast({
-        title: "Connection Error",
-        description: "Failed to establish connection to notification service",
-        variant: "destructive",
-      });
     }
   };
 

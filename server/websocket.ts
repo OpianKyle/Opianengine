@@ -11,7 +11,7 @@ const clients = new Map<WebSocket, {
 export function setupWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ 
     server,
-    path: '/ws',
+    path: '/notifications-ws',
     // Ignore Vite HMR connections
     verifyClient: (info: any) => {
       const protocol = info.req.headers['sec-websocket-protocol'];
@@ -75,6 +75,7 @@ export function setupWebSocketServer(server: Server) {
 
   return {
     broadcastToUser: (userId: number, notification: any) => {
+      console.log(`Broadcasting to user ${userId}:`, notification);
       const enrichedNotification = {
         ...notification,
         timestamp: new Date().toISOString(),
@@ -89,6 +90,7 @@ export function setupWebSocketServer(server: Server) {
     },
 
     broadcastToAdmins: (notification: any) => {
+      console.log('Broadcasting to admins:', notification);
       const enrichedNotification = {
         ...notification,
         timestamp: new Date().toISOString(),
@@ -103,6 +105,7 @@ export function setupWebSocketServer(server: Server) {
     },
 
     broadcastToAll: (notification: any) => {
+      console.log('Broadcasting to all:', notification);
       const enrichedNotification = {
         ...notification,
         timestamp: new Date().toISOString(),

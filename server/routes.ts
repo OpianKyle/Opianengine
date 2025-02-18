@@ -119,6 +119,14 @@ export function registerRoutes(app: Express): Server {
         else if (tierPoints >= 50000) currentTier = "Purple";
         else if (tierPoints >= 10000) currentTier = "Silver";
 
+        // Broadcast the points allocation notification
+        wsServer.broadcastToUser(userId, {
+          type: "POINTS_ALLOCATION",
+          points,
+          description,
+          timestamp: new Date().toISOString()
+        });
+
         // Send email to customer
         const customerEmail = formatPointsAssignmentEmail(
           targetUser.firstName || "Valued Customer",
