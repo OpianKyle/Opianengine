@@ -3,7 +3,6 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import fileUpload from 'express-fileupload';
-import { setupWebSocketServer } from './websocket';
 
 const app = express();
 
@@ -58,12 +57,6 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = registerRoutes(app);
-
-  // Set up WebSocket server
-  const wsServer = setupWebSocketServer(server);
-
-  // Make WebSocket server available to routes
-  app.set('wsServer', wsServer);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

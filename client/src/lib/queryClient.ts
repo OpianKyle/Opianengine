@@ -13,7 +13,6 @@ export const queryClient = new QueryClient({
 
         if (!res.ok) {
           if (res.status === 401) {
-            // For authentication errors, throw a specific error
             throw new Error("Please log in to continue");
           }
 
@@ -21,15 +20,15 @@ export const queryClient = new QueryClient({
             throw new Error(`${res.status}: ${res.statusText}`);
           }
 
-          throw new Error(`${res.status}: ${await res.text()}`);
+          const errorText = await res.text();
+          throw new Error(errorText || `${res.status}: ${res.statusText}`);
         }
 
         return res.json();
       },
-      refetchInterval: false,
+      retry: false,
       refetchOnWindowFocus: false,
-      staleTime: 0, 
-      retry: 1,
+      staleTime: 0
     },
     mutations: {
       retry: false,

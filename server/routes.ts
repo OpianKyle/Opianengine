@@ -1,71 +1,16 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth, authCrypto } from "./auth";
+import { setupAuth } from "./auth";
 import { db } from "@db";
 import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, referralStats, quoteRequests } from "@db/schema";
 import { eq, desc, sql, inArray } from "drizzle-orm";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { logAdminAction, getAdminLogs } from "./admin-logger";
+import { logAdminAction } from "./admin-logger";
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
-
-// Global notifications queue with timestamp-based cleanup
-const notificationsQueue = new Map<number, Array<{
-  type: string;
-  userId: number;
-  points: number;
-  description: string;
-  timestamp: string;
-}>>();
-
-// Configuration for polling
-const POLLING_CONFIG = {
-  maxQueueSize: 100, // Maximum notifications per user
-  retentionPeriod: 5 * 60 * 1000, // 5 minutes retention for notifications
-  cleanupInterval: 60 * 1000 // Cleanup every minute
-};
-
-// Cleanup old notifications periodically
-setInterval(() => {
-  const cutoffTime = new Date(Date.now() - POLLING_CONFIG.retentionPeriod);
-  for (const [userId, notifications] of notificationsQueue.entries()) {
-    const validNotifications = notifications.filter(
-      n => new Date(n.timestamp) > cutoffTime
-    );
-    if (validNotifications.length === 0) {
-      notificationsQueue.delete(userId);
-    } else {
-      notificationsQueue.set(userId, validNotifications);
-    }
-  }
-}, POLLING_CONFIG.cleanupInterval);
-
-// Helper function to add notification
-function addNotification(notification: {
-  type: string;
-  userId: number;
-  points: number;
-  description: string;
-}) {
-  const userNotifications = notificationsQueue.get(notification.userId) || [];
-  const newNotification = {
-    ...notification,
-    timestamp: new Date().toISOString()
-  };
-
-  console.log('Adding notification:', newNotification); // Debug log
-
-  // Add to queue, maintain max size
-  userNotifications.push(newNotification);
-  if (userNotifications.length > POLLING_CONFIG.maxQueueSize) {
-    userNotifications.shift(); // Remove oldest
-  }
-
-  notificationsQueue.set(notification.userId, userNotifications);
-}
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -79,20 +24,6 @@ const crypto = {
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
   const httpServer = createServer(app);
-
-  // New endpoint for polling notifications
-  app.get("/api/notifications/poll", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-
-    const userNotifications = notificationsQueue.get(req.user.id) || [];
-    // Clear notifications after sending
-    if (userNotifications.length > 0) {
-      notificationsQueue.set(req.user.id, []);
-      console.log('Sending notifications:', userNotifications); // Debug log
-    }
-
-    res.json(userNotifications);
-  });
 
   // Add new endpoint to fetch admin logs
   app.get("/api/admin/logs", async (req, res) => {
@@ -219,22 +150,6 @@ export function registerRoutes(app: Express): Server {
           actionType: "POINT_ADJUSTMENT",
           targetUserId: userId,
           details: `Adjusted points by ${points}. Reason: ${description}`,
-        });
-
-        // Send real-time notification via WebSocket
-        const wsServer = req.app.get('wsServer');
-        wsServer.broadcastToUser(userId, {
-          type: "POINTS_ALLOCATION",
-          points,
-          description,
-          timestamp: new Date().toISOString()
-        });
-
-        // Also notify admins about the points allocation
-        wsServer.broadcastToAdmins({
-          type: "ADMIN_NOTIFICATION",
-          description: `Points adjusted for ${targetUser.firstName} ${targetUser.lastName}: ${points > 0 ? '+' : ''}${points} points`,
-          timestamp: new Date().toISOString()
         });
 
         return updatedUser;
@@ -546,6 +461,7 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: 'Failed to delete customer' });
     }
   });
+
 
 
   // Export customers to CSV
@@ -1070,7 +986,7 @@ export function registerRoutes(app: Express): Server {
         .where(eq(users.isAdmin, true));
 
       // Send email to all admin users
-      for (const admin of adminUsers) {
+      for(const admin of adminUsers) {
         const adminEmailContent = formatAdminQuoteRequestEmail(
           `${req.user.firstName} ${req.user.lastName}`,
           req.user.email,
@@ -1093,13 +1009,6 @@ export function registerRoutes(app: Express): Server {
         details: `Created quote request for product: ${product.name}`,
       });
 
-      // Add notification
-      addNotification({
-        type: "QUOTE_REQUEST",
-        userId: req.user.id,
-        points: 0,
-        description: `Your quote request for ${product.name} has been submitted and is pending review.`,
-      });
 
       res.json({
         message: "Quote request submitted successfully",
@@ -1477,13 +1386,7 @@ export function registerRoutes(app: Express): Server {
           })
           .where(eq(users.id, user.id));
 
-        // Add notification for admins
-        addNotification({
-          type: "CASH_REDEMPTION",
-          userId: req.user.id,
-          points: points,
-          description: `${user.firstName} ${user.lastName} redeemed ${points} points for R${(points * 0.015).toFixed(2)}`
-        });
+
       });
 
       res.json({

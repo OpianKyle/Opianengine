@@ -7,7 +7,6 @@ import Home from "@/pages/home";
 import ResetPassword from "@/pages/reset-password";
 import { useUser } from "@/hooks/use-user";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
-import { useWebSocket } from "@/hooks/use-websocket";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
@@ -33,7 +32,6 @@ import CustomerProducts from "@/pages/customer/products";
 function ProtectedRoute({ component: Component, admin = false, ...rest }: any) {
   const { user, isLoading } = useUser();
   useSessionTimeout();
-  useWebSocket(); // Initialize WebSocket connection for authenticated routes
 
   if (isLoading) {
     return (
