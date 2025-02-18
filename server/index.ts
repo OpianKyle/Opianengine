@@ -3,6 +3,8 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import fileUpload from 'express-fileupload';
+import { createServer } from 'http'; // Added import for createServer
+
 
 const app = express();
 
@@ -23,6 +25,7 @@ app.use(fileUpload({
   },
 }));
 
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -54,8 +57,19 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = registerRoutes(app);
+  // Create server instance
+  const server = createServer(app);
 
+  // Add middleware to handle API routes first
+  app.use('/api', (req, res, next) => {
+    console.log(`API request received: ${req.method} ${req.path}`);
+    next();
+  });
+
+  // Register API routes
+  registerRoutes(app);
+
+  // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -64,6 +78,7 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
+  // Setup Vite or static serving after API routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {

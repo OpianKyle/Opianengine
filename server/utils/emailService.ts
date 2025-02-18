@@ -1,13 +1,13 @@
 import nodemailer from 'nodemailer';
 
-// Create reusable transporter with more detailed options
+// Create reusable transporter with environment variables
 const transporter = nodemailer.createTransport({
-  host: 'mail.opianfsgroup.com',
-  port: 465,
-  secure: true, // true for 465, false for other ports
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || '465'),
+  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD
   },
   tls: {
     // Do not fail on invalid certs
@@ -29,10 +29,10 @@ export async function sendEmail({ to, subject, text, html }: EmailParams): Promi
     console.log('========== EMAIL SENDING ATTEMPT ==========');
     console.log('To:', to);
     console.log('Subject:', subject);
-    console.log('Using EMAIL_USER:', process.env.EMAIL_USER);
+    console.log('Using EMAIL_USER:', process.env.SMTP_USER);
 
     // Check if credentials are present
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
       console.error('Missing email credentials');
       return false;
     }
@@ -45,7 +45,7 @@ export async function sendEmail({ to, subject, text, html }: EmailParams): Promi
     // Attempt to send email
     console.log('Attempting to send email...');
     const result = await transporter.sendMail({
-      from: `"OPIAN Rewards" <${process.env.EMAIL_USER}>`,
+      from: `"OPIAN Rewards" <${process.env.SMTP_USER}>`,
       to,
       subject,
       text,
@@ -164,4 +164,26 @@ export function formatRegistrationEmail(
   `;
 
   return { text, html };
+}
+
+// Add test email function after the existing functions
+export async function sendTestEmail(to: string): Promise<boolean> {
+  const testEmailContent = {
+    subject: "OPIAN Rewards - Email Configuration Test",
+    text: "This is a test email to verify the SMTP configuration.",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Email Configuration Test</h2>
+        <p>This is a test email to verify that the SMTP configuration is working correctly.</p>
+        <p>If you received this email, it means your email service is configured properly.</p>
+      </div>
+    `
+  };
+
+  return sendEmail({
+    to,
+    subject: testEmailContent.subject,
+    text: testEmailContent.text,
+    html: testEmailContent.html
+  });
 }
