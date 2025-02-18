@@ -2,9 +2,9 @@ import nodemailer from 'nodemailer';
 
 // Create reusable transporter with more detailed options
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // true for 465, false for other ports
+  host: 'mail.opianfsgroup.com',
+  port: 465,
+  secure: true, // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
@@ -22,24 +22,38 @@ interface EmailParams {
 
 export async function sendEmail({ to, subject, text, html }: EmailParams): Promise<boolean> {
   try {
-    console.log('Attempting to send email to:', to);
+    console.log('========== EMAIL SENDING ATTEMPT ==========');
+    console.log('To:', to);
+    console.log('Subject:', subject);
     console.log('Using EMAIL_USER:', process.env.EMAIL_USER);
 
+    // Check if credentials are present
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      console.error('Missing email credentials');
+      return false;
+    }
+
     // Verify SMTP connection configuration
+    console.log('Verifying SMTP connection...');
     const verification = await transporter.verify();
     console.log('SMTP Connection verified:', verification);
 
+    // Attempt to send email
+    console.log('Attempting to send email...');
     const result = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: `"OPIAN Rewards" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,
       html
     });
 
-    console.log('Email sent successfully:', result);
+    console.log('Email sent successfully. Message ID:', result.messageId);
+    console.log('Preview URL:', nodemailer.getTestMessageUrl(result));
+    console.log('Full result:', result);
     return true;
   } catch (error) {
+    console.error('========== EMAIL ERROR ==========');
     console.error('Detailed email error:', error);
     if (error instanceof Error) {
       console.error('Error name:', error.name);
