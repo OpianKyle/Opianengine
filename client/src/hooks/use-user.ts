@@ -18,8 +18,17 @@ const userSchema = z.object({
 
 export type User = z.infer<typeof userSchema>;
 
+const loginResponseSchema = z.object({
+  user: userSchema,
+  token: z.string()
+});
+
 export function useUser() {
   const queryClient = useQueryClient();
+  const tokenKey = 'auth_token';
+
+  // Helper function to get stored token
+  const getStoredToken = () => localStorage.getItem(tokenKey);
 
   const { data: user, isLoading, error } = useQuery({
     queryKey: ['/api/user'],
@@ -73,7 +82,9 @@ export function useUser() {
       }
 
       const data = await response.json();
-      return userSchema.parse(data);
+      const loginResponse = loginResponseSchema.parse(data);
+      localStorage.setItem(tokenKey, loginResponse.token);
+      return loginResponse.user;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
@@ -127,6 +138,9 @@ export function useUser() {
         throw new Error('Logout failed');
       }
 
+      // Clear token from localStorage
+      localStorage.removeItem(tokenKey);
+
       // Clear all user-related queries
       queryClient.removeQueries({ queryKey: ['/api/user'] });
       queryClient.setQueryData(['/api/user'], null);
@@ -137,6 +151,7 @@ export function useUser() {
     user,
     isLoading,
     error,
+    token: getStoredToken(),
     loginMutation,
     logoutMutation,
     registerMutation,

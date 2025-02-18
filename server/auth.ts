@@ -11,6 +11,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { sendEmail, formatRegistrationEmail } from "./utils/emailService";
 import { parse as parseCookie } from 'cookie';
+import jwt from 'jsonwebtoken';
 
 const scryptAsync = promisify(scrypt);
 const MemoryStore = createMemoryStore(session);
@@ -24,12 +25,13 @@ export const sessionConfig = {
     checkPeriod: 86400000 // 24h
   }),
   cookie: {
-    secure: false, // Set to true in production
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax' as const // Type assertion to fix the error
+    sameSite: 'lax' as const,
+    path: '/'
   },
-  name: 'sid'
+  name: 'connect.sid' // Changed to match default Express session name
 };
 
 // Verify session helper function
@@ -56,7 +58,7 @@ export async function verifySession(req: Request): Promise<any> {
     }
 
     const cookies = parseCookie(req.headers.cookie);
-    const sessionId = cookies['sid'];
+    const sessionId = cookies['connect.sid']; // Changed to match cookie name
 
     if (!sessionId) {
       console.log('No session ID found in cookies');
@@ -75,7 +77,12 @@ export async function verifySession(req: Request): Promise<any> {
         }
 
         try {
-          console.log('Retrieved session data:', session);
+          console.log('Retrieved session data:', {
+            ...session,
+            // Redact sensitive data in logs
+            cookie: '[Redacted]',
+            passport: session.passport ? { user: session.passport.user } : undefined
+          });
 
           // Get user data from passport session
           const userId = session.passport?.user;
@@ -136,6 +143,34 @@ export const crypto = {
     }
   }
 };
+
+const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
+
+// Add enhanced logging to verifyToken function
+export function verifyToken(token: string): any {
+  try {
+    console.log('Verifying token:', {
+      tokenLength: token.length,
+      firstChars: token.substring(0, 10) + '...',
+    });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('Token verified successfully:', {
+      userId: decoded.id,
+      isAdmin: decoded.isAdmin,
+      exp: new Date(decoded.exp * 1000).toISOString()
+    });
+
+    return decoded;
+  } catch (error) {
+    console.error('Token verification failed:', {
+      error: error.message,
+      name: error.name,
+      tokenLength: token?.length
+    });
+    return null;
+  }
+}
 
 export async function setupAuth(app: Express) {
   app.use(session(sessionConfig));
@@ -233,8 +268,12 @@ export async function setupAuth(app: Express) {
             console.error('Login error:', loginErr);
             return res.status(500).json({ error: "Login failed" });
           }
+
+          // Generate token for WebSocket authentication
+          const token = generateToken(user);
+
           console.log('User logged in successfully:', user);
-          return res.json(user);
+          return res.json({ user, token });
         });
       })(req, res, next);
     } catch (error) {
@@ -367,7 +406,7 @@ export async function setupAuth(app: Express) {
           console.error('Session destruction error:', err);
           return res.status(500).json({ error: "Logout failed" });
         }
-        res.clearCookie("sid");
+        res.clearCookie("connect.sid"); //Updated cookie name
         res.json({ message: "Logged out successfully" });
       });
     });
@@ -394,3 +433,15 @@ const registerSchema = z.object({
   phoneNumber: z.string().min(1, "Phone number is required"),
   referralCode: z.string().optional(),
 });
+
+export function generateToken(user: any) {
+  return jwt.sign(
+    {
+      id: user.id,
+      isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin
+    },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}

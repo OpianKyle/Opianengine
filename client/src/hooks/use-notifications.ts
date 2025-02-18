@@ -13,13 +13,15 @@ interface PointsNotification {
 }
 
 export function useNotifications() {
-  const { user } = useUser();
+  const { user, token } = useUser();
   const { toast } = useToast();
   const socketRef = useRef<WebSocket | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const queryClient = useQueryClient();
+  const maxReconnectAttempts = 5;
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   // Fetch notifications from API
   const { data: notifications = [] } = useQuery<PointsNotification[]>({
@@ -27,7 +29,7 @@ export function useNotifications() {
     queryFn: async () => {
       if (!user) return [];
       const response = await fetch('/api/notifications', {
-        credentials: 'include' // Important: include credentials for session cookie
+        credentials: 'include'
       });
       if (!response.ok) throw new Error('Failed to fetch notifications');
       const data = await response.json();
@@ -42,49 +44,43 @@ export function useNotifications() {
       }));
     },
     enabled: !!user,
-    staleTime: 0, // Always fetch fresh data
+    staleTime: 0,
     retry: 3
   });
 
-  // Update unread count whenever notifications change
   useEffect(() => {
     if (notifications) {
       setUnreadCount(notifications.filter(n => !n.read).length);
     }
   }, [notifications]);
 
-  const markAsReadMutation = useMutation({
-    mutationFn: async (notificationId?: string) => {
-      const response = await fetch('/api/notifications/mark-read', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId })
-      });
-      if (!response.ok) throw new Error('Failed to mark notifications as read');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    }
-  });
-
   const connectWebSocket = () => {
-    if (!user || socketRef.current?.readyState === WebSocket.OPEN) {
-      console.log('Skipping WebSocket connection - no user or already connected');
+    if (!user || !token || socketRef.current?.readyState === WebSocket.OPEN) {
+      console.log('Skipping WebSocket connection - no user/token or already connected', {
+        hasUser: !!user,
+        hasToken: !!token,
+        socketState: socketRef.current?.readyState
+      });
       return;
     }
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/notifications-ws`;
+      const wsUrl = `${protocol}//${window.location.host}/notifications-ws?token=${encodeURIComponent(token)}`;
       console.log('Attempting WebSocket connection to:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log('WebSocket connected, sending auth data');
+        console.log('WebSocket connected');
         setIsConnected(true);
+        setReconnectAttempts(0);  // Reset reconnection attempts on successful connection
+        toast({
+          title: "Connected",
+          description: "Successfully connected to notification service",
+          duration: 3000,
+        });
       };
 
       socket.onmessage = (event) => {
@@ -94,22 +90,6 @@ export function useNotifications() {
 
           if (data.type === 'auth_success') {
             console.log('WebSocket authentication successful');
-            toast({
-              title: "Connected",
-              description: "Successfully connected to notification service",
-              duration: 3000,
-            });
-            return;
-          }
-
-          if (data.type === 'error') {
-            console.error('WebSocket error message:', data.message);
-            toast({
-              title: "Error",
-              description: data.message,
-              variant: "destructive",
-              duration: 5000,
-            });
             return;
           }
 
@@ -121,14 +101,14 @@ export function useNotifications() {
             toast({
               title: "Points Update",
               description: `${data.points > 0 ? '+' : ''}${data.points} points - ${data.description}`,
-              duration: 5000,
+              duration: 0, // Keep until user dismisses
               variant: data.points > 0 ? "default" : "destructive",
             });
           } else {
             toast({
               title: "Notification",
               description: data.message || data.description,
-              duration: 5000,
+              duration: 0, // Keep until user dismisses
             });
           }
         } catch (error) {
@@ -139,12 +119,6 @@ export function useNotifications() {
       socket.onerror = (error) => {
         console.error('WebSocket error:', error);
         setIsConnected(false);
-        toast({
-          title: "Connection Error",
-          description: "Failed to connect to notification service",
-          variant: "destructive",
-          duration: 5000,
-        });
       };
 
       socket.onclose = (event) => {
@@ -152,29 +126,31 @@ export function useNotifications() {
         setIsConnected(false);
         socketRef.current = null;
 
-        if (user && !reconnectTimeoutRef.current) {
-          console.log('Scheduling reconnection attempt...');
+        // Only attempt to reconnect if we have a user and haven't exceeded max attempts
+        if (user && !reconnectTimeoutRef.current && reconnectAttempts < maxReconnectAttempts) {
+          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}...`);
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log('Attempting to reconnect...');
+            setReconnectAttempts(prev => prev + 1);
             reconnectTimeoutRef.current = null;
             connectWebSocket();
-          }, 5000);
+          }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000)); // Exponential backoff with 30s max
+        } else if (reconnectAttempts >= maxReconnectAttempts) {
+          toast({
+            title: "Connection Error",
+            description: "Unable to establish connection to notification service. Please refresh the page.",
+            variant: "destructive",
+            duration: 0, // Keep toast until user dismisses
+          });
         }
       };
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
       setIsConnected(false);
-      toast({
-        title: "Connection Error",
-        description: "Failed to establish connection to notification service",
-        variant: "destructive",
-        duration: 5000,
-      });
     }
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && token) {
       console.log('User authenticated, initiating WebSocket connection');
       connectWebSocket();
     }
@@ -194,7 +170,22 @@ export function useNotifications() {
 
       setIsConnected(false);
     };
-  }, [user]);
+  }, [user, token]);
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId?: string) => {
+      const response = await fetch('/api/notifications/mark-read', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId })
+      });
+      if (!response.ok) throw new Error('Failed to mark notifications as read');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
 
   const markAsRead = (notificationId?: string) => {
     markAsReadMutation.mutate(notificationId);

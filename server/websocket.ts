@@ -3,7 +3,7 @@ import { Server } from 'http';
 import { type User } from '@db/schema';
 import { db } from "@db";
 import { notifications } from "@db/schema";
-import { verifySession } from './auth';
+import { verifyToken } from './auth';
 import { eq, desc, sql } from 'drizzle-orm';
 
 // Store active connections with user information
@@ -24,29 +24,30 @@ export function setupWebSocketServer(server: Server) {
           origin: info.origin
         });
 
-        // Explicitly check for notifications-ws path
-        if (!info.req.url.startsWith('/notifications-ws')) {
-          console.log('Rejecting non-notifications WebSocket connection');
-          return done(false);
-        }
-
         // Check for Vite HMR connection
         if (info.req.headers['sec-websocket-protocol']?.includes('vite-hmr')) {
           console.log('Allowing Vite HMR WebSocket connection');
           return done(true);
         }
 
-        // Verify session
-        console.log('Verifying session for WebSocket connection');
-        const user = await verifySession(info.req);
+        // Get token from query parameter
+        const url = new URL(info.req.url, `http://${info.req.headers.host}`);
+        const token = url.searchParams.get('token');
 
-        if (!user) {
-          console.log('WebSocket connection rejected: No valid session');
-          return done(false, 401, 'Unauthorized');
+        if (!token) {
+          console.log('WebSocket connection rejected: No token provided');
+          return done(false, 401, 'No token provided');
         }
 
-        console.log('WebSocket connection authorized for user:', user.id);
-        info.req.user = user;
+        // Verify token
+        const userData = verifyToken(token);
+        if (!userData) {
+          console.log('WebSocket connection rejected: Invalid token');
+          return done(false, 401, 'Invalid token');
+        }
+
+        console.log('WebSocket connection authorized for user:', userData.id);
+        info.req.user = userData;
         return done(true);
       } catch (error) {
         console.error('WebSocket verification error:', error);
@@ -61,7 +62,7 @@ export function setupWebSocketServer(server: Server) {
       userId: req.user?.id
     });
 
-    // Initialize user data from verified session
+    // Initialize user data from verified token
     const userData = {
       userId: req.user.id,
       isAdmin: req.user.isAdmin
@@ -107,7 +108,31 @@ export function setupWebSocketServer(server: Server) {
     });
   });
 
-  const storeAndBroadcastNotification = async (userId: number, notificationData: any) => {
+  return {
+    broadcastToUser: (userId: number, notification: any) => {
+      console.log(`Broadcasting to user ${userId}:`, notification);
+      storeAndBroadcastNotification(userId, notification);
+    },
+
+    broadcastToAdmins: (notification: any) => {
+      console.log('Broadcasting to admins:', notification);
+      Array.from(clients.entries()).forEach(([_ws, client]) => {
+        if (client.isAdmin) {
+          storeAndBroadcastNotification(client.userId, notification);
+        }
+      });
+    },
+
+    broadcastToAll: (notification: any) => {
+      console.log('Broadcasting to all:', notification);
+      Array.from(clients.entries()).forEach(([_ws, client]) => {
+        storeAndBroadcastNotification(client.userId, notification);
+      });
+    }
+  };
+}
+
+const storeAndBroadcastNotification = async (userId: number, notificationData: any) => {
     console.log(`Storing and broadcasting notification for user ${userId}:`, notificationData);
 
     const enrichedNotification = {
@@ -147,27 +172,3 @@ export function setupWebSocketServer(server: Server) {
       console.error('Error storing notification:', error);
     }
   };
-
-  return {
-    broadcastToUser: (userId: number, notification: any) => {
-      console.log(`Broadcasting to user ${userId}:`, notification);
-      storeAndBroadcastNotification(userId, notification);
-    },
-
-    broadcastToAdmins: (notification: any) => {
-      console.log('Broadcasting to admins:', notification);
-      Array.from(clients.entries()).forEach(([_ws, client]) => {
-        if (client.isAdmin) {
-          storeAndBroadcastNotification(client.userId, notification);
-        }
-      });
-    },
-
-    broadcastToAll: (notification: any) => {
-      console.log('Broadcasting to all:', notification);
-      Array.from(clients.entries()).forEach(([_ws, client]) => {
-        storeAndBroadcastNotification(client.userId, notification);
-      });
-    }
-  };
-}
