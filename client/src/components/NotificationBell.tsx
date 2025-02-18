@@ -1,4 +1,4 @@
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -58,37 +58,45 @@ const NotificationBell = () => {
               No notifications
             </div>
           )}
-          {isConnected && notifications.map((notification) => {
-            console.log('Rendering notification:', notification); // Debug log
-            return (
-              <DropdownMenuItem
-                key={notification.id}
-                className={`px-4 py-2 cursor-pointer ${
-                  !notification.read ? "bg-muted/50" : ""
-                }`}
-                onClick={() => markAsRead(notification.id)}
-              >
-                <div>
+          {isConnected && notifications.map((notification) => (
+            <DropdownMenuItem
+              key={notification.id}
+              className={`px-4 py-2 cursor-default ${
+                !notification.read ? "bg-muted/50" : ""
+              }`}
+            >
+              <div className="flex-1">
+                <div className="flex justify-between items-start">
                   <div className="font-medium">
-                    {notification.type === "POINTS_ALLOCATION" ? (
-                      <span>
-                        {notification.points! > 0 ? "+" : ""}
-                        {notification.points} points
+                    {notification.type === "POINTS_ALLOCATION" || notification.type === "POINTS_AWARDED" ? (
+                      <span className={notification.points && notification.points >= 0 ? "text-green-600" : "text-red-600"}>
+                        {notification.formattedPoints} points
                       </span>
                     ) : (
                       "New Notification"
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {notification.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(notification.timestamp), "MMM d, h:mm a")}
-                  </p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 -my-1 -mr-2 hover:bg-muted"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markAsRead(notification.id);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-              </DropdownMenuItem>
-            );
-          })}
+                <p className="text-sm text-muted-foreground">
+                  {notification.description}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {format(new Date(notification.timestamp), "MMM d, h:mm a")}
+                </p>
+              </div>
+            </DropdownMenuItem>
+          ))}
         </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>

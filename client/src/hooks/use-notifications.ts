@@ -37,7 +37,7 @@ export function useNotifications() {
         id: notification.id.toString(),
         type: notification.type,
         points: notification.type === 'POINTS_AWARDED' ? 
-          parseInt(notification.title.replace(/[^-\d]/g, '')) : undefined,
+          parseInt(notification.title.match(/-?\d+/)?.[0] || '0') : undefined,
         description: notification.message,
         timestamp: notification.createdAt,
         read: notification.isRead
@@ -203,7 +203,11 @@ export function useNotifications() {
   };
 
   return {
-    notifications: notifications || [],
+    notifications: notifications?.map(notification => ({
+      ...notification,
+      formattedPoints: notification.points !== undefined ? 
+        `${notification.points > 0 ? '+' : ''}${notification.points}` : undefined
+    })) || [],
     unreadCount,
     markAsRead,
     isConnected

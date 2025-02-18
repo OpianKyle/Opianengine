@@ -87,7 +87,7 @@ export function setupWebSocketServer(server: Server) {
         ws.send(JSON.stringify({
           type: notification.type,
           points: notification.type === 'POINTS_AWARDED' ? 
-            parseInt(notification.title.replace(/[^-\d]/g, '')) : undefined,
+            parseInt(notification.title.match(/-?\d+/)?.[0] || '0') : undefined,
           description: notification.message,
           timestamp: notification.createdAt.toISOString(),
           id: notification.id.toString()
