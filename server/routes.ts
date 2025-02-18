@@ -7,7 +7,7 @@ import { eq, desc, sql, inArray } from "drizzle-orm";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { logAdminAction, getAdminLogs } from "./admin-logger";
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, sendTestEmail } from "./utils/emailService";
+import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
@@ -1544,57 +1544,6 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error in password reset:', error);
       res.status(500).json({ error: "Failed to reset password" });
-    }
-  });
-
-  // Test email configuration
-  app.post("/api/admin/test-email", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
-
-    try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ error: "Email address is required" });
-      }
-
-      console.log('Attempting to send test email to:', email);
-      const result = await sendTestEmail(email);
-
-      if (result) {
-        res.json({ message: "Test email sent successfully" });
-      } else {
-        res.status(500).json({ error: "Failed to send test email" });
-      }
-    } catch (error) {
-      console.error('Error sending test email:', error);
-      res.status(500).json({
-        error: "Failed to send test email",
-        details: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-  // Test email configuration - temporary setup endpoint
-  app.post("/api/setup/test-email", async (req, res) => {
-    try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ error: "Email address is required" });
-      }
-
-      console.log('Attempting to send test email to:', email);
-      const result = await sendTestEmail(email);
-
-      if (result) {
-        res.json({ message: "Test email sent successfully" });
-      } else {
-        res.status(500).json({ error: "Failed to send test email" });
-      }
-    } catch (error) {
-      console.error('Error sending test email:', error);
-      res.status(500).json({
-        error: "Failed to send test email",
-        details: error instanceof Error ? error.message : String(error)
-      });
     }
   });
 
