@@ -9,6 +9,7 @@ import { users, transactions } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { sendEmail, formatRegistrationEmail } from "./utils/emailService";
 
 const scryptAsync = promisify(scrypt);
 const MemoryStore = createMemoryStore(session);
@@ -178,7 +179,6 @@ export async function setupAuth(app: Express) {
       }
 
       const newReferralCode = randomBytes(8).toString('hex');
-
       const hashedPassword = await crypto.hashPassword(password);
 
       const newUser = await db.transaction(async (tx) => {
@@ -225,6 +225,15 @@ export async function setupAuth(app: Express) {
         }
 
         return user;
+      });
+
+      // Send welcome email
+      const { text, html } = formatRegistrationEmail(firstName, newReferralCode);
+      await sendEmail({
+        to: email,
+        subject: "Welcome to OPIAN Rewards!",
+        text,
+        html
       });
 
       req.login(newUser, (err) => {

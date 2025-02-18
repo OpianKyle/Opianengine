@@ -111,3 +111,39 @@ export function formatAdminNotificationEmail(
 
   return { text, html };
 }
+
+export function formatRegistrationEmail(
+  firstName: string,
+  referralCode: string
+): { text: string; html: string } {
+  const text = `
+    Welcome to OPIAN Rewards, ${firstName}!
+
+    Thank you for joining our rewards program. Your account has been successfully created with 2,000 welcome bonus points!
+
+    Your unique referral code is: ${referralCode}
+    Share this code with friends to earn additional rewards when they sign up!
+
+    Start exploring our rewards and benefits now.
+
+    Best regards,
+    The OPIAN Rewards Team
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #43EB3E;">Welcome to OPIAN Rewards!</h2>
+      <p>Dear ${firstName},</p>
+      <p>Thank you for joining our rewards program. Your account has been successfully created with <strong>2,000 welcome bonus points!</strong></p>
+      <div style="background-color: #011d3d; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <p style="color: #ffffff; margin: 0;">Your unique referral code is: <strong>${referralCode}</strong></p>
+        <p style="color: #43EB3E; margin: 10px 0 0 0;">Share this code with friends to earn additional rewards when they sign up!</p>
+      </div>
+      <p>Start exploring our rewards and benefits now.</p>
+      <br/>
+      <p>Best regards,<br/>The OPIAN Rewards Team</p>
+    </div>
+  `;
+
+  return { text, html };
+}
