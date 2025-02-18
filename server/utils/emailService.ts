@@ -1,17 +1,14 @@
 import nodemailer from 'nodemailer';
 
-// Create reusable transporter with more detailed options
+// Create reusable transporter with Gmail SMTP configuration
 const transporter = nodemailer.createTransport({
-  host: 'mail.opianfsgroup.com',
+  service: 'gmail', // Use Gmail's predefined settings
+  host: 'smtp.gmail.com',
   port: 465,
-  secure: true, // true for 465, false for other ports
+  secure: true,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  },
-  tls: {
-    // Do not fail on invalid certs
-    rejectUnauthorized: false
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD
   },
   debug: true, // Enable debug output
   logger: true // Log information to the console
@@ -29,11 +26,11 @@ export async function sendEmail({ to, subject, text, html }: EmailParams): Promi
     console.log('========== EMAIL SENDING ATTEMPT ==========');
     console.log('To:', to);
     console.log('Subject:', subject);
-    console.log('Using EMAIL_USER:', process.env.EMAIL_USER);
+    console.log('Using Gmail account:', process.env.GMAIL_USER);
 
     // Check if credentials are present
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-      console.error('Missing email credentials');
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      console.error('Missing Gmail credentials');
       return false;
     }
 
@@ -45,7 +42,7 @@ export async function sendEmail({ to, subject, text, html }: EmailParams): Promi
     // Attempt to send email
     console.log('Attempting to send email...');
     const result = await transporter.sendMail({
-      from: `"OPIAN Rewards" <${process.env.EMAIL_USER}>`,
+      from: `"OPIAN Rewards" <${process.env.GMAIL_USER}>`,
       to,
       subject,
       text,
@@ -68,6 +65,7 @@ export async function sendEmail({ to, subject, text, html }: EmailParams): Promi
   }
 }
 
+// Keep existing email formatting functions unchanged
 export function formatPointsAssignmentEmail(
   customerName: string,
   points: number,
