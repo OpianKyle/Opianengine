@@ -127,7 +127,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Modify points allocation to include email notifications
+  // Update the points allocation endpoint to use WebSocket
   app.post("/api/admin/points", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
     const { userId, points, description } = req.body;
@@ -219,6 +219,22 @@ export function registerRoutes(app: Express): Server {
           actionType: "POINT_ADJUSTMENT",
           targetUserId: userId,
           details: `Adjusted points by ${points}. Reason: ${description}`,
+        });
+
+        // Send real-time notification via WebSocket
+        const wsServer = req.app.get('wsServer');
+        wsServer.broadcastToUser(userId, {
+          type: "POINTS_ALLOCATION",
+          points,
+          description,
+          timestamp: new Date().toISOString()
+        });
+
+        // Also notify admins about the points allocation
+        wsServer.broadcastToAdmins({
+          type: "ADMIN_NOTIFICATION",
+          description: `Points adjusted for ${targetUser.firstName} ${targetUser.lastName}: ${points > 0 ? '+' : ''}${points} points`,
+          timestamp: new Date().toISOString()
         });
 
         return updatedUser;
