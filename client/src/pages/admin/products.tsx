@@ -269,33 +269,7 @@ export default function ProductManagement() {
                   <h3 className="text-lg font-semibold text-white">Activity Points</h3>
                 </div>
                 <TabsContent value="activities" className="mt-2">
-                  <div className="space-y-4">
-                    {activityTypes.map((type, index) => {
-                      const isPointsManaged = type === "PREMIUM_PAYMENT" || type === "CARD_BALANCE";
-                      return (
-                        <div key={type} className="grid grid-cols-2 gap-4 items-center">
-                          <label className="font-medium text-white">
-                            {type.split('_').map(word =>
-                              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                            ).join(' ')} points:
-                          </label>
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              type="number"
-                              disabled={isPointsManaged}
-                              {...form.register(`activities.${index}.pointsValue`, { valueAsNumber: true })}
-                              className="bg-[#011d3d] border-[#022b5c] text-white focus:ring-[#43EB3E] disabled:opacity-50"
-                            />
-                            {isPointsManaged && (
-                              <span className="text-sm text-[#43EB3E]">
-                                (Managed in customer assignments)
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {renderActivitiesForm(form)}
                 </TabsContent>
               </Tabs>
               <Button
