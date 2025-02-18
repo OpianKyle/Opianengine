@@ -11,12 +11,16 @@ import { ScrollArea } from "./ui/scroll-area";
 import { format } from "date-fns";
 
 const NotificationBell = () => {
-  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, isConnected } = useNotifications();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <Button 
+          variant="ghost" 
+          className={`relative h-8 w-8 rounded-full ${!isConnected ? 'opacity-50' : ''}`}
+          title={isConnected ? 'Notifications' : 'Connecting to notification service...'}
+        >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
@@ -39,44 +43,48 @@ const NotificationBell = () => {
           )}
         </div>
         <ScrollArea className="h-[300px]">
-          {notifications.length === 0 ? (
+          {!isConnected && (
+            <div className="p-4 text-center text-muted-foreground">
+              Connecting to notification service...
+            </div>
+          )}
+          {isConnected && notifications.length === 0 && (
             <div className="p-4 text-center text-muted-foreground">
               No notifications
             </div>
-          ) : (
-            notifications.map((notification) => (
-              <DropdownMenuItem
-                key={notification.id}
-                className={`px-4 py-2 cursor-pointer ${
-                  !notification.read ? "bg-muted/50" : ""
-                }`}
-                onClick={() => markAsRead(notification.id)}
-              >
-                <div>
-                  <div className="font-medium">
-                    {notification.type === "POINTS_ALLOCATION" ? (
-                      <span>
-                        {notification.points! > 0 ? "+" : ""}
-                        {notification.points} points
-                      </span>
-                    ) : (
-                      "New Notification"
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {notification.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(notification.timestamp), "MMM d, h:mm a")}
-                  </p>
-                </div>
-              </DropdownMenuItem>
-            ))
           )}
+          {isConnected && notifications.map((notification) => (
+            <DropdownMenuItem
+              key={notification.id}
+              className={`px-4 py-2 cursor-pointer ${
+                !notification.read ? "bg-muted/50" : ""
+              }`}
+              onClick={() => markAsRead(notification.id)}
+            >
+              <div>
+                <div className="font-medium">
+                  {notification.type === "POINTS_ALLOCATION" ? (
+                    <span>
+                      {notification.points! > 0 ? "+" : ""}
+                      {notification.points} points
+                    </span>
+                  ) : (
+                    "New Notification"
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {notification.description}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {format(new Date(notification.timestamp), "MMM d, h:mm a")}
+                </p>
+              </div>
+            </DropdownMenuItem>
+          ))}
         </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};
 
 export default NotificationBell;

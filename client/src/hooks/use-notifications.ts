@@ -14,19 +14,14 @@ interface PointsNotification {
 export function useNotifications() {
   const { user } = useUser();
   const { toast } = useToast();
-  const socketRef = useRef<WebSocket>();
+  const socketRef = useRef<WebSocket | null>(null);
   const [notifications, setNotifications] = useState<PointsNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   const connectWebSocket = useCallback(() => {
-    if (!user) return;
-
-    // Clear any existing connection
-    if (socketRef.current) {
-      socketRef.current.close();
-      socketRef.current = null;
-    }
+    if (!user || socketRef.current?.readyState === WebSocket.OPEN) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -36,7 +31,7 @@ export function useNotifications() {
 
     socket.onopen = () => {
       console.log('WebSocket connected');
-      // Send authentication message
+      setIsConnected(true);
       socket.send(JSON.stringify({
         type: 'auth',
         userId: user.id,
@@ -53,13 +48,11 @@ export function useNotifications() {
           return;
         }
 
-        // Update notifications list
         setNotifications(prev => [
           { ...notification, read: false, id: notification.id || Date.now().toString() },
           ...prev
         ]);
 
-        // Update unread count
         setUnreadCount(count => count + 1);
 
         if (notification.type === "POINTS_ALLOCATION" && notification.points !== undefined) {
@@ -83,44 +76,45 @@ export function useNotifications() {
 
     socket.onerror = (error) => {
       console.error('WebSocket error:', error);
-      toast({
-        title: "Connection Error",
-        description: "Failed to connect to notification service",
-        variant: "destructive",
-      });
+      setIsConnected(false);
     };
 
     socket.onclose = () => {
       console.log('WebSocket connection closed');
-      // Attempt to reconnect after a delay
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
-    };
+      setIsConnected(false);
 
-    return () => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.close();
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
+      // Only attempt to reconnect if we still have a user and the component is mounted
+      if (user && !reconnectTimeoutRef.current) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectTimeoutRef.current = null;
+          connectWebSocket();
+        }, 5000);
       }
     };
   }, [user, toast]);
 
+  // Connect when component mounts or user changes
   useEffect(() => {
-    const cleanup = connectWebSocket();
+    if (user) {
+      connectWebSocket();
+    }
+
+    // Cleanup function
     return () => {
-      cleanup?.();
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
+
+      if (socketRef.current) {
+        const socket = socketRef.current;
+        socketRef.current = null;
+        socket.close();
+      }
+
+      setIsConnected(false);
     };
-  }, [connectWebSocket]);
+  }, [user, connectWebSocket]);
 
   const markAsRead = useCallback((notificationId?: string) => {
     if (notificationId) {
@@ -140,6 +134,7 @@ export function useNotifications() {
   return {
     notifications,
     unreadCount,
-    markAsRead
+    markAsRead,
+    isConnected
   };
 }
