@@ -40,14 +40,18 @@ export function setupWebSocketServer(server: Server) {
           // Send confirmation
           ws.send(JSON.stringify({
             type: 'auth_success',
-            message: 'Successfully connected to notification system'
+            message: 'Successfully connected to notification system',
+            timestamp: new Date().toISOString(),
+            id: Date.now().toString()
           }));
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
         ws.send(JSON.stringify({
           type: 'error',
-          message: 'Invalid message format'
+          message: 'Invalid message format',
+          timestamp: new Date().toISOString(),
+          id: Date.now().toString()
         }));
       }
     });
@@ -62,25 +66,43 @@ export function setupWebSocketServer(server: Server) {
 
   return {
     broadcastToUser: (userId: number, notification: any) => {
+      const enrichedNotification = {
+        ...notification,
+        timestamp: new Date().toISOString(),
+        id: Date.now().toString()
+      };
+
       Array.from(clients.entries()).forEach(([ws, client]) => {
         if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify(notification));
+          ws.send(JSON.stringify(enrichedNotification));
         }
       });
     },
 
     broadcastToAdmins: (notification: any) => {
+      const enrichedNotification = {
+        ...notification,
+        timestamp: new Date().toISOString(),
+        id: Date.now().toString()
+      };
+
       Array.from(clients.entries()).forEach(([ws, client]) => {
         if (client.isAdmin && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify(notification));
+          ws.send(JSON.stringify(enrichedNotification));
         }
       });
     },
 
     broadcastToAll: (notification: any) => {
+      const enrichedNotification = {
+        ...notification,
+        timestamp: new Date().toISOString(),
+        id: Date.now().toString()
+      };
+
       Array.from(clients.entries()).forEach(([ws, _client]) => {
         if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify(notification));
+          ws.send(JSON.stringify(enrichedNotification));
         }
       });
     }

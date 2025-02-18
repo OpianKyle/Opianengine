@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUser } from "./use-user";
 import { useToast } from "./use-toast";
 
@@ -7,12 +7,16 @@ interface PointsNotification {
   points?: number;
   description: string;
   timestamp: string;
+  read?: boolean;
+  id: string;
 }
 
 export function useNotifications() {
   const { user } = useUser();
   const { toast } = useToast();
   const socketRef = useRef<WebSocket>();
+  const [notifications, setNotifications] = useState<PointsNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const connectWebSocket = useCallback(() => {
     if (!user) return;
@@ -37,6 +41,15 @@ export function useNotifications() {
       try {
         const notification: PointsNotification = JSON.parse(event.data);
 
+        // Update notifications list
+        setNotifications(prev => [
+          { ...notification, read: false, id: Date.now().toString() },
+          ...prev
+        ]);
+
+        // Update unread count
+        setUnreadCount(count => count + 1);
+
         if (notification.type === "POINTS_ALLOCATION" && notification.points !== undefined) {
           toast({
             title: "Points Update",
@@ -45,7 +58,6 @@ export function useNotifications() {
             variant: notification.points > 0 ? "default" : "destructive",
           });
         } else {
-          // Handle other notification types
           toast({
             title: "Notification",
             description: notification.description,
@@ -83,4 +95,25 @@ export function useNotifications() {
       }
     };
   }, [connectWebSocket]);
+
+  const markAsRead = useCallback((notificationId?: string) => {
+    if (notificationId) {
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId ? { ...notif, read: true } : notif
+        )
+      );
+      setUnreadCount(count => Math.max(0, count - 1));
+    } else {
+      // Mark all as read
+      setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+      setUnreadCount(0);
+    }
+  }, []);
+
+  return {
+    notifications,
+    unreadCount,
+    markAsRead
+  };
 }
