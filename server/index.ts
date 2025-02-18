@@ -7,10 +7,12 @@ import { setupWebSocketServer } from './websocket';
 
 const app = express();
 
-// Configure CORS
+// Configure CORS with specific options
 app.use(cors({
-  origin: true,
-  credentials: true
+  origin: true, // Allow all origins in development
+  credentials: true, // Required for cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 app.use(express.json());

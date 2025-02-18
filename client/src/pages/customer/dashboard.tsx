@@ -25,7 +25,7 @@ interface Transaction {
   points: number;
   description: string;
   createdAt: string;
-  type?: string; // Added type property to Transaction interface
+  type?: string;
 }
 
 const getTierInfo = (points: number): { name: string; color: string; nextTier?: { name: string; pointsNeeded: number } } => {
@@ -134,7 +134,7 @@ export default function CustomerDashboard() {
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold text-muted-foreground">
-          Welcome back, {user ? `${user.firstName} ${user.lastName}` : 'Guest'}
+          Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome to OPIAN Rewards'}
         </h2>
         <h1 className="text-3xl font-bold text-[#1b75bc]">Your Dashboard</h1>
       </div>
