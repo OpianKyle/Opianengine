@@ -182,35 +182,58 @@ export default function AdminManagement() {
               Create Admin
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-[#011d3d] border border-[#022b5c] text-white">
             <DialogHeader>
-              <DialogTitle>Create New Admin User</DialogTitle>
+              <DialogTitle className="text-white">Create New Admin User</DialogTitle>
             </DialogHeader>
             <form 
               onSubmit={form.handleSubmit((data) => createAdminMutation.mutate(data))} 
               className="space-y-4"
             >
               <div className="space-y-2">
-                <label>Email</label>
-                <Input {...form.register("email")} type="email" />
+                <label className="text-white">Email</label>
+                <Input 
+                  {...form.register("email")} 
+                  type="email"
+                  className="bg-[#011d3d] border-[#022b5c] text-white focus:ring-[#43EB3E]"
+                />
               </div>
               <div className="space-y-2">
-                <label>First Name</label>
-                <Input {...form.register("firstName")} />
+                <label className="text-white">First Name</label>
+                <Input 
+                  {...form.register("firstName")}
+                  className="bg-[#011d3d] border-[#022b5c] text-white focus:ring-[#43EB3E]"
+                />
               </div>
               <div className="space-y-2">
-                <label>Last Name</label>
-                <Input {...form.register("lastName")} />
+                <label className="text-white">Last Name</label>
+                <Input 
+                  {...form.register("lastName")}
+                  className="bg-[#011d3d] border-[#022b5c] text-white focus:ring-[#43EB3E]"
+                />
               </div>
               <div className="space-y-2">
-                <label>Phone Number</label>
-                <Input {...form.register("phoneNumber")} type="tel" />
+                <label className="text-white">Phone Number</label>
+                <Input 
+                  {...form.register("phoneNumber")} 
+                  type="tel"
+                  className="bg-[#011d3d] border-[#022b5c] text-white focus:ring-[#43EB3E]"
+                />
               </div>
               <div className="space-y-2">
-                <label>Password</label>
-                <Input type="password" {...form.register("password")} />
+                <label className="text-white">Password</label>
+                <Input 
+                  type="password" 
+                  {...form.register("password")}
+                  className="bg-[#011d3d] border-[#022b5c] text-white focus:ring-[#43EB3E]"
+                />
               </div>
-              <Button type="submit">Create Admin</Button>
+              <Button 
+                type="submit"
+                className="w-full bg-[#43EB3E] text-white hover:bg-[#3ad936]"
+              >
+                Create Admin
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
