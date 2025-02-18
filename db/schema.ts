@@ -162,6 +162,7 @@ export const userRelations = relations(users, ({ many, one }) => ({
     fields: [users.referred_by],
     references: [users.referral_code],
   }),
+  notifications: many(notifications)
 }));
 
 export const productAssignmentRelations = relations(productAssignments, ({ one }) => ({
@@ -236,6 +237,31 @@ export const quoteRequestRelations = relations(quoteRequests, ({ one }) => ({
 }));
 
 
+export const notificationTypes = pgEnum("notification_type", [
+  "QUOTE_STATUS_CHANGE",
+  "POINTS_AWARDED",
+  "ADMIN_MESSAGE",
+  "SYSTEM_UPDATE"
+]);
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  type: notificationTypes("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  relatedId: integer("related_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const notificationRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertProductSchema = createInsertSchema(products);
 export const selectProductSchema = createSelectSchema(products);
 export const insertProductActivitySchema = createInsertSchema(product_activities);
@@ -254,6 +280,8 @@ export const insertReferralStatsSchema = createInsertSchema(referralStats);
 export const selectReferralStatsSchema = createSelectSchema(referralStats);
 export const insertQuoteRequestSchema = createInsertSchema(quoteRequests);
 export const selectQuoteRequestSchema = createSelectSchema(quoteRequests);
+export const insertNotificationSchema = createInsertSchema(notifications);
+export const selectNotificationSchema = createSelectSchema(notifications);
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
@@ -273,3 +301,5 @@ export type ReferralStats = typeof referralStats.$inferSelect;
 export type InsertReferralStats = typeof referralStats.$inferInsert;
 export type QuoteRequest = typeof quoteRequests.$inferSelect;
 export type InsertQuoteRequest = typeof quoteRequests.$inferInsert;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

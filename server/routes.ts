@@ -2,8 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, referralStats, quoteRequests } from "@db/schema";
-import { eq, desc, sql, inArray } from "drizzle-orm";
+import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, referralStats, quoteRequests, notifications } from "@db/schema";
+import { eq, desc, sql, inArray, and } from "drizzle-orm";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { logAdminAction } from "./admin-logger";
@@ -1093,6 +1093,15 @@ export function registerRoutes(app: Express): Server {
         .where(eq(quoteRequests.id, parseInt(id)))
         .returning();
 
+      // Create notification for the customer
+      await db.insert(notifications).values({
+        userId: quoteRequest.userId,
+        type: "QUOTE_STATUS_CHANGE",
+        title: "Quote Request Update",
+        message: `Your quote request has been ${status.toLowerCase()}${notes ? `: ${notes}` : ''}`,
+        relatedId: quoteRequest.id
+      });
+
       // Log the status update with correct action type
       await logAdminAction({
         adminId: req.user.id,
@@ -1682,6 +1691,68 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error in password reset:', error);
       res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
+
+  // Get user notifications
+  app.get("/api/notifications", async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+    try {
+      const userNotifications = await db.query.notifications.findMany({
+        where: eq(notifications.userId, req.user.id),
+        orderBy: desc(notifications.createdAt),
+      });
+
+      res.json(userNotifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+  });
+
+  // Mark notification as read
+  app.post("/api/notifications/:id/read", async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+    const { id } = req.params;
+
+    try {
+      const [notification] = await db
+        .update(notifications)
+        .set({ isRead: true })
+        .where(
+          and(
+            eq(notifications.id, parseInt(id)),
+            eq(notifications.userId, req.user.id)
+          )
+        )
+        .returning();
+
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+
+      res.json(notification);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ error: 'Failed to mark notification as read' });
+    }
+  });
+
+  // Mark all notifications as read
+  app.post("/api/notifications/read-all", async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+    try {
+      await db
+        .update(notifications)
+        .set({ isRead: true })
+        .where(eq(notifications.userId, req.user.id));
+
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({ error: 'Failed to mark all notifications as read' });
     }
   });
 
