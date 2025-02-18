@@ -10,9 +10,9 @@ export default function CustomerProducts() {
   const [pendingRequests, setPendingRequests] = useState<number[]>([]);
 
   const { data: products } = useQuery({
-    queryKey: ["/api/products"],
+    queryKey: ["/api/products/customer"],
     queryFn: async () => {
-      const response = await fetch("/api/products", {
+      const response = await fetch("/api/products/customer", {
         credentials: 'include',
         headers: {
           'Accept': 'application/json'
@@ -43,14 +43,13 @@ export default function CustomerProducts() {
         body: JSON.stringify({ productId }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        if (response.headers.get('content-type')?.includes('application/json')) {
-          const error = await response.json();
-          throw new Error(error.message || "Failed to submit quote request");
-        }
-        throw new Error("Failed to submit quote request");
+        throw new Error(data.error || "Failed to submit quote request");
       }
-      return response.json();
+
+      return data;
     },
     onSuccess: (_, productId) => {
       setPendingRequests(prev => [...prev, productId]);
@@ -89,7 +88,7 @@ export default function CustomerProducts() {
               <Button 
                 className="w-full"
                 onClick={() => quoteRequestMutation.mutate(product.id)}
-                disabled={pendingRequests.includes(product.id)}
+                disabled={pendingRequests.includes(product.id) || quoteRequestMutation.isPending}
                 variant={pendingRequests.includes(product.id) ? "secondary" : "default"}
               >
                 {pendingRequests.includes(product.id) ? (
@@ -97,6 +96,8 @@ export default function CustomerProducts() {
                     <Clock className="w-4 h-4 mr-2" />
                     Request Pending
                   </>
+                ) : quoteRequestMutation.isPending ? (
+                  "Submitting..."
                 ) : (
                   <>
                     <MessageSquare className="w-4 h-4 mr-2" />
