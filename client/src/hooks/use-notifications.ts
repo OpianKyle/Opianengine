@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useUser } from "./use-user";
 import { useToast } from "./use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface PointsNotification {
   type: string;
@@ -15,10 +16,57 @@ export function useNotifications() {
   const { user } = useUser();
   const { toast } = useToast();
   const socketRef = useRef<WebSocket | null>(null);
-  const [notifications, setNotifications] = useState<PointsNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Fetch notifications from API
+  const { data: notifications = [] } = useQuery<PointsNotification[]>({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      if (!user) return [];
+      const response = await fetch('/api/notifications', {
+        credentials: 'include' // Important: include credentials for session cookie
+      });
+      if (!response.ok) throw new Error('Failed to fetch notifications');
+      const data = await response.json();
+      return data.map((notification: any) => ({
+        id: notification.id.toString(),
+        type: notification.type,
+        points: notification.type === 'POINTS_AWARDED' ? 
+          parseInt(notification.title.replace(/[^-\d]/g, '')) : undefined,
+        description: notification.message,
+        timestamp: notification.createdAt,
+        read: notification.isRead
+      }));
+    },
+    enabled: !!user,
+    staleTime: 0, // Always fetch fresh data
+    retry: 3
+  });
+
+  // Update unread count whenever notifications change
+  useEffect(() => {
+    if (notifications) {
+      setUnreadCount(notifications.filter(n => !n.read).length);
+    }
+  }, [notifications]);
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId?: string) => {
+      const response = await fetch('/api/notifications/mark-read', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId })
+      });
+      if (!response.ok) throw new Error('Failed to mark notifications as read');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
 
   const connectWebSocket = () => {
     if (!user || socketRef.current?.readyState === WebSocket.OPEN) {
@@ -27,7 +75,6 @@ export function useNotifications() {
     }
 
     try {
-      // Construct WebSocket URL with specific path to avoid Vite HMR conflicts
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/notifications-ws`;
       console.log('Attempting WebSocket connection to:', wsUrl);
@@ -38,11 +85,6 @@ export function useNotifications() {
       socket.onopen = () => {
         console.log('WebSocket connected, sending auth data');
         setIsConnected(true);
-        socket.send(JSON.stringify({
-          type: 'auth',
-          userId: user.id,
-          isAdmin: user.isAdmin
-        }));
       };
 
       socket.onmessage = (event) => {
@@ -71,22 +113,8 @@ export function useNotifications() {
             return;
           }
 
-          // Create notification object
-          const notification: PointsNotification = {
-            ...data,
-            read: false,
-            id: data.id || Date.now().toString()
-          };
-
-          // Update notifications state, preventing duplicates
-          setNotifications(prev => {
-            if (prev.some(n => n.id === notification.id)) {
-              return prev;
-            }
-            return [notification, ...prev];
-          });
-
-          setUnreadCount(count => count + 1);
+          // Refresh notifications after receiving a new one
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
           // Show toast for different notification types
           if (data.type === "POINTS_ALLOCATION" && data.points !== undefined) {
@@ -99,7 +127,7 @@ export function useNotifications() {
           } else {
             toast({
               title: "Notification",
-              description: data.description,
+              description: data.message || data.description,
               duration: 5000,
             });
           }
@@ -124,7 +152,6 @@ export function useNotifications() {
         setIsConnected(false);
         socketRef.current = null;
 
-        // Attempt to reconnect if we have a user and no pending reconnection
         if (user && !reconnectTimeoutRef.current) {
           console.log('Scheduling reconnection attempt...');
           reconnectTimeoutRef.current = setTimeout(() => {
@@ -170,22 +197,11 @@ export function useNotifications() {
   }, [user]);
 
   const markAsRead = (notificationId?: string) => {
-    if (notificationId) {
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId ? { ...notif, read: true } : notif
-        )
-      );
-      setUnreadCount(count => Math.max(0, count - 1));
-    } else {
-      // Mark all as read
-      setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
-      setUnreadCount(0);
-    }
+    markAsReadMutation.mutate(notificationId);
   };
 
   return {
-    notifications,
+    notifications: notifications || [],
     unreadCount,
     markAsRead,
     isConnected

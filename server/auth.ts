@@ -1,32 +1,118 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { type Express } from "express";
+import { type Express, Request } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, transactions } from "@db/schema";
+import { users } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { sendEmail, formatRegistrationEmail } from "./utils/emailService";
+import { parse as parseCookie } from 'cookie';
 
 const scryptAsync = promisify(scrypt);
 const MemoryStore = createMemoryStore(session);
 
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
+// Session configuration
+export const sessionConfig = {
+  secret: process.env.SESSION_SECRET || 'development-secret',
+  resave: false,
+  saveUninitialized: false,
+  store: new MemoryStore({
+    checkPeriod: 86400000 // 24h
+  }),
+  cookie: {
+    secure: false, // Set to true in production
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax' as const // Type assertion to fix the error
+  },
+  name: 'sid'
+};
 
-const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  referralCode: z.string().optional(),
-});
+// Verify session helper function
+export async function verifySession(req: Request): Promise<any> {
+  try {
+    console.log('Verifying session for request:', {
+      url: req.url,
+      headers: {
+        cookie: req.headers.cookie,
+        'sec-websocket-protocol': req.headers['sec-websocket-protocol']
+      }
+    });
+
+    // If we already have user data from passport, return it
+    if (req.user) {
+      console.log('Using existing session user:', req.user);
+      return req.user;
+    }
+
+    // For WebSocket requests, parse the cookie and verify the session
+    if (!req.headers.cookie) {
+      console.log('No cookie found in request');
+      return null;
+    }
+
+    const cookies = parseCookie(req.headers.cookie);
+    const sessionId = cookies['sid'];
+
+    if (!sessionId) {
+      console.log('No session ID found in cookies');
+      return null;
+    }
+
+    console.log('Found session ID:', sessionId);
+
+    // Verify session from store
+    return new Promise((resolve) => {
+      sessionConfig.store.get(sessionId, async (err: any, session: any) => {
+        if (err || !session) {
+          console.log('Session not found or error:', err);
+          resolve(null);
+          return;
+        }
+
+        try {
+          console.log('Retrieved session data:', session);
+
+          // Get user data from passport session
+          const userId = session.passport?.user;
+          if (!userId) {
+            console.log('No user ID in session');
+            resolve(null);
+            return;
+          }
+
+          console.log('Found user ID in session:', userId);
+
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+
+          if (!user) {
+            console.log('User not found in database');
+            resolve(null);
+            return;
+          }
+
+          const { password: _, ...safeUser } = user;
+          console.log('Session verified for user:', safeUser.id);
+          resolve(safeUser);
+        } catch (error) {
+          console.error('Error verifying session:', error);
+          resolve(null);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error in verifySession:', error);
+    return null;
+  }
+}
 
 export const crypto = {
   async hashPassword(password: string) {
@@ -52,21 +138,7 @@ export const crypto = {
 };
 
 export async function setupAuth(app: Express) {
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: false,
-    store: new MemoryStore({
-      checkPeriod: 86400000 // 24h
-    }),
-    cookie: {
-      secure: false, // Set to false for development
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'lax'
-    },
-    name: 'sid'
-  }));
+  app.use(session(sessionConfig));
 
   app.use(passport.initialize());
   app.use(passport.session());
@@ -86,10 +158,12 @@ export async function setupAuth(app: Express) {
         .limit(1);
 
       if (!user) {
+        console.log('User not found during deserialization');
         return done(null, false);
       }
 
       const { password: _, ...safeUser } = user;
+      console.log('User deserialized successfully:', safeUser.id);
       done(null, safeUser);
     } catch (error) {
       console.error('Deserialization error:', error);
@@ -176,9 +250,9 @@ export async function setupAuth(app: Express) {
       const result = registerSchema.safeParse(req.body);
       if (!result.success) {
         console.error('Registration validation failed:', result.error);
-        return res.status(400).json({ 
-          error: "Invalid input data", 
-          details: result.error.errors 
+        return res.status(400).json({
+          error: "Invalid input data",
+          details: result.error.errors
         });
       }
 
@@ -191,8 +265,8 @@ export async function setupAuth(app: Express) {
         .limit(1);
 
       if (existingUser) {
-        return res.status(400).json({ 
-          error: "This email address is already registered. Please try logging in or use a different email address." 
+        return res.status(400).json({
+          error: "This email address is already registered. Please try logging in or use a different email address."
         });
       }
 
@@ -306,3 +380,17 @@ export async function setupAuth(app: Express) {
     res.json(req.user);
   });
 }
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  referralCode: z.string().optional(),
+});
