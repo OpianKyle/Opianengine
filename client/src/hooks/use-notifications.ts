@@ -97,12 +97,23 @@ export function useNotifications() {
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
           // Show toast for different notification types
-          if (data.type === "POINTS_ALLOCATION" && data.points !== undefined) {
+          if (data.type === "POINTS_ALLOCATION") {
+            const points = data.points ?? 0;
+            const sign = points >= 0 ? '+' : '';
             toast({
-              title: "Points Update",
-              description: `${data.points > 0 ? '+' : ''}${data.points} points - ${data.description}`,
+              title: `${sign}${points} Points Allocated`,
+              description: data.description,
               duration: 0, // Keep until user dismisses
-              variant: data.points > 0 ? "default" : "destructive",
+              variant: points >= 0 ? "default" : "destructive",
+            });
+          } else if (data.type === "POINTS_AWARDED") {
+            const points = data.points ?? 0;
+            const sign = points >= 0 ? '+' : '';
+            toast({
+              title: `${sign}${points} Points Awarded`,
+              description: data.description,
+              duration: 0, // Keep until user dismisses
+              variant: points >= 0 ? "default" : "destructive",
             });
           } else {
             toast({
