@@ -7,7 +7,7 @@ const TIMEOUT_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 export function useSessionTimeout() {
   const timeoutRef = useRef<NodeJS.Timeout>();
   const [, navigate] = useLocation();
-  const { user, logout } = useUser();
+  const { user, logoutMutation } = useUser();
 
   const resetTimeout = () => {
     if (timeoutRef.current) {
@@ -15,9 +15,13 @@ export function useSessionTimeout() {
     }
 
     if (user) {
-      timeoutRef.current = setTimeout(() => {
-        logout();
-        navigate('/');
+      timeoutRef.current = setTimeout(async () => {
+        try {
+          await logoutMutation.mutateAsync();
+          navigate('/');
+        } catch (error) {
+          console.error('Error during session timeout logout:', error);
+        }
       }, TIMEOUT_DURATION);
     }
   };
