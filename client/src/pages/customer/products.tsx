@@ -1,10 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Clock } from "lucide-react";
+import { useState } from "react";
 
 export default function CustomerProducts() {
+  const queryClient = useQueryClient();
+  const [pendingRequests, setPendingRequests] = useState<number[]>([]);
+
   const { data: products } = useQuery({
     queryKey: ["/api/products"],
     queryFn: async () => {
@@ -16,8 +20,8 @@ export default function CustomerProducts() {
 
   const { toast } = useToast();
 
-  const handleQuoteRequest = async (productId: number) => {
-    try {
+  const quoteRequestMutation = useMutation({
+    mutationFn: async (productId: number) => {
       const response = await fetch("/api/quote-requests", {
         method: "POST",
         headers: {
@@ -27,19 +31,25 @@ export default function CustomerProducts() {
       });
 
       if (!response.ok) throw new Error("Failed to submit quote request");
-
+      return response.json();
+    },
+    onSuccess: (_, productId) => {
+      setPendingRequests(prev => [...prev, productId]);
       toast({
         title: "Success",
         description: "Your quote request has been submitted successfully.",
       });
-    } catch (error) {
+      // Invalidate the quotes query if you have one
+      queryClient.invalidateQueries({ queryKey: ["/api/quote-requests"] });
+    },
+    onError: (error) => {
       toast({
         variant: "destructive",
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to submit quote request",
       });
-    }
-  };
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -60,10 +70,21 @@ export default function CustomerProducts() {
             <CardContent className="flex-grow">
               <Button 
                 className="w-full"
-                onClick={() => handleQuoteRequest(product.id)}
+                onClick={() => quoteRequestMutation.mutate(product.id)}
+                disabled={pendingRequests.includes(product.id)}
+                variant={pendingRequests.includes(product.id) ? "secondary" : "default"}
               >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Request Quote
+                {pendingRequests.includes(product.id) ? (
+                  <>
+                    <Clock className="w-4 h-4 mr-2" />
+                    Request Pending
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Request Quote
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
