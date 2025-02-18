@@ -18,18 +18,18 @@ export function useNotifications() {
     if (!user) return;
 
     try {
-      // Use the current window location to build the WebSocket URL
+      // Get the base URL from the current window location
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = window.location.host;
       const wsUrl = `${protocol}//${host}/ws`;
 
-      console.log('Connecting to WebSocket:', wsUrl);
+      console.log('Attempting to connect to WebSocket:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connection established');
         // Send authentication message
         socket.send(JSON.stringify({
           type: 'auth',
@@ -49,10 +49,9 @@ export function useNotifications() {
               duration: 5000,
               variant: notification.points > 0 ? "default" : "destructive",
             });
-          } else {
-            // Handle other notification types
+          } else if (notification.type === "ADMIN_NOTIFICATION") {
             toast({
-              title: "Notification",
+              title: "Admin Notification",
               description: notification.description,
               duration: 5000,
             });
