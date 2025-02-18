@@ -7,7 +7,7 @@ import { eq, desc, sql, inArray } from "drizzle-orm";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { logAdminAction, getAdminLogs } from "./admin-logger";
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail } from "./utils/emailService";
+import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
@@ -997,36 +997,6 @@ export function registerRoutes(app: Express): Server {
     }
   })
 
-
-  app.delete("/api/products/assignments/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-
-    try {
-      const [assignment] = await db
-        .delete(productAssignments)
-        .where(eq(productAssignments.id, parseInt(id)))
-        .returning();
-
-      if (!assignment) {
-        return res.status(404).json({ error: "Assignment not found" });
-      }
-
-      // Log the product unassignment
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "PRODUCT_UNASSIGNED",
-        targetUserId: assignment.userId,
-        details: `Unassigned product ID ${assignment.productId} from user ID ${assignment.userId}`,
-      });
-
-      res.json({ message: "Product assignment removed successfully" });
-    } catch (error) {
-      console.error('Error removing product assignment:', error);
-      res.status(500).json({ error: 'Failed to remove product assignment' });
-    }
-  });
-
   // Add after the existing product endpoints
   app.get("/api/products/customer", async (req, res) => {
     try {
@@ -1047,7 +1017,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add quote requests endpoints
+  // Update the quote requests endpoint to include email notifications
   app.post("/api/quote-requests", async (req, res) => {
     if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -1080,6 +1050,40 @@ export function registerRoutes(app: Express): Server {
           status: "PENDING",
         })
         .returning();
+
+      // Send email to customer
+      const customerEmailContent = formatQuoteRequestEmail(
+        req.user.firstName,
+        product.name
+      );
+      await sendEmail({
+        to: req.user.email,
+        subject: "Quote Request Confirmation",
+        text: customerEmailContent.text,
+        html: customerEmailContent.html
+      });
+
+      // Get admin users to notify
+      const adminUsers = await db
+        .select()
+        .from(users)
+        .where(eq(users.isAdmin, true));
+
+      // Send email to all admin users
+      for (const admin of adminUsers) {
+        const adminEmailContent = formatAdminQuoteRequestEmail(
+          `${req.user.firstName} ${req.user.lastName}`,
+          req.user.email,
+          product.name,
+          admin.firstName
+        );
+        await sendEmail({
+          to: admin.email,
+          subject: `New Quote Request - ${product.name}`,
+          text: adminEmailContent.text,
+          html: adminEmailContent.html
+        });
+      }
 
       // Log the admin action
       await logAdminAction({

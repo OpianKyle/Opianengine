@@ -163,3 +163,87 @@ export function formatRegistrationEmail(
 
   return { text, html };
 }
+
+// Add new email template for quote requests
+export function formatQuoteRequestEmail(
+  customerName: string,
+  productName: string
+): { text: string; html: string } {
+  const text = `
+    Dear ${customerName},
+
+    Thank you for submitting a quote request for ${productName}. Your request has been received and is being processed.
+
+    Our team will review your request and get back to you shortly with a detailed quote.
+
+    Product: ${productName}
+    Status: Under Review
+
+    If you have any questions in the meantime, please don't hesitate to contact us.
+
+    Best regards,
+    The OPIAN Rewards Team
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #43EB3E;">Quote Request Confirmation</h2>
+      <p>Dear ${customerName},</p>
+      <p>Thank you for submitting a quote request. Your request has been received and is being processed.</p>
+
+      <div style="background-color: #011d3d; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <p style="color: #ffffff; margin: 0;"><strong>Product:</strong> ${productName}</p>
+        <p style="color: #43EB3E; margin: 10px 0 0 0;"><strong>Status:</strong> Under Review</p>
+      </div>
+
+      <p>Our team will review your request and get back to you shortly with a detailed quote.</p>
+      <p>If you have any questions in the meantime, please don't hesitate to contact us.</p>
+      <br/>
+      <p>Best regards,<br/>The OPIAN Rewards Team</p>
+    </div>
+  `;
+
+  return { text, html };
+}
+
+export function formatAdminQuoteRequestEmail(
+  customerName: string,
+  customerEmail: string,
+  productName: string,
+  adminName: string
+): { text: string; html: string } {
+  const text = `
+    Hello ${adminName},
+
+    A new quote request has been submitted:
+
+    Customer: ${customerName}
+    Email: ${customerEmail}
+    Product: ${productName}
+
+    Please review this request and prepare a quote for the customer.
+
+    Best regards,
+    OPIAN Rewards System
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>New Quote Request</h2>
+      <p>Hello ${adminName},</p>
+      <p>A new quote request has been submitted.</p>
+
+      <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #0070f3;">
+        <p><strong>Customer:</strong> ${customerName}</p>
+        <p><strong>Email:</strong> ${customerEmail}</p>
+        <p><strong>Product:</strong> ${productName}</p>
+      </div>
+
+      <p>Please review this request and prepare a quote for the customer.</p>
+      <br/>
+      <p>Best regards,<br/>OPIAN Rewards System</p>
+    </div>
+  `;
+
+  return { text, html };
+}
