@@ -54,7 +54,7 @@ export const crypto = {
 export { crypto as authCrypto };
 
 export async function setupAuth(app: Express) {
-  // Set up session middleware first
+  // Set up session middleware first with more secure settings
   app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
@@ -63,10 +63,11 @@ export async function setupAuth(app: Express) {
       checkPeriod: 86400000 // 24h
     }),
     cookie: {
-      secure: false, // Set to false for development
+      secure: process.env.NODE_ENV === 'production', // Only use secure in production
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'lax'
+      sameSite: 'lax',
+      path: '/'
     },
     name: 'sid' // Custom session ID name
   }));
@@ -75,18 +76,22 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Serialize the entire user object except password
+  // Serialize user with better error handling
   passport.serializeUser((user: any, done) => {
-    console.log('Serializing user:', user.id);
-    const { password: _, ...safeUser } = user;
-    done(null, safeUser);
+    try {
+      console.log('Serializing user:', user.id);
+      const { password: _, ...safeUser } = user;
+      done(null, safeUser);
+    } catch (error) {
+      console.error('Serialization error:', error);
+      done(error);
+    }
   });
 
-  // Deserialize using the safe user object
-  passport.deserializeUser(async (user: any, done) => {
+  // Deserialize with improved error handling
+  passport.deserializeUser((user: any, done) => {
     try {
       console.log('Deserializing user:', user.id);
-      // Since we stored the safe user object, we can just return it
       done(null, user);
     } catch (error) {
       console.error('Deserialization error:', error);

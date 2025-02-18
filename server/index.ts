@@ -4,15 +4,19 @@ import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import fileUpload from 'express-fileupload';
 import { setupWebSocketServer } from './websocket';
+import { setupAuth } from './auth';
 
 const app = express();
 
-// Configure CORS with specific options
+// Configure CORS with more specific options
 app.use(cors({
-  origin: true, // Allow all origins in development
-  credentials: true, // Required for cookies
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL 
+    : ['http://localhost:5000', 'http://127.0.0.1:5000'],
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  exposedHeaders: ['Set-Cookie'],
 }));
 
 app.use(express.json());
@@ -26,6 +30,7 @@ app.use(fileUpload({
   },
 }));
 
+// Set up logging middleware with improved detail
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -41,6 +46,9 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (req.user) {
+        logLine += ` [User: ${(req.user as any).id}]`;
+      }
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
@@ -57,30 +65,39 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = registerRoutes(app);
+  try {
+    // Set up authentication before routes
+    await setupAuth(app);
 
-  // Set up WebSocket server
-  const wsServer = setupWebSocketServer(server);
+    // Register routes after auth setup
+    const server = registerRoutes(app);
 
-  // Make WebSocket server available to routes
-  app.set('wsServer', wsServer);
+    // Set up WebSocket server
+    const wsServer = setupWebSocketServer(server);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    console.error(`Error [${status}]:`, err);
+    // Make WebSocket server available to routes
+    app.set('wsServer', wsServer);
 
-    res.status(status).json({ message });
-  });
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      console.error(`Error [${status}]:`, err);
 
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+      res.status(status).json({ message });
+    });
+
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`Server running on port ${PORT} in ${app.get("env")} mode`);
+    });
+  } catch (error) {
+    console.error('Server initialization error:', error);
+    process.exit(1);
   }
-
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
 })();
