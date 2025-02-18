@@ -26,6 +26,7 @@ import CustomerRewards from "@/pages/customer/rewards";
 import CustomerLayout from "@/components/layout/customer-layout";
 import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
+import CustomerProducts from "@/pages/customer/products";
 
 function ProtectedRoute({ component: Component, admin = false, ...rest }: any) {
   const { user, isLoading } = useUser();
@@ -118,6 +119,11 @@ function Router() {
         <Route path="/profile">
           <CustomerLayout>
             <ProtectedRoute component={ProfilePage} />
+          </CustomerLayout>
+        </Route>
+        <Route path="/products">
+          <CustomerLayout>
+            <ProtectedRoute component={CustomerProducts} />
           </CustomerLayout>
         </Route>
 
