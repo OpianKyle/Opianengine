@@ -26,6 +26,7 @@ import CustomerRewards from "@/pages/customer/rewards";
 import CustomerLayout from "@/components/layout/customer-layout";
 import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
+import TestDashboard from "@/pages/test-dashboard";
 
 function ProtectedRoute({ component: Component, admin = false, ...rest }: any) {
   const { user, isLoading } = useUser();
@@ -60,6 +61,9 @@ function Router() {
         </Route>
         <Route path="/reset-password">
           <ResetPassword />
+        </Route>
+        <Route path="/test-dashboard">
+          <TestDashboard />
         </Route>
 
         {/* Admin Routes */}
