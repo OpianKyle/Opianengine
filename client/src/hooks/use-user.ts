@@ -21,29 +21,38 @@ export type User = z.infer<typeof userSchema>;
 export function useUser() {
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading, error } = useQuery({
     queryKey: ['/api/user'],
     queryFn: async () => {
       try {
+        console.log('Fetching user data...');
         const response = await fetch('/api/user', {
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
         });
 
         if (response.status === 401) {
+          console.log('User not authenticated');
           return null;
         }
 
         if (!response.ok) {
-          throw new Error('Failed to fetch user');
+          throw new Error(`Failed to fetch user: ${response.statusText}`);
         }
 
         const data = await response.json();
+        console.log('User data received:', data);
         return userSchema.parse(data);
       } catch (error) {
         console.error('Error fetching user:', error);
-        return null;
+        throw error;
       }
     },
+    retry: false,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 
   const loginMutation = useMutation({
@@ -52,6 +61,7 @@ export function useUser() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(credentials),
         credentials: 'include',
@@ -84,6 +94,7 @@ export function useUser() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(userData),
         credentials: 'include',
@@ -107,13 +118,16 @@ export function useUser() {
       const response = await fetch('/api/logout', {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
       });
 
       if (!response.ok) {
         throw new Error('Logout failed');
       }
 
-      // Instead of clearing everything, just clear user-related queries
+      // Clear all user-related queries
       queryClient.removeQueries({ queryKey: ['/api/user'] });
       queryClient.setQueryData(['/api/user'], null);
     },
@@ -122,6 +136,7 @@ export function useUser() {
   return {
     user,
     isLoading,
+    error,
     loginMutation,
     logoutMutation,
     registerMutation,

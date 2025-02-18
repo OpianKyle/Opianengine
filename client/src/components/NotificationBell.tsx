@@ -9,9 +9,14 @@ import {
 import { useNotifications } from "@/hooks/use-notifications";
 import { ScrollArea } from "./ui/scroll-area";
 import { format } from "date-fns";
+import { useUser } from "@/hooks/use-user";
 
 const NotificationBell = () => {
+  const { user } = useUser();
   const { notifications, unreadCount, markAsRead, isConnected } = useNotifications();
+
+  // Only render if user is authenticated
+  if (!user) return null;
 
   return (
     <DropdownMenu>
@@ -53,34 +58,37 @@ const NotificationBell = () => {
               No notifications
             </div>
           )}
-          {isConnected && notifications.map((notification) => (
-            <DropdownMenuItem
-              key={notification.id}
-              className={`px-4 py-2 cursor-pointer ${
-                !notification.read ? "bg-muted/50" : ""
-              }`}
-              onClick={() => markAsRead(notification.id)}
-            >
-              <div>
-                <div className="font-medium">
-                  {notification.type === "POINTS_ALLOCATION" ? (
-                    <span>
-                      {notification.points! > 0 ? "+" : ""}
-                      {notification.points} points
-                    </span>
-                  ) : (
-                    "New Notification"
-                  )}
+          {isConnected && notifications.map((notification) => {
+            console.log('Rendering notification:', notification); // Debug log
+            return (
+              <DropdownMenuItem
+                key={notification.id}
+                className={`px-4 py-2 cursor-pointer ${
+                  !notification.read ? "bg-muted/50" : ""
+                }`}
+                onClick={() => markAsRead(notification.id)}
+              >
+                <div>
+                  <div className="font-medium">
+                    {notification.type === "POINTS_ALLOCATION" ? (
+                      <span>
+                        {notification.points! > 0 ? "+" : ""}
+                        {notification.points} points
+                      </span>
+                    ) : (
+                      "New Notification"
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {notification.description}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {format(new Date(notification.timestamp), "MMM d, h:mm a")}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {notification.description}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {format(new Date(notification.timestamp), "MMM d, h:mm a")}
-                </p>
-              </div>
-            </DropdownMenuItem>
-          ))}
+              </DropdownMenuItem>
+            );
+          })}
         </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>

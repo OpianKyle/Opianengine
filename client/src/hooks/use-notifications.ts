@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUser } from "./use-user";
 import { useToast } from "./use-toast";
 
@@ -20,14 +20,16 @@ export function useNotifications() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  const connectWebSocket = useCallback(() => {
-    if (!user || socketRef.current?.readyState === WebSocket.OPEN) return;
+  const connectWebSocket = () => {
+    if (!user || socketRef.current?.readyState === WebSocket.OPEN) {
+      console.log('Skipping WebSocket connection - no user or already connected');
+      return;
+    }
 
     try {
-      // Get the correct WebSocket URL based on Replit's environment
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsHost = window.location.host || window.location.hostname;
-      const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+      // Get the correct WebSocket URL based on window.location
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
       console.log('Attempting WebSocket connection to:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
@@ -45,32 +47,34 @@ export function useNotifications() {
 
       socket.onmessage = (event) => {
         try {
-          const notification: PointsNotification = JSON.parse(event.data);
-          console.log('Received notification:', notification);
+          const data = JSON.parse(event.data);
+          console.log('Received WebSocket message:', data);
 
-          if (notification.type === 'auth_success') {
+          if (data.type === 'auth_success') {
             console.log('WebSocket authentication successful');
             return;
           }
 
-          setNotifications(prev => [
-            { ...notification, read: false, id: notification.id || Date.now().toString() },
-            ...prev
-          ]);
+          const notification: PointsNotification = {
+            ...data,
+            read: false,
+            id: data.id || Date.now().toString()
+          };
 
+          setNotifications(prev => [notification, ...prev]);
           setUnreadCount(count => count + 1);
 
-          if (notification.type === "POINTS_ALLOCATION" && notification.points !== undefined) {
+          if (data.type === "POINTS_ALLOCATION" && data.points !== undefined) {
             toast({
               title: "Points Update",
-              description: `${notification.points > 0 ? '+' : ''}${notification.points} points - ${notification.description}`,
+              description: `${data.points > 0 ? '+' : ''}${data.points} points - ${data.description}`,
               duration: 5000,
-              variant: notification.points > 0 ? "default" : "destructive",
+              variant: data.points > 0 ? "default" : "destructive",
             });
           } else {
             toast({
               title: "Notification",
-              description: notification.description,
+              description: data.description,
               duration: 5000,
             });
           }
@@ -112,7 +116,7 @@ export function useNotifications() {
         variant: "destructive",
       });
     }
-  }, [user, toast]);
+  };
 
   useEffect(() => {
     if (user) {
@@ -135,9 +139,9 @@ export function useNotifications() {
 
       setIsConnected(false);
     };
-  }, [user, connectWebSocket]);
+  }, [user]);
 
-  const markAsRead = useCallback((notificationId?: string) => {
+  const markAsRead = (notificationId?: string) => {
     if (notificationId) {
       setNotifications(prev => 
         prev.map(notif => 
@@ -150,7 +154,7 @@ export function useNotifications() {
       setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
       setUnreadCount(0);
     }
-  }, []);
+  };
 
   return {
     notifications,
