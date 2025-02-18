@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import ResetPassword from "@/pages/reset-password";
 import { useUser } from "@/hooks/use-user";
+import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
@@ -28,6 +29,7 @@ import ProfilePage from "@/pages/customer/profile";
 
 function ProtectedRoute({ component: Component, admin = false, ...rest }: any) {
   const { user, isLoading } = useUser();
+  useSessionTimeout(); // Add session timeout monitoring to protected routes
 
   if (isLoading) {
     return (
