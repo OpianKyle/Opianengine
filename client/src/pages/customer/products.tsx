@@ -12,8 +12,19 @@ export default function CustomerProducts() {
   const { data: products } = useQuery({
     queryKey: ["/api/products"],
     queryFn: async () => {
-      const response = await fetch("/api/products");
-      if (!response.ok) throw new Error("Failed to fetch products");
+      const response = await fetch("/api/products", {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        if (response.headers.get('content-type')?.includes('application/json')) {
+          const error = await response.json();
+          throw new Error(error.message || "Failed to fetch products");
+        }
+        throw new Error("Failed to fetch products");
+      }
       return response.json();
     },
   });
@@ -24,13 +35,21 @@ export default function CustomerProducts() {
     mutationFn: async (productId: number) => {
       const response = await fetch("/api/quote-requests", {
         method: "POST",
+        credentials: 'include',
         headers: {
           "Content-Type": "application/json",
+          'Accept': 'application/json'
         },
         body: JSON.stringify({ productId }),
       });
 
-      if (!response.ok) throw new Error("Failed to submit quote request");
+      if (!response.ok) {
+        if (response.headers.get('content-type')?.includes('application/json')) {
+          const error = await response.json();
+          throw new Error(error.message || "Failed to submit quote request");
+        }
+        throw new Error("Failed to submit quote request");
+      }
       return response.json();
     },
     onSuccess: (_, productId) => {
@@ -39,14 +58,13 @@ export default function CustomerProducts() {
         title: "Success",
         description: "Your quote request has been submitted successfully.",
       });
-      // Invalidate the quotes query if you have one
       queryClient.invalidateQueries({ queryKey: ["/api/quote-requests"] });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit quote request",
+        description: error.message,
       });
     },
   });

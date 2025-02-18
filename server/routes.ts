@@ -82,7 +82,7 @@ export function registerRoutes(app: Express): Server {
 
   // New endpoint for polling notifications
   app.get("/api/notifications/poll", async (req, res) => {
-    if (!req.user) return res.status(401).send("Unauthorized");
+    if (!req.user) return res.status(401).json({error: "Unauthorized"});
 
     const userNotifications = notificationsQueue.get(req.user.id) || [];
     // Clear notifications after sending
@@ -96,7 +96,7 @@ export function registerRoutes(app: Express): Server {
 
   // Add new endpoint to fetch admin logs
   app.get("/api/admin/logs", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     try {
       const logs = await db.query.adminLogs.findMany({
         orderBy: desc(adminLogs.createdAt),
@@ -123,13 +123,13 @@ export function registerRoutes(app: Express): Server {
       res.json(logs);
     } catch (error) {
       console.error('Error fetching admin logs:', error);
-      res.status(500).send('Failed to fetch admin logs');
+      res.status(500).json({ error: 'Failed to fetch admin logs' });
     }
   });
 
   // Update the points allocation endpoint to use WebSocket
   app.post("/api/admin/points", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { userId, points, description } = req.body;
 
     try {
@@ -243,13 +243,13 @@ export function registerRoutes(app: Express): Server {
       res.json({ message: "Points adjusted successfully" });
     } catch (error) {
       console.error('Error adjusting points:', error);
-      res.status(500).send('Failed to adjust points');
+      res.status(500).json({ error: 'Failed to adjust points' });
     }
   });
 
   // Admin Management Routes
   app.post("/api/admin/users/create", async (req, res) => {
-    if (!req.user?.isSuperAdmin) return res.status(403).send("Only super admins can create new admins");
+    if (!req.user?.isSuperAdmin) return res.status(403).json({error: "Only super admins can create new admins"});
     const { email, password, firstName, lastName, phoneNumber } = req.body;
 
     const [existingUser] = await db
@@ -259,7 +259,7 @@ export function registerRoutes(app: Express): Server {
       .limit(1);
 
     if (existingUser) {
-      return res.status(400).send("Email already exists");
+      return res.status(400).json({ error: "Email already exists" });
     }
 
     try {
@@ -290,12 +290,12 @@ export function registerRoutes(app: Express): Server {
       res.json(newUser);
     } catch (error) {
       console.error('Error creating admin user:', error);
-      res.status(500).send('Failed to create admin user');
+      res.status(500).json({ error: 'Failed to create admin user' });
     }
   });
 
   app.put("/api/admin/users/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
     const { email, firstName, lastName, phoneNumber, password } = req.body;
 
@@ -318,7 +318,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (!user) {
-        return res.status(404).send("User not found");
+        return res.status(404).json({ error: "User not found" });
       }
 
       // Log the user update
@@ -332,12 +332,12 @@ export function registerRoutes(app: Express): Server {
       res.json(user);
     } catch (error) {
       console.error('Error updating user:', error);
-      res.status(500).send('Failed to update user');
+      res.status(500).json({ error: 'Failed to update user' });
     }
   });
 
   app.post("/api/admin/users/:id/toggle-status", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
     const { enabled } = req.body;
 
@@ -349,7 +349,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (!user) {
-        return res.status(404).send("User not found");
+        return res.status(404).json({ error: "User not found" });
       }
 
       // Log the status change using a valid action type
@@ -363,17 +363,17 @@ export function registerRoutes(app: Express): Server {
       res.json(user);
     } catch (error) {
       console.error('Error toggling user status:', error);
-      res.status(500).send('Failed to toggle user status');
+      res.status(500).json({ error: 'Failed to toggle user status' });
     }
   });
 
   // Updated admin removal logic to handle foreign key constraints
   app.post("/api/admin/users/toggle-admin", async (req, res) => {
-    if (!req.user?.isSuperAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isSuperAdmin) return res.status(403).json({error: "Unauthorized"});
     const { userId, isAdmin } = req.body;
 
     if (userId === req.user.id) {
-      return res.status(400).send("Cannot change your own admin status");
+      return res.status(400).json({ error: "Cannot change your own admin status" });
     }
 
     const [targetUser] = await db
@@ -383,7 +383,7 @@ export function registerRoutes(app: Express): Server {
       .limit(1);
 
     if (targetUser?.isSuperAdmin) {
-      return res.status(400).send("Cannot modify super admin status");
+      return res.status(400).json({ error: "Cannot modify super admin status" });
     }
 
     try {
@@ -427,12 +427,12 @@ export function registerRoutes(app: Express): Server {
       }
     } catch (error) {
       console.error('Error modifying admin status:', error);
-      res.status(500).send('Failed to modify admin status');
+      res.status(500).json({ error: 'Failed to modify admin status' });
     }
   });
 
   app.get("/api/admin/users", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const allUsers = await db.query.users.findMany({
       where: eq(users.isAdmin, true),
       orderBy: desc(users.createdAt),
@@ -442,7 +442,7 @@ export function registerRoutes(app: Express): Server {
 
   // Add the customers endpoint right after the admin users endpoint
   app.get("/api/admin/customers", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const customers = await db.query.users.findMany({
       where: eq(users.isAdmin, false),
       orderBy: desc(users.createdAt),
@@ -470,7 +470,7 @@ export function registerRoutes(app: Express): Server {
 
   // Add customer deletion endpoint
   app.delete("/api/admin/customers/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
     const userId = parseInt(id);
 
@@ -490,12 +490,12 @@ export function registerRoutes(app: Express): Server {
         .limit(1);
 
       if (!customer) {
-        return res.status(404).send("Customer not found");
+        return res.status(404).json({ error: "Customer not found" });
       }
 
       // Prevent deletion of admin users through this endpoint
       if (customer.isAdmin) {
-        return res.status(403).send("Cannot delete admin users through this endpoint");
+        return res.status(403).json({ error: "Cannot delete admin users through this endpoint" });
       }
 
       // Begin transaction to handle the deletion and related records
@@ -543,14 +543,14 @@ export function registerRoutes(app: Express): Server {
       res.json({ message: "Customer deleted successfully" });
     } catch (error) {
       console.error('Error deleting customer:', error);
-      res.status(500).send('Failed to delete customer');
+      res.status(500).json({ error: 'Failed to delete customer' });
     }
   });
 
 
   // Export customers to CSV
   app.get("/api/admin/customers/export", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
 
     try {
       const customers = await db.query.users.findMany({
@@ -599,13 +599,13 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error('Error exporting customers:', error);
-      res.status(500).send('Failed to export customers');
+      res.status(500).json({ error: 'Failed to export customers' });
     }
   });
 
   // Import customers from CSV
   app.post("/api/admin/customers/import", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
 
     if (!req.files || !req.files.file) {
       return res.status(400).json({ error: "No file uploaded" });
@@ -705,12 +705,32 @@ export function registerRoutes(app: Express): Server {
       res.json(allProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
-      res.status(500).send('Failed to fetch products');
+      res.status(500).json({ error: 'Failed to fetch products' });
+    }
+  });
+
+  // Add after the existing product endpoints
+  app.get("/api/products/customer", async (req, res) => {
+    try {
+      // Only return enabled products for customers
+      const allProducts = await db.query.products.findMany({
+        where: eq(products.isEnabled, true),
+        columns: {
+          id: true,
+          name: true,
+          description: true,
+        },
+        orderBy: desc(products.createdAt),
+      });
+      res.json(allProducts);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      res.status(500).json({ error: 'Failed to fetch products' });
     }
   });
 
   app.post("/api/products", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
 
     try {
       const { name, description, activities } = req.body;
@@ -767,12 +787,12 @@ export function registerRoutes(app: Express): Server {
       res.json(completeProduct);
     } catch (error) {
       console.error('Error creating product:', error);
-      res.status(500).send('Failed to create product');
+      res.status(500).json({ error: 'Failed to create product' });
     }
   });
 
   app.put("/api/products/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
     const { name, description, activities } = req.body;
 
@@ -825,12 +845,12 @@ export function registerRoutes(app: Express): Server {
       res.json(completeProduct);
     } catch (error) {
       console.error('Error updating product:', error);
-      res.status(500).send('Failed to update product');
+      res.status(500).json({ error: 'Failed to update product' });
     }
   });
 
   app.post("/api/products/:id/toggle-status", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
     const { enabled } = req.body;
 
@@ -842,7 +862,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (!product) {
-        return res.status(404).send("Product not found");
+        return res.status(404).json({ error: "Product not found" });
       }
 
       // Log the status change
@@ -855,12 +875,12 @@ export function registerRoutes(app: Express): Server {
       res.json(product);
     } catch (error) {
       console.error('Error toggling product status:', error);
-      res.status(500).send('Failed to toggle product status');
+      res.status(500).json({ error: 'Failed to toggle product status' });
     }
   });
 
   app.delete("/api/products/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
 
     try {
@@ -870,7 +890,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (!product) {
-        return res.status(404).send("Product not found");
+        return res.status(404).json({ error: "Product not found" });
       }
 
       // Log the product deletion
@@ -883,12 +903,12 @@ export function registerRoutes(app: Express): Server {
       res.json({ message: "Product deleted successfully" });
     } catch (error) {
       console.error('Error deleting product:', error);
-      res.status(500).send('Failed to delete product');
+      res.status(500).json({ error: 'Failed to delete product' });
     }
   });
 
   app.post("/api/products/:id/assign", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
     const { userId } = req.body;
 
@@ -921,12 +941,12 @@ export function registerRoutes(app: Express): Server {
       res.json(assignment);
     } catch (error) {
       console.error('Error assigning product:', error);
-      res.status(500).send('Failed to assign product');
+      res.status(500).json({ error: 'Failed to assign product' });
     }
   });
 
   app.post("/api/products/:id/unassign", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
     const { userId } = req.body;
 
@@ -951,13 +971,12 @@ export function registerRoutes(app: Express): Server {
       res.json({ message: "Product unassigned successfully" });
     } catch (error) {
       console.error('Error unassigning product:', error);
-      res.status(500).send('Failed to unassign product');
+      res.status(500).json({ error: 'Failed to unassign product' });
     }
   });
 
-
   app.get("/api/products/assignments/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized")
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"})
     const { id } = req.params;
 
     try {
@@ -969,18 +988,18 @@ export function registerRoutes(app: Express): Server {
         }
       })
       if (!assignment) {
-        return res.status(404).send("Assignment not found")
+        return res.status(404).json({ error: "Assignment not found" });
       }
       res.json(assignment);
     } catch (error) {
       console.error("Error fetching assignment:", error);
-      res.status(500).send("Failed to fetch assignment");
+      res.status(500).json({ error: "Failed to fetch assignment" });
     }
   })
 
 
   app.delete("/api/products/assignments/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
 
     try {
@@ -990,7 +1009,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (!assignment) {
-        return res.status(404).send("Assignment not found");
+        return res.status(404).json({ error: "Assignment not found" });
       }
 
       // Log the product unassignment
@@ -1004,13 +1023,93 @@ export function registerRoutes(app: Express): Server {
       res.json({ message: "Product assignment removed successfully" });
     } catch (error) {
       console.error('Error removing product assignment:', error);
-      res.status(500).send('Failed to remove product assignment');
+      res.status(500).json({ error: 'Failed to remove product assignment' });
+    }
+  });
+
+  // Add after the existing product endpoints
+  app.get("/api/products/customer", async (req, res) => {
+    try {
+      // Only return enabled products for customers
+      const allProducts = await db.query.products.findMany({
+        where: eq(products.isEnabled, true),
+        columns: {
+          id: true,
+          name: true,
+          description: true,
+        },
+        orderBy: desc(products.createdAt),
+      });
+      res.json(allProducts);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      res.status(500).json({ error: 'Failed to fetch products' });
+    }
+  });
+
+  // Add quote requests endpoints
+  app.post("/api/quote-requests", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { productId } = req.body;
+
+    try {
+      // Verify the product exists and is enabled
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(
+          sql`${products.id} = ${productId} AND ${products.isEnabled} = true`
+        )
+        .limit(1);
+
+      if (!product) {
+        return res.status(404).json({ error: "Product not found or not available" });
+      }
+
+      // Create a transaction to track the quote request
+      const [transaction] = await db
+        .insert(transactions)
+        .values({
+          userId: req.user.id,
+          points: 0,
+          type: "QUOTE_REQUEST",
+          description: `Quote request for ${product.name}`,
+          status: "PENDING",
+        })
+        .returning();
+
+      // Log the admin action
+      await logAdminAction({
+        adminId: req.user.id,
+        actionType: "POINT_ADJUSTMENT",
+        targetUserId: req.user.id,
+        details: `Created quote request for product: ${product.name}`,
+      });
+
+      // Add notification
+      addNotification({
+        type: "QUOTE_REQUEST",
+        userId: req.user.id,
+        points: 0,
+        description: `Your quote request for ${product.name} has been submitted and is pending review.`,
+      });
+
+      res.json({
+        message: "Quote request submitted successfully",
+        transactionId: transaction.id,
+      });
+    } catch (error) {
+      console.error('Error submitting quote request:', error);
+      res.status(500).json({ error: 'Failed to submit quote request' });
     }
   });
 
   // Customer Routes
   app.get("/api/customer/points", async (req, res) => {
-    if (!req.user) return res.status(401).send("Unauthorized");
+    if (!req.user) return res.status(401).json({error: "Unauthorized"});
     const user = await db.query.users.findFirst({
       where: eq(users.id, req.user.id),
     });
@@ -1018,7 +1117,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/customer/transactions", async (req, res) => {
-    if (!req.user) return res.status(401).send("Unauthorized");
+    if (!req.user) return res.status(401).json({error: "Unauthorized"});
     const userTransactions = await db.query.transactions.findMany({
       where: eq(transactions.userId, req.user.id),
       orderBy: desc(transactions.createdAt),
@@ -1031,7 +1130,7 @@ export function registerRoutes(app: Express): Server {
 
   // Add the new customer referralendpoint
   app.get("/api/customer/referral", async (req, res) => {
-    if (!req.user) return res.status(401).send("Unauthorized");
+    if (!req.user) return res.status(401).json({error: "Unauthorized"});
 
     try {
       // Get the current user with their referral code
@@ -1042,7 +1141,7 @@ export function registerRoutes(app: Express): Server {
         .limit(1);
 
       if (!user) {
-        return res.status(404).send("User not found");
+        return res.status(404).json({ error: "User not found" });
       }
 
       // If user doesn't have a referral code, generate one
@@ -1074,13 +1173,13 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error('Error fetching referral info:', error);
-      res.status(500).send('Failed to fetch referral information');
+      res.status(500).json({ error: 'Failed to fetch referral information' });
     }
   });
 
   // Update the query in the /api/customer/referrals endpoint
   app.get("/api/customer/referrals", async (req, res) => {
-    if (!req.user) return res.status(401).send("Unauthorized");
+    if (!req.user) return res.status(401).json({error: "Unauthorized"});
 
     try {
       console.log("Fetching referral stats for user:", req.user.id);
@@ -1093,7 +1192,7 @@ export function registerRoutes(app: Express): Server {
         .limit(1);
 
       if (!currentUser) {
-        return res.status(404).send("User not found");
+        return res.status(404).json({ error: "User not found" });
       }
 
       // Get level 1 referrals (direct referrals)
@@ -1172,7 +1271,7 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error("Error fetching referral stats:", error);
-      res.status(500).send("Failed to fetch referral stats");
+      res.status(500).json({ error: "Failed to fetch referral stats" });
     }
   });
 
@@ -1185,7 +1284,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/rewards", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     try {
       const [reward] = await db.insert(rewards).values({
         ...req.body,
@@ -1202,12 +1301,12 @@ export function registerRoutes(app: Express): Server {
       res.json(reward);
     } catch (error) {
       console.error('Error creating reward:', error);
-      res.status(500).send('Failed to create reward');
+      res.status(500).json({ error: 'Failed to create reward' });
     }
   });
 
   app.put("/api/rewards/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
     const { name, description, pointsCost, imageUrl, available } = req.body;
 
@@ -1225,7 +1324,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (!reward) {
-        return res.status(404).send("Reward not found");
+        return res.status(404).json({ error: "Reward not found" });
       }
 
       // Log the reward update
@@ -1238,12 +1337,12 @@ export function registerRoutes(app: Express): Server {
       res.json(reward);
     } catch (error) {
       console.error('Error updating reward:', error);
-      res.status(500).send('Failed to update reward');
+      res.status(500).json({ error: 'Failed to update reward' });
     }
   });
 
   app.delete("/api/rewards/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
 
     try {
@@ -1254,7 +1353,7 @@ export function registerRoutes(app: Express): Server {
         .limit(1);
 
       if (!reward) {
-        return res.status(404).send("Reward not found");
+        return res.status(404).json({ error: "Reward not found" });
       }
 
       await db
@@ -1272,26 +1371,26 @@ export function registerRoutes(app: Express): Server {
       res.json({ message: "Reward deleted successfully" });
     } catch (error) {
       console.error('Error deleting reward:', error);
-      res.status(500).send('Failed to delete reward');
+      res.status(500).json({ error: 'Failed to delete reward' });
     }
   });
 
   app.post("/api/rewards/redeem", async (req, res) => {
-    if (!req.user) return res.status(401).send("Unauthorized");
+    if (!req.user) return res.status(401).json({error: "Unauthorized"});
     const { rewardId } = req.body;
 
     const reward = await db.query.rewards.findFirst({
       where: eq(rewards.id, rewardId),
     });
 
-    if (!reward) return res.status(404).send("Reward not found");
+    if (!reward) return res.status(404).json({ error: "Reward not found" });
 
     const user = await db.query.users.findFirst({
       where: eq(users.id, req.user.id),
     });
 
     if (!user || user.points < reward.pointsCost) {
-      return res.status(400).send("Insufficient points");
+      return res.status(400).json({ error: "Insufficient points" });
     }
 
     try {
@@ -1333,17 +1432,17 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error('Error processing reward redemption:', error);
-      res.status(500).send('Failed to process reward redemption');
+      res.status(500).json({ error: 'Failed to process reward redemption' });
     }
   });
 
   // Update the cash redemption route
   app.post("/api/rewards/redeem-cash", async (req, res) => {
-    if (!req.user) return res.status(401).send("Unauthorized");
+    if (!req.user) return res.status(401).json({error: "Unauthorized"});
     const { points } = req.body;
 
     if (!points || points <= 0) {
-      return res.status(400).send("Invalid points amount");
+      return res.status(400).json({ error: "Invalid points amount" });
     }
 
     try {
@@ -1352,7 +1451,7 @@ export function registerRoutes(app: Express): Server {
       });
 
       if (!user || user.points < points) {
-        return res.status(400).send("Insufficient points");
+        return res.status(400).json({ error: "Insufficient points" });
       }
 
       await db.transaction(async (tx) => {
@@ -1389,13 +1488,13 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error('Error processing cash redemption:', error);
-      res.status(500).send('Failed to process cash redemption');
+      res.status(500).json({ error: 'Failed to process cash redemption' });
     }
   });
 
   // Update the cash redemptions endpoint to properly filter and include user details
   app.get("/api/admin/cash-redemptions", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
 
     try {
       const cashRedemptions = await db.query.transactions.findMany({
@@ -1415,13 +1514,13 @@ export function registerRoutes(app: Express): Server {
       res.json(cashRedemptions);
     } catch (error) {
       console.error('Error fetching cash redemptions:', error);
-      res.status(500).send('Failed to fetch cash redemptions');
+      res.status(500).json({ error: 'Failed to fetch cash redemptions' });
     }
   });
 
   // Add endpoint to mark cash redemption as processed
   app.post("/api/admin/cash-redemptions/:id/process", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).send("Unauthorized");
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
 
     try {
@@ -1436,7 +1535,7 @@ export function registerRoutes(app: Express): Server {
         .returning();
 
       if (!transaction) {
-        return res.status(404).send("Transaction not found");
+        return res.status(404).json({ error: "Transaction not found" });
       }
 
       // Log the cash redemption processing
@@ -1450,7 +1549,7 @@ export function registerRoutes(app: Express): Server {
       res.json(transaction);
     } catch (error) {
       console.error('Error processing cash redemption:', error);
-      res.status(500).send('Failed to process cash redemption');
+      res.status(500).json({ error: 'Failed to process cash redemption' });
     }
   });
 
