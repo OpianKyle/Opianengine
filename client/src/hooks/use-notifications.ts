@@ -52,6 +52,22 @@ export function useNotifications() {
 
           if (data.type === 'auth_success') {
             console.log('WebSocket authentication successful');
+            toast({
+              title: "Connected",
+              description: "Successfully connected to notification service",
+              duration: 3000,
+            });
+            return;
+          }
+
+          if (data.type === 'error') {
+            console.error('WebSocket error message:', data.message);
+            toast({
+              title: "Error",
+              description: data.message,
+              variant: "destructive",
+              duration: 5000,
+            });
             return;
           }
 
@@ -95,6 +111,12 @@ export function useNotifications() {
       socket.onerror = (error) => {
         console.error('WebSocket error:', error);
         setIsConnected(false);
+        toast({
+          title: "Connection Error",
+          description: "Failed to connect to notification service",
+          variant: "destructive",
+          duration: 5000,
+        });
       };
 
       socket.onclose = (event) => {
@@ -115,6 +137,12 @@ export function useNotifications() {
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
       setIsConnected(false);
+      toast({
+        title: "Connection Error",
+        description: "Failed to establish connection to notification service",
+        variant: "destructive",
+        duration: 5000,
+      });
     }
   };
 

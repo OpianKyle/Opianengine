@@ -14,13 +14,18 @@ export function setupWebSocketServer(server: Server) {
     path: '/notifications-ws',
     // Ignore Vite HMR connections
     verifyClient: (info: any) => {
-      const protocol = info.req.headers['sec-websocket-protocol'];
-      return protocol !== 'vite-hmr';
+      console.log('Verifying WebSocket connection:', info.req.url);
+      // Explicitly check for notifications-ws path and reject all others
+      if (!info.req.url.startsWith('/notifications-ws')) {
+        console.log('Rejecting non-notifications WebSocket connection');
+        return false;
+      }
+      return true;
     }
   });
 
   wss.on('connection', (ws: WebSocket, req) => {
-    console.log('New WebSocket connection attempt');
+    console.log('New WebSocket connection attempt from:', req.url);
 
     // The user data will be set after authentication
     let userData: { userId: number; isAdmin: boolean; } | null = null;
@@ -84,6 +89,7 @@ export function setupWebSocketServer(server: Server) {
 
       Array.from(clients.entries()).forEach(([ws, client]) => {
         if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
+          console.log(`Sending notification to user ${userId}`);
           ws.send(JSON.stringify(enrichedNotification));
         }
       });
@@ -99,6 +105,7 @@ export function setupWebSocketServer(server: Server) {
 
       Array.from(clients.entries()).forEach(([ws, client]) => {
         if (client.isAdmin && ws.readyState === WebSocket.OPEN) {
+          console.log(`Sending notification to admin ${client.userId}`);
           ws.send(JSON.stringify(enrichedNotification));
         }
       });
