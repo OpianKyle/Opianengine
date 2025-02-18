@@ -54,7 +54,7 @@ export const crypto = {
 export { crypto as authCrypto };
 
 export async function setupAuth(app: Express) {
-  // Set up session middleware first
+  // Set up session middleware with secure configuration
   app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
@@ -63,7 +63,7 @@ export async function setupAuth(app: Express) {
       checkPeriod: 86400000 // 24h
     }),
     cookie: {
-      secure: false, // Set to false for development
+      secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: 'lax'
@@ -75,18 +75,37 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Serialize the entire user object except password
+  // Serialize only the user ID to keep the session light
   passport.serializeUser((user: any, done) => {
     console.log('Serializing user:', user.id);
-    const { password: _, ...safeUser } = user;
-    done(null, safeUser);
+    done(null, user.id);
   });
 
-  // Deserialize using the safe user object
-  passport.deserializeUser(async (user: any, done) => {
+  // Deserialize by fetching the full user object from the database
+  passport.deserializeUser(async (id: number, done) => {
     try {
-      console.log('Deserializing user:', user.id);
-      // Since we stored the safe user object, we can just return it
+      console.log('Deserializing user:', id);
+      const [user] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          phoneNumber: users.phoneNumber,
+          isAdmin: users.isAdmin,
+          isSuperAdmin: users.isSuperAdmin,
+          isEnabled: users.isEnabled,
+          points: users.points,
+          referral_code: users.referral_code,
+        })
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
+
+      if (!user) {
+        return done(null, false);
+      }
+
       done(null, user);
     } catch (error) {
       console.error('Deserialization error:', error);
@@ -132,6 +151,46 @@ export async function setupAuth(app: Express) {
     }
   ));
 
+  // Login endpoint
+  app.post("/api/login", (req, res, next) => {
+    try {
+      console.log('Login request received:', { email: req.body.email });
+
+      const result = loginSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: "Invalid input data", 
+          details: result.error.errors 
+        });
+      }
+
+      passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
+        if (err) {
+          console.error('Authentication error:', err);
+          return res.status(500).json({ error: "Authentication error" });
+        }
+
+        if (!user) {
+          return res.status(401).json({ error: info?.message || "Invalid email or password" });
+        }
+
+        req.login(user, (loginErr) => {
+          if (loginErr) {
+            console.error('Login error:', loginErr);
+            return res.status(500).json({ error: "Login failed" });
+          }
+
+          console.log('User logged in successfully:', user);
+          return res.json(user);
+        });
+      })(req, res, next);
+    } catch (error) {
+      console.error('Login route error:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Register endpoint
   app.post("/api/register", async (req, res) => {
     try {
       console.log('Registration attempt:', req.body);
@@ -231,6 +290,7 @@ export async function setupAuth(app: Express) {
         html
       });
 
+      // Log in the new user automatically
       const { password: _, ...safeUser } = newUser;
       req.login(safeUser, (err) => {
         if (err) {
@@ -245,44 +305,7 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
-    try {
-      console.log('Login request received:', { email: req.body.email });
-
-      const result = loginSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ 
-          error: "Invalid input data", 
-          details: result.error.errors 
-        });
-      }
-
-      passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
-        if (err) {
-          console.error('Authentication error:', err);
-          return res.status(500).json({ error: "Authentication error" });
-        }
-
-        if (!user) {
-          return res.status(401).json({ error: info?.message || "Invalid email or password" });
-        }
-
-        req.login(user, (loginErr) => {
-          if (loginErr) {
-            console.error('Login error:', loginErr);
-            return res.status(500).json({ error: "Login failed" });
-          }
-
-          console.log('User logged in successfully:', user);
-          return res.json(user);
-        });
-      })(req, res, next);
-    } catch (error) {
-      console.error('Login route error:', error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
+  // Logout endpoint
   app.post("/api/logout", (req, res) => {
     console.log('Logout request received');
     req.logout((err) => {
@@ -302,6 +325,7 @@ export async function setupAuth(app: Express) {
     });
   });
 
+  // User session check endpoint
   app.get("/api/user", (req, res) => {
     console.log('User session check:', req.isAuthenticated());
     console.log('Session ID:', req.sessionID);

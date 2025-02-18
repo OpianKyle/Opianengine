@@ -11,7 +11,11 @@ const clients = new Map<WebSocket, {
 export function setupWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ 
     server,
-    path: '/ws'
+    path: '/ws',
+    // Ignore Vite HMR connections
+    verifyClient: (info) => {
+      return info.req.headers['sec-websocket-protocol'] !== 'vite-hmr';
+    }
   });
 
   wss.on('connection', (ws: WebSocket, req) => {
@@ -58,27 +62,27 @@ export function setupWebSocketServer(server: Server) {
 
   return {
     broadcastToUser: (userId: number, notification: any) => {
-      for (const [ws, client] of clients.entries()) {
+      Array.from(clients.entries()).forEach(([ws, client]) => {
         if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(notification));
         }
-      }
+      });
     },
 
     broadcastToAdmins: (notification: any) => {
-      for (const [ws, client] of clients.entries()) {
+      Array.from(clients.entries()).forEach(([ws, client]) => {
         if (client.isAdmin && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(notification));
         }
-      }
+      });
     },
 
     broadcastToAll: (notification: any) => {
-      for (const [ws, _] of clients.entries()) {
+      Array.from(clients.entries()).forEach(([ws, _client]) => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(notification));
         }
-      }
+      });
     }
   };
 }

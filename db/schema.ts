@@ -80,7 +80,7 @@ export const transactionTypes = pgEnum("transaction_type", [
   "CASH_REDEMPTION",
   "WELCOME_BONUS",
   "REFERRAL_BONUS",
-  "QUOTE_REQUEST"  // Added new type
+  "QUOTE_REQUEST"
 ]);
 
 export const transactionStatus = pgEnum("transaction_status", ["PENDING", "PROCESSED"]);
@@ -144,6 +144,8 @@ export const userRelations = relations(users, ({ many, one }) => ({
   adminLogsCreated: many(adminLogs, { relationName: "adminLogsCreated" }),
   adminLogsTarget: many(adminLogs, { relationName: "adminLogsTarget" }),
   productAssignments: many(productAssignments),
+  quoteRequests: many(quoteRequests, { relationName: "userQuoteRequests" }),
+  completedQuoteRequests: many(quoteRequests, { relationName: "adminCompletedQuotes" }),
   referralStats: one(referralStats, {
     fields: [users.id],
     references: [referralStats.userId],
@@ -202,6 +204,36 @@ export const referralStatsRelations = relations(referralStats, ({ one }) => ({
   }),
 }));
 
+export const quoteRequestStatus = pgEnum("quote_request_status", ["PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED"]);
+
+export const quoteRequests = pgTable("quote_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  productId: integer("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
+  status: quoteRequestStatus("status").default("PENDING").notNull(),
+  notes: text("notes"),
+  completedAt: timestamp("completed_at"),
+  completedBy: integer("completed_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const quoteRequestRelations = relations(quoteRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [quoteRequests.userId],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [quoteRequests.productId],
+    references: [products.id],
+  }),
+  completedByUser: one(users, {
+    fields: [quoteRequests.completedBy],
+    references: [users.id],
+  }),
+}));
+
+
 export const insertProductSchema = createInsertSchema(products);
 export const selectProductSchema = createSelectSchema(products);
 export const insertProductActivitySchema = createInsertSchema(product_activities);
@@ -218,6 +250,8 @@ export const insertProductAssignmentSchema = createInsertSchema(productAssignmen
 export const selectProductAssignmentSchema = createSelectSchema(productAssignments);
 export const insertReferralStatsSchema = createInsertSchema(referralStats);
 export const selectReferralStatsSchema = createSelectSchema(referralStats);
+export const insertQuoteRequestSchema = createInsertSchema(quoteRequests);
+export const selectQuoteRequestSchema = createSelectSchema(quoteRequests);
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
@@ -235,3 +269,5 @@ export type ProductAssignment = typeof productAssignments.$inferSelect;
 export type InsertProductAssignment = typeof productAssignments.$inferInsert;
 export type ReferralStats = typeof referralStats.$inferSelect;
 export type InsertReferralStats = typeof referralStats.$inferInsert;
+export type QuoteRequest = typeof quoteRequests.$inferSelect;
+export type InsertQuoteRequest = typeof quoteRequests.$inferInsert;

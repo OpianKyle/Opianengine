@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import ResetPassword from "@/pages/reset-password";
 import { useUser } from "@/hooks/use-user";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
@@ -19,6 +20,7 @@ import ManageUsers from "@/pages/admin/manage-users";
 import AdminLogs from "@/pages/admin/logs";
 import AdminProducts from "@/pages/admin/products";
 import CashRedemptions from "@/pages/admin/cash-redemptions";
+import AdminQuoteRequests from "@/pages/admin/quote-requests";
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -30,7 +32,8 @@ import CustomerProducts from "@/pages/customer/products";
 
 function ProtectedRoute({ component: Component, admin = false, ...rest }: any) {
   const { user, isLoading } = useUser();
-  useSessionTimeout(); // Add session timeout monitoring to protected routes
+  useSessionTimeout();
+  useWebSocket(); // Initialize WebSocket connection for authenticated routes
 
   if (isLoading) {
     return (
@@ -97,6 +100,11 @@ function Router() {
         <Route path="/admin/logs">
           <AdminLayout>
             <ProtectedRoute component={AdminLogs} admin />
+          </AdminLayout>
+        </Route>
+        <Route path="/admin/quote-requests">
+          <AdminLayout>
+            <ProtectedRoute component={AdminQuoteRequests} admin />
           </AdminLayout>
         </Route>
 
