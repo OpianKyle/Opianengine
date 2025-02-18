@@ -9,16 +9,13 @@ const clients = new Map<WebSocket, {
 }>();
 
 export function setupWebSocketServer(server: Server) {
-  console.log('Setting up WebSocket server...');
-
   const wss = new WebSocketServer({ 
     server,
-    path: '/ws',
-    clientTracking: true
+    path: '/ws'
   });
 
   wss.on('connection', (ws: WebSocket, req) => {
-    console.log('New WebSocket connection attempt from:', req.socket.remoteAddress);
+    console.log('New WebSocket connection attempt');
 
     // The user data will be set after authentication
     let userData: { userId: number; isAdmin: boolean; } | null = null;
@@ -26,7 +23,6 @@ export function setupWebSocketServer(server: Server) {
     ws.on('message', async (message: string) => {
       try {
         const data = JSON.parse(message.toString());
-        console.log('Received message:', data);
 
         // Handle authentication message
         if (data.type === 'auth') {
@@ -52,10 +48,6 @@ export function setupWebSocketServer(server: Server) {
       }
     });
 
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
-    });
-
     ws.on('close', () => {
       if (userData) {
         clients.delete(ws);
@@ -64,16 +56,8 @@ export function setupWebSocketServer(server: Server) {
     });
   });
 
-  // Log any server-level errors
-  wss.on('error', (error) => {
-    console.error('WebSocket server error:', error);
-  });
-
-  console.log('WebSocket server setup complete');
-
   return {
     broadcastToUser: (userId: number, notification: any) => {
-      console.log(`Broadcasting to user ${userId}:`, notification);
       for (const [ws, client] of clients.entries()) {
         if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(notification));
@@ -82,7 +66,6 @@ export function setupWebSocketServer(server: Server) {
     },
 
     broadcastToAdmins: (notification: any) => {
-      console.log('Broadcasting to admins:', notification);
       for (const [ws, client] of clients.entries()) {
         if (client.isAdmin && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(notification));
@@ -91,7 +74,6 @@ export function setupWebSocketServer(server: Server) {
     },
 
     broadcastToAll: (notification: any) => {
-      console.log('Broadcasting to all clients:', notification);
       for (const [ws, _] of clients.entries()) {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(notification));
