@@ -14,7 +14,8 @@ export function setupWebSocketServer(server: Server) {
     path: '/ws',
     // Ignore Vite HMR connections
     verifyClient: (info: any) => {
-      return info.req.headers['sec-websocket-protocol'] !== 'vite-hmr';
+      const protocol = info.req.headers['sec-websocket-protocol'];
+      return protocol !== 'vite-hmr';
     }
   });
 
@@ -27,6 +28,7 @@ export function setupWebSocketServer(server: Server) {
     ws.on('message', async (message: string) => {
       try {
         const data = JSON.parse(message.toString());
+        console.log('Received WebSocket message:', data);
 
         // Handle authentication message
         if (data.type === 'auth') {
@@ -60,6 +62,13 @@ export function setupWebSocketServer(server: Server) {
       if (userData) {
         clients.delete(ws);
         console.log(`Client disconnected: User ${userData.userId}`);
+      }
+    });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket connection error:', error);
+      if (userData) {
+        clients.delete(ws);
       }
     });
   });
