@@ -2,7 +2,7 @@ import React from "react";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Home, Gift, Users, User, Menu, X } from "lucide-react";
+import { Home, Gift, Users, User, Menu, X, ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const handleLogout = async () => {
     try {
       await logoutMutation.mutateAsync();
-      // Change redirect from /auth to /
       window.location.href = '/';
     } catch (error) {
       console.error('Logout failed:', error);
@@ -23,6 +22,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   const menuItems = [
     { label: "Dashboard", href: "/dashboard", icon: <Home className="h-4 w-4 mr-2" /> },
+    { label: "Products", href: "/products", icon: <ShoppingBag className="h-4 w-4 mr-2" /> },
     { label: "Rewards", href: "/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Referrals", href: "/referrals", icon: <Users className="h-4 w-4 mr-2" /> },
     { label: "Profile", href: "/profile", icon: <User className="h-4 w-4 mr-2" /> },
