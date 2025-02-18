@@ -102,7 +102,6 @@ export const adminActionTypes = pgEnum("admin_action_type", [
   "POINT_ADJUSTMENT",
   "ADMIN_CREATED",
   "ADMIN_REMOVED",
-  "ADMIN_UPDATED",
   "ADMIN_ENABLED",
   "ADMIN_DISABLED",
   "USER_ENABLED",
@@ -115,7 +114,10 @@ export const adminActionTypes = pgEnum("admin_action_type", [
   "PRODUCT_UPDATED",
   "PRODUCT_DELETED",
   "PRODUCT_ASSIGNED",
-  "PRODUCT_UNASSIGNED"
+  "PRODUCT_UNASSIGNED",
+  "QUOTE_REQUEST_UPDATED",
+  "QUOTE_REQUEST_COMPLETED",
+  "QUOTE_REQUEST_REJECTED"
 ]);
 
 export const adminLogs = pgTable("admin_logs", {

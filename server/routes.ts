@@ -979,7 +979,7 @@ export function registerRoutes(app: Express): Server {
 
       // Send email to customer
       const customerEmailContent = formatQuoteRequestEmail(
-        req.user.firstName,
+        req.user.firstName || 'Customer',
         product.name
       );
       await sendEmail({
@@ -995,14 +995,15 @@ export function registerRoutes(app: Express): Server {
         .from(users)
         .where(eq(users.isAdmin, true));
 
-      // Send email to all admin users
+      // Send email toall admin users
       for(const admin of adminUsers) {
         const adminEmailContent = formatAdminQuoteRequestEmail(
-          `req.user.firstName} ${req.user.lastName}`,
+          `${req.user.firstName || 'Customer'} ${req.user.lastName || ''}`,
           req.user.email,
           product.name,
-          admin.firstName
+          admin.firstName || 'Admin'
         );
+
         await sendEmail({
           to: admin.email,
           subject: `New Quote Request - ${product.name}`,
@@ -1054,6 +1055,84 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error fetching quote requests:', error);
       res.status(500).json({ error: 'Failed to fetch quote requests' });
+    }
+  });
+
+  // Update quote request status (admin only)
+  app.put("/api/quote-requests/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+
+    const { id } = req.params;
+    const { status, notes } = req.body;
+
+    try {
+      const [quoteRequest] = await db
+        .select()
+        .from(quoteRequests)
+        .where(eq(quoteRequests.id, parseInt(id)))
+        .limit(1);
+
+      if (!quoteRequest) {
+        return res.status(404).json({ error: "Quote request not found" });
+      }
+
+      const updates: any = {
+        status,
+        notes,
+        updatedAt: new Date(),
+      };
+
+      if (status === "COMPLETED" || status === "REJECTED") {
+        updates.completedAt = new Date();
+        updates.completedBy = req.user.id;
+      }
+
+      const [updatedRequest] = await db
+        .update(quoteRequests)
+        .set(updates)
+        .where(eq(quoteRequests.id, parseInt(id)))
+        .returning();
+
+      // Log the status update with correct action type
+      await logAdminAction({
+        adminId: req.user.id,
+        actionType: status === "COMPLETED" ? "QUOTE_REQUEST_COMPLETED" : 
+                   status === "REJECTED" ? "QUOTE_REQUEST_REJECTED" : 
+                   "QUOTE_REQUEST_UPDATED",
+        targetUserId: quoteRequest.userId,
+        details: `Updated quote request status to ${status}`,
+      });
+
+      // Get the complete request with relations
+      const completeRequest = await db.query.quoteRequests.findFirst({
+        where: eq(quoteRequests.id, parseInt(id)),
+        with: {
+          user: {
+            columns: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          product: {
+            columns: {
+              name: true,
+              description: true
+            }
+          },
+          completedByUser: {
+            columns: {
+              firstName: true,
+              lastName: true,
+            }
+          }
+        }
+      });
+
+      res.json(completeRequest);
+    } catch (error) {
+      console.error('Error updating quote request:', error);
+      res.status(500).json({ error: 'Failed to update quote request' });
     }
   });
 
