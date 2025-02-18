@@ -26,7 +26,11 @@ export function useUser() {
     queryFn: async () => {
       try {
         const response = await fetch('/api/user', {
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }
         });
 
         if (response.status === 401) {
@@ -44,6 +48,8 @@ export function useUser() {
         return null;
       }
     },
+    staleTime: 0,
+    retry: false
   });
 
   const loginMutation = useMutation({
@@ -51,6 +57,7 @@ export function useUser() {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(credentials),
@@ -79,10 +86,12 @@ export function useUser() {
       phoneNumber: string;
       isAdmin?: boolean;
       isSuperAdmin?: boolean;
+      referralCode?: string;
     }) => {
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(userData),
@@ -107,13 +116,16 @@ export function useUser() {
       const response = await fetch('/api/logout', {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
       });
 
       if (!response.ok) {
         throw new Error('Logout failed');
       }
 
-      // Instead of clearing everything, just clear user-related queries
       queryClient.removeQueries({ queryKey: ['/api/user'] });
       queryClient.setQueryData(['/api/user'], null);
     },

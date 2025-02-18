@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth, authCrypto } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 import { db } from "@db";
 import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, referralStats } from "@db/schema";
 import { eq, desc, sql, inArray } from "drizzle-orm";
@@ -263,7 +263,7 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      const hashedPassword = await authCrypto.hashPassword(password);
+      const hashedPassword = await hashPassword(password);
       const [newUser] = await db
         .insert(users)
         .values({
@@ -308,7 +308,7 @@ export function registerRoutes(app: Express): Server {
       };
 
       if (password) {
-        updates.password = await authCrypto.hashPassword(password);
+        updates.password = await hashPassword(password);
       }
 
       const [user] = await db
@@ -629,12 +629,12 @@ export function registerRoutes(app: Express): Server {
       const results = {
         success: 0,
         failed: 0,
-        errors: []
+        errors: [] as string[]
       };
 
-      for (const record of records) {
+      for (const record of records as any[]) {
         try {
-          const hashedPassword = await authCrypto.hashPassword('ChangeMe123!'); // Use authCrypto instead of crypto
+          const hashedPassword = await hashPassword('ChangeMe123!');
 
           // Check if user already exists
           const [existingUser] = await db
@@ -665,7 +665,7 @@ export function registerRoutes(app: Express): Server {
           results.success++;
         } catch (error) {
           results.failed++;
-          results.errors.push(`Failed to import user ${record.email}: ${error.message}`);
+          results.errors.push(`Failed to import user ${record.email}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 
@@ -681,7 +681,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error importing customers:', error);
       res.status(500).json({
         error: 'Failed to import customers',
-        details: error.message
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
@@ -1010,7 +1010,7 @@ export function registerRoutes(app: Express): Server {
 
   // Customer Routes
   app.get("/api/customer/points", async (req, res) => {
-    if (!req.user) return res.status(401).send("Unauthorized");
+    if(!req.user) return res.status(401).send("Unauthorized");
     const user = await db.query.users.findFirst({
       where: eq(users.id, req.user.id),
     });
@@ -1544,7 +1544,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Hash the new password
-      const hashedPassword = await authCrypto.hashPassword(newPassword);
+      const hashedPassword = await hashPassword(newPassword);
 
       // Update user's password and clear reset token
       await db

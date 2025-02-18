@@ -11,7 +11,11 @@ const clients = new Map<WebSocket, {
 export function setupWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ 
     server,
-    path: '/ws'
+    path: '/ws',
+    verifyClient: (info, done) => {
+      // Allow the connection, authentication will be handled in the connection event
+      done(true);
+    }
   });
 
   wss.on('connection', (ws: WebSocket, req) => {
@@ -48,16 +52,32 @@ export function setupWebSocketServer(server: Server) {
       }
     });
 
+    // Set a ping interval to keep the connection alive
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping();
+      }
+    }, 30000);
+
     ws.on('close', () => {
       if (userData) {
         clients.delete(ws);
         console.log(`Client disconnected: User ${userData.userId}`);
+      }
+      clearInterval(pingInterval);
+    });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      if (userData) {
+        clients.delete(ws);
       }
     });
   });
 
   return {
     broadcastToUser: (userId: number, notification: any) => {
+      console.log(`Attempting to broadcast to user ${userId}:`, notification);
       for (const [ws, client] of clients.entries()) {
         if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(notification));
@@ -66,6 +86,7 @@ export function setupWebSocketServer(server: Server) {
     },
 
     broadcastToAdmins: (notification: any) => {
+      console.log('Broadcasting to admins:', notification);
       for (const [ws, client] of clients.entries()) {
         if (client.isAdmin && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(notification));
@@ -74,6 +95,7 @@ export function setupWebSocketServer(server: Server) {
     },
 
     broadcastToAll: (notification: any) => {
+      console.log('Broadcasting to all clients:', notification);
       for (const [ws, _] of clients.entries()) {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(notification));

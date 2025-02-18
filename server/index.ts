@@ -8,15 +8,10 @@ import { setupAuth } from './auth';
 
 const app = express();
 
-// Configure CORS with more specific options
+// Basic CORS setup
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : ['http://localhost:5000', 'http://127.0.0.1:5000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-  exposedHeaders: ['Set-Cookie'],
+  origin: 'http://localhost:5000',
+  credentials: true
 }));
 
 app.use(express.json());
@@ -30,43 +25,9 @@ app.use(fileUpload({
   },
 }));
 
-// Set up logging middleware with improved detail
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (req.user) {
-        logLine += ` [User: ${(req.user as any).id}]`;
-      }
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
-});
-
 (async () => {
   try {
-    // Set up authentication before routes
+    // Set up authentication first
     await setupAuth(app);
 
     // Register routes after auth setup
@@ -74,16 +35,12 @@ app.use((req, res, next) => {
 
     // Set up WebSocket server
     const wsServer = setupWebSocketServer(server);
-
-    // Make WebSocket server available to routes
     app.set('wsServer', wsServer);
 
+    // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      console.error(`Error [${status}]:`, err);
-
-      res.status(status).json({ message });
+      console.error('Error:', err);
+      res.status(500).json({ error: "Internal server error" });
     });
 
     if (app.get("env") === "development") {
