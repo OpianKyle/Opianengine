@@ -126,9 +126,18 @@ export default function CustomerDashboard() {
   const randValue = (pointsToRedeem * 0.015).toFixed(2);
   const canRedeem = pointsToRedeem > 0 && pointsToRedeem <= (user?.points || 0);
 
+  // Get current time of day
+  const currentDate = new Date();
+  const timeOfDay = currentDate.getHours() < 12 ? 'morning' : currentDate.getHours() < 17 ? 'afternoon' : 'evening';
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Your Dashboard</h1>
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold text-muted-foreground">
+          Welcome back, {user ? `${user.firstName} ${user.lastName}` : 'Guest'}
+        </h2>
+        <h1 className="text-3xl font-bold text-[#1b75bc]">Your Dashboard</h1>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

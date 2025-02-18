@@ -72,9 +72,18 @@ export default function AdminDashboard() {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
+  // Get current date
+  const currentDate = new Date();
+  const timeOfDay = currentDate.getHours() < 12 ? 'morning' : currentDate.getHours() < 17 ? 'afternoon' : 'evening';
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold text-muted-foreground">
+          Good {timeOfDay},
+        </h2>
+        <h1 className="text-3xl font-bold text-[#1b75bc]">Analytics Dashboard</h1>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (

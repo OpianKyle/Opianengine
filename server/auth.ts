@@ -62,9 +62,9 @@ export async function setupAuth(app: Express) {
       checkPeriod: 86400000 // 24h
     }),
     cookie: {
-      secure: false,
+      secure: process.env.NODE_ENV === 'production', // Only use secure in production
       httpOnly: true,
-      maxAge: 5 * 60 * 1000, // 5 minutes
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: 'lax'
     }
   }));
