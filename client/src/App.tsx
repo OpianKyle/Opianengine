@@ -4,6 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
+import Login from "@/pages/login";
+import Register from "@/pages/register";
 import ResetPassword from "@/pages/reset-password";
 import { useUser } from "@/hooks/use-user";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
@@ -59,6 +61,12 @@ function Router() {
         {/* Public Routes */}
         <Route path="/">
           <Home />
+        </Route>
+        <Route path="/login">
+          <Login />
+        </Route>
+        <Route path="/register">
+          <Register />
         </Route>
         <Route path="/reset-password">
           <ResetPassword />
