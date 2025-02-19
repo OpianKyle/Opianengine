@@ -328,6 +328,7 @@ export async function setupAuth(app: Express) {
       const hashedPassword = await crypto.hashPassword(password);
 
       const newUser = await db.transaction(async (tx) => {
+        // First create the new user
         const [user] = await tx
           .insert(users)
           .values({
@@ -339,21 +340,23 @@ export async function setupAuth(app: Express) {
             isAdmin: false,
             isSuperAdmin: false,
             isEnabled: true,
-            points: 2000,
+            points: referralCode ? 2000 : 1000, // More points if referred
             referral_code: newReferralCode,
             referred_by: referralCode || null,
           })
           .returning();
 
+        // Add welcome bonus transaction
         await tx
           .insert(transactions)
           .values({
             userId: user.id,
-            points: 2000,
+            points: referralCode ? 2000 : 1000,
             type: "WELCOME_BONUS",
             description: "Welcome bonus for new registration",
           });
 
+        // If user was referred, update referrer's points
         if (referrerUser) {
           await tx
             .update(users)
@@ -431,7 +434,7 @@ const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
-  referralCode: z.string().optional(),
+  referralCode: z.string().optional().nullable(),
 });
 
 export function generateToken(user: any) {

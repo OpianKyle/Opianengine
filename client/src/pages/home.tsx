@@ -8,6 +8,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+interface RegisterData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  referralCode?: string | null;
+}
+
 export default function HomePage() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -103,7 +112,7 @@ export default function HomePage() {
         firstName: regFirstName,
         lastName: regLastName,
         phoneNumber: regPhone,
-        referralCode: referralCode
+        ...(referralCode ? { referralCode } : {})
       });
 
       toast({
