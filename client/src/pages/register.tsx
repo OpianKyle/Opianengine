@@ -355,7 +355,7 @@ export default function RegisterPage() {
                     <Carousel className="w-full">
                       <CarouselContent>
                         {packages.map((pkg) => (
-                          <CarouselItem key={pkg.id} className="md:basis-1/2 lg:basis-1/3">
+                          <CarouselItem key={pkg.id} className="md:basis-1/3 lg:basis-1/4">
                             <Card
                               className={`cursor-pointer transition-all hover:border-primary h-full ${
                                 formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
