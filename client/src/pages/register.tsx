@@ -8,6 +8,13 @@ import { useUser } from "@/hooks/use-user";
 import { Link } from "wouter";
 import SignatureCanvas from "react-signature-canvas";
 import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -341,39 +348,46 @@ export default function RegisterPage() {
                   />
                 </div>
 
-                {/* Package Selection */}
+                {/* Package Selection with Carousel */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Select Your Package</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {packages.map((pkg) => (
-                      <Card
-                        key={pkg.id}
-                        className={`cursor-pointer transition-all hover:border-primary ${
-                          formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
-                        }`}
-                        onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
-                      >
-                        <CardHeader>
-                          <CardTitle className="flex justify-between items-center">
-                            {pkg.name}
-                            {formData.selectedPackage === pkg.id && (
-                              <Check className="h-5 w-5 text-primary" />
-                            )}
-                          </CardTitle>
-                          <CardDescription>R{pkg.price}/month</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <ul className="space-y-2">
-                            {pkg.perks.map((perk, index) => (
-                              <li key={index} className="flex items-center">
-                                <Badge variant="outline" className="mr-2">✓</Badge>
-                                {perk}
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    ))}
+                  <div className="relative">
+                    <Carousel className="w-full">
+                      <CarouselContent>
+                        {packages.map((pkg) => (
+                          <CarouselItem key={pkg.id} className="md:basis-1/2 lg:basis-1/3">
+                            <Card
+                              className={`cursor-pointer transition-all hover:border-primary h-full ${
+                                formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
+                              }`}
+                              onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
+                            >
+                              <CardHeader>
+                                <CardTitle className="flex justify-between items-center">
+                                  {pkg.name}
+                                  {formData.selectedPackage === pkg.id && (
+                                    <Check className="h-5 w-5 text-primary" />
+                                  )}
+                                </CardTitle>
+                                <CardDescription>R{pkg.price}/month</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                <ul className="space-y-2">
+                                  {pkg.perks.map((perk, index) => (
+                                    <li key={index} className="flex items-center">
+                                      <Badge variant="outline" className="mr-2">✓</Badge>
+                                      {perk}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </CardContent>
+                            </Card>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <CarouselPrevious className="absolute -left-4 md:-left-6" />
+                      <CarouselNext className="absolute -right-4 md:-right-6" />
+                    </Carousel>
                   </div>
                 </div>
 
