@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
 import { Link } from "wouter";
 import SignatureCanvas from "react-signature-canvas";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -179,9 +179,9 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName || 
-        !formData.idNumber || !formData.dateOfBirth || !formData.gender || !formData.language || 
-        !formData.mobileNumber || !formData.selectedPackage || !formData.accountHolderName || 
+    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName ||
+        !formData.idNumber || !formData.dateOfBirth || !formData.gender || !formData.language ||
+        !formData.mobileNumber || !formData.selectedPackage || !formData.accountHolderName ||
         !formData.bankName || !formData.branchCode || !formData.accountNumber || !formData.accountType) {
       setError("Please fill in all required fields");
       return;
@@ -274,7 +274,7 @@ export default function RegisterPage() {
                       id="isSouthAfrican"
                       name="isSouthAfrican"
                       checked={formData.isSouthAfrican}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         setFormData(prev => ({ ...prev, isSouthAfrican: checked as boolean }))
                       }
                     />
@@ -346,7 +346,7 @@ export default function RegisterPage() {
                   <h3 className="text-lg font-semibold">Select Your Package</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                     {packages.map((pkg) => (
-                      <Card 
+                      <Card
                         key={pkg.id}
                         className={`cursor-pointer transition-all hover:border-primary ${
                           formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
@@ -480,8 +480,8 @@ export default function RegisterPage() {
           </Card>
 
           {/* Information Section - Right Column */}
-          <div className="space-y-6">
-            <Card>
+          <div className="hidden lg:block space-y-6 sticky top-8 self-start">
+            <Card className="h-full">
               <CardHeader>
                 <CardTitle>Program Benefits</CardTitle>
                 <CardDescription>
@@ -504,7 +504,7 @@ export default function RegisterPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                  If you have any questions about our packages or the registration process, 
+                  If you have any questions about our packages or the registration process,
                   our support team is here to help.
                 </p>
                 <p className="text-sm font-semibold">Contact us:</p>
