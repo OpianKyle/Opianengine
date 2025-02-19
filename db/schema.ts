@@ -36,6 +36,23 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   phoneNumber: text("phone_number").notNull(),
+  // New fields for enhanced registration
+  isSouthAfrican: boolean("is_south_african").default(false).notNull(),
+  idNumber: text("id_number").notNull(),
+  dateOfBirth: timestamp("date_of_birth").notNull(),
+  gender: text("gender").notNull(),
+  language: text("language").notNull(),
+  // Package and payment details
+  selectedPackage: integer("selected_package").notNull(),
+  // Banking details
+  accountHolderName: text("account_holder_name").notNull(),
+  bankName: text("bank_name").notNull(),
+  branchCode: text("branch_code").notNull(),
+  accountNumber: text("account_number").notNull(),
+  accountType: text("account_type").notNull(),
+  // Digital signature
+  signature: text("signature").notNull(),
+  // Existing fields
   isAdmin: boolean("is_admin").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
   isEnabled: boolean("is_enabled").default(true).notNull(),

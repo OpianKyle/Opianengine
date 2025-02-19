@@ -6,13 +6,63 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
 import { Link } from "wouter";
+import SignatureCanvas from "react-signature-canvas";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+const packages = [
+  {
+    id: 1,
+    name: "Basic",
+    price: 99,
+    perks: ["10% Cashback", "Basic Support", "Monthly Newsletter"]
+  },
+  {
+    id: 2,
+    name: "Standard",
+    price: 199,
+    perks: ["15% Cashback", "Priority Support", "Quarterly Rewards", "Exclusive Events"]
+  },
+  {
+    id: 3,
+    name: "Premium",
+    price: 299,
+    perks: ["20% Cashback", "24/7 VIP Support", "Monthly Rewards", "VIP Events", "Travel Insurance"]
+  }
+];
+
+const languages = ["English", "Afrikaans", "Zulu", "Xhosa", "Sotho", "Tswana"];
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+    isSouthAfrican: false,
+    idNumber: "",
+    dateOfBirth: "",
+    gender: "",
+    language: "",
+    mobileNumber: "",
+    selectedPackage: null,
+    // Banking Details
+    accountHolderName: "",
+    bankName: "",
+    branchCode: "",
+    accountNumber: "",
+    accountType: "",
+  });
+
+  const [signature, setSignature] = useState<SignatureCanvas | null>(null);
   const [error, setError] = useState("");
   const [referralCode, setReferralCode] = useState<string | null>(null);
 
@@ -41,22 +91,37 @@ export default function RegisterPage() {
     return null;
   }
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+    }));
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!email || !password || !firstName || !lastName || !phone) {
-      setError("Please fill in all fields");
+    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName || 
+        !formData.idNumber || !formData.dateOfBirth || !formData.gender || !formData.language || 
+        !formData.mobileNumber || !formData.selectedPackage || !formData.accountHolderName || 
+        !formData.bankName || !formData.branchCode || !formData.accountNumber || !formData.accountType) {
+      setError("Please fill in all required fields");
       return;
     }
 
+    if (!signature?.isEmpty()) {
+      setError("Please provide your signature");
+      return;
+    }
+
+    const signatureData = signature?.toDataURL();
+
     try {
       const user = await registerMutation.mutateAsync({
-        email,
-        password,
-        firstName,
-        lastName,
-        phoneNumber: phone,
+        ...formData,
+        signature: signatureData,
         ...(referralCode ? { referralCode } : {})
       });
 
@@ -77,9 +142,13 @@ export default function RegisterPage() {
     }
   };
 
+  const clearSignature = () => {
+    signature?.clear();
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-4xl space-y-8 my-8">
         <div className="flex flex-col items-center">
           <img
             src="/Assets/opian-logo-white.png"
@@ -99,37 +168,187 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                placeholder="First Name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+        <form onSubmit={handleRegister} className="space-y-6">
+          {/* Personal Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              name="firstName"
+              placeholder="First Name"
+              value={formData.firstName}
+              onChange={handleInputChange}
+            />
+            <Input
+              name="lastName"
+              placeholder="Last Name"
+              value={formData.lastName}
+              onChange={handleInputChange}
+            />
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isSouthAfrican"
+                name="isSouthAfrican"
+                checked={formData.isSouthAfrican}
+                onCheckedChange={(checked) => 
+                  setFormData(prev => ({ ...prev, isSouthAfrican: checked as boolean }))
+                }
               />
-              <Input
-                placeholder="Last Name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
+              <label htmlFor="isSouthAfrican" className="text-sm">
+                Are you a South African citizen?
+              </label>
             </div>
             <Input
+              name="idNumber"
+              placeholder="ID Number/Passport"
+              value={formData.idNumber}
+              onChange={handleInputChange}
+            />
+            <Input
+              name="dateOfBirth"
+              type="date"
+              placeholder="Date of Birth"
+              value={formData.dateOfBirth}
+              onChange={handleInputChange}
+            />
+            <Select
+              onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Language" />
+              </SelectTrigger>
+              <SelectContent>
+                {languages.map(lang => (
+                  <SelectItem key={lang} value={lang.toLowerCase()}>{lang}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              name="email"
               type="email"
               placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleInputChange}
             />
             <Input
+              name="password"
               type="password"
               placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleInputChange}
             />
             <Input
-              placeholder="Phone Number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              name="mobileNumber"
+              placeholder="Mobile Number"
+              value={formData.mobileNumber}
+              onChange={handleInputChange}
             />
+          </div>
+
+          {/* Package Selection */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Select Your Package</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {packages.map((pkg) => (
+                <Card 
+                  key={pkg.id}
+                  className={`cursor-pointer transition-all ${
+                    formData.selectedPackage === pkg.id ? 'border-primary' : ''
+                  }`}
+                  onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
+                >
+                  <CardHeader>
+                    <CardTitle>{pkg.name}</CardTitle>
+                    <CardDescription>R{pkg.price}/month</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {pkg.perks.map((perk, index) => (
+                        <li key={index} className="flex items-center">
+                          <Badge variant="outline" className="mr-2">✓</Badge>
+                          {perk}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Banking Details */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Banking Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                name="accountHolderName"
+                placeholder="Account Holder Name"
+                value={formData.accountHolderName}
+                onChange={handleInputChange}
+              />
+              <Input
+                name="bankName"
+                placeholder="Bank Name"
+                value={formData.bankName}
+                onChange={handleInputChange}
+              />
+              <Input
+                name="branchCode"
+                placeholder="Branch & Code"
+                value={formData.branchCode}
+                onChange={handleInputChange}
+              />
+              <Input
+                name="accountNumber"
+                placeholder="Account Number"
+                value={formData.accountNumber}
+                onChange={handleInputChange}
+              />
+              <Select
+                onValueChange={(value) => setFormData(prev => ({ ...prev, accountType: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Type of Account" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="savings">Savings</SelectItem>
+                  <SelectItem value="current">Current</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Digital Signature */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Digital Signature</h3>
+            <div className="border rounded-lg p-4 bg-white">
+              <SignatureCanvas
+                ref={(ref) => setSignature(ref)}
+                canvasProps={{
+                  className: "signature-canvas w-full h-40 border rounded",
+                  style: { backgroundColor: 'white' }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={clearSignature}
+                className="mt-2"
+              >
+                Clear Signature
+              </Button>
+            </div>
           </div>
 
           {error && (
