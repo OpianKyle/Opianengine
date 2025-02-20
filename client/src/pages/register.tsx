@@ -163,7 +163,7 @@ export default function RegisterPage() {
     branchCode: "",
     accountNumber: "",
     accountType: "",
-    acceptMandate: false, // Added acceptMandate field
+    acceptMandate: false,
   });
 
   const [signature, setSignature] = useState<SignatureCanvas | null>(null);
@@ -251,8 +251,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen w-full bg-background">
+      <div className="container px-4 py-8 mx-auto">
         <div className="flex flex-col items-center mb-8">
           <img
             src="/Assets/opian-logo-white.png"
@@ -264,7 +264,7 @@ export default function RegisterPage() {
               img.src = '/logo-fallback.png';
             }}
           />
-          <h2 className="mt-6 text-2xl font-semibold text-center">Create Your Account</h2>
+          <h2 className="mt-6 text-2xl font-semibold">Create Your Account</h2>
           {referralCode && (
             <p className="mt-2 text-sm text-muted-foreground">
               You've been referred by a friend!
@@ -275,7 +275,7 @@ export default function RegisterPage() {
         <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {/* Left Column - Form */}
           <Card className="lg:col-span-2">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <form onSubmit={handleRegister} className="space-y-6">
                 {/* Personal Information */}
                 <div className="space-y-4">
@@ -286,14 +286,14 @@ export default function RegisterPage() {
                       placeholder="First Name"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <Input
                       name="lastName"
                       placeholder="Last Name"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <Input
                       name="email"
@@ -301,7 +301,7 @@ export default function RegisterPage() {
                       placeholder="Email address"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <Input
                       name="password"
@@ -309,14 +309,14 @@ export default function RegisterPage() {
                       placeholder="Password"
                       value={formData.password}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <Input
                       name="mobileNumber"
                       placeholder="Mobile Number"
                       value={formData.mobileNumber}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -336,7 +336,7 @@ export default function RegisterPage() {
                       placeholder="ID Number/Passport"
                       value={formData.idNumber}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <Input
                       name="dateOfBirth"
@@ -344,12 +344,12 @@ export default function RegisterPage() {
                       placeholder="Date of Birth"
                       value={formData.dateOfBirth}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <Select
                       onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9 w-full">
                         <SelectValue placeholder="Select Gender" />
                       </SelectTrigger>
                       <SelectContent>
@@ -361,7 +361,7 @@ export default function RegisterPage() {
                     <Select
                       onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9 w-full">
                         <SelectValue placeholder="Select Language" />
                       </SelectTrigger>
                       <SelectContent>
@@ -376,17 +376,15 @@ export default function RegisterPage() {
                 {/* Package Selection */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Select Your Package</h3>
-                  <div className="relative">
+                  <div className="relative -mx-4 sm:mx-0">
                     <Carousel className="w-full">
                       <CarouselContent>
                         {packages.map((pkg) => (
                           <CarouselItem key={pkg.id} className="sm:basis-1/2">
-                            <Card
-                              className={`cursor-pointer transition-all hover:border-primary h-full ${
-                                formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
-                              }`}
-                              onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
-                            >
+                            <Card className={`mx-4 sm:mx-2 cursor-pointer transition-all hover:border-primary h-full ${
+                              formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
+                            }`}
+                            onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}>
                               <CardHeader className="p-4">
                                 <CardTitle className="flex justify-between items-center text-base">
                                   {pkg.name}
@@ -410,8 +408,8 @@ export default function RegisterPage() {
                           </CarouselItem>
                         ))}
                       </CarouselContent>
-                      <CarouselPrevious className="absolute -left-4" />
-                      <CarouselNext className="absolute -right-4" />
+                      <CarouselPrevious className="absolute -left-2 sm:-left-4" />
+                      <CarouselNext className="absolute -right-2 sm:-right-4" />
                     </Carousel>
                   </div>
                 </div>
@@ -425,33 +423,33 @@ export default function RegisterPage() {
                       placeholder="Account Holder Name"
                       value={formData.accountHolderName}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <Input
                       name="bankName"
                       placeholder="Bank Name"
                       value={formData.bankName}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <Input
                       name="branchCode"
                       placeholder="Branch & Code"
                       value={formData.branchCode}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <Input
                       name="accountNumber"
                       placeholder="Account Number"
                       value={formData.accountNumber}
                       onChange={handleInputChange}
-                      className="h-9"
+                      className="h-9 w-full"
                     />
                     <Select
                       onValueChange={(value) => setFormData(prev => ({ ...prev, accountType: value }))}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9 w-full">
                         <SelectValue placeholder="Type of Account" />
                       </SelectTrigger>
                       <SelectContent>

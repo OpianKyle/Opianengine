@@ -150,8 +150,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <div className="min-h-screen w-full bg-background">
+        <Router />
+        <Toaster />
+      </div>
     </QueryClientProvider>
   );
 }
