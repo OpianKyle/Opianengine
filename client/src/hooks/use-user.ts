@@ -23,7 +23,6 @@ const userSchema = z.object({
   postalCode: z.string().optional(),
   employerName: z.string().optional(),
   jobTitle: z.string().optional(),
-  employmentDuration: z.string().optional(),
   bankName: z.string().optional(),
   accountType: z.string().optional(),
   accountNumber: z.string().optional(),
@@ -136,7 +135,6 @@ export function useUser() {
       postalCode?: string;
       employerName?: string;
       jobTitle?: string;
-      employmentDuration?: string;
       bankName?: string;
       accountType?: string;
       accountNumber?: string;

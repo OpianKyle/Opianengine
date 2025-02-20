@@ -26,7 +26,6 @@ const profileSchema = z.object({
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   industry: z.string().min(1, "Industry is required"),
   occupation: z.string().min(1, "Occupation is required"),
-  employmentDuration: z.string().min(1, "Employment duration is required"),
   isSouthAfrican: z.boolean(),
   bankName: z.string().min(1, "Bank name is required"),
   accountType: z.string().min(1, "Account type is required"),
@@ -65,7 +64,6 @@ export default function ProfilePage() {
       dateOfBirth: user?.dateOfBirth || "",
       industry: user?.employerName || "",
       occupation: user?.jobTitle || "",
-      employmentDuration: user?.employmentDuration || "",
       isSouthAfrican: user?.isSouthAfrican || false,
       bankName: user?.bankName || "",
       accountType: user?.accountType || "",
@@ -340,20 +338,6 @@ export default function ProfilePage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Occupation</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="employmentDuration"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Employment Duration</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
