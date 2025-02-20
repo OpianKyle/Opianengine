@@ -230,8 +230,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-2 sm:p-4 md:p-6 lg:p-8">
-      <div className="max-w-[1800px] mx-auto">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-2 py-4 md:px-4 lg:px-6">
         <div className="flex flex-col items-center mb-4">
           <img
             src="/Assets/opian-logo-white.png"
@@ -243,7 +243,7 @@ export default function RegisterPage() {
               img.src = '/logo-fallback.png';
             }}
           />
-          <h2 className="mt-4 text-3xl font-semibold text-center">Create Your Account</h2>
+          <h2 className="mt-4 text-2xl md:text-3xl font-semibold text-center">Create Your Account</h2>
           {referralCode && (
             <p className="mt-2 text-sm text-muted-foreground">
               You've been referred by a friend!
@@ -251,19 +251,19 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-4 md:gap-6">
+        <div className="grid lg:grid-cols-12 gap-4">
           {/* Registration Form - Main Column */}
-          <Card className="lg:col-span-8 p-2 sm:p-4 md:p-6">
-            <CardHeader className="p-0 sm:p-2 md:p-4">
+          <Card className="lg:col-span-8 w-full">
+            <CardHeader className="p-3 md:p-4">
               <CardTitle>Personal Information</CardTitle>
               <CardDescription>
                 Please fill in your details to create your account
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0 sm:p-2 md:p-4 mt-4">
-              <form onSubmit={handleRegister} className="space-y-4 md:space-y-6">
+            <CardContent className="p-3 md:p-4">
+              <form onSubmit={handleRegister} className="space-y-4">
                 {/* Personal Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
                     name="firstName"
                     placeholder="First Name"
@@ -358,13 +358,13 @@ export default function RegisterPage() {
                 {/* Package Selection with Carousel */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Select Your Package</h3>
-                  <div className="relative px-4 md:px-8">
+                  <div className="relative px-4">
                     <Carousel className="w-full">
-                      <CarouselContent className="-ml-2 md:-ml-4">
+                      <CarouselContent>
                         {packages.map((pkg) => (
                           <CarouselItem 
                             key={pkg.id} 
-                            className="pl-2 md:pl-4 basis-full sm:basis-1/2"
+                            className="pl-2 basis-full sm:basis-1/2"
                           >
                             <Card
                               className={`cursor-pointer transition-all hover:border-primary h-full ${
@@ -372,7 +372,7 @@ export default function RegisterPage() {
                               }`}
                               onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
                             >
-                              <CardHeader className="p-4">
+                              <CardHeader className="p-3 md:p-4">
                                 <CardTitle className="flex justify-between items-center">
                                   {pkg.name}
                                   {formData.selectedPackage === pkg.id && (
@@ -381,7 +381,7 @@ export default function RegisterPage() {
                                 </CardTitle>
                                 <CardDescription>R{pkg.price}/month</CardDescription>
                               </CardHeader>
-                              <CardContent className="p-4">
+                              <CardContent className="p-3 md:p-4">
                                 <ul className="space-y-2">
                                   {pkg.perks.map((perk, index) => (
                                     <li key={index} className="flex items-center">
@@ -395,8 +395,8 @@ export default function RegisterPage() {
                           </CarouselItem>
                         ))}
                       </CarouselContent>
-                      <CarouselPrevious className="absolute -left-2 md:-left-4" />
-                      <CarouselNext className="absolute -right-2 md:-right-4" />
+                      <CarouselPrevious />
+                      <CarouselNext />
                     </Carousel>
                   </div>
                 </div>
@@ -404,7 +404,7 @@ export default function RegisterPage() {
                 {/* Banking Details */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Banking Details</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Input
                       name="accountHolderName"
                       placeholder="Account Holder Name"
@@ -450,7 +450,7 @@ export default function RegisterPage() {
                 {/* Digital Signature */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Digital Signature</h3>
-                  <div className="border rounded-lg p-4 bg-white">
+                  <div className="border rounded-lg p-3 md:p-4 bg-white">
                     <SignatureCanvas
                       ref={(ref) => setSignature(ref)}
                       canvasProps={{
@@ -507,16 +507,16 @@ export default function RegisterPage() {
             </CardContent>
           </Card>
 
-          {/* Information Section - Right Column */}
-          <div className="lg:col-span-4 space-y-4">
+          {/* Information Section - Right Column (hidden on mobile) */}
+          <div className="hidden lg:block lg:col-span-4">
             <Card className="h-full">
-              <CardHeader className="p-2 sm:p-4">
+              <CardHeader className="p-4">
                 <CardTitle>Program Benefits</CardTitle>
                 <CardDescription>
                   Join our rewards program and enjoy these exclusive benefits
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-2 sm:p-4 space-y-4 md:space-y-6">
+              <CardContent className="p-4 space-y-4">
                 {benefitsInfo.map((benefit, index) => (
                   <div key={index} className="space-y-2">
                     <h4 className="font-semibold text-primary">{benefit.title}</h4>
