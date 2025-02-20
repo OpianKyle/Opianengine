@@ -26,37 +26,11 @@ const loginResponseSchema = z.object({
 export function useUser() {
   const queryClient = useQueryClient();
   const tokenKey = 'auth_token';
-  const tokenExpiryKey = 'token_expiry';
 
-  // Helper functions for token management
+  // Helper function to get stored token
   const getStoredToken = () => localStorage.getItem(tokenKey);
-  const getTokenExpiry = () => {
-    const expiry = localStorage.getItem(tokenExpiryKey);
-    return expiry ? new Date(expiry) : null;
-  };
 
-  const setToken = (token: string) => {
-    localStorage.setItem(tokenKey, token);
-    // Set token expiry to 6 days from now (1 day before actual expiry)
-    const expiry = new Date();
-    expiry.setDate(expiry.getDate() + 6);
-    localStorage.setItem(tokenExpiryKey, expiry.toISOString());
-  };
-
-  const clearToken = () => {
-    localStorage.removeItem(tokenKey);
-    localStorage.removeItem(tokenExpiryKey);
-  };
-
-  // Check if token needs refresh (less than 1 day until expiry)
-  const shouldRefreshToken = () => {
-    const expiry = getTokenExpiry();
-    if (!expiry) return false;
-    const now = new Date();
-    return expiry <= now;
-  };
-
-  const { data: user, isLoading, error, refetch } = useQuery({
+  const { data: user, isLoading, error } = useQuery({
     queryKey: ['/api/user'],
     queryFn: async () => {
       try {
@@ -71,7 +45,6 @@ export function useUser() {
 
         if (response.status === 401) {
           console.log('User not authenticated');
-          clearToken();
           return null;
         }
 
@@ -90,31 +63,6 @@ export function useUser() {
     retry: false,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
-
-  const refreshToken = async () => {
-    try {
-      const response = await fetch('/api/refresh-token', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Token refresh failed');
-      }
-
-      const data = await response.json();
-      setToken(data.token);
-      return data.token;
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      clearToken();
-      throw error;
-    }
-  };
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
@@ -135,7 +83,7 @@ export function useUser() {
 
       const data = await response.json();
       const loginResponse = loginResponseSchema.parse(data);
-      setToken(loginResponse.token);
+      localStorage.setItem(tokenKey, loginResponse.token);
       return loginResponse.user;
     },
     onSuccess: (user) => {
@@ -190,27 +138,20 @@ export function useUser() {
         throw new Error('Logout failed');
       }
 
-      clearToken();
+      // Clear token from localStorage
+      localStorage.removeItem(tokenKey);
+
+      // Clear all user-related queries
       queryClient.removeQueries({ queryKey: ['/api/user'] });
       queryClient.setQueryData(['/api/user'], null);
     },
   });
-
-  // Attempt to refresh token if needed
-  if (shouldRefreshToken() && user) {
-    refreshToken().catch(() => {
-      // If refresh fails, clear user data
-      clearToken();
-      queryClient.setQueryData(['/api/user'], null);
-    });
-  }
 
   return {
     user,
     isLoading,
     error,
     token: getStoredToken(),
-    refreshToken,
     loginMutation,
     logoutMutation,
     registerMutation,

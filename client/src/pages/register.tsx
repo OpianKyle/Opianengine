@@ -230,9 +230,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-2 py-4 md:px-4 lg:px-6">
-        <div className="flex flex-col items-center mb-4">
+    <div className="min-h-screen bg-background p-4 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col items-center mb-8">
           <img
             src="/Assets/opian-logo-white.png"
             alt="OPIAN Rewards"
@@ -243,7 +243,7 @@ export default function RegisterPage() {
               img.src = '/logo-fallback.png';
             }}
           />
-          <h2 className="mt-4 text-2xl md:text-3xl font-semibold text-center">Create Your Account</h2>
+          <h2 className="mt-6 text-3xl font-semibold text-center">Create Your Account</h2>
           {referralCode && (
             <p className="mt-2 text-sm text-muted-foreground">
               You've been referred by a friend!
@@ -251,34 +251,32 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-4">
-          {/* Registration Form - Main Column */}
-          <Card className="lg:col-span-8 w-full">
-            <CardHeader className="p-3 md:p-4">
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Registration Form - Left Column */}
+          <Card className="lg:col-span-2 p-6">
+            <CardHeader>
               <CardTitle>Personal Information</CardTitle>
               <CardDescription>
                 Please fill in your details to create your account
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-3 md:p-4">
-              <form onSubmit={handleRegister} className="space-y-4">
+            <CardContent>
+              <form onSubmit={handleRegister} className="space-y-8">
                 {/* Personal Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     name="firstName"
                     placeholder="First Name"
                     value={formData.firstName}
                     onChange={handleInputChange}
-                    className="w-full"
                   />
                   <Input
                     name="lastName"
                     placeholder="Last Name"
                     value={formData.lastName}
                     onChange={handleInputChange}
-                    className="w-full"
                   />
-                  <div className="col-span-1 sm:col-span-2 flex items-center space-x-2">
+                  <div className="flex items-center space-x-2">
                     <Checkbox
                       id="isSouthAfrican"
                       name="isSouthAfrican"
@@ -296,7 +294,6 @@ export default function RegisterPage() {
                     placeholder="ID Number/Passport"
                     value={formData.idNumber}
                     onChange={handleInputChange}
-                    className="w-full"
                   />
                   <Input
                     name="dateOfBirth"
@@ -304,7 +301,6 @@ export default function RegisterPage() {
                     placeholder="Date of Birth"
                     value={formData.dateOfBirth}
                     onChange={handleInputChange}
-                    className="w-full"
                   />
                   <Select
                     onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
@@ -336,7 +332,6 @@ export default function RegisterPage() {
                     placeholder="Email address"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full"
                   />
                   <Input
                     name="password"
@@ -344,35 +339,30 @@ export default function RegisterPage() {
                     placeholder="Password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full"
                   />
                   <Input
                     name="mobileNumber"
                     placeholder="Mobile Number"
                     value={formData.mobileNumber}
                     onChange={handleInputChange}
-                    className="w-full"
                   />
                 </div>
 
                 {/* Package Selection with Carousel */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Select Your Package</h3>
-                  <div className="relative px-4">
+                  <div className="relative">
                     <Carousel className="w-full">
                       <CarouselContent>
                         {packages.map((pkg) => (
-                          <CarouselItem 
-                            key={pkg.id} 
-                            className="pl-2 basis-full sm:basis-1/2"
-                          >
+                          <CarouselItem key={pkg.id} className="md:basis-1/2 lg:basis-1/3">
                             <Card
                               className={`cursor-pointer transition-all hover:border-primary h-full ${
                                 formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
                               }`}
                               onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
                             >
-                              <CardHeader className="p-3 md:p-4">
+                              <CardHeader>
                                 <CardTitle className="flex justify-between items-center">
                                   {pkg.name}
                                   {formData.selectedPackage === pkg.id && (
@@ -381,7 +371,7 @@ export default function RegisterPage() {
                                 </CardTitle>
                                 <CardDescription>R{pkg.price}/month</CardDescription>
                               </CardHeader>
-                              <CardContent className="p-3 md:p-4">
+                              <CardContent>
                                 <ul className="space-y-2">
                                   {pkg.perks.map((perk, index) => (
                                     <li key={index} className="flex items-center">
@@ -395,8 +385,8 @@ export default function RegisterPage() {
                           </CarouselItem>
                         ))}
                       </CarouselContent>
-                      <CarouselPrevious />
-                      <CarouselNext />
+                      <CarouselPrevious className="absolute -left-4 md:-left-6" />
+                      <CarouselNext className="absolute -right-4 md:-right-6" />
                     </Carousel>
                   </div>
                 </div>
@@ -404,34 +394,30 @@ export default function RegisterPage() {
                 {/* Banking Details */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Banking Details</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input
                       name="accountHolderName"
                       placeholder="Account Holder Name"
                       value={formData.accountHolderName}
                       onChange={handleInputChange}
-                      className="w-full"
                     />
                     <Input
                       name="bankName"
                       placeholder="Bank Name"
                       value={formData.bankName}
                       onChange={handleInputChange}
-                      className="w-full"
                     />
                     <Input
                       name="branchCode"
                       placeholder="Branch & Code"
                       value={formData.branchCode}
                       onChange={handleInputChange}
-                      className="w-full"
                     />
                     <Input
                       name="accountNumber"
                       placeholder="Account Number"
                       value={formData.accountNumber}
                       onChange={handleInputChange}
-                      className="w-full"
                     />
                     <Select
                       onValueChange={(value) => setFormData(prev => ({ ...prev, accountType: value }))}
@@ -450,7 +436,7 @@ export default function RegisterPage() {
                 {/* Digital Signature */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Digital Signature</h3>
-                  <div className="border rounded-lg p-3 md:p-4 bg-white">
+                  <div className="border rounded-lg p-4 bg-white">
                     <SignatureCanvas
                       ref={(ref) => setSignature(ref)}
                       canvasProps={{
@@ -507,22 +493,40 @@ export default function RegisterPage() {
             </CardContent>
           </Card>
 
-          {/* Information Section - Right Column (hidden on mobile) */}
-          <div className="hidden lg:block lg:col-span-4">
+          {/* Information Section - Right Column */}
+          <div className="hidden lg:block space-y-6 sticky top-8 self-start">
             <Card className="h-full">
-              <CardHeader className="p-4">
+              <CardHeader>
                 <CardTitle>Program Benefits</CardTitle>
                 <CardDescription>
                   Join our rewards program and enjoy these exclusive benefits
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-4 space-y-4">
+              <CardContent className="space-y-6">
                 {benefitsInfo.map((benefit, index) => (
                   <div key={index} className="space-y-2">
                     <h4 className="font-semibold text-primary">{benefit.title}</h4>
                     <p className="text-sm text-muted-foreground">{benefit.description}</p>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Need Help?</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  If you have any questions about our packages or the registration process,
+                  our support team is here to help.
+                </p>
+                <p className="text-sm font-semibold">Contact us:</p>
+                <ul className="text-sm text-muted-foreground">
+                  <li>Email: support@opianrewards.com</li>
+                  <li>Phone: 0800 123 456</li>
+                  <li>Hours: Mon-Fri 8am-5pm</li>
+                </ul>
               </CardContent>
             </Card>
           </div>
