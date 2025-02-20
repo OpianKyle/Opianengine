@@ -7,6 +7,14 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users } from "@db/schema";
 
+// Check required environment variables
+const requiredEnvVars = ['DATABASE_URL'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingEnvVars.length > 0) {
+  console.error('Missing required environment variables:', missingEnvVars.join(', '));
+  process.exit(1);
+}
+
 const app = express();
 
 // Configure CORS with specific options
@@ -31,26 +39,10 @@ app.use(fileUpload({
 // Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-      log(logLine);
+    if (req.path.startsWith("/api")) {
+      log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
     }
   });
   next();
@@ -62,7 +54,7 @@ app.use((req, res, next) => {
 
     // Test database connection
     try {
-      const [testUser] = await db.select().from(users).limit(1);
+      await db.select().from(users).limit(1);
       log('Database connection successful');
     } catch (dbError) {
       console.error('Database connection failed:', dbError);
@@ -70,7 +62,7 @@ app.use((req, res, next) => {
     }
 
     // Setup authentication
-    setupAuth(app);
+    await setupAuth(app);
     log('Authentication setup complete');
 
     const server = registerRoutes(app);
@@ -81,11 +73,11 @@ app.use((req, res, next) => {
       console.error('Global error handler caught:', err);
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      res.status(status).json({ message });
+      res.status(status).json({ error: message });
     });
 
     // Setup appropriate server based on environment
-    if (app.get("env") === "development") {
+    if (process.env.NODE_ENV !== "production") {
       log('Setting up Vite development server...');
       await setupVite(app, server);
       log('Vite setup complete');
