@@ -375,6 +375,8 @@ export default function AdminCustomers() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
+                <TableHead>Package</TableHead>
+                <TableHead>Registration Details</TableHead>
                 <TableHead>Tier</TableHead>
                 <TableHead>Points</TableHead>
                 <TableHead>Status</TableHead>
@@ -395,6 +397,66 @@ export default function AdminCustomers() {
                     <TableCell>{customer.firstName} {customer.lastName}</TableCell>
                     <TableCell>{customer.email}</TableCell>
                     <TableCell>{customer.phoneNumber}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        {customer.package?.name || 'No Package'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            View Details
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>Registration Details</DialogTitle>
+                          </DialogHeader>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <h3 className="font-semibold mb-2">Personal Information</h3>
+                              <div className="space-y-1">
+                                <p><span className="font-medium">ID Number:</span> {customer.idNumber}</p>
+                                <p><span className="font-medium">Date of Birth:</span> {customer.dateOfBirth}</p>
+                                <p><span className="font-medium">Nationality:</span> {customer.isSouthAfrican ? 'South African' : 'Other'}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <h3 className="font-semibold mb-2">Contact Information</h3>
+                              <div className="space-y-1">
+                                <p><span className="font-medium">Address:</span> {customer.address}</p>
+                                <p><span className="font-medium">City:</span> {customer.city}</p>
+                                <p><span className="font-medium">Postal Code:</span> {customer.postalCode}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <h3 className="font-semibold mb-2">Employment Information</h3>
+                              <div className="space-y-1">
+                                <p><span className="font-medium">Employer:</span> {customer.employerName}</p>
+                                <p><span className="font-medium">Job Title:</span> {customer.jobTitle}</p>
+                                <p><span className="font-medium">Employment Duration:</span> {customer.employmentDuration}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <h3 className="font-semibold mb-2">Financial Information</h3>
+                              <div className="space-y-1">
+                                <p><span className="font-medium">Bank:</span> {customer.bankName}</p>
+                                <p><span className="font-medium">Account Type:</span> {customer.accountType}</p>
+                                <p><span className="font-medium">Has Credit Card:</span> {customer.hasCreditCard ? 'Yes' : 'No'}</p>
+                              </div>
+                            </div>
+                            <div className="col-span-2">
+                              <h3 className="font-semibold mb-2">Referral Information</h3>
+                              <div className="space-y-1">
+                                <p><span className="font-medium">Referral Code:</span> {customer.referralCode}</p>
+                                <p><span className="font-medium">Referrer:</span> {customer.referrer?.firstName} {customer.referrer?.lastName}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         <Badge className={`${tierInfo.color}`}>
