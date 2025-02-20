@@ -455,13 +455,13 @@ export default function RegisterPage() {
                     <Carousel className="w-full">
                       <CarouselContent>
                         {packages.map((pkg) => (
-                          <CarouselItem key={pkg.id} className="sm:basis-1/2">
-                            <Card className={`mx-4 sm:mx-2 cursor-pointer transition-all hover:border-primary h-full ${
+                          <CarouselItem key={pkg.id} className="basis-1/2 sm:basis-1/3 md:basis-1/3 lg:basis-1/4">
+                            <Card className={`mx-2 cursor-pointer transition-all hover:border-primary h-full ${
                               formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
                             }`}
                               onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}>
-                              <CardHeader className="p-4">
-                                <CardTitle className="flex justify-between items-center text-base">
+                              <CardHeader className="p-3">
+                                <CardTitle className="flex justify-between items-center text-sm">
                                   {pkg.name}
                                   {formData.selectedPackage === pkg.id && (
                                     <Check className="h-4 w-4 text-primary" />
@@ -469,7 +469,7 @@ export default function RegisterPage() {
                                 </CardTitle>
                                 <CardDescription>R{pkg.price}/month</CardDescription>
                               </CardHeader>
-                              <CardContent className="p-4">
+                              <CardContent className="p-3">
                                 <ul className="space-y-1">
                                   {pkg.perks.map((perk, index) => (
                                     <li key={index} className="flex items-center text-xs">
@@ -483,8 +483,8 @@ export default function RegisterPage() {
                           </CarouselItem>
                         ))}
                       </CarouselContent>
-                      <CarouselPrevious className="absolute -left-2 sm:-left-4" />
-                      <CarouselNext className="absolute -right-2 sm:-right-4" />
+                      <CarouselPrevious className="absolute -left-2 sm:-left-4 -translate-y-1/2" />
+                      <CarouselNext className="absolute -right-2 sm:-right-4 -translate-y-1/2" />
                     </Carousel>
                   </div>
                 </div>
