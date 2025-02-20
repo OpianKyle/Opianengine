@@ -252,7 +252,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen w-full bg-background">
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-6 md:px-6">
         {/* Header */}
         <div className="flex flex-col items-center space-y-4 mb-8">
           <img
@@ -273,9 +273,9 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-[1400px] mx-auto">
           {/* Main Form */}
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-8">
             <CardContent className="p-6">
               <form onSubmit={handleRegister} className="space-y-8">
                 {/* Personal Information */}
@@ -554,68 +554,70 @@ export default function RegisterPage() {
           </Card>
 
           {/* Right Column - About Opian Rewards */}
-          <div className="hidden lg:flex flex-col space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>About Opian Rewards</CardTitle>
-                <CardDescription>
-                  Join South Africa's premier rewards program
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-primary">Why Choose Opian?</h4>
-                  <ul className="space-y-3 text-sm text-muted-foreground">
-                    <li className="flex items-start">
-                      <Badge variant="outline" className="mr-2 mt-1">✓</Badge>
-                      Industry-leading rewards rates with up to 25% cashback on purchases
-                    </li>
-                    <li className="flex items-start">
-                      <Badge variant="outline" className="mr-2 mt-1">✓</Badge>
-                      Exclusive access to premium financial products and services
-                    </li>
-                    <li className="flex items-start">
-                      <Badge variant="outline" className="mr-2 mt-1">✓</Badge>
-                      Comprehensive insurance coverage options
-                    </li>
-                    <li className="flex items-start">
-                      <Badge variant="outline" className="mr-2 mt-1">✓</Badge>
-                      VIP events and experiences for premium members
-                    </li>
-                  </ul>
-                </div>
+          <aside className="hidden lg:block lg:col-span-4">
+            <div className="space-y-6 sticky top-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>About Opian Rewards</CardTitle>
+                  <CardDescription>
+                    Join South Africa's premier rewards program
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-primary">Why Choose Opian?</h4>
+                    <ul className="space-y-3 text-sm text-muted-foreground">
+                      <li className="flex items-start">
+                        <Badge variant="outline" className="mr-2 mt-1">✓</Badge>
+                        Industry-leading rewards rates with up to 25% cashback on purchases
+                      </li>
+                      <li className="flex items-start">
+                        <Badge variant="outline" className="mr-2 mt-1">✓</Badge>
+                        Exclusive access to premium financial products and services
+                      </li>
+                      <li className="flex items-start">
+                        <Badge variant="outline" className="mr-2 mt-1">✓</Badge>
+                        Comprehensive insurance coverage options
+                      </li>
+                      <li className="flex items-start">
+                        <Badge variant="outline" className="mr-2 mt-1">✓</Badge>
+                        VIP events and experiences for premium members
+                      </li>
+                    </ul>
+                  </div>
 
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-primary">Our Commitment</h4>
-                  <p className="text-sm text-muted-foreground">
-                    At Opian Rewards, we're committed to providing exceptional value to our members.
-                    Our program is designed to reward your loyalty with real, tangible benefits that
-                    make a difference in your financial journey.
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-primary">Our Commitment</h4>
+                    <p className="text-sm text-muted-foreground">
+                      At Opian Rewards, we're committed to providing exceptional value to our members.
+                      Our program is designed to reward your loyalty with real, tangible benefits that
+                      make a difference in your financial journey.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Need Help?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Our support team is here to help you with any questions about our
+                    packages or the registration process.
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Need Help?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Our support team is here to help you with any questions about our
-                  packages or the registration process.
-                </p>
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold">Contact us:</p>
-                  <ul className="text-sm space-y-1 text-muted-foreground">
-                    <li>Email: support@opianrewards.com</li>
-                    <li>Phone: 0800 123 456</li>
-                    <li>Hours: Mon-Fri 8am-5pm</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Contact us:</p>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>Email: support@opianrewards.com</li>
+                      <li>Phone: 0800 123 456</li>
+                      <li>Hours: Mon-Fri 8am-5pm</li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
