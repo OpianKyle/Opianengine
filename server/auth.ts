@@ -149,7 +149,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Update the registration handler with better error handling
   app.post("/api/register", async (req, res) => {
     try {
       console.log('Registration attempt with data:', {
@@ -233,11 +232,9 @@ export function setupAuth(app: Express) {
         return res.status(500).json({ error: "Error processing registration. Please try again." });
       }
 
-      console.log('Starting transaction for new user creation');
       let newUser;
       try {
         newUser = await db.transaction(async (tx) => {
-          console.log('Creating new user record');
           const [user] = await tx
             .insert(users)
             .values({
@@ -277,7 +274,6 @@ export function setupAuth(app: Express) {
             throw new Error("Failed to create user record");
           }
 
-          console.log('Adding welcome bonus transaction');
           await tx
             .insert(transactions)
             .values({
@@ -288,7 +284,6 @@ export function setupAuth(app: Express) {
             });
 
           if (referrerUser) {
-            console.log('Processing referral bonus for referrer:', referrerUser.id);
             await tx
               .update(users)
               .set({ points: referrerUser.points + 2500 })
@@ -307,6 +302,32 @@ export function setupAuth(app: Express) {
           return user;
         });
 
+        console.log('Successfully created new user:', {
+          id: newUser.id,
+          email: newUser.email
+        });
+
+        // Start a new session for the user
+        const { password: _, ...safeUser } = newUser;
+
+        // Log the user in automatically
+        return new Promise((resolve, reject) => {
+          req.login(safeUser, (loginErr) => {
+            if (loginErr) {
+              console.error('Login error after registration:', loginErr);
+              // Even if auto-login fails, registration was successful
+              res.status(201).json({ 
+                ...safeUser,
+                message: "Registration successful but automatic login failed. Please log in manually."
+              });
+              resolve();
+            } else {
+              res.status(201).json(safeUser);
+              resolve();
+            }
+          });
+        });
+
       } catch (dbError) {
         console.error('Database error during registration:', dbError);
         return res.status(500).json({ 
@@ -315,28 +336,9 @@ export function setupAuth(app: Express) {
         });
       }
 
-      console.log('Successfully created new user:', {
-        id: newUser.id,
-        email: newUser.email
-      });
-
-      // Start a new session for the user
-      const { password: _, ...safeUser } = newUser;
-      req.login(safeUser, (loginErr) => {
-        if (loginErr) {
-          console.error('Login error after registration:', loginErr);
-          // Even though login failed, user was created successfully
-          return res.status(201).json({ 
-            ...safeUser,
-            message: "Registration successful but automatic login failed. Please log in manually."
-          });
-        }
-        res.status(201).json(safeUser);
-      });
-
     } catch (error) {
       console.error('Registration error:', error);
-      // If we haven't sent a response yet, send a generic error
+      // Only send error response if we haven't already sent one
       if (!res.headersSent) {
         res.status(500).json({ error: "Registration failed. Please try again." });
       }
