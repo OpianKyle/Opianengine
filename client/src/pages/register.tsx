@@ -195,7 +195,6 @@ export default function RegisterPage() {
     occupation: "",
     industry: "",
     addressLine1: "",
-    addressLine2: "",
     suburb: "",
     postalCode: "",
     hasCreditCard: false,
@@ -313,7 +312,7 @@ export default function RegisterPage() {
       selectedPackage: "Package",
       occupation: "Occupation",
       industry: "Industry",
-      addressLine1: "Address Line 1",
+      addressLine1: "Address",
       suburb: "Suburb",
       postalCode: "Postal Code",
       accountHolderName: "Account Holder Name",
@@ -348,7 +347,7 @@ export default function RegisterPage() {
       const registrationData = {
         ...formData,
         phoneNumber: formData.mobileNumber,
-        address: formData.addressLine1 + (formData.addressLine2 ? `\n${formData.addressLine2}` : ''),
+        address: formData.addressLine1,
         city: formData.suburb,
         employerName: formData.industry,
         jobTitle: formData.occupation,
@@ -552,14 +551,8 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                   <div className="grid gap-4">
                     <Input
                       name="addressLine1"
-                      placeholder="Address Line 1"
+                      placeholder="Address"
                       value={formData.addressLine1}
-                      onChange={handleInputChange}
-                    />
-                    <Input
-                      name="addressLine2"
-                      placeholder="Address Line 2"
-                      value={formData.addressLine2}
                       onChange={handleInputChange}
                     />
                     <div className="grid sm:grid-cols-2 gap-4">
