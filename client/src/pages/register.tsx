@@ -280,7 +280,7 @@ export default function RegisterPage() {
                 {/* Personal Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Personal Information</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
                     <Input
                       name="firstName"
                       placeholder="First Name"
@@ -417,7 +417,7 @@ export default function RegisterPage() {
                 {/* Banking Details */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Banking Details</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
                     <Input
                       name="accountHolderName"
                       placeholder="Account Holder Name"
