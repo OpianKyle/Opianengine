@@ -152,6 +152,37 @@ let MandateText = `This signed Authority and Mandate refers to our contract date
 
 `;
 
+const PackageCard = ({ pkg, isSelected, onSelect }) => (
+  <Card
+    className={`mx-2 h-[420px] cursor-pointer transition-all hover:border-primary ${
+      isSelected ? 'border-primary ring-2 ring-primary' : ''
+    }`}
+    onClick={onSelect}
+  >
+    <CardHeader className="p-4 sm:p-6">
+      <CardTitle className="flex justify-between items-center text-lg">
+        {pkg.name}
+        {isSelected && (
+          <Check className="h-5 w-5 text-primary" />
+        )}
+      </CardTitle>
+      <CardDescription className="text-base">R{pkg.price}/month</CardDescription>
+    </CardHeader>
+    <CardContent className="p-4 sm:p-6">
+      <ScrollArea className="h-[280px] w-full pr-4">
+        <ul className="space-y-2">
+          {pkg.perks.map((perk, index) => (
+            <li key={index} className="flex items-center text-sm">
+              <Badge variant="outline" className="mr-2 shrink-0">✓</Badge>
+              <span>{perk}</span>
+            </li>
+          ))}
+        </ul>
+      </ScrollArea>
+    </CardContent>
+  </Card>
+);
+
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     email: "",
@@ -541,32 +572,11 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                       <CarouselContent>
                         {packages.map((pkg) => (
                           <CarouselItem key={pkg.id} className="basis-full sm:basis-1/2 md:basis-1/2">
-                            <Card
-                              className={`mx-2 cursor-pointer transition-all hover:border-primary ${
-                                formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
-                              }`}
-                              onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
-                            >
-                              <CardHeader className="p-4 sm:p-6">
-                                <CardTitle className="flex justify-between items-center text-lg">
-                                  {pkg.name}
-                                  {formData.selectedPackage === pkg.id && (
-                                    <Check className="h-5 w-5 text-primary" />
-                                  )}
-                                </CardTitle>
-                                <CardDescription className="text-base">R{pkg.price}/month</CardDescription>
-                              </CardHeader>
-                              <CardContent className="p-4 sm:p-6">
-                                <ul className="space-y-2">
-                                  {pkg.perks.map((perk, index) => (
-                                    <li key={index} className="flex items-center text-sm">
-                                      <Badge variant="outline" className="mr-2">✓</Badge>
-                                      {perk}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </CardContent>
-                            </Card>
+                            <PackageCard
+                              pkg={pkg}
+                              isSelected={formData.selectedPackage === pkg.id}
+                              onSelect={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
+                            />
                           </CarouselItem>
                         ))}
                       </CarouselContent>
