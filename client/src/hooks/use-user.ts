@@ -14,6 +14,21 @@ const userSchema = z.object({
   referralCode: z.string().nullable().optional(),
   referredBy: z.string().nullable().optional(),
   createdAt: z.string(),
+  // Extended fields
+  isSouthAfrican: z.boolean().optional(),
+  idNumber: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  postalCode: z.string().optional(),
+  employerName: z.string().optional(),
+  jobTitle: z.string().optional(),
+  employmentDuration: z.string().optional(),
+  bankName: z.string().optional(),
+  accountType: z.string().optional(),
+  accountNumber: z.string().optional(),
+  hasCreditCard: z.boolean().optional(),
+  signature: z.string().optional(),
 });
 
 export type User = z.infer<typeof userSchema>;
@@ -100,6 +115,21 @@ export function useUser() {
       phoneNumber: string;
       isAdmin?: boolean;
       isSuperAdmin?: boolean;
+      // Extended fields
+      isSouthAfrican?: boolean;
+      idNumber?: string;
+      dateOfBirth?: string;
+      address?: string;
+      city?: string;
+      postalCode?: string;
+      employerName?: string;
+      jobTitle?: string;
+      employmentDuration?: string;
+      bankName?: string;
+      accountType?: string;
+      accountNumber?: string;
+      hasCreditCard?: boolean;
+      signature?: string;
     }) => {
       const response = await fetch('/api/register', {
         method: 'POST',
