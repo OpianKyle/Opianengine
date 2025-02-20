@@ -77,7 +77,7 @@ export default function ProfilePage() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      const res = await fetch("/api/user/profile", {
+      const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: 'include',
@@ -91,11 +91,13 @@ export default function ProfilePage() {
           password: data.password || undefined,
         }),
       });
-      if (!res.ok) {
-        const error = await res.text();
+
+      if (!response.ok) {
+        const error = await response.text();
         throw new Error(error);
       }
-      return res.json();
+
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/user"], (oldData: any) => ({
@@ -103,10 +105,7 @@ export default function ProfilePage() {
         ...data,
       }));
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      form.reset({
-        ...data,
-        password: "",
-      });
+      form.reset(form.getValues());
       toast({
         title: "Success",
         description: "Profile updated successfully",
@@ -121,19 +120,31 @@ export default function ProfilePage() {
     },
   });
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">My Profile</h1>
+      <div className="space-y-0.5">
+        <h2 className="text-2xl font-bold tracking-tight">Profile Settings</h2>
+        <p className="text-muted-foreground">
+          Manage your account settings and set your personal preferences.
+        </p>
+      </div>
+
+      <Separator />
 
       <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Personal Information</CardTitle>
-            <CardDescription>Your basic profile information</CardDescription>
+            <CardDescription>Update your personal and account information</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(data => updateProfileMutation.mutateAsync(data))} className="space-y-6">
+                {/* Basic Information */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -194,6 +205,7 @@ export default function ProfilePage() {
 
                 <Separator />
 
+                {/* Identity Information */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -245,6 +257,7 @@ export default function ProfilePage() {
 
                 <Separator />
 
+                {/* Address Information */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -305,6 +318,7 @@ export default function ProfilePage() {
 
                 <Separator />
 
+                {/* Employment Information */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -351,6 +365,7 @@ export default function ProfilePage() {
 
                 <Separator />
 
+                {/* Banking Information */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -430,6 +445,7 @@ export default function ProfilePage() {
 
                 <Separator />
 
+                {/* Password Change */}
                 <FormField
                   control={form.control}
                   name="password"
