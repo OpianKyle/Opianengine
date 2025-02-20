@@ -568,7 +568,7 @@ const registerSchema = z.object({
   bankName: z.string().optional().nullable(),
   accountType: z.string()
     .transform(val => val?.toUpperCase())
-    .pipe(z.enum(["CHEQUE", "SAVINGS"]))
+    .pipe(z.enum(["CHEQUE", "SAVINGS", "CURRENT"]))
     .optional()
     .nullable(),
   accountNumber: z.string().optional().nullable(),

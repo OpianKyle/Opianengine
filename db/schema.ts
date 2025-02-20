@@ -21,7 +21,8 @@ export const packageTypes = pgEnum("package_type", [
 
 export const accountTypes = pgEnum("account_type", [
   "CHEQUE",
-  "SAVINGS"
+  "SAVINGS",
+  "CURRENT"
 ]);
 
 export const products = pgTable("products", {
