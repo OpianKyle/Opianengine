@@ -26,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const packages = [
   {
@@ -147,7 +148,9 @@ const benefitsInfo = [
   }
 ];
 
-let MandateText = `This signed Authority and Mandate refers to our contract dated `;
+let MandateText = `This signed Authority and Mandate refers to our contract dated
+
+`;
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -271,46 +274,29 @@ export default function RegisterPage() {
   };
 
   const today = new Date().toISOString().split('T')[0];
-  MandateText += `${today} ("the Agreement").
-I/We hereby authorise you to issue and deliver payment instructions of R550 per month for the program fee to your Banker for collection against my/our abovementioned account at my/our above-mentioned Bank (or any other bank or branch to which I/we may transfer my/our account) on condition that the sum of such payment instructions will never exceed my/our obligations as agreed to in the Agreement and commencing on 1rst of each month and continuing until this Authority and Mandate is terminated by me/us by giving you notice in writing of not less than 20 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
+  MandateText = `This signed Authority and Mandate refers to our contract dated
+
+${today}
+("the Agreement").
+
+I / We hereby authorise you to issue and deliver payment instructions of R550 per month for the program fee to your Banker for collection against my / our abovementioned account at my / our above-mentioned Bank (or any other bank or branch to which I / we may transfer my / our account) on condition that the sum of such payment instructions will never exceed my / our obligations as as agreed to in the Agreement and commencing on 1rst of each month and continuing until this Authority and Mandate is terminated by me / us by giving you notice in writing of not less than 20 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
 
 The individual payment instructions so authorised to be issued must be issued and delivered as follows: R550 monthly.
 
-Personal Details:
-- Full Name: ${formData.firstName} ${formData.lastName}
-- ID Number: ${formData.idNumber}
-- Mobile: ${formData.mobileNumber}
-
-Employment Details:
-- Occupation: ${formData.occupation}
-- Industry: ${formData.industry}
-- Salary Bracket: ${formData.salaryBracket}
-
-Residential Address:
-${formData.addressLine1}
-${formData.addressLine2}
-${formData.suburb}
-${formData.postalCode}
-
-Banking Details:
-- Account Holder: ${formData.accountHolderName}
-- Bank: ${formData.bankName}
-- Branch Code: ${formData.branchCode}
-- Account Number: ${formData.accountNumber}
-- Account Type: ${formData.accountType}
-
 In the event that the payment day falls on a Sunday, or recognised South African public holiday, the payment day will automatically be the preceding ordinary business day.
 
-I/We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement.
+Payment Instructions due in December may be debited against my account on a earlier date
+
+I / We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement. A payment reference is added to this form before the issuing of any payment instruction.
 
 Mandate
-I/We acknowledge that all payment instructions issued by you shall be treated by my/our above-mentioned Bank as if the instructions have been issued by me/us personally.
+I /We acknowledge that all payment instructions issued by you shall be treated by my / our above-mentioned Bank as if the instructions have been issued by me/us personally.
 
 Cancellation
-I/We agree that although this Authority and Mandate may be cancelled by me/us, such cancellation will not cancel the Agreement. I/We shall not be entitled to any refund of amounts which you have withdrawn while this Authority was in force, if such amounts were legally owing to you.
+I / We agree that although this Authority and Mandate may be cancelled by me / us, such cancellation will not cancel the Agreement I / We shall not be entitled to any refund of amounts which you have withdrawn while this Authority was in force, if such amounts were legally owing to you.
 
 Assignment
-I/We acknowledge that this Authority may be ceded or assigned to a third party if the Agreement is also ceded or assigned to that third party, but in the absence of such assignment of the Agreement, this Authority and Mandate cannot be assigned to any third party.`;
+I / We acknowledge that this Authority may be ceded or assigned to a third party if the Agreement is also ceded or assigned to that third party, but in the absence of such assignment of the Agreement, this Authority and Mandate cannot be assigned to any third party.`;
 
   return (
     <div className="min-h-screen w-full bg-background">
@@ -383,6 +369,7 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                           onCheckedChange={(checked) =>
                             setFormData(prev => ({ ...prev, isSouthAfrican: checked as boolean }))
                           }
+                          className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
                         />
                         <label htmlFor="isSouthAfrican" className="ml-2 text-sm">
                           South African citizen
@@ -390,13 +377,16 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                       </div>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
-                      <Input
-                        name="dateOfBirth"
-                        type="date"
-                        placeholder="Date of Birth"
-                        value={formData.dateOfBirth}
-                        onChange={handleInputChange}
-                      />
+                      <div className="space-y-2">
+                        <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                        <Input
+                          id="dateOfBirth"
+                          name="dateOfBirth"
+                          type="date"
+                          value={formData.dateOfBirth}
+                          onChange={handleInputChange}
+                        />
+                      </div>
                       <Select name="gender" onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select Gender" />
@@ -506,6 +496,7 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                       name="hasCreditCard"
                       checked={formData.hasCreditCard}
                       onCheckedChange={handleInputChange}
+                      className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
                     />
                     <label htmlFor="hasCreditCard" className="text-sm">
                       Do you own a credit card?
@@ -615,6 +606,7 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                       name="acceptMandate"
                       checked={formData.acceptMandate}
                       onCheckedChange={handleInputChange}
+                      className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
                     />
                     <label htmlFor="acceptMandate" className="text-sm">
                       I accept the terms of the mandate
