@@ -25,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const packages = [
   {
@@ -102,6 +103,29 @@ const packages = [
 
 const languages = ["English", "Afrikaans", "Zulu", "Xhosa", "Sotho", "Tswana"];
 
+const salaryBrackets = [
+  "R0 - R10,000",
+  "R10,001 - R20,000",
+  "R20,001 - R30,000",
+  "R30,001 - R50,000",
+  "R50,001+"
+];
+
+const industries = [
+  "Agriculture",
+  "Construction",
+  "Education",
+  "Finance",
+  "Healthcare",
+  "Information Technology",
+  "Manufacturing",
+  "Mining",
+  "Retail",
+  "Services",
+  "Transport",
+  "Other"
+];
+
 const benefitsInfo = [
   {
     title: "Exclusive Rewards",
@@ -125,24 +149,7 @@ const benefitsInfo = [
   }
 ];
 
-const MandateText = `This signed Authority and Mandate refers to our contract dated ("the Agreement").
-
-I/We hereby authorise you to issue and deliver payment instructions of R550 per month for the program fee to your Banker for collection against my/our abovementioned account at my/our above-mentioned Bank (or any other bank or branch to which I/we may transfer my/our account) on condition that the sum of such payment instructions will never exceed my/our obligations as agreed to in the Agreement and commencing on 1rst of each month and continuing until this Authority and Mandate is terminated by me/us by giving you notice in writing of not less than 20 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
-
-The individual payment instructions so authorised to be issued must be issued and delivered as follows: R550 monthly.
-
-In the event that the payment day falls on a Sunday, or recognised South African public holiday, the payment day will automatically be the preceding ordinary business day.
-
-I/We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement.
-
-Mandate
-I/We acknowledge that all payment instructions issued by you shall be treated by my/our above-mentioned Bank as if the instructions have been issued by me/us personally.
-
-Cancellation
-I/We agree that although this Authority and Mandate may be cancelled by me/us, such cancellation will not cancel the Agreement. I/We shall not be entitled to any refund of amounts which you have withdrawn while this Authority was in force, if such amounts were legally owing to you.
-
-Assignment
-I/We acknowledge that this Authority may be ceded or assigned to a third party if the Agreement is also ceded or assigned to that third party, but in the absence of such assignment of the Agreement, this Authority and Mandate cannot be assigned to any third party.`;
+let MandateText = `This signed Authority and Mandate refers to our contract dated `;
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -156,6 +163,17 @@ export default function RegisterPage() {
     gender: "",
     language: "",
     mobileNumber: "",
+    // Employment Details
+    occupation: "",
+    industry: "",
+    salaryBracket: "",
+    // Address Details
+    addressLine1: "",
+    addressLine2: "",
+    suburb: "",
+    postalCode: "",
+    // Financial Details
+    hasCreditCard: false,
     selectedPackage: null,
     // Banking Details
     accountHolderName: "",
@@ -195,11 +213,12 @@ export default function RegisterPage() {
     return null;
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [name]: type === 'checkbox' ? checked : (type === 'select' ? value : value),
+
     }));
   };
 
@@ -208,9 +227,12 @@ export default function RegisterPage() {
     setError("");
 
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName ||
-        !formData.idNumber || !formData.dateOfBirth || !formData.gender || !formData.language ||
-        !formData.mobileNumber || !formData.selectedPackage || !formData.accountHolderName ||
-        !formData.bankName || !formData.branchCode || !formData.accountNumber || !formData.accountType || !formData.acceptMandate) {
+      !formData.idNumber || !formData.dateOfBirth || !formData.gender || !formData.language ||
+      !formData.mobileNumber || !formData.selectedPackage || !formData.accountHolderName ||
+      !formData.bankName || !formData.branchCode || !formData.accountNumber || !formData.accountType || !formData.acceptMandate ||
+      !formData.occupation || !formData.industry || !formData.salaryBracket ||
+      !formData.addressLine1 || !formData.suburb || !formData.postalCode
+    ) {
       setError("Please fill in all required fields");
       return;
     }
@@ -249,6 +271,50 @@ export default function RegisterPage() {
   const clearSignature = () => {
     signature?.clear();
   };
+
+  const today = new Date().toISOString().split('T')[0];
+  MandateText += `${today} ("the Agreement").
+
+I/We hereby authorise you to issue and deliver payment instructions of R550 per month for the program fee to your Banker for collection against my/our abovementioned account at my/our above-mentioned Bank (or any other bank or branch to which I/we may transfer my/our account) on condition that the sum of such payment instructions will never exceed my/our obligations as agreed to in the Agreement and commencing on 1rst of each month and continuing until this Authority and Mandate is terminated by me/us by giving you notice in writing of not less than 20 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
+
+The individual payment instructions so authorised to be issued must be issued and delivered as follows: R550 monthly.
+
+Personal Details:
+- Full Name: ${formData.firstName} ${formData.lastName}
+- ID Number: ${formData.idNumber}
+- Mobile: ${formData.mobileNumber}
+
+Employment Details:
+- Occupation: ${formData.occupation}
+- Industry: ${formData.industry}
+- Salary Bracket: ${formData.salaryBracket}
+
+Residential Address:
+${formData.addressLine1}
+${formData.addressLine2}
+${formData.suburb}
+${formData.postalCode}
+
+Banking Details:
+- Account Holder: ${formData.accountHolderName}
+- Bank: ${formData.bankName}
+- Branch Code: ${formData.branchCode}
+- Account Number: ${formData.accountNumber}
+- Account Type: ${formData.accountType}
+
+In the event that the payment day falls on a Sunday, or recognised South African public holiday, the payment day will automatically be the preceding ordinary business day.
+
+I/We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement.
+
+Mandate
+I/We acknowledge that all payment instructions issued by you shall be treated by my/our above-mentioned Bank as if the instructions have been issued by me/us personally.
+
+Cancellation
+I/We agree that although this Authority and Mandate may be cancelled by me/us, such cancellation will not cancel the Agreement. I/We shall not be entitled to any refund of amounts which you have withdrawn while this Authority was in force, if such amounts were legally owing to you.
+
+Assignment
+I/We acknowledge that this Authority may be ceded or assigned to a third party if the Agreement is also ceded or assigned to that third party, but in the absence of such assignment of the Agreement, this Authority and Mandate cannot be assigned to any third party.`;
+
 
   return (
     <div className="min-h-screen w-full bg-background">
@@ -324,15 +390,97 @@ export default function RegisterPage() {
                           id="isSouthAfrican"
                           name="isSouthAfrican"
                           checked={formData.isSouthAfrican}
-                          onCheckedChange={(checked) =>
-                            setFormData(prev => ({ ...prev, isSouthAfrican: checked as boolean }))
-                          }
+                          onCheckedChange={handleInputChange}
                         />
                         <label htmlFor="isSouthAfrican" className="ml-2 text-sm">
                           South African citizen
                         </label>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Employment Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Employment Information</h3>
+                  <div className="grid gap-4">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Input
+                        name="occupation"
+                        placeholder="Occupation"
+                        value={formData.occupation}
+                        onChange={handleInputChange}
+                      />
+                      <Select onValueChange={handleInputChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Industry" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {industries.map(industry => (
+                            <SelectItem key={industry} value={industry}>{industry}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Select name="industry" onValueChange={handleInputChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Salary Bracket" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {salaryBrackets.map(bracket => (
+                          <SelectItem key={bracket} value={bracket}>{bracket}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Address Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Address Information</h3>
+                  <div className="grid gap-4">
+                    <Input
+                      name="addressLine1"
+                      placeholder="Address Line 1"
+                      value={formData.addressLine1}
+                      onChange={handleInputChange}
+                    />
+                    <Input
+                      name="addressLine2"
+                      placeholder="Address Line 2"
+                      value={formData.addressLine2}
+                      onChange={handleInputChange}
+                    />
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Input
+                        name="suburb"
+                        placeholder="Suburb"
+                        value={formData.suburb}
+                        onChange={handleInputChange}
+                      />
+                      <Input
+                        name="postalCode"
+                        placeholder="Postal Code"
+                        value={formData.postalCode}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Financial Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Financial Information</h3>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasCreditCard"
+                      name="hasCreditCard"
+                      checked={formData.hasCreditCard}
+                      onCheckedChange={handleInputChange}
+                    />
+                    <label htmlFor="hasCreditCard" className="text-sm">
+                      Do you own a credit card?
+                    </label>
                   </div>
                 </div>
 
@@ -356,7 +504,7 @@ export default function RegisterPage() {
                       />
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
-                      <Select onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+                      <Select name="gender" onValueChange={handleInputChange}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select Gender" />
                         </SelectTrigger>
@@ -366,13 +514,13 @@ export default function RegisterPage() {
                           <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Select onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}>
+                      <Select name="language" onValueChange={handleInputChange}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select Language" />
                         </SelectTrigger>
                         <SelectContent>
                           {languages.map(lang => (
-                            <SelectItem key={lang} value={lang.toLowerCase()}>{lang}</SelectItem>
+                            <SelectItem key={lang} value={lang}>{lang}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -455,7 +603,7 @@ export default function RegisterPage() {
                         onChange={handleInputChange}
                       />
                     </div>
-                    <Select onValueChange={(value) => setFormData(prev => ({ ...prev, accountType: value }))}>
+                    <Select name="accountType" onValueChange={handleInputChange}>
                       <SelectTrigger>
                         <SelectValue placeholder="Type of Account" />
                       </SelectTrigger>
@@ -482,10 +630,9 @@ export default function RegisterPage() {
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="acceptMandate"
+                      name="acceptMandate"
                       checked={formData.acceptMandate}
-                      onCheckedChange={(checked) =>
-                        setFormData(prev => ({ ...prev, acceptMandate: checked as boolean }))
-                      }
+                      onCheckedChange={handleInputChange}
                     />
                     <label htmlFor="acceptMandate" className="text-sm">
                       I accept the terms of the mandate
