@@ -31,7 +31,7 @@ import { Label } from "@/components/ui/label";
 const packages = [
   {
     id: 1,
-    name: "Bronze",
+    name: "Beginner",
     price: 99,
     perks: [
       "5% Cashback on Purchases",
@@ -43,7 +43,7 @@ const packages = [
   },
   {
     id: 2,
-    name: "Silver",
+    name: "Novice",
     price: 199,
     perks: [
       "10% Cashback on Purchases",
@@ -56,7 +56,7 @@ const packages = [
   },
   {
     id: 3,
-    name: "Gold",
+    name: "Active",
     price: 299,
     perks: [
       "15% Cashback on Purchases",
@@ -70,7 +70,7 @@ const packages = [
   },
   {
     id: 4,
-    name: "Platinum",
+    name: "Professional",
     price: 499,
     perks: [
       "20% Cashback on Purchases",
@@ -85,7 +85,7 @@ const packages = [
   },
   {
     id: 5,
-    name: "Diamond",
+    name: "Expert",
     price: 999,
     perks: [
       "25% Cashback on Purchases",
