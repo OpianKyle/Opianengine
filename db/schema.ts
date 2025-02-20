@@ -12,17 +12,16 @@ export const activityTypes = pgEnum("activity_type", [
 ]);
 
 export const packageTypes = pgEnum("package_type", [
-  "BASIC",
-  "STANDARD",
-  "PREMIUM",
-  "PLATINUM"
+  "BEGINNER",
+  "NOVICE",
+  "ACTIVE",
+  "PROFESSIONAL",
+  "EXPERT"
 ]);
 
 export const accountTypes = pgEnum("account_type", [
-  "SAVINGS",
   "CHEQUE",
-  "CREDIT",
-  "BUSINESS"
+  "SAVINGS"
 ]);
 
 export const products = pgTable("products", {

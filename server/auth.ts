@@ -513,10 +513,10 @@ const registerSchema = z.object({
   city: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
   // Package Selection
-  selectedPackage: z.enum(["BASIC", "STANDARD", "PREMIUM", "PLATINUM"]).optional().nullable(),
+  selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]).optional().nullable(),
   // Banking Information
   bankName: z.string().optional().nullable(),
-  accountType: z.enum(["SAVINGS", "CHEQUE", "CREDIT", "BUSINESS"]).optional().nullable(),
+  accountType: z.enum(["CHEQUE", "SAVINGS"]).optional().nullable(),
   accountNumber: z.string().optional().nullable(),
   hasCreditCard: z.boolean().default(false),
   // Digital signature
