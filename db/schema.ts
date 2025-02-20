@@ -36,30 +36,34 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   phoneNumber: text("phone_number").notNull(),
-  // New fields for enhanced registration
+  // Personal Information
   isSouthAfrican: boolean("is_south_african").default(false).notNull(),
   idNumber: text("id_number").notNull(),
-  dateOfBirth: timestamp("date_of_birth").notNull(),
-  gender: text("gender").notNull(),
-  // Add agent role field
-  isAgent: boolean("is_agent").default(false).notNull(),
-  // Package and payment details
+  dateOfBirth: text("date_of_birth").notNull(),
+  // Address Information
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  postalCode: text("postal_code").notNull(),
+  // Employment Information
+  employerName: text("employer_name").notNull(),
+  jobTitle: text("job_title").notNull(),
+  employmentDuration: text("employment_duration").notNull(),
+  // Package Selection
   selectedPackage: integer("selected_package").notNull(),
-  // Banking details
-  accountHolderName: text("account_holder_name").notNull(),
+  // Banking Information (for admins only)
   bankName: text("bank_name").notNull(),
-  branchCode: text("branch_code").notNull(),
-  accountNumber: text("account_number").notNull(),
   accountType: text("account_type").notNull(),
+  accountNumber: text("account_number").notNull(),
+  hasCreditCard: boolean("has_credit_card").default(false),
   // Digital signature
   signature: text("signature").notNull(),
-  // Existing fields
+  // System fields
   isAdmin: boolean("is_admin").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
   isEnabled: boolean("is_enabled").default(true).notNull(),
   points: integer("points").default(0).notNull(),
-  referral_code: text("referral_code"),
-  referred_by: text("referred_by"),
+  referralCode: text("referral_code"),
+  referredBy: text("referred_by"),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -172,13 +176,13 @@ export const userRelations = relations(users, ({ many, one }) => ({
   }),
   referredUsers: many(users, {
     relationName: "referralRelation",
-    fields: [users.referral_code],
-    references: [users.referred_by],
+    fields: [users.referralCode],
+    references: [users.referredBy],
   }),
   referrer: one(users, {
     relationName: "referralRelation",
-    fields: [users.referred_by],
-    references: [users.referral_code],
+    fields: [users.referredBy],
+    references: [users.referralCode],
   }),
   notifications: many(notifications)
 }));
