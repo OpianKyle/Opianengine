@@ -149,7 +149,6 @@ const benefitsInfo = [
 ];
 
 let MandateText = `This signed Authority and Mandate refers to our contract dated
-
 `;
 
 const PackageCard = ({ pkg, isSelected, onSelect, anySelected }) => (
@@ -349,12 +348,12 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!signature?.isEmpty()) {
-      setError("Please provide your signature");
+    if (!signature || signature.isEmpty()) {
+      setError("Please provide your digital signature");
       return;
     }
 
-    const signatureData = signature?.toDataURL();
+    const signatureData = signature.toDataURL();
 
     try {
       const registrationData = {
@@ -388,7 +387,6 @@ export default function RegisterPage() {
 
   const today = new Date().toISOString().split('T')[0];
   MandateText = `This signed Authority and Mandate refers to our contract dated
-
 ${today}
 ("the Agreement").
 
@@ -401,7 +399,6 @@ In the event that the payment day falls on a Sunday, or recognised South African
 Payment Instructions due in December may be debited against my account on a earlier date
 
 I / We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement. A payment reference is added to this form before the issuing of any payment instruction.
-
 Mandate
 I /We acknowledge that all payment instructions issued by you shall be treated by my / our above-mentioned Bank as if the instructions have been issued by me/us personally.
 
@@ -687,19 +684,46 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                           {MandateText}
                         </div>
                       </ScrollArea>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="acceptMandate"
+                          checked={formData.acceptMandate}
+                          onCheckedChange={handleCheckboxChange('acceptMandate')}
+                          className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
+                        />
+                        <label htmlFor="acceptMandate" className="text-sm">
+                          I accept the terms of the mandate
+                        </label>
+                      </div>
+
+                      <div className="space-y-4">
+                        <Label>Digital Signature</Label>
+                        <Card className="p-4">
+                          <div className="border rounded-md bg-background">
+                            <SignatureCanvas
+                              ref={(ref) => setSignature(ref)}
+                              canvasProps={{
+                                className: 'w-full h-[200px]',
+                                style: {
+                                  background: 'transparent',
+                                  border: '1px solid var(--border)'
+                                }
+                              }}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={clearSignature}
+                          >
+                            Clear Signature
+                          </Button>
+                        </Card>
+                      </div>
                     </CardContent>
                   </Card>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="acceptMandate"
-                      checked={formData.acceptMandate}
-                      onCheckedChange={handleCheckboxChange('acceptMandate')}
-                      className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
-                    />
-                    <label htmlFor="acceptMandate" className="text-sm">
-                      I accept the terms of the mandate
-                    </label>
-                  </div>
                 </div>
 
                 {/* Agent Referral Section */}
