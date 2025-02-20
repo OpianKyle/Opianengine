@@ -43,7 +43,6 @@ const registerSchema = z.object({
   referralCode: z.string().optional().nullable(),
 });
 
-// Session configuration remains the same
 export const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'development-secret',
   resave: false,

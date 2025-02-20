@@ -26,6 +26,9 @@ app.use(fileUpload({
 }));
 
 app.use((req, res, next) => {
+  // Enable credentials for all responses
+  res.header('Access-Control-Allow-Credentials', 'true');
+
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
