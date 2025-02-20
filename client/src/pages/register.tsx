@@ -280,20 +280,20 @@ export default function RegisterPage() {
                 {/* Personal Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Personal Information</h3>
-                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
+                  <div className="flex flex-wrap gap-3">
                     <Input
                       name="firstName"
                       placeholder="First Name"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
                     <Input
                       name="lastName"
                       placeholder="Last Name"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
                     <Input
                       name="email"
@@ -301,7 +301,7 @@ export default function RegisterPage() {
                       placeholder="Email address"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
                     <Input
                       name="password"
@@ -309,16 +309,16 @@ export default function RegisterPage() {
                       placeholder="Password"
                       value={formData.password}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
                     <Input
                       name="mobileNumber"
                       placeholder="Mobile Number"
                       value={formData.mobileNumber}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 w-[calc(50%-6px)]">
                       <Checkbox
                         id="isSouthAfrican"
                         name="isSouthAfrican"
@@ -336,7 +336,7 @@ export default function RegisterPage() {
                       placeholder="ID Number/Passport"
                       value={formData.idNumber}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
                     <Input
                       name="dateOfBirth"
@@ -344,78 +344,84 @@ export default function RegisterPage() {
                       placeholder="Date of Birth"
                       value={formData.dateOfBirth}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
-                    <Select
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
-                    >
-                      <SelectTrigger className="h-9 w-full">
-                        <SelectValue placeholder="Select Gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
-                    >
-                      <SelectTrigger className="h-9 w-full">
-                        <SelectValue placeholder="Select Language" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {languages.map(lang => (
-                          <SelectItem key={lang} value={lang.toLowerCase()}>{lang}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="w-[calc(50%-6px)]">
+                      <Select
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
+                      >
+                        <SelectTrigger className="h-9 w-full">
+                          <SelectValue placeholder="Select Gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-[calc(50%-6px)]">
+                      <Select
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
+                      >
+                        <SelectTrigger className="h-9 w-full">
+                          <SelectValue placeholder="Select Language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {languages.map(lang => (
+                            <SelectItem key={lang} value={lang.toLowerCase()}>{lang}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
                 {/* Banking Details */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Banking Details</h3>
-                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
+                  <div className="flex flex-wrap gap-3">
                     <Input
                       name="accountHolderName"
                       placeholder="Account Holder Name"
                       value={formData.accountHolderName}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
                     <Input
                       name="bankName"
                       placeholder="Bank Name"
                       value={formData.bankName}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
                     <Input
                       name="branchCode"
                       placeholder="Branch & Code"
                       value={formData.branchCode}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
                     <Input
                       name="accountNumber"
                       placeholder="Account Number"
                       value={formData.accountNumber}
                       onChange={handleInputChange}
-                      className="h-9 w-full"
+                      className="h-9 w-[calc(50%-6px)]"
                     />
-                    <Select
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, accountType: value }))}
-                    >
-                      <SelectTrigger className="h-9 w-full">
-                        <SelectValue placeholder="Type of Account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="savings">Savings</SelectItem>
-                        <SelectItem value="current">Current</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="w-[calc(50%-6px)]">
+                      <Select
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, accountType: value }))}
+                      >
+                        <SelectTrigger className="h-9 w-full">
+                          <SelectValue placeholder="Type of Account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="savings">Savings</SelectItem>
+                          <SelectItem value="current">Current</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
