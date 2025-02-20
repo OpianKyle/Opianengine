@@ -8,7 +8,7 @@ import { db } from "@db";
 import { users } from "@db/schema";
 
 // Check required environment variables
-const requiredEnvVars = ['DATABASE_URL'];
+const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missingEnvVars.length > 0) {
   console.error('Missing required environment variables:', missingEnvVars.join(', '));
@@ -61,8 +61,8 @@ app.use((req, res, next) => {
       process.exit(1);
     }
 
-    // Setup authentication
-    await setupAuth(app);
+    // Setup authentication (before routes)
+    setupAuth(app);
     log('Authentication setup complete');
 
     const server = registerRoutes(app);
@@ -87,8 +87,9 @@ app.use((req, res, next) => {
       log('Static serving setup complete');
     }
 
+    // Start the server
     const PORT = process.env.PORT || 5000;
-    server.listen(PORT, "0.0.0.0", () => {
+    server.listen(PORT, () => {
       log(`Server running on port ${PORT}`);
     });
   } catch (error) {

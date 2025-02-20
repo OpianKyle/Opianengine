@@ -44,9 +44,6 @@ export const users = pgTable("users", {
   address: text("address"),
   city: text("city"),
   postalCode: text("postal_code"),
-  // Employment Information
-  employerName: text("employer_name"),
-  jobTitle: text("job_title"),
   // Package Selection
   selectedPackage: integer("selected_package"),
   // Banking Information

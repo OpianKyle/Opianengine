@@ -2,10 +2,9 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type Express, Request } from "express";
 import session from "express-session";
-import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, transactions } from "@db/schema"; // Added transactions import
+import { users, transactions } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -14,166 +13,34 @@ import { parse as parseCookie } from 'cookie';
 import jwt from 'jsonwebtoken';
 
 const scryptAsync = promisify(scrypt);
-const MemoryStore = createMemoryStore(session);
 
-// Session configuration
-export const sessionConfig = {
-  secret: process.env.SESSION_SECRET || 'development-secret',
-  resave: false,
-  saveUninitialized: false,
-  store: new MemoryStore({
-    checkPeriod: 86400000 // 24h
-  }),
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax' as const,
-    path: '/'
-  },
-  name: 'connect.sid' // Changed to match default Express session name
-};
-
-// Verify session helper function
-export async function verifySession(req: Request): Promise<any> {
-  try {
-    console.log('Verifying session for request:', {
-      url: req.url,
-      headers: {
-        cookie: req.headers.cookie,
-        'sec-websocket-protocol': req.headers['sec-websocket-protocol']
-      }
-    });
-
-    // If we already have user data from passport, return it
-    if (req.user) {
-      console.log('Using existing session user:', req.user);
-      return req.user;
-    }
-
-    // For WebSocket requests, parse the cookie and verify the session
-    if (!req.headers.cookie) {
-      console.log('No cookie found in request');
-      return null;
-    }
-
-    const cookies = parseCookie(req.headers.cookie);
-    const sessionId = cookies['connect.sid']; // Changed to match cookie name
-
-    if (!sessionId) {
-      console.log('No session ID found in cookies');
-      return null;
-    }
-
-    console.log('Found session ID:', sessionId);
-
-    // Verify session from store
-    return new Promise((resolve) => {
-      sessionConfig.store.get(sessionId, async (err: any, session: any) => {
-        if (err || !session) {
-          console.log('Session not found or error:', err);
-          resolve(null);
-          return;
-        }
-
-        try {
-          console.log('Retrieved session data:', {
-            ...session,
-            // Redact sensitive data in logs
-            cookie: '[Redacted]',
-            passport: session.passport ? { user: session.passport.user } : undefined
-          });
-
-          // Get user data from passport session
-          const userId = session.passport?.user;
-          if (!userId) {
-            console.log('No user ID in session');
-            resolve(null);
-            return;
-          }
-
-          console.log('Found user ID in session:', userId);
-
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, userId))
-            .limit(1);
-
-          if (!user) {
-            console.log('User not found in database');
-            resolve(null);
-            return;
-          }
-
-          const { password: _, ...safeUser } = user;
-          console.log('Session verified for user:', safeUser.id);
-          resolve(safeUser);
-        } catch (error) {
-          console.error('Error verifying session:', error);
-          resolve(null);
-        }
-      });
-    });
-  } catch (error) {
-    console.error('Error in verifySession:', error);
-    return null;
-  }
+// Create the MemoryStore using a dynamic import
+let MemoryStore: any;
+try {
+  const memorystore = await import('memorystore');
+  MemoryStore = memorystore.default(session);
+} catch (error) {
+  console.error('Failed to import memorystore:', error);
+  process.exit(1);
 }
 
-export const crypto = {
-  async hashPassword(password: string) {
-    const salt = randomBytes(16).toString('hex');
-    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${salt}.${hash.toString('hex')}`;
-  },
-
-  async verifyPassword(password: string, storedHash: string) {
-    try {
-      const [salt, hash] = storedHash.split('.');
-      if (!salt || !hash) return false;
-
-      const hashBuffer = Buffer.from(hash, 'hex');
-      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
-
-      return timingSafeEqual(hashBuffer, suppliedBuffer);
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
-    }
-  }
-};
-
-const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
-
-// Add enhanced logging to verifyToken function
-export function verifyToken(token: string): any {
-  try {
-    console.log('Verifying token:', {
-      tokenLength: token.length,
-      firstChars: token.substring(0, 10) + '...',
-    });
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    console.log('Token verified successfully:', {
-      userId: decoded.id,
-      isAdmin: decoded.isAdmin,
-      exp: new Date(decoded.exp * 1000).toISOString()
-    });
-
-    return decoded;
-  } catch (error) {
-    console.error('Token verification failed:', {
-      error: error.message,
-      name: error.name,
-      tokenLength: token?.length
-    });
-    return null;
-  }
-}
-
-export async function setupAuth(app: Express) {
-  app.use(session(sessionConfig));
+export function setupAuth(app: Express) {
+  // Configure session middleware with MemoryStore
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || 'development-secret',
+      cookie: {
+        maxAge: 86400000, // 24 hours
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      },
+      store: new MemoryStore({
+        checkPeriod: 86400000 // prune expired entries every 24h
+      }),
+      resave: false,
+      saveUninitialized: false
+    })
+  );
 
   app.use(passport.initialize());
   app.use(passport.session());
@@ -284,7 +151,10 @@ export async function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
-      console.log('Registration attempt:', req.body);
+      console.log('Registration attempt with data:', {
+        ...req.body,
+        password: '[REDACTED]'
+      });
 
       const result = registerSchema.safeParse(req.body);
       if (!result.success) {
@@ -322,6 +192,7 @@ export async function setupAuth(app: Express) {
         signature
       } = result.data;
 
+      console.log('Checking for existing user with email:', email);
       const [existingUser] = await db
         .select()
         .from(users)
@@ -329,6 +200,7 @@ export async function setupAuth(app: Express) {
         .limit(1);
 
       if (existingUser) {
+        console.log('User already exists with email:', email);
         return res.status(400).json({
           error: "This email address is already registered. Please try logging in or use a different email address."
         });
@@ -336,10 +208,11 @@ export async function setupAuth(app: Express) {
 
       let referrerUser = null;
       if (referralCode) {
+        console.log('Looking up referral code:', referralCode);
         [referrerUser] = await db
           .select()
           .from(users)
-          .where(eq(users.referral_code, referralCode))
+          .where(eq(users.referralCode, referralCode))
           .limit(1);
 
         if (!referrerUser) {
@@ -350,91 +223,96 @@ export async function setupAuth(app: Express) {
       }
 
       const newReferralCode = randomBytes(8).toString('hex');
+      console.log('Generated new referral code:', newReferralCode);
       const hashedPassword = await crypto.hashPassword(password);
 
-      const newUser = await db.transaction(async (tx) => {
-        // Create the new user with all fields
-        const [user] = await tx
-          .insert(users)
-          .values({
-            email,
-            password: hashedPassword,
-            firstName,
-            lastName,
-            phoneNumber,
-            isAdmin: false,
-            isSuperAdmin: false,
-            isEnabled: true,
-            points: referralCode ? 2000 : 1000,
-            referral_code: newReferralCode,
-            referred_by: referralCode || null,
-            is_south_african: isSouthAfrican || false,
-            id_number: idNumber || null,
-            date_of_birth: dateOfBirth || null,
-            gender: gender || null,
-            occupation: occupation || null,
-            industry: industry || null,
-            address_line1: addressLine1 || null,
-            address_line2: addressLine2 || null,
-            suburb: suburb || null,
-            postal_code: postalCode || null,
-            has_credit_card: hasCreditCard || false,
-            selected_package: selectedPackage || null,
-            account_holder_name: accountHolderName || null,
-            bank_name: bankName || null,
-            branch_code: branchCode || null,
-            account_number: accountNumber || null,
-            account_type: accountType || null,
-            signature: signature || null,
-          })
-          .returning();
+      console.log('Starting transaction for new user creation');
+      try {
+        const newUser = await db.transaction(async (tx) => {
+          console.log('Creating new user record');
+          const [user] = await tx
+            .insert(users)
+            .values({
+              email,
+              password: hashedPassword,
+              firstName,
+              lastName,
+              phoneNumber,
+              isAdmin: false,
+              isSuperAdmin: false,
+              isEnabled: true,
+              points: referralCode ? 2000 : 1000,
+              referralCode: newReferralCode,
+              referredBy: referralCode || null,
+              isSouthAfrican: isSouthAfrican || false,
+              idNumber: idNumber || null,
+              dateOfBirth: dateOfBirth || null,
+              gender: gender || null,
+              occupation: occupation || null,
+              industry: industry || null,
+              addressLine1: addressLine1 || null,
+              addressLine2: addressLine2 || null,
+              suburb: suburb || null,
+              postalCode: postalCode || null,
+              hasCreditCard: hasCreditCard || false,
+              selectedPackage: selectedPackage || null,
+              accountHolderName: accountHolderName || null,
+              bankName: bankName || null,
+              branchCode: branchCode || null,
+              accountNumber: accountNumber || null,
+              accountType: accountType || null,
+              signature: signature || null,
+              createdAt: new Date()
+            })
+            .returning();
 
-        // Add welcome bonus transaction
-        await tx
-          .insert(transactions)
-          .values({
-            userId: user.id,
-            points: referralCode ? 2000 : 1000,
-            type: "WELCOME_BONUS",
-            description: "Welcome bonus for new registration",
-          });
-
-        // If user was referred, update referrer's points
-        if (referrerUser) {
-          await tx
-            .update(users)
-            .set({ points: referrerUser.points + 2500 })
-            .where(eq(users.id, referrerUser.id));
-
+          console.log('Adding welcome bonus transaction');
           await tx
             .insert(transactions)
             .values({
-              userId: referrerUser.id,
-              points: 2500,
-              type: "REFERRAL_BONUS",
-              description: `Referral bonus for referring ${email}`,
+              userId: user.id,
+              points: referralCode ? 2000 : 1000,
+              type: "WELCOME_BONUS",
+              description: "Welcome bonus for new registration",
             });
-        }
 
-        return user;
-      });
+          if (referrerUser) {
+            console.log('Processing referral bonus for referrer:', referrerUser.id);
+            await tx
+              .update(users)
+              .set({ points: referrerUser.points + 2500 })
+              .where(eq(users.id, referrerUser.id));
 
-      const { text, html } = formatRegistrationEmail(firstName, newReferralCode);
-      await sendEmail({
-        to: email,
-        subject: "Welcome to OPIAN Rewards!",
-        text,
-        html
-      });
+            await tx
+              .insert(transactions)
+              .values({
+                userId: referrerUser.id,
+                points: 2500,
+                type: "REFERRAL_BONUS",
+                description: `Referral bonus for referring ${email}`,
+              });
+          }
 
-      const { password: _, ...safeUser } = newUser;
-      req.login(safeUser, (err) => {
-        if (err) {
-          console.error('Login error after registration:', err);
-          return res.status(500).json({ error: "Registration successful but login failed" });
-        }
-        res.status(201).json(safeUser);
-      });
+          return user;
+        });
+
+        console.log('Successfully created new user:', {
+          id: newUser.id,
+          email: newUser.email
+        });
+
+        const { password: _, ...safeUser } = newUser;
+        req.login(safeUser, (err) => {
+          if (err) {
+            console.error('Login error after registration:', err);
+            return res.status(500).json({ error: "Registration successful but login failed" });
+          }
+          res.status(201).json(safeUser);
+        });
+      } catch (dbError) {
+        console.error('Database error during registration:', dbError);
+        res.status(500).json({ error: "Database error during registration" }); 
+      }
     } catch (error) {
       console.error('Registration error:', error);
       res.status(500).json({ error: "Registration failed. Please try again." });
@@ -452,7 +330,7 @@ export async function setupAuth(app: Express) {
           console.error('Session destruction error:', err);
           return res.status(500).json({ error: "Logout failed" });
         }
-        res.clearCookie("connect.sid"); //Updated cookie name
+        res.clearCookie("connect.sid"); 
         res.json({ message: "Logged out successfully" });
       });
     });
@@ -464,6 +342,166 @@ export async function setupAuth(app: Express) {
     }
     res.json(req.user);
   });
+}
+
+export async function verifySession(req: Request): Promise<any> {
+  try {
+    console.log('Verifying session for request:', {
+      url: req.url,
+      headers: {
+        cookie: req.headers.cookie,
+        'sec-websocket-protocol': req.headers['sec-websocket-protocol']
+      }
+    });
+
+    // If we already have user data from passport, return it
+    if (req.user) {
+      console.log('Using existing session user:', req.user);
+      return req.user;
+    }
+
+    // For WebSocket requests, parse the cookie and verify the session
+    if (!req.headers.cookie) {
+      console.log('No cookie found in request');
+      return null;
+    }
+
+    const cookies = parseCookie(req.headers.cookie);
+    const sessionId = cookies['connect.sid']; 
+
+    if (!sessionId) {
+      console.log('No session ID found in cookies');
+      return null;
+    }
+
+    console.log('Found session ID:', sessionId);
+
+    // Verify session from store
+    return new Promise((resolve) => {
+      session({
+        secret: process.env.SESSION_SECRET || 'development-secret',
+        cookie: {
+          maxAge: 86400000, // 24 hours
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        },
+        store: new MemoryStore({
+          checkPeriod: 86400000 // prune expired entries every 24h
+        }),
+        resave: false,
+        saveUninitialized: false
+      }).store.get(sessionId, async (err: any, session: any) => {
+        if (err || !session) {
+          console.log('Session not found or error:', err);
+          resolve(null);
+          return;
+        }
+
+        try {
+          console.log('Retrieved session data:', {
+            ...session,
+            // Redact sensitive data in logs
+            cookie: '[Redacted]',
+            passport: session.passport ? { user: session.passport.user } : undefined
+          });
+
+          // Get user data from passport session
+          const userId = session.passport?.user;
+          if (!userId) {
+            console.log('No user ID in session');
+            resolve(null);
+            return;
+          }
+
+          console.log('Found user ID in session:', userId);
+
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+
+          if (!user) {
+            console.log('User not found in database');
+            resolve(null);
+            return;
+          }
+
+          const { password: _, ...safeUser } = user;
+          console.log('Session verified for user:', safeUser.id);
+          resolve(safeUser);
+        } catch (error) {
+          console.error('Error verifying session:', error);
+          resolve(null);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error in verifySession:', error);
+    return null;
+  }
+}
+
+export const crypto = {
+  async hashPassword(password: string) {
+    const salt = randomBytes(16).toString('hex');
+    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${salt}.${hash.toString('hex')}`;
+  },
+
+  async verifyPassword(password: string, storedHash: string) {
+    try {
+      const [salt, hash] = storedHash.split('.');
+      if (!salt || !hash) return false;
+
+      const hashBuffer = Buffer.from(hash, 'hex');
+      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
+
+      return timingSafeEqual(hashBuffer, suppliedBuffer);
+    } catch (error) {
+      console.error('Password verification error:', error);
+      return false;
+    }
+  }
+};
+
+const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
+
+export function verifyToken(token: string): any {
+  try {
+    console.log('Verifying token:', {
+      tokenLength: token.length,
+      firstChars: token.substring(0, 10) + '...',
+    });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('Token verified successfully:', {
+      userId: decoded.id,
+      isAdmin: decoded.isAdmin,
+      exp: new Date(decoded.exp * 1000).toISOString()
+    });
+
+    return decoded;
+  } catch (error) {
+    console.error('Token verification failed:', {
+      error: error.message,
+      name: error.name,
+      tokenLength: token?.length
+    });
+    return null;
+  }
+}
+
+export function generateToken(user: any) {
+  return jwt.sign(
+    {
+      id: user.id,
+      isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin
+    },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
 }
 
 const loginSchema = z.object({
@@ -497,15 +535,3 @@ const registerSchema = z.object({
   accountType: z.string().optional().nullable(),
   signature: z.string().optional().nullable(),
 });
-
-export function generateToken(user: any) {
-  return jwt.sign(
-    {
-      id: user.id,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin
-    },
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-}
