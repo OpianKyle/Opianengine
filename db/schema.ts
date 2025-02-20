@@ -41,7 +41,8 @@ export const users = pgTable("users", {
   idNumber: text("id_number").notNull(),
   dateOfBirth: timestamp("date_of_birth").notNull(),
   gender: text("gender").notNull(),
-  language: text("language").notNull(),
+  // Add agent role field
+  isAgent: boolean("is_agent").default(false).notNull(),
   // Package and payment details
   selectedPackage: integer("selected_package").notNull(),
   // Banking details

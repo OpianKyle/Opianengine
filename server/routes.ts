@@ -14,6 +14,7 @@ import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
+import referralRouter from './routes/referral';  // Import referral routes
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -25,7 +26,6 @@ const crypto = {
 };
 
 export function registerRoutes(app: Express): Server {
-  // Configure session middleware
   const MemoryStoreSession = MemoryStore(session);
   app.use(
     session({
@@ -43,10 +43,13 @@ export function registerRoutes(app: Express): Server {
   );
 
   setupAuth(app);
+
+  // Mount referral routes
+  app.use(referralRouter);
+
   const httpServer = createServer(app);
   const wsServer = setupWebSocketServer(httpServer);
 
-  // Add new endpoint to fetch admin logs
   app.get("/api/admin/logs", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     try {
@@ -79,14 +82,12 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update the points allocation endpoint to use WebSocket
   app.post("/api/admin/points", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { userId, points, description } = req.body;
 
     try {
       const result = await db.transaction(async (tx) => {
-        // Get the target user's details
         const [targetUser] = await tx
           .select({
             id: users.id,
@@ -103,7 +104,6 @@ export function registerRoutes(app: Express): Server {
           throw new Error("User not found");
         }
 
-        // Get the admin's details
         const [admin] = await tx
           .select({
             id: users.id,
@@ -130,7 +130,6 @@ export function registerRoutes(app: Express): Server {
           .where(eq(users.id, userId))
           .returning();
 
-        // Get the user's tier after points update
         const tierPoints = updatedUser.points;
         let currentTier = "Bronze";
         if (tierPoints >= 150000) currentTier = "Platinum";
@@ -138,7 +137,6 @@ export function registerRoutes(app: Express): Server {
         else if (tierPoints >= 50000) currentTier = "Purple";
         else if (tierPoints >= 10000) currentTier = "Silver";
 
-        // Broadcast the points allocation notification
         wsServer.broadcastToUser(userId, {
           type: "POINTS_ALLOCATION",
           points,
@@ -146,7 +144,6 @@ export function registerRoutes(app: Express): Server {
           timestamp: new Date().toISOString()
         });
 
-        // Send email to customer
         const customerEmail = formatPointsAssignmentEmail(
           targetUser.firstName || "Valued Customer",
           points,
@@ -160,7 +157,6 @@ export function registerRoutes(app: Express): Server {
           html: customerEmail.html
         });
 
-        // Send email to admin
         const adminEmail = formatAdminNotificationEmail(
           `${targetUser.firstName} ${targetUser.lastName}`,
           points,
@@ -191,7 +187,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Admin Management Routes
   app.post("/api/admin/users/create", async (req, res) => {
     if (!req.user?.isSuperAdmin) return res.status(403).json({error: "Only super admins can create new admins"});
     const { email, password, firstName, lastName, phoneNumber } = req.body;
@@ -223,7 +218,6 @@ export function registerRoutes(app: Express): Server {
         })
         .returning();
 
-      // Log admin creation
       await logAdminAction({
         adminId: req.user.id,
         actionType: "ADMIN_CREATED",
@@ -265,7 +259,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Log the user update
       await logAdminAction({
         adminId: req.user.id,
         actionType: "ADMIN_UPDATED",
@@ -296,10 +289,9 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Log the status change using a valid action type
       await logAdminAction({
         adminId: req.user.id,
-        actionType: "ADMIN_REMOVED", // Using ADMIN_REMOVED as it's the closest valid action type
+        actionType: "ADMIN_REMOVED", 
         targetUserId: user.id,
         details: `${enabled ? 'Enabled' : 'Disabled'} admin user: ${user.email}`,
       });
@@ -311,7 +303,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Updated admin removal logic to handle foreign key constraints
   app.post("/api/admin/users/toggle-admin", async (req, res) => {
     if (!req.user?.isSuperAdmin) return res.status(403).json({error: "Unauthorized"});
     const { userId, isAdmin } = req.body;
@@ -332,7 +323,6 @@ export function registerRoutes(app: Express): Server {
 
     try {
       if (!isAdmin) {
-        // Instead of deleting, we'll update the user to remove admin status and disable the account
         const [updatedUser] = await db
           .update(users)
           .set({
@@ -342,7 +332,6 @@ export function registerRoutes(app: Express): Server {
           .where(eq(users.id, userId))
           .returning();
 
-        // Log admin removal
         await logAdminAction({
           adminId: req.user.id,
           actionType: "ADMIN_REMOVED",
@@ -352,14 +341,12 @@ export function registerRoutes(app: Express): Server {
 
         res.json({ message: "Admin user removed successfully" });
       } else {
-        // If adding admin status, update the user
         const [updatedUser] = await db
           .update(users)
           .set({ isAdmin })
           .where(eq(users.id, userId))
           .returning();
 
-        // Log admin updated
         await logAdminAction({
           adminId: req.user.id,
           actionType: "ADMIN_ENABLED",
@@ -384,7 +371,6 @@ export function registerRoutes(app: Express): Server {
     res.json(allUsers);
   });
 
-  // Add the customers endpoint right after the admin users endpoint
   app.get("/api/admin/customers", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const customers = await db.query.users.findMany({
@@ -412,14 +398,12 @@ export function registerRoutes(app: Express): Server {
     res.json(customers);
   });
 
-  // Add customer deletion endpoint
   app.delete("/api/admin/customers/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
     const userId = parseInt(id);
 
     try {
-      // Get customer details before deletion for logging
       const [customer] = await db
         .select({
           id: users.id,
@@ -437,48 +421,39 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Customer not found" });
       }
 
-      // Prevent deletion of admin users through this endpoint
       if (customer.isAdmin) {
         return res.status(403).json({ error: "Cannot delete admin users through this endpoint" });
       }
 
-      // Begin transaction to handle the deletion and related records
       await db.transaction(async (tx) => {
-        // Delete admin logs first
         await tx
           .delete(adminLogs)
           .where(eq(adminLogs.targetUserId, userId));
 
-        // Delete product assignments
         await tx
           .delete(productAssignments)
           .where(eq(productAssignments.userId, userId));
 
-        // Delete transactions
         await tx
           .delete(transactions)
           .where(eq(transactions.userId, userId));
 
-        // Delete referral stats
         await tx
           .delete(referralStats)
           .where(eq(referralStats.userId, userId));
 
-        // Update referred_by to null for any users this customer referred
         await tx
           .update(users)
           .set({ referred_by: null })
           .where(eq(users.referred_by, customer.referral_code));
 
-        // Finally delete the user
         await tx
           .delete(users)
           .where(eq(users.id, userId));
 
-        // Log the customer deletion
         await logAdminAction({
-          adminId: req.user.id,
-          actionType: "ADMIN_REMOVED", // Changed to use a valid enum value
+          adminId: req.user.id, 
+          actionType: "ADMIN_REMOVED", 
           targetUserId: userId,
           details: `Deleted customer: ${customer.email} (${customer.firstName} ${customer.lastName})`,
         });
@@ -492,7 +467,6 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-  // Export customers to CSV
   app.get("/api/admin/customers/export", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
 
@@ -547,7 +521,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Import customers from CSV
   app.post("/api/admin/customers/import", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
 
@@ -578,9 +551,8 @@ export function registerRoutes(app: Express): Server {
 
       for (const record of records) {
         try {
-          const hashedPassword = await authCrypto.hashPassword('ChangeMe123!'); // Use authCrypto instead of crypto
+          const hashedPassword = await authCrypto.hashPassword('ChangeMe123!'); 
 
-          // Check if user already exists
           const [existingUser] = await db
             .select()
             .from(users)
@@ -593,7 +565,6 @@ export function registerRoutes(app: Express): Server {
             continue;
           }
 
-          // Create new user
           await db.insert(users).values({
             email: record.email,
             password: hashedPassword,
@@ -613,7 +584,6 @@ export function registerRoutes(app: Express): Server {
         }
       }
 
-      // Log the import action
       await logAdminAction({
         adminId: req.user.id,
         actionType: "ADMIN_CREATED",
@@ -630,7 +600,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Product Management Routes
   app.get("/api/products", async (req, res) => {
     try {
       const allProducts = await db.query.products.findMany({
@@ -653,10 +622,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add after the existing product endpoints
   app.get("/api/products/customer", async (req, res) => {
     try {
-      // Only return enabled products for customers
       const allProducts = await db.query.products.findMany({
         where: eq(products.isEnabled, true),
         columns: {
@@ -680,7 +647,6 @@ export function registerRoutes(app: Express): Server {
       const { name, description, activities } = req.body;
 
       const result = await db.transaction(async (tx) => {
-        // Create the product first
         const [product] = await tx
           .insert(products)
           .values({
@@ -690,7 +656,6 @@ export function registerRoutes(app: Express): Server {
           })
           .returning();
 
-        // Then create all activities for this product
         if (activities && Array.isArray(activities)) {
           await Promise.all(
             activities.map((activity) =>
@@ -706,14 +671,12 @@ export function registerRoutes(app: Express): Server {
         return product;
       });
 
-      // Log the product creation
       await logAdminAction({
         adminId: req.user.id,
         actionType: "PRODUCT_CREATED",
         details: `Created new product: ${result.name}`,
       });
 
-      // Fetch the complete product with activities
       const completeProduct = await db.query.products.findFirst({
         where: eq(products.id, result.id),
         with: {
@@ -742,7 +705,6 @@ export function registerRoutes(app: Express): Server {
 
     try {
       const result = await db.transaction(async (tx) => {
-        // Update the product
         const [product] = await tx
           .update(products)
           .set({
@@ -752,12 +714,10 @@ export function registerRoutes(app: Express): Server {
           .where(eq(products.id, parseInt(id)))
           .returning();
 
-        // Delete existing activities
         await tx
           .delete(product_activities)
           .where(eq(product_activities.productId, parseInt(id)));
 
-        // Create new activities
         const activityPromises = activities.map(async (activity: any) => {
           return tx.insert(product_activities).values({
             productId: parseInt(id),
@@ -771,14 +731,12 @@ export function registerRoutes(app: Express): Server {
         return product;
       });
 
-      // Log the product update
       await logAdminAction({
         adminId: req.user.id,
         actionType: "PRODUCT_UPDATED",
         details: `Updated product: ${result.name}`,
       });
 
-      // Fetch the complete product with activities
       const completeProduct = await db.query.products.findFirst({
         where: eq(products.id, parseInt(id)),
         with: {
@@ -809,7 +767,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Product not found" });
       }
 
-      // Log the status change
       await logAdminAction({
         adminId: req.user.id,
         actionType: enabled ? "PRODUCT_CREATED" : "PRODUCT_DELETED",
@@ -837,7 +794,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Product not found" });
       }
 
-      // Log the product deletion
       await logAdminAction({
         adminId: req.user.id,
         actionType: "PRODUCT_DELETED",
@@ -857,7 +813,6 @@ export function registerRoutes(app: Express): Server {
     const { userId } = req.body;
 
     try {
-      // Check if assignment already exists
       const existingAssignment = await db.query.productAssignments.findFirst({
         where: sql`${productAssignments.userId} = ${userId} AND ${productAssignments.productId} = ${parseInt(id)}`,
       });
@@ -874,7 +829,6 @@ export function registerRoutes(app: Express): Server {
         })
         .returning();
 
-      // Log the product assignment
       await logAdminAction({
         adminId: req.user.id,
         actionType: "PRODUCT_ASSIGNED",
@@ -904,7 +858,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Assignment not found" });
       }
 
-      // Log the product unassignment
       await logAdminAction({
         adminId: req.user.id,
         actionType: "PRODUCT_UNASSIGNED",
@@ -941,10 +894,8 @@ export function registerRoutes(app: Express): Server {
     }
   })
 
-  // Add after the existing product endpoints
   app.get("/api/products/customer", async (req, res) => {
     try {
-      // Only return enabled products for customers
       const allProducts = await db.query.products.findMany({
         where: eq(products.isEnabled, true),
         columns: {
@@ -961,7 +912,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update the quote requests endpoint to include duplicate request check
   app.post("/api/quote-requests", async (req, res) => {
     if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -970,7 +920,6 @@ export function registerRoutes(app: Express): Server {
     const { productId } = req.body;
 
     try {
-      // Check for existing active quote requests
       const existingRequest = await db.query.quoteRequests.findFirst({
         where: sql`${quoteRequests.userId} = ${req.user.id} AND 
                   ${quoteRequests.status} IN ('PENDING', 'IN_PROGRESS')`,
@@ -982,7 +931,6 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Verify the product exists and is enabled
       const [product] = await db
         .select()
         .from(products)
@@ -995,8 +943,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Product not found or not available" });
       }
 
-      
-      // Create the quote request
       const [quoteRequest] = await db
         .insert(quoteRequests)
         .values({
@@ -1006,7 +952,6 @@ export function registerRoutes(app: Express): Server {
         })
         .returning();
 
-      // Send email to customer
       const customerEmailContent = formatQuoteRequestEmail(
         req.user.firstName || 'Customer',
         product.name
@@ -1018,13 +963,11 @@ export function registerRoutes(app: Express): Server {
         html: customerEmailContent.html
       });
 
-      // Get admin users to notify
       const adminUsers = await db
         .select()
         .from(users)
         .where(eq(users.isAdmin, true));
 
-      // Send email toall admin users
       for(const admin of adminUsers) {
         const adminEmailContent = formatAdminQuoteRequestEmail(
           `${req.user.firstName || 'Customer'} ${req.user.lastName || ''}`,
@@ -1048,7 +991,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add GET endpoint for admin to fetch quote requests
   app.get("/api/quote-requests", async (req, res) => {
     if (!req.user?.isAdmin) {
       return res.status(403).json({ error: "Unauthorized" });
@@ -1087,7 +1029,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update quote request status (admin only)
   app.put("/api/quote-requests/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
 
@@ -1122,7 +1063,6 @@ export function registerRoutes(app: Express): Server {
         .where(eq(quoteRequests.id, parseInt(id)))
         .returning();
 
-      // Create notification for the customer
       await db.insert(notifications).values({
         userId: quoteRequest.userId,
         type: "QUOTE_STATUS_CHANGE",
@@ -1131,7 +1071,6 @@ export function registerRoutes(app: Express): Server {
         relatedId: quoteRequest.id
       });
 
-      // Log the status update with correct action type
       await logAdminAction({
         adminId: req.user.id,
         actionType: status === "COMPLETED" ? "QUOTE_REQUEST_COMPLETED" : 
@@ -1141,7 +1080,6 @@ export function registerRoutes(app: Express): Server {
         details: `Updated quote request status to ${status}`,
       });
 
-      // Get the complete request with relations
       const completeRequest = await db.query.quoteRequests.findFirst({
         where: eq(quoteRequests.id, parseInt(id)),
         with: {
@@ -1174,7 +1112,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Customer Routes
   app.get("/api/customer/points", async (req, res) => {
     if (!req.user) return res.status(401).json({error: "Unauthorized"});
     const user = await db.query.users.findFirst({
@@ -1195,12 +1132,10 @@ export function registerRoutes(app: Express): Server {
     res.json(userTransactions);
   });
 
-  // Add the new customer referralendpoint
   app.get("/api/customer/referral", async (req, res) => {
     if (!req.user) return res.status(401).json({error: "Unauthorized"});
 
     try {
-      // Get the current user with their referral code
       const [user] = await db
         .select()
         .from(users)
@@ -1211,7 +1146,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // If user doesn't have a referral code, generate one
       let currentReferralCode = user.referral_code;
       if (!currentReferralCode) {
         currentReferralCode = randomBytes(8).toString("hex");
@@ -1221,7 +1155,6 @@ export function registerRoutes(app: Express): Server {
           .where(eq(users.id, req.user.id));
       }
 
-      // Get all users who used this user's referral code
       const referrals = await db
         .select({
           id: users.id,
@@ -1244,14 +1177,12 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update the query in the /api/customer/referrals endpoint
   app.get("/api/customer/referrals", async (req, res) => {
     if (!req.user) return res.status(401).json({error: "Unauthorized"});
 
     try {
       console.log("Fetching referral stats for user:", req.user.id);
 
-      // Get the user's referral code and direct referrals
       const [currentUser] = await db
         .select()
         .from(users)
@@ -1262,7 +1193,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Get level 1 referrals (direct referrals)
       const level1Referrals = await db
         .select({
           id: users.id,
@@ -1275,7 +1205,6 @@ export function registerRoutes(app: Express): Server {
         .from(users)
         .where(eq(users.referred_by, currentUser.referral_code));
 
-      // Get level 2 referrals count
       const level2Count = await db
         .select({ count: sql<number>`count(*)` })
         .from(users)
@@ -1286,7 +1215,6 @@ export function registerRoutes(app: Express): Server {
           )
         );
 
-      // Get level 3 referrals count
       const level2Referrals = await db
         .select({ referral_code: users.referral_code })
         .from(users)
@@ -1307,7 +1235,6 @@ export function registerRoutes(app: Express): Server {
           )
         );
 
-      // Get referral counts for each level 1 referral
       const referralsWithCounts = await Promise.all(
         level1Referrals.map(async (referral) => {
           const referralCount = await db
@@ -1342,7 +1269,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Shared Routes
   app.get("/api/rewards", async (req, res) => {
     const allRewards = await db.query.rewards.findMany({
       where: eq(rewards.available, true),
@@ -1358,7 +1284,6 @@ export function registerRoutes(app: Express): Server {
         available: true,
       }).returning();
 
-      // Log both the reward creation and the points cost setting
       await logAdminAction({
         adminId: req.user.id,
         actionType: "REWARD_CREATED",
@@ -1394,7 +1319,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Reward not found" });
       }
 
-      // Log the reward update
       await logAdminAction({
         adminId: req.user.id,
         actionType: "REWARD_UPDATED",
@@ -1428,7 +1352,6 @@ export function registerRoutes(app: Express): Server {
         .set({ available: false })
         .where(eq(rewards.id, parseInt(id)));
 
-      // Log the reward deletion
       await logAdminAction({
         adminId: req.user.id,
         actionType: "REWARD_DELETED",
@@ -1462,7 +1385,6 @@ export function registerRoutes(app: Express): Server {
 
     try {
       await db.transaction(async (tx) => {
-        // Create the transaction record
         await tx.insert(transactions).values({
           userId: user.id,
           points: -reward.pointsCost,
@@ -1473,13 +1395,11 @@ export function registerRoutes(app: Express): Server {
           rewardId,
         });
 
-        // Update user points
         await tx
           .update(users)
           .set({ points: user.points - reward.pointsCost })
           .where(eq(users.id, user.id));
 
-        // Log the point adjustment
         await logAdminAction({
           adminId: user.id,
           actionType: "POINT_ADJUSTMENT",
@@ -1490,7 +1410,6 @@ export function registerRoutes(app: Express): Server {
         });
       });
 
-      // Return success message
       res.json({
         success: true,
         message: reward.type === "CASH"
@@ -1503,7 +1422,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update the cash redemption route
   app.post("/api/rewards/redeem-cash", async (req, res) => {
     if (!req.user) return res.status(401).json({error: "Unauthorized"});
     const { points } = req.body;
@@ -1522,7 +1440,6 @@ export function registerRoutes(app: Express): Server {
       }
 
       await db.transaction(async (tx) => {
-        // Create the transaction record
         const [transaction] = await tx.insert(transactions).values({
           userId: user.id,
           points: -points,
@@ -1532,7 +1449,6 @@ export function registerRoutes(app: Express): Server {
           createdAt: new Date(),
         }).returning();
 
-        // Update user points
         await tx
           .update(users)
           .set({
@@ -1553,7 +1469,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update the cash redemptions endpoint to properly filter and include user details
   app.get("/api/admin/cash-redemptions", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
 
@@ -1579,7 +1494,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add endpoint to mark cash redemption as processed
   app.post("/api/admin/cash-redemptions/:id/process", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
@@ -1599,7 +1513,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Transaction not found" });
       }
 
-      // Log the cash redemption processing
       await logAdminAction({
         adminId: req.user.id,
         actionType: "POINT_ADJUSTMENT",
@@ -1614,7 +1527,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add after existing WebSocket setup
   app.get("/api/notifications", async (req, res) => {
     if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -1624,7 +1536,7 @@ export function registerRoutes(app: Express): Server {
       const userNotifications = await db.query.notifications.findMany({
         where: eq(notifications.userId, req.user.id),
         orderBy: desc(notifications.createdAt),
-        limit: 50 // Limit to recent 50 notifications
+        limit: 50 
       });
 
       res.json(userNotifications);
@@ -1634,7 +1546,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Update the mark-read endpoint to handle notification deletion
   app.post("/api/notifications/mark-read", async (req, res) => {
     if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -1644,7 +1555,6 @@ export function registerRoutes(app: Express): Server {
 
     try {
       if (notificationId) {
-        // Delete specific notification
         const [deletedNotification] = await db
           .delete(notifications)
           .where(
@@ -1659,7 +1569,6 @@ export function registerRoutes(app: Express): Server {
           return res.status(404).json({ error: "Notification not found" });
         }
       } else {
-        // Delete all user's notifications
         await db
           .delete(notifications)
           .where(eq(notifications.userId, req.user.id));
@@ -1676,7 +1585,6 @@ export function registerRoutes(app: Express): Server {
     const { email } = req.body;
 
     try {
-      // Find user with the provided email
       const [user] = await db
         .select()
         .from(users)
@@ -1684,11 +1592,9 @@ export function registerRoutes(app: Express): Server {
         .limit(1);
 
       if (user) {
-        // Generate a reset token that expires in 1 hour
         const resetToken = randomBytes(32).toString("hex");
-        const tokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+        const tokenExpiry = new Date(Date.now() + 3600000); 
 
-        // Update user with reset token
         await db
           .update(users)
           .set({
@@ -1697,7 +1603,6 @@ export function registerRoutes(app: Express): Server {
           })
           .where(eq(users.id, user.id));
 
-        // Log reset token info with clear visibility
         console.log('\n');
         console.log('🔑 PASSWORD RESET REQUEST 🔑');
         console.log('=============================');
@@ -1706,7 +1611,6 @@ export function registerRoutes(app: Express): Server {
         console.log('Token Expiry:', tokenExpiry);
         console.log('=============================');
 
-        // Create and log reset link
         const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
         console.log('📧 RESET PASSWORD LINK:');
         console.log('=============================');
@@ -1734,7 +1638,6 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Always return success to prevent email enumeration
       res.json({ message: "If an account exists with that email, you will receive password reset instructions." });
     } catch (error) {
       console.error('Error in password reset:', error);
@@ -1747,7 +1650,6 @@ export function registerRoutes(app: Express): Server {
     const { newPassword } = req.body;
 
     try {
-      // Find user with the valid reset token
       const [user] = await db
         .select()
         .from(users)
@@ -1760,10 +1662,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid or expired reset token" });
       }
 
-      // Hash the new password
       const hashedPassword = await authCrypto.hashPassword(newPassword);
 
-      // Update user's password and clear reset token
       await db
         .update(users)
         .set({

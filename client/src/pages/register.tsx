@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, X } from "lucide-react"; // Added X import
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -179,11 +179,14 @@ export default function RegisterPage() {
     accountNumber: "",
     accountType: "",
     acceptMandate: false,
+    agentReferralCode: "",
   });
 
   const [signature, setSignature] = useState<SignatureCanvas | null>(null);
   const [error, setError] = useState("");
   const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [isValidatingReferral, setIsValidatingReferral] = useState(false);
+  const [referralValid, setReferralValid] = useState<boolean | null>(null);
 
   const { registerMutation, user, isLoading } = useUser();
   const [, navigate] = useLocation();
@@ -210,12 +213,39 @@ export default function RegisterPage() {
     return null;
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target;
+  const validateReferralCode = async (code: string) => {
+    if (!code) {
+      setReferralValid(null);
+      return;
+    }
+
+    setIsValidatingReferral(true);
+    try {
+      const response = await fetch(`/api/verify-referral/${code}`);
+      const data = await response.json();
+      setReferralValid(data.isValid);
+    } catch (error) {
+      setReferralValid(false);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to validate referral code",
+      });
+    } finally {
+      setIsValidatingReferral(false);
+    }
+  };
+
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     }));
+
+    if (name === 'agentReferralCode' && value) {
+      await validateReferralCode(value);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -614,25 +644,41 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                   </div>
                 </div>
 
+                {/* Agent Referral Section */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">Digital Signature</h3>
-                  <div className="border rounded-lg p-4 bg-white">
-                    <SignatureCanvas
-                      ref={(ref) => setSignature(ref)}
-                      canvasProps={{
-                        className: "signature-canvas w-full h-32 border rounded",
-                        style: { backgroundColor: 'white' }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={clearSignature}
-                      className="mt-2"
-                    >
-                      Clear Signature
-                    </Button>
+                  <h3 className="text-lg font-semibold border-b pb-2">Agent Referral</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="agentReferralCode">Agent Referral Code (Optional)</Label>
+                    <div className="relative">
+                      <Input
+                        id="agentReferralCode"
+                        name="agentReferralCode"
+                        placeholder="Enter agent's referral code if you have one"
+                        value={formData.agentReferralCode}
+                        onChange={handleInputChange}
+                        className={`${
+                          referralValid === true ? 'border-green-500' :
+                            referralValid === false ? 'border-red-500' : ''
+                        }`}
+                      />
+                      {isValidatingReferral && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                      {!isValidatingReferral && referralValid !== null && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {referralValid ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <X className="h-4 w-4 text-red-500" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {referralValid === false && (
+                      <p className="text-sm text-red-500">Invalid referral code</p>
+                    )}
                   </div>
                 </div>
 
