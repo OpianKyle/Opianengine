@@ -358,6 +358,7 @@ export default function RegisterPage() {
     try {
       const registrationData = {
         ...formData,
+        phoneNumber: formData.mobileNumber, // Map mobileNumber to phoneNumber for the API
         signature: signatureData,
         ...(formData.agentReferralCode ? { referralCode: formData.agentReferralCode } : {})
       };
