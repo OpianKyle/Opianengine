@@ -358,7 +358,11 @@ export default function RegisterPage() {
     try {
       const registrationData = {
         ...formData,
-        phoneNumber: formData.mobileNumber, // Map mobileNumber to phoneNumber for the API
+        phoneNumber: formData.mobileNumber,
+        address: formData.addressLine1 + (formData.addressLine2 ? `\n${formData.addressLine2}` : ''),
+        city: formData.suburb,
+        employerName: formData.industry,
+        jobTitle: formData.occupation,
         signature: signatureData,
         ...(formData.agentReferralCode ? { referralCode: formData.agentReferralCode } : {})
       };
