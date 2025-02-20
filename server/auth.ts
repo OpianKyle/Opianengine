@@ -340,6 +340,7 @@ export function setupAuth(app: Express) {
         referralCode 
       } = result.data;
 
+      // Check for existing user before starting transaction
       const [existingUser] = await db
         .select()
         .from(users)
@@ -370,83 +371,101 @@ export function setupAuth(app: Express) {
       const newReferralCode = randomBytes(8).toString('hex');
       const hashedPassword = await crypto.hashPassword(password);
 
-      const newUser = await db.transaction(async (tx) => {
-        const [user] = await tx
-          .insert(users)
-          .values({
-            email,
-            password: hashedPassword,
-            firstName,
-            lastName,
-            phoneNumber,
-            isSouthAfrican: isSouthAfrican || false,
-            idNumber: idNumber || null,
-            dateOfBirth: dateOfBirth || null,
-            address: address || null,
-            city: city || null,
-            postalCode: postalCode || null,
-            employerName: employerName || null,
-            jobTitle: jobTitle || null,
-            employmentDuration: employmentDuration || null,
-            bankName: bankName || null,
-            accountType: accountType || null,
-            accountNumber: accountNumber || null,
-            hasCreditCard: hasCreditCard || false,
-            isAdmin: false,
-            isSuperAdmin: false,
-            isEnabled: true,
-            points: referralCode ? 2000 : 1000,
-            referralCode: newReferralCode,
-            referredBy: referralCode || null,
-          })
-          .returning();
-
-        await tx
-          .insert(transactions)
-          .values({
-            userId: user.id,
-            points: referralCode ? 2000 : 1000,
-            type: "WELCOME_BONUS",
-            description: "Welcome bonus for new registration",
-            status: "PROCESSED"
-          });
-
-        if (referrerUser) {
-          await tx
-            .update(users)
-            .set({ points: referrerUser.points + 2500 })
-            .where(eq(users.id, referrerUser.id));
+      let newUser;
+      try {
+        newUser = await db.transaction(async (tx) => {
+          const [user] = await tx
+            .insert(users)
+            .values({
+              email,
+              password: hashedPassword,
+              firstName,
+              lastName,
+              phoneNumber,
+              isSouthAfrican: isSouthAfrican || false,
+              idNumber: idNumber || null,
+              dateOfBirth: dateOfBirth || null,
+              address: address || null,
+              city: city || null,
+              postalCode: postalCode || null,
+              employerName: employerName || null,
+              jobTitle: jobTitle || null,
+              employmentDuration: employmentDuration || null,
+              bankName: bankName || null,
+              accountType: accountType || null,
+              accountNumber: accountNumber || null,
+              hasCreditCard: hasCreditCard || false,
+              isAdmin: false,
+              isSuperAdmin: false,
+              isEnabled: true,
+              points: referralCode ? 2000 : 1000,
+              referralCode: newReferralCode,
+              referredBy: referralCode || null,
+            })
+            .returning();
 
           await tx
             .insert(transactions)
             .values({
-              userId: referrerUser.id,
-              points: 2500,
-              type: "REFERRAL_BONUS",
-              description: `Referral bonus for referring ${email}`,
+              userId: user.id,
+              points: referralCode ? 2000 : 1000,
+              type: "WELCOME_BONUS",
+              description: "Welcome bonus for new registration",
               status: "PROCESSED"
             });
-        }
 
-        return user;
-      });
+          if (referrerUser) {
+            await tx
+              .update(users)
+              .set({ points: referrerUser.points + 2500 })
+              .where(eq(users.id, referrerUser.id));
 
-      const { text, html } = formatRegistrationEmail(firstName, newReferralCode);
-      await sendEmail({
-        to: email,
-        subject: "Welcome to OPIAN Rewards!",
-        text,
-        html
-      });
+            await tx
+              .insert(transactions)
+              .values({
+                userId: referrerUser.id,
+                points: 2500,
+                type: "REFERRAL_BONUS",
+                description: `Referral bonus for referring ${email}`,
+                status: "PROCESSED"
+              });
+          }
 
-      const { password: _, ...safeUser } = newUser;
-      req.login(safeUser, (err) => {
-        if (err) {
-          console.error('Login error after registration:', err);
-          return res.status(500).json({ error: "Registration successful but login failed" });
-        }
-        res.status(201).json(safeUser);
-      });
+          return user;
+        });
+      } catch (error) {
+        console.error('Transaction error during registration:', error);
+        return res.status(500).json({ 
+          error: "Registration failed. Database transaction error." 
+        });
+      }
+
+      try {
+        const { text, html } = formatRegistrationEmail(firstName, newReferralCode);
+        await sendEmail({
+          to: email,
+          subject: "Welcome to OPIAN Rewards!",
+          text,
+          html
+        });
+      } catch (emailError) {
+        console.error('Email sending error:', emailError);
+        // Continue with registration even if email fails
+      }
+
+      try {
+        const { password: _, ...safeUser } = newUser;
+        req.login(safeUser, (err) => {
+          if (err) {
+            console.error('Login error after registration:', err);
+            return res.status(500).json({ error: "Registration successful but login failed" });
+          }
+          res.status(201).json(safeUser);
+        });
+      } catch (loginError) {
+        console.error('Login process error:', loginError);
+        return res.status(500).json({ error: "Registration successful but session creation failed" });
+      }
     } catch (error) {
       console.error('Registration error:', error);
       res.status(500).json({ error: "Registration failed. Please try again." });
