@@ -230,7 +230,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-background p-2 sm:p-4 md:p-6 lg:p-8">
       <div className="max-w-[1800px] mx-auto">
         <div className="flex flex-col items-center mb-4">
           <img
@@ -251,32 +251,34 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-6">
+        <div className="grid lg:grid-cols-12 gap-4 md:gap-6">
           {/* Registration Form - Main Column */}
-          <Card className="lg:col-span-8 p-4 md:p-6">
-            <CardHeader className="p-0 md:p-4">
+          <Card className="lg:col-span-8 p-2 sm:p-4 md:p-6">
+            <CardHeader className="p-0 sm:p-2 md:p-4">
               <CardTitle>Personal Information</CardTitle>
               <CardDescription>
                 Please fill in your details to create your account
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0 md:p-4 mt-4">
-              <form onSubmit={handleRegister} className="space-y-6">
+            <CardContent className="p-0 sm:p-2 md:p-4 mt-4">
+              <form onSubmit={handleRegister} className="space-y-4 md:space-y-6">
                 {/* Personal Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                   <Input
                     name="firstName"
                     placeholder="First Name"
                     value={formData.firstName}
                     onChange={handleInputChange}
+                    className="w-full"
                   />
                   <Input
                     name="lastName"
                     placeholder="Last Name"
                     value={formData.lastName}
                     onChange={handleInputChange}
+                    className="w-full"
                   />
-                  <div className="sm:col-span-2 flex items-center space-x-2">
+                  <div className="col-span-1 sm:col-span-2 flex items-center space-x-2">
                     <Checkbox
                       id="isSouthAfrican"
                       name="isSouthAfrican"
@@ -294,6 +296,7 @@ export default function RegisterPage() {
                     placeholder="ID Number/Passport"
                     value={formData.idNumber}
                     onChange={handleInputChange}
+                    className="w-full"
                   />
                   <Input
                     name="dateOfBirth"
@@ -301,6 +304,7 @@ export default function RegisterPage() {
                     placeholder="Date of Birth"
                     value={formData.dateOfBirth}
                     onChange={handleInputChange}
+                    className="w-full"
                   />
                   <Select
                     onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
@@ -332,6 +336,7 @@ export default function RegisterPage() {
                     placeholder="Email address"
                     value={formData.email}
                     onChange={handleInputChange}
+                    className="w-full"
                   />
                   <Input
                     name="password"
@@ -339,23 +344,28 @@ export default function RegisterPage() {
                     placeholder="Password"
                     value={formData.password}
                     onChange={handleInputChange}
+                    className="w-full"
                   />
                   <Input
                     name="mobileNumber"
                     placeholder="Mobile Number"
                     value={formData.mobileNumber}
                     onChange={handleInputChange}
+                    className="w-full"
                   />
                 </div>
 
                 {/* Package Selection with Carousel */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Select Your Package</h3>
-                  <div className="relative px-8">
+                  <div className="relative px-4 md:px-8">
                     <Carousel className="w-full">
                       <CarouselContent className="-ml-2 md:-ml-4">
                         {packages.map((pkg) => (
-                          <CarouselItem key={pkg.id} className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
+                          <CarouselItem 
+                            key={pkg.id} 
+                            className="pl-2 md:pl-4 basis-full sm:basis-1/2"
+                          >
                             <Card
                               className={`cursor-pointer transition-all hover:border-primary h-full ${
                                 formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
@@ -385,8 +395,8 @@ export default function RegisterPage() {
                           </CarouselItem>
                         ))}
                       </CarouselContent>
-                      <CarouselPrevious className="absolute -left-2" />
-                      <CarouselNext className="absolute -right-2" />
+                      <CarouselPrevious className="absolute -left-2 md:-left-4" />
+                      <CarouselNext className="absolute -right-2 md:-right-4" />
                     </Carousel>
                   </div>
                 </div>
@@ -400,24 +410,28 @@ export default function RegisterPage() {
                       placeholder="Account Holder Name"
                       value={formData.accountHolderName}
                       onChange={handleInputChange}
+                      className="w-full"
                     />
                     <Input
                       name="bankName"
                       placeholder="Bank Name"
                       value={formData.bankName}
                       onChange={handleInputChange}
+                      className="w-full"
                     />
                     <Input
                       name="branchCode"
                       placeholder="Branch & Code"
                       value={formData.branchCode}
                       onChange={handleInputChange}
+                      className="w-full"
                     />
                     <Input
                       name="accountNumber"
                       placeholder="Account Number"
                       value={formData.accountNumber}
                       onChange={handleInputChange}
+                      className="w-full"
                     />
                     <Select
                       onValueChange={(value) => setFormData(prev => ({ ...prev, accountType: value }))}
@@ -496,37 +510,19 @@ export default function RegisterPage() {
           {/* Information Section - Right Column */}
           <div className="lg:col-span-4 space-y-4">
             <Card className="h-full">
-              <CardHeader className="p-4">
+              <CardHeader className="p-2 sm:p-4">
                 <CardTitle>Program Benefits</CardTitle>
                 <CardDescription>
                   Join our rewards program and enjoy these exclusive benefits
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-4 space-y-6">
+              <CardContent className="p-2 sm:p-4 space-y-4 md:space-y-6">
                 {benefitsInfo.map((benefit, index) => (
                   <div key={index} className="space-y-2">
                     <h4 className="font-semibold text-primary">{benefit.title}</h4>
                     <p className="text-sm text-muted-foreground">{benefit.description}</p>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="p-4">
-                <CardTitle>Need Help?</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  If you have any questions about our packages or the registration process,
-                  our support team is here to help.
-                </p>
-                <p className="text-sm font-semibold">Contact us:</p>
-                <ul className="text-sm text-muted-foreground">
-                  <li>Email: support@opianrewards.com</li>
-                  <li>Phone: 0800 123 456</li>
-                  <li>Hours: Mon-Fri 8am-5pm</li>
-                </ul>
               </CardContent>
             </Card>
           </div>
