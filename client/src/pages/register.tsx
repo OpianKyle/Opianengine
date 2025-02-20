@@ -230,9 +230,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-0">
+    <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
       <div className="max-w-[1800px] mx-auto">
-        <div className="flex flex-col items-center mb-4 pt-4">
+        <div className="flex flex-col items-center mb-4">
           <img
             src="/Assets/opian-logo-white.png"
             alt="OPIAN Rewards"
@@ -251,19 +251,19 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-4">
-          {/* Registration Form - Left Column */}
-          <Card className="lg:col-span-2 p-4">
-            <CardHeader className="p-4">
+        <div className="grid lg:grid-cols-12 gap-6">
+          {/* Registration Form - Main Column */}
+          <Card className="lg:col-span-8 p-4 md:p-6">
+            <CardHeader className="p-0 md:p-4">
               <CardTitle>Personal Information</CardTitle>
               <CardDescription>
                 Please fill in your details to create your account
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-0 md:p-4 mt-4">
               <form onSubmit={handleRegister} className="space-y-6">
                 {/* Personal Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     name="firstName"
                     placeholder="First Name"
@@ -276,7 +276,7 @@ export default function RegisterPage() {
                     value={formData.lastName}
                     onChange={handleInputChange}
                   />
-                  <div className="flex items-center space-x-2">
+                  <div className="sm:col-span-2 flex items-center space-x-2">
                     <Checkbox
                       id="isSouthAfrican"
                       name="isSouthAfrican"
@@ -351,11 +351,11 @@ export default function RegisterPage() {
                 {/* Package Selection with Carousel */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Select Your Package</h3>
-                  <div className="relative">
+                  <div className="relative px-8">
                     <Carousel className="w-full">
                       <CarouselContent className="-ml-2 md:-ml-4">
                         {packages.map((pkg) => (
-                          <CarouselItem key={pkg.id} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                          <CarouselItem key={pkg.id} className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
                             <Card
                               className={`cursor-pointer transition-all hover:border-primary h-full ${
                                 formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
@@ -385,8 +385,8 @@ export default function RegisterPage() {
                           </CarouselItem>
                         ))}
                       </CarouselContent>
-                      <CarouselPrevious className="absolute -left-4 md:-left-6" />
-                      <CarouselNext className="absolute -right-4 md:-right-6" />
+                      <CarouselPrevious className="absolute -left-2" />
+                      <CarouselNext className="absolute -right-2" />
                     </Carousel>
                   </div>
                 </div>
@@ -394,7 +394,7 @@ export default function RegisterPage() {
                 {/* Banking Details */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Banking Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input
                       name="accountHolderName"
                       placeholder="Account Holder Name"
@@ -494,7 +494,7 @@ export default function RegisterPage() {
           </Card>
 
           {/* Information Section - Right Column */}
-          <div className="hidden lg:block space-y-4 sticky top-8 self-start">
+          <div className="lg:col-span-4 space-y-4">
             <Card className="h-full">
               <CardHeader className="p-4">
                 <CardTitle>Program Benefits</CardTitle>
