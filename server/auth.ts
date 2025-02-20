@@ -295,7 +295,32 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      const { email, password, firstName, lastName, phoneNumber, referralCode } = result.data;
+      const {
+        email,
+        password,
+        firstName,
+        lastName,
+        phoneNumber,
+        referralCode,
+        isSouthAfrican,
+        idNumber,
+        dateOfBirth,
+        gender,
+        occupation,
+        industry,
+        addressLine1,
+        addressLine2,
+        suburb,
+        postalCode,
+        hasCreditCard,
+        selectedPackage,
+        accountHolderName,
+        bankName,
+        branchCode,
+        accountNumber,
+        accountType,
+        signature
+      } = result.data;
 
       const [existingUser] = await db
         .select()
@@ -328,7 +353,7 @@ export async function setupAuth(app: Express) {
       const hashedPassword = await crypto.hashPassword(password);
 
       const newUser = await db.transaction(async (tx) => {
-        // First create the new user
+        // Create the new user with all fields
         const [user] = await tx
           .insert(users)
           .values({
@@ -340,9 +365,27 @@ export async function setupAuth(app: Express) {
             isAdmin: false,
             isSuperAdmin: false,
             isEnabled: true,
-            points: referralCode ? 2000 : 1000, // More points if referred
+            points: referralCode ? 2000 : 1000,
             referral_code: newReferralCode,
             referred_by: referralCode || null,
+            is_south_african: isSouthAfrican || false,
+            id_number: idNumber || null,
+            date_of_birth: dateOfBirth || null,
+            gender: gender || null,
+            occupation: occupation || null,
+            industry: industry || null,
+            address_line1: addressLine1 || null,
+            address_line2: addressLine2 || null,
+            suburb: suburb || null,
+            postal_code: postalCode || null,
+            has_credit_card: hasCreditCard || false,
+            selected_package: selectedPackage || null,
+            account_holder_name: accountHolderName || null,
+            bank_name: bankName || null,
+            branch_code: branchCode || null,
+            account_number: accountNumber || null,
+            account_type: accountType || null,
+            signature: signature || null,
           })
           .returning();
 
@@ -435,25 +478,24 @@ const registerSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
   referralCode: z.string().optional().nullable(),
-  isSouthAfrican: z.boolean(),
-  idNumber: z.string(),
-  dateOfBirth: z.string(),
-  gender: z.string(),
-  occupation: z.string(),
-  industry: z.string(),
-  addressLine1: z.string(),
-  addressLine2: z.string().optional(),
-  suburb: z.string(),
-  postalCode: z.string(),
-  hasCreditCard: z.boolean(),
-  selectedPackage: z.number(),
-  accountHolderName: z.string(),
-  bankName: z.string(),
-  branchCode: z.string(),
-  accountNumber: z.string(),
-  accountType: z.string(),
-  acceptMandate: z.boolean(),
-  signature: z.string(),
+  isSouthAfrican: z.boolean().optional().default(false),
+  idNumber: z.string().optional().nullable(),
+  dateOfBirth: z.string().optional().nullable(),
+  gender: z.string().optional().nullable(),
+  occupation: z.string().optional().nullable(),
+  industry: z.string().optional().nullable(),
+  addressLine1: z.string().optional().nullable(),
+  addressLine2: z.string().optional().nullable(),
+  suburb: z.string().optional().nullable(),
+  postalCode: z.string().optional().nullable(),
+  hasCreditCard: z.boolean().optional().default(false),
+  selectedPackage: z.number().optional().nullable(),
+  accountHolderName: z.string().optional().nullable(),
+  bankName: z.string().optional().nullable(),
+  branchCode: z.string().optional().nullable(),
+  accountNumber: z.string().optional().nullable(),
+  accountType: z.string().optional().nullable(),
+  signature: z.string().optional().nullable(),
 });
 
 export function generateToken(user: any) {

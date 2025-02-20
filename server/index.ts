@@ -3,13 +3,16 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import fileUpload from 'express-fileupload';
+import { setupAuth } from "./auth";
+import { db } from "@db";
+import { users } from "@db/schema";
 
 const app = express();
 
 // Configure CORS with specific options
 app.use(cors({
-  origin: true, // Allow all origins in development
-  credentials: true, // Required for cookies
+  origin: true,
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -25,6 +28,7 @@ app.use(fileUpload({
   },
 }));
 
+// Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -43,37 +47,60 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
-
       log(logLine);
     }
   });
-
   next();
 });
 
 (async () => {
-  const server = registerRoutes(app);
+  try {
+    log('Starting server initialization...');
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    console.error(`Error [${status}]:`, err);
+    // Test database connection
+    try {
+      const [testUser] = await db.select().from(users).limit(1);
+      log('Database connection successful');
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError);
+      process.exit(1);
+    }
 
-    res.status(status).json({ message });
-  });
+    // Setup authentication
+    setupAuth(app);
+    log('Authentication setup complete');
 
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    const server = registerRoutes(app);
+    log('Routes registered');
+
+    // Global error handler
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error('Global error handler caught:', err);
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
+    });
+
+    // Setup appropriate server based on environment
+    if (app.get("env") === "development") {
+      log('Setting up Vite development server...');
+      await setupVite(app, server);
+      log('Vite setup complete');
+    } else {
+      log('Setting up static file serving...');
+      serveStatic(app);
+      log('Static serving setup complete');
+    }
+
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Server startup error:', error);
+    process.exit(1);
   }
-
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
 })();
