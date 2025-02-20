@@ -231,7 +231,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-background p-4 lg:p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-md mx-auto lg:max-w-7xl">
         <div className="flex flex-col items-center mb-8">
           <img
             src="/Assets/opian-logo-white.png"
