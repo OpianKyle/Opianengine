@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2, Check, X } from "lucide-react"; // Added X import
+import { Loader2, Check, X } from "lucide-react"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -102,13 +102,7 @@ const packages = [
   }
 ];
 
-const salaryBrackets = [
-  "R0 - R10,000",
-  "R10,001 - R20,000",
-  "R20,001 - R30,000",
-  "R30,001 - R50,000",
-  "R50,001+"
-];
+// Removed salaryBrackets array
 
 const industries = [
   "Agriculture",
@@ -200,7 +194,6 @@ export default function RegisterPage() {
     mobileNumber: "",
     occupation: "",
     industry: "",
-    salaryBracket: "",
     addressLine1: "",
     addressLine2: "",
     suburb: "",
@@ -272,7 +265,6 @@ export default function RegisterPage() {
 
   const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | string, fieldName?: string) => {
     if (typeof e === 'string' && fieldName) {
-      // Handle Select component changes
       setFormData(prev => ({
         ...prev,
         [fieldName]: e
@@ -282,7 +274,6 @@ export default function RegisterPage() {
         await validateReferralCode(e);
       }
     } else if (typeof e !== 'string') {
-      // Handle regular input changes
       const { name, value, type } = e.target;
       setFormData(prev => ({
         ...prev,
@@ -311,7 +302,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // Required fields check
     const requiredFields = {
       email: "Email",
       password: "Password",
@@ -323,7 +313,6 @@ export default function RegisterPage() {
       selectedPackage: "Package",
       occupation: "Occupation",
       industry: "Industry",
-      salaryBracket: "Salary Bracket",
       addressLine1: "Address Line 1",
       suburb: "Suburb",
       postalCode: "Postal Code",
@@ -555,16 +544,6 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                         </SelectContent>
                       </Select>
                     </div>
-                    <Select name="salaryBracket" onValueChange={(value) => handleInputChange(value, 'salaryBracket')}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Salary Bracket" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {salaryBrackets.map(bracket => (
-                          <SelectItem key={bracket} value={bracket}>{bracket}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
 
@@ -731,7 +710,6 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                   </Card>
                 </div>
 
-                {/* Agent Referral Section */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Agent Referral</h3>
                   <div className="space-y-2">
