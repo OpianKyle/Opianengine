@@ -37,26 +37,26 @@ export const users = pgTable("users", {
   lastName: text("last_name").notNull(),
   phoneNumber: text("phone_number").notNull(),
   // Personal Information
-  isSouthAfrican: boolean("is_south_african").default(false).notNull(),
-  idNumber: text("id_number").notNull(),
-  dateOfBirth: text("date_of_birth").notNull(),
+  isSouthAfrican: boolean("is_south_african").default(false),
+  idNumber: text("id_number"),
+  dateOfBirth: text("date_of_birth"),
   // Address Information
-  address: text("address").notNull(),
-  city: text("city").notNull(),
-  postalCode: text("postal_code").notNull(),
+  address: text("address"),
+  city: text("city"),
+  postalCode: text("postal_code"),
   // Employment Information
-  employerName: text("employer_name").notNull(),
-  jobTitle: text("job_title").notNull(),
-  employmentDuration: text("employment_duration").notNull(),
+  employerName: text("employer_name"),
+  jobTitle: text("job_title"),
+  employmentDuration: text("employment_duration"),
   // Package Selection
-  selectedPackage: integer("selected_package").notNull(),
-  // Banking Information (for admins only)
-  bankName: text("bank_name").notNull(),
-  accountType: text("account_type").notNull(),
-  accountNumber: text("account_number").notNull(),
+  selectedPackage: integer("selected_package"),
+  // Banking Information
+  bankName: text("bank_name"),
+  accountType: text("account_type"),
+  accountNumber: text("account_number"),
   hasCreditCard: boolean("has_credit_card").default(false),
   // Digital signature
-  signature: text("signature").notNull(),
+  signature: text("signature"),
   // System fields
   isAdmin: boolean("is_admin").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
