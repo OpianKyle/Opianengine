@@ -101,8 +101,6 @@ const packages = [
   }
 ];
 
-const languages = ["English", "Afrikaans", "Zulu", "Xhosa", "Sotho", "Tswana"];
-
 const salaryBrackets = [
   "R0 - R10,000",
   "R10,001 - R20,000",
@@ -155,27 +153,23 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    confirmPassword: "",
     firstName: "",
     lastName: "",
     isSouthAfrican: false,
     idNumber: "",
     dateOfBirth: "",
     gender: "",
-    language: "",
     mobileNumber: "",
-    // Employment Details
     occupation: "",
     industry: "",
     salaryBracket: "",
-    // Address Details
     addressLine1: "",
     addressLine2: "",
     suburb: "",
     postalCode: "",
-    // Financial Details
     hasCreditCard: false,
     selectedPackage: null,
-    // Banking Details
     accountHolderName: "",
     bankName: "",
     branchCode: "",
@@ -217,8 +211,7 @@ export default function RegisterPage() {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : (type === 'select' ? value : value),
-
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -226,8 +219,13 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName ||
-      !formData.idNumber || !formData.dateOfBirth || !formData.gender || !formData.language ||
+      !formData.idNumber || !formData.dateOfBirth || !formData.gender ||
       !formData.mobileNumber || !formData.selectedPackage || !formData.accountHolderName ||
       !formData.bankName || !formData.branchCode || !formData.accountNumber || !formData.accountType || !formData.acceptMandate ||
       !formData.occupation || !formData.industry || !formData.salaryBracket ||
@@ -274,7 +272,6 @@ export default function RegisterPage() {
 
   const today = new Date().toISOString().split('T')[0];
   MandateText += `${today} ("the Agreement").
-
 I/We hereby authorise you to issue and deliver payment instructions of R550 per month for the program fee to your Banker for collection against my/our abovementioned account at my/our above-mentioned Bank (or any other bank or branch to which I/we may transfer my/our account) on condition that the sum of such payment instructions will never exceed my/our obligations as agreed to in the Agreement and commencing on 1rst of each month and continuing until this Authority and Mandate is terminated by me/us by giving you notice in writing of not less than 20 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
 
 The individual payment instructions so authorised to be issued must be issued and delivered as follows: R550 monthly.
@@ -315,11 +312,9 @@ I/We agree that although this Authority and Mandate may be cancelled by me/us, s
 Assignment
 I/We acknowledge that this Authority may be ceded or assigned to a third party if the Agreement is also ceded or assigned to that third party, but in the absence of such assignment of the Agreement, this Authority and Mandate cannot be assigned to any third party.`;
 
-
   return (
     <div className="min-h-screen w-full bg-background">
       <div className="container mx-auto px-4 py-6 md:px-6">
-        {/* Header */}
         <div className="flex flex-col items-center space-y-4 mb-8">
           <img
             src="/Assets/opian-logo-white.png"
@@ -340,11 +335,9 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-[1400px] mx-auto">
-          {/* Main Form */}
           <Card className="lg:col-span-8">
             <CardContent className="p-6">
               <form onSubmit={handleRegister} className="space-y-8">
-                {/* Personal Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Personal Information</h3>
                   <div className="grid gap-4">
@@ -362,27 +355,24 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                         onChange={handleInputChange}
                       />
                     </div>
+                    <Input
+                      name="email"
+                      type="email"
+                      placeholder="Email address"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                    />
+                    <Input
+                      name="mobileNumber"
+                      placeholder="Mobile Number"
+                      value={formData.mobileNumber}
+                      onChange={handleInputChange}
+                    />
                     <div className="grid sm:grid-cols-2 gap-4">
                       <Input
-                        name="email"
-                        type="email"
-                        placeholder="Email address"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                      />
-                      <Input
-                        name="password"
-                        type="password"
-                        placeholder="Password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <Input
-                        name="mobileNumber"
-                        placeholder="Mobile Number"
-                        value={formData.mobileNumber}
+                        name="idNumber"
+                        placeholder="ID Number/Passport"
+                        value={formData.idNumber}
                         onChange={handleInputChange}
                       />
                       <div className="flex items-center h-10 px-3 border rounded-md">
@@ -390,17 +380,58 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                           id="isSouthAfrican"
                           name="isSouthAfrican"
                           checked={formData.isSouthAfrican}
-                          onCheckedChange={handleInputChange}
+                          onCheckedChange={(checked) =>
+                            setFormData(prev => ({ ...prev, isSouthAfrican: checked as boolean }))
+                          }
                         />
                         <label htmlFor="isSouthAfrican" className="ml-2 text-sm">
                           South African citizen
                         </label>
                       </div>
                     </div>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Input
+                        name="dateOfBirth"
+                        type="date"
+                        placeholder="Date of Birth"
+                        value={formData.dateOfBirth}
+                        onChange={handleInputChange}
+                      />
+                      <Select name="gender" onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
-                {/* Employment Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Password Security</h3>
+                  <div className="grid gap-4">
+                    <Input
+                      name="password"
+                      type="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                    />
+                    <Input
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="Confirm Password"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+
+
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Employment Information</h3>
                   <div className="grid gap-4">
@@ -435,7 +466,6 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                   </div>
                 </div>
 
-                {/* Address Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Address Information</h3>
                   <div className="grid gap-4">
@@ -468,7 +498,6 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                   </div>
                 </div>
 
-                {/* Financial Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Financial Information</h3>
                   <div className="flex items-center space-x-2">
@@ -484,51 +513,6 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                   </div>
                 </div>
 
-                {/* Additional Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">Additional Information</h3>
-                  <div className="grid gap-4">
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <Input
-                        name="idNumber"
-                        placeholder="ID Number/Passport"
-                        value={formData.idNumber}
-                        onChange={handleInputChange}
-                      />
-                      <Input
-                        name="dateOfBirth"
-                        type="date"
-                        placeholder="Date of Birth"
-                        value={formData.dateOfBirth}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <Select name="gender" onValueChange={handleInputChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select name="language" onValueChange={handleInputChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Language" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {languages.map(lang => (
-                            <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Package Selection */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Select Your Package</h3>
                   <div className="relative">
@@ -571,7 +555,6 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                   </div>
                 </div>
 
-                {/* Banking Details */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Banking Details</h3>
                   <div className="grid gap-4">
@@ -615,7 +598,6 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                   </div>
                 </div>
 
-                {/* Mandate Section */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Mandate Agreement</h3>
                   <Card className="bg-muted/50">
@@ -640,7 +622,6 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
                   </div>
                 </div>
 
-                {/* Digital Signature */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Digital Signature</h3>
                   <div className="border rounded-lg p-4 bg-white">
@@ -700,7 +681,6 @@ I/We acknowledge that this Authority may be ceded or assigned to a third party i
             </CardContent>
           </Card>
 
-          {/* Right Column - About Opian Rewards */}
           <aside className="hidden lg:block lg:col-span-4">
             <div className="space-y-6 sticky top-8">
               <Card>
