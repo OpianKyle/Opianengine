@@ -61,7 +61,6 @@ export const sessionConfig = {
   name: 'connect.sid'
 };
 
-// Rest of the auth.ts file remains unchanged until the register endpoint
 export async function verifySession(req: Request): Promise<any> {
   try {
     console.log('Verifying session for request:', {
@@ -294,8 +293,20 @@ export function setupAuth(app: Express) {
             return res.status(500).json({ error: "Login failed" });
           }
 
+          // Set proper session cookie
+          res.cookie('connect.sid', req.sessionID, {
+            ...sessionConfig.cookie,
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+          });
+
           const token = generateToken(user);
-          console.log('User logged in successfully:', user);
+          console.log('User logged in successfully:', {
+            id: user.id,
+            email: user.email,
+            sessionID: req.sessionID
+          });
+
           return res.json({ user, token });
         });
       })(req, res, next);
@@ -318,11 +329,11 @@ export function setupAuth(app: Express) {
         });
       }
 
-      const { 
-        email, 
-        password, 
-        firstName, 
-        lastName, 
+      const {
+        email,
+        password,
+        firstName,
+        lastName,
         phoneNumber,
         isSouthAfrican,
         idNumber,
@@ -337,7 +348,7 @@ export function setupAuth(app: Express) {
         accountType,
         accountNumber,
         hasCreditCard,
-        referralCode 
+        referralCode
       } = result.data;
 
       // Check for existing user before starting transaction
@@ -435,8 +446,8 @@ export function setupAuth(app: Express) {
         });
       } catch (error) {
         console.error('Transaction error during registration:', error);
-        return res.status(500).json({ 
-          error: "Registration failed. Database transaction error." 
+        return res.status(500).json({
+          error: "Registration failed. Database transaction error."
         });
       }
 
@@ -455,16 +466,39 @@ export function setupAuth(app: Express) {
 
       try {
         const { password: _, ...safeUser } = newUser;
-        req.login(safeUser, (err) => {
-          if (err) {
-            console.error('Login error after registration:', err);
-            return res.status(500).json({ error: "Registration successful but login failed" });
-          }
-          res.status(201).json(safeUser);
+        // Create a new Promise to handle the login properly
+        await new Promise<void>((resolve, reject) => {
+          req.login(safeUser, (err) => {
+            if (err) {
+              console.error('Login error after registration:', err);
+              reject(new Error("Registration successful but login failed"));
+              return;
+            }
+            resolve();
+          });
+        });
+
+        // Set proper session cookie
+        res.cookie('connect.sid', req.sessionID, {
+          ...sessionConfig.cookie,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+        });
+
+        // Generate token for API authentication
+        const token = generateToken(safeUser);
+
+        // Return success response with user data and token
+        return res.status(201).json({
+          user: safeUser,
+          token
         });
       } catch (loginError) {
         console.error('Login process error:', loginError);
-        return res.status(500).json({ error: "Registration successful but session creation failed" });
+        return res.status(500).json({
+          error: "Registration successful but session creation failed",
+          details: (loginError as Error).message
+        });
       }
     } catch (error) {
       console.error('Registration error:', error);
