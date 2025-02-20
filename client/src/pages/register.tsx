@@ -155,9 +155,9 @@ let MandateText = `This signed Authority and Mandate refers to our contract date
 const PackageCard = ({ pkg, isSelected, onSelect, anySelected }) => (
   <Card
     className={`mx-2 h-[420px] cursor-pointer transition-all relative
-      ${isSelected 
-        ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]' 
-        : anySelected 
+      ${isSelected
+        ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
+        : anySelected
           ? 'opacity-50 hover:opacity-75'
           : 'hover:border-primary'
       }`}
@@ -281,6 +281,13 @@ export default function RegisterPage() {
     if (name === 'agentReferralCode' && value) {
       await validateReferralCode(value);
     }
+  };
+
+  const handleCheckboxChange = (name: string) => (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: checked
+    }));
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -429,11 +436,8 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                       <div className="flex items-center h-10 px-3 border rounded-md">
                         <Checkbox
                           id="isSouthAfrican"
-                          name="isSouthAfrican"
                           checked={formData.isSouthAfrican}
-                          onCheckedChange={(checked) =>
-                            setFormData(prev => ({ ...prev, isSouthAfrican: checked as boolean }))
-                          }
+                          onCheckedChange={handleCheckboxChange('isSouthAfrican')}
                           className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
                         />
                         <label htmlFor="isSouthAfrican" className="ml-2 text-sm">
@@ -558,9 +562,8 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="hasCreditCard"
-                      name="hasCreditCard"
                       checked={formData.hasCreditCard}
-                      onCheckedChange={handleInputChange}
+                      onCheckedChange={handleCheckboxChange('hasCreditCard')}
                       className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
                     />
                     <label htmlFor="hasCreditCard" className="text-sm">
@@ -648,9 +651,8 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="acceptMandate"
-                      name="acceptMandate"
                       checked={formData.acceptMandate}
-                      onCheckedChange={handleInputChange}
+                      onCheckedChange={handleCheckboxChange('acceptMandate')}
                       className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
                     />
                     <label htmlFor="acceptMandate" className="text-sm">
