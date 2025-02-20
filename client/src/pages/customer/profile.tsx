@@ -27,6 +27,7 @@ const profileSchema = z.object({
   industry: z.string().min(1, "Industry is required"),
   occupation: z.string().min(1, "Occupation is required"),
   isSouthAfrican: z.boolean(),
+  selectedPackage: z.number().optional(),
   bankName: z.string().min(1, "Bank name is required"),
   accountType: z.string().min(1, "Account type is required"),
   accountNumber: z.string().min(1, "Account number is required"),
@@ -42,6 +43,12 @@ const accountTypes = [
   "Credit",
   "Transmission",
   "Business"
+];
+
+const packages = [
+  { id: 1, name: "Basic Package" },
+  { id: 2, name: "Premium Package" },
+  { id: 3, name: "Gold Package" },
 ];
 
 export default function ProfilePage() {
@@ -65,6 +72,7 @@ export default function ProfilePage() {
       industry: user?.employerName || "",
       occupation: user?.jobTitle || "",
       isSouthAfrican: user?.isSouthAfrican || false,
+      selectedPackage: user?.selectedPackage || 1,
       bankName: user?.bankName || "",
       accountType: user?.accountType || "",
       accountNumber: user?.accountNumber || "",
@@ -247,6 +255,34 @@ export default function ProfilePage() {
                             />
                           </FormControl>
                         </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="selectedPackage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Selected Package</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(Number(value))}
+                          defaultValue={field.value?.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a package" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {packages.map((pkg) => (
+                              <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                                {pkg.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

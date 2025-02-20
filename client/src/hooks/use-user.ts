@@ -23,6 +23,7 @@ const userSchema = z.object({
   postalCode: z.string().optional(),
   employerName: z.string().optional(),
   jobTitle: z.string().optional(),
+  selectedPackage: z.number().optional(),
   bankName: z.string().optional(),
   accountType: z.string().optional(),
   accountNumber: z.string().optional(),
@@ -34,7 +35,7 @@ export type User = z.infer<typeof userSchema>;
 
 const loginResponseSchema = z.object({
   user: userSchema,
-  token: z.string().optional() // Make token optional as we're using cookies
+  token: z.string().optional()
 });
 
 export function useUser() {
@@ -69,7 +70,7 @@ export function useUser() {
       }
     },
     retry: false,
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   const loginMutation = useMutation({
@@ -111,7 +112,6 @@ export function useUser() {
         throw new Error('Logout failed');
       }
 
-      // Clear all user-related queries
       queryClient.removeQueries({ queryKey: ['/api/user'] });
       queryClient.setQueryData(['/api/user'], null);
     },
@@ -135,6 +135,7 @@ export function useUser() {
       postalCode?: string;
       employerName?: string;
       jobTitle?: string;
+      selectedPackage?: number;
       bankName?: string;
       accountType?: string;
       accountNumber?: string;
