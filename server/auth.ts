@@ -497,6 +497,14 @@ const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+const packageMap = {
+  1: "BEGINNER",
+  2: "NOVICE", 
+  3: "ACTIVE",
+  4: "PROFESSIONAL",
+  5: "EXPERT"
+};
+
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -513,10 +521,17 @@ const registerSchema = z.object({
   city: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
   // Package Selection
-  selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]).optional().nullable(),
+  selectedPackage: z.union([
+    z.number().transform(val => packageMap[val]),
+    z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"])
+  ]).optional().nullable(),
   // Banking Information
   bankName: z.string().optional().nullable(),
-  accountType: z.enum(["CHEQUE", "SAVINGS"]).optional().nullable(),
+  accountType: z.string()
+    .transform(val => val?.toUpperCase())
+    .pipe(z.enum(["CHEQUE", "SAVINGS"]))
+    .optional()
+    .nullable(),
   accountNumber: z.string().optional().nullable(),
   hasCreditCard: z.boolean().default(false),
   // Digital signature
