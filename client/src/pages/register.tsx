@@ -263,18 +263,20 @@ export default function RegisterPage() {
             <CardContent>
               <form onSubmit={handleRegister} className="space-y-8">
                 {/* Personal Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
                   <Input
                     name="firstName"
                     placeholder="First Name"
                     value={formData.firstName}
                     onChange={handleInputChange}
+                    className="h-9 md:h-10 text-sm md:text-base"
                   />
                   <Input
                     name="lastName"
                     placeholder="Last Name"
                     value={formData.lastName}
                     onChange={handleInputChange}
+                    className="h-9 md:h-10 text-sm md:text-base"
                   />
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -284,8 +286,9 @@ export default function RegisterPage() {
                       onCheckedChange={(checked) =>
                         setFormData(prev => ({ ...prev, isSouthAfrican: checked as boolean }))
                       }
+                      className="h-4 w-4 md:h-5 md:w-5"
                     />
-                    <label htmlFor="isSouthAfrican" className="text-sm">
+                    <label htmlFor="isSouthAfrican" className="text-xs md:text-sm">
                       Are you a South African citizen?
                     </label>
                   </div>
@@ -294,6 +297,7 @@ export default function RegisterPage() {
                     placeholder="ID Number/Passport"
                     value={formData.idNumber}
                     onChange={handleInputChange}
+                    className="h-9 md:h-10 text-sm md:text-base"
                   />
                   <Input
                     name="dateOfBirth"
@@ -301,11 +305,12 @@ export default function RegisterPage() {
                     placeholder="Date of Birth"
                     value={formData.dateOfBirth}
                     onChange={handleInputChange}
+                    className="h-9 md:h-10 text-sm md:text-base"
                   />
                   <Select
                     onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 md:h-10 text-sm md:text-base">
                       <SelectValue placeholder="Select Gender" />
                     </SelectTrigger>
                     <SelectContent>
@@ -317,7 +322,7 @@ export default function RegisterPage() {
                   <Select
                     onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9 md:h-10 text-sm md:text-base">
                       <SelectValue placeholder="Select Language" />
                     </SelectTrigger>
                     <SelectContent>
@@ -332,6 +337,7 @@ export default function RegisterPage() {
                     placeholder="Email address"
                     value={formData.email}
                     onChange={handleInputChange}
+                    className="h-9 md:h-10 text-sm md:text-base"
                   />
                   <Input
                     name="password"
@@ -339,12 +345,14 @@ export default function RegisterPage() {
                     placeholder="Password"
                     value={formData.password}
                     onChange={handleInputChange}
+                    className="h-9 md:h-10 text-sm md:text-base"
                   />
                   <Input
                     name="mobileNumber"
                     placeholder="Mobile Number"
                     value={formData.mobileNumber}
                     onChange={handleInputChange}
+                    className="h-9 md:h-10 text-sm md:text-base"
                   />
                 </div>
 
@@ -355,27 +363,27 @@ export default function RegisterPage() {
                     <Carousel className="w-full">
                       <CarouselContent>
                         {packages.map((pkg) => (
-                          <CarouselItem key={pkg.id} className="md:basis-1/2 lg:basis-1/3">
+                          <CarouselItem key={pkg.id} className="sm:basis-1/2">
                             <Card
                               className={`cursor-pointer transition-all hover:border-primary h-full ${
                                 formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
                               }`}
                               onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
                             >
-                              <CardHeader>
-                                <CardTitle className="flex justify-between items-center">
+                              <CardHeader className="p-4 md:p-6">
+                                <CardTitle className="flex justify-between items-center text-base md:text-lg">
                                   {pkg.name}
                                   {formData.selectedPackage === pkg.id && (
-                                    <Check className="h-5 w-5 text-primary" />
+                                    <Check className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                                   )}
                                 </CardTitle>
-                                <CardDescription>R{pkg.price}/month</CardDescription>
+                                <CardDescription className="text-sm md:text-base">R{pkg.price}/month</CardDescription>
                               </CardHeader>
-                              <CardContent>
-                                <ul className="space-y-2">
+                              <CardContent className="p-4 md:p-6">
+                                <ul className="space-y-1 md:space-y-2">
                                   {pkg.perks.map((perk, index) => (
-                                    <li key={index} className="flex items-center">
-                                      <Badge variant="outline" className="mr-2">✓</Badge>
+                                    <li key={index} className="flex items-center text-xs md:text-sm">
+                                      <Badge variant="outline" className="mr-2 text-xs">✓</Badge>
                                       {perk}
                                     </li>
                                   ))}
@@ -400,29 +408,33 @@ export default function RegisterPage() {
                       placeholder="Account Holder Name"
                       value={formData.accountHolderName}
                       onChange={handleInputChange}
+                      className="h-9 md:h-10 text-sm md:text-base"
                     />
                     <Input
                       name="bankName"
                       placeholder="Bank Name"
                       value={formData.bankName}
                       onChange={handleInputChange}
+                      className="h-9 md:h-10 text-sm md:text-base"
                     />
                     <Input
                       name="branchCode"
                       placeholder="Branch & Code"
                       value={formData.branchCode}
                       onChange={handleInputChange}
+                      className="h-9 md:h-10 text-sm md:text-base"
                     />
                     <Input
                       name="accountNumber"
                       placeholder="Account Number"
                       value={formData.accountNumber}
                       onChange={handleInputChange}
+                      className="h-9 md:h-10 text-sm md:text-base"
                     />
                     <Select
                       onValueChange={(value) => setFormData(prev => ({ ...prev, accountType: value }))}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9 md:h-10 text-sm md:text-base">
                         <SelectValue placeholder="Type of Account" />
                       </SelectTrigger>
                       <SelectContent>
