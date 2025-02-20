@@ -175,20 +175,14 @@ export function setupAuth(app: Express) {
         isSouthAfrican,
         idNumber,
         dateOfBirth,
-        gender,
-        occupation,
-        industry,
-        addressLine1,
-        addressLine2,
-        suburb,
+        address,
+        city,
         postalCode,
-        hasCreditCard,
         selectedPackage,
-        accountHolderName,
         bankName,
-        branchCode,
-        accountNumber,
         accountType,
+        accountNumber,
+        hasCreditCard,
         signature
       } = result.data;
 
@@ -247,20 +241,14 @@ export function setupAuth(app: Express) {
               isSouthAfrican: isSouthAfrican || false,
               idNumber: idNumber || null,
               dateOfBirth: dateOfBirth || null,
-              gender: gender || null,
-              occupation: occupation || null,
-              industry: industry || null,
-              addressLine1: addressLine1 || null,
-              addressLine2: addressLine2 || null,
-              suburb: suburb || null,
+              address: address || null,
+              city: city || null,
               postalCode: postalCode || null,
-              hasCreditCard: hasCreditCard || false,
               selectedPackage: selectedPackage || null,
-              accountHolderName: accountHolderName || null,
               bankName: bankName || null,
-              branchCode: branchCode || null,
-              accountNumber: accountNumber || null,
               accountType: accountType || null,
+              accountNumber: accountNumber || null,
+              hasCreditCard: hasCreditCard || false,
               signature: signature || null,
               createdAt: new Date()
             })
@@ -311,7 +299,7 @@ export function setupAuth(app: Express) {
         });
       } catch (dbError) {
         console.error('Database error during registration:', dbError);
-        res.status(500).json({ error: "Database error during registration" }); 
+        res.status(500).json({ error: "Database error during registration" });
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -330,7 +318,7 @@ export function setupAuth(app: Express) {
           console.error('Session destruction error:', err);
           return res.status(500).json({ error: "Logout failed" });
         }
-        res.clearCookie("connect.sid"); 
+        res.clearCookie("connect.sid");
         res.json({ message: "Logged out successfully" });
       });
     });
@@ -367,7 +355,7 @@ export async function verifySession(req: Request): Promise<any> {
     }
 
     const cookies = parseCookie(req.headers.cookie);
-    const sessionId = cookies['connect.sid']; 
+    const sessionId = cookies['connect.sid'];
 
     if (!sessionId) {
       console.log('No session ID found in cookies');
@@ -516,22 +504,21 @@ const registerSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
   referralCode: z.string().optional().nullable(),
-  isSouthAfrican: z.boolean().optional().default(false),
+  // Personal Information
+  isSouthAfrican: z.boolean().default(false),
   idNumber: z.string().optional().nullable(),
   dateOfBirth: z.string().optional().nullable(),
-  gender: z.string().optional().nullable(),
-  occupation: z.string().optional().nullable(),
-  industry: z.string().optional().nullable(),
-  addressLine1: z.string().optional().nullable(),
-  addressLine2: z.string().optional().nullable(),
-  suburb: z.string().optional().nullable(),
+  // Address Information
+  address: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
-  hasCreditCard: z.boolean().optional().default(false),
-  selectedPackage: z.number().optional().nullable(),
-  accountHolderName: z.string().optional().nullable(),
+  // Package Selection
+  selectedPackage: z.enum(["BASIC", "STANDARD", "PREMIUM", "PLATINUM"]).optional().nullable(),
+  // Banking Information
   bankName: z.string().optional().nullable(),
-  branchCode: z.string().optional().nullable(),
+  accountType: z.enum(["SAVINGS", "CHEQUE", "CREDIT", "BUSINESS"]).optional().nullable(),
   accountNumber: z.string().optional().nullable(),
-  accountType: z.string().optional().nullable(),
+  hasCreditCard: z.boolean().default(false),
+  // Digital signature
   signature: z.string().optional().nullable(),
 });

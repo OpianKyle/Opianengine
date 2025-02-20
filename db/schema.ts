@@ -11,6 +11,20 @@ export const activityTypes = pgEnum("activity_type", [
   "RENEWAL"
 ]);
 
+export const packageTypes = pgEnum("package_type", [
+  "BASIC",
+  "STANDARD",
+  "PREMIUM",
+  "PLATINUM"
+]);
+
+export const accountTypes = pgEnum("account_type", [
+  "SAVINGS",
+  "CHEQUE",
+  "CREDIT",
+  "BUSINESS"
+]);
+
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -45,10 +59,10 @@ export const users = pgTable("users", {
   city: text("city"),
   postalCode: text("postal_code"),
   // Package Selection
-  selectedPackage: integer("selected_package"),
+  selectedPackage: packageTypes("selected_package"),
   // Banking Information
   bankName: text("bank_name"),
-  accountType: text("account_type"),
+  accountType: accountTypes("account_type"),
   accountNumber: text("account_number"),
   hasCreditCard: boolean("has_credit_card").default(false),
   // Digital signature
