@@ -152,18 +152,22 @@ let MandateText = `This signed Authority and Mandate refers to our contract date
 
 `;
 
-const PackageCard = ({ pkg, isSelected, onSelect }) => (
+const PackageCard = ({ pkg, isSelected, onSelect, anySelected }) => (
   <Card
-    className={`mx-2 h-[420px] cursor-pointer transition-all hover:border-primary ${
-      isSelected ? 'border-primary ring-2 ring-primary' : ''
-    }`}
+    className={`mx-2 h-[420px] cursor-pointer transition-all relative
+      ${isSelected 
+        ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]' 
+        : anySelected 
+          ? 'opacity-50 hover:opacity-75'
+          : 'hover:border-primary'
+      }`}
     onClick={onSelect}
   >
     <CardHeader className="p-4 sm:p-6">
       <CardTitle className="flex justify-between items-center text-lg">
         {pkg.name}
         {isSelected && (
-          <Check className="h-5 w-5 text-primary" />
+          <Check className="h-5 w-5 text-[#43EB3E]" />
         )}
       </CardTitle>
       <CardDescription className="text-base">R{pkg.price}/month</CardDescription>
@@ -575,6 +579,7 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                             <PackageCard
                               pkg={pkg}
                               isSelected={formData.selectedPackage === pkg.id}
+                              anySelected={formData.selectedPackage !== null}
                               onSelect={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
                             />
                           </CarouselItem>
