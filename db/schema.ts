@@ -53,6 +53,9 @@ export const users = pgTable("users", {
   isSouthAfrican: boolean("is_south_african").default(false),
   idNumber: text("id_number"),
   dateOfBirth: text("date_of_birth"),
+  gender: text("gender"),
+  occupation: text("occupation"),
+  industry: text("industry"),
   // Address Information
   address: text("address"),
   city: text("city"),
@@ -63,6 +66,8 @@ export const users = pgTable("users", {
   bankName: text("bank_name"),
   accountType: accountTypes("account_type"),
   accountNumber: text("account_number"),
+  accountHolderName: text("account_holder_name"),
+  branchCode: text("branch_code"),
   hasCreditCard: boolean("has_credit_card").default(false),
   // Digital signature
   signature: text("signature"),

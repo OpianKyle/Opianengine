@@ -183,7 +183,12 @@ export function setupAuth(app: Express) {
         accountType,
         accountNumber,
         hasCreditCard,
-        signature
+        signature,
+        gender,
+        occupation,
+        industry,
+        accountHolderName,
+        branchCode
       } = result.data;
 
       console.log('Checking for existing user with email:', email);
@@ -250,7 +255,12 @@ export function setupAuth(app: Express) {
               accountNumber: accountNumber || null,
               hasCreditCard: hasCreditCard || false,
               signature: signature || null,
-              createdAt: new Date()
+              createdAt: new Date(),
+              gender: gender || null,
+              occupation: occupation || null,
+              industry: industry || null,
+              accountHolderName: accountHolderName || null,
+              branchCode: branchCode || null
             })
             .returning();
 
@@ -516,6 +526,9 @@ const registerSchema = z.object({
   isSouthAfrican: z.boolean().default(false),
   idNumber: z.string().optional().nullable(),
   dateOfBirth: z.string().optional().nullable(),
+  gender: z.string().optional().nullable(),
+  occupation: z.string().optional().nullable(),
+  industry: z.string().optional().nullable(),
   // Address Information
   address: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
@@ -533,6 +546,8 @@ const registerSchema = z.object({
     .optional()
     .nullable(),
   accountNumber: z.string().optional().nullable(),
+  accountHolderName: z.string().optional().nullable(),
+  branchCode: z.string().optional().nullable(),
   hasCreditCard: z.boolean().default(false),
   // Digital signature
   signature: z.string().optional().nullable(),
