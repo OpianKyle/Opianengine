@@ -12,15 +12,17 @@ interface PointsNotification {
   read?: boolean;
 }
 
+const MAX_RECONNECT_ATTEMPTS = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
 export function useNotifications() {
-  const { user, token } = useUser();
+  const { user, token, refreshToken } = useUser();
   const { toast } = useToast();
   const socketRef = useRef<WebSocket | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const queryClient = useQueryClient();
-  const maxReconnectAttempts = 5;
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   // Fetch notifications from API
@@ -54,9 +56,9 @@ export function useNotifications() {
     }
   }, [notifications]);
 
-  const connectWebSocket = () => {
+  const connectWebSocket = async () => {
     if (!user || !token || socketRef.current?.readyState === WebSocket.OPEN) {
-      console.log('Skipping WebSocket connection - no user/token or already connected', {
+      console.log('Skipping WebSocket connection:', {
         hasUser: !!user,
         hasToken: !!token,
         socketState: socketRef.current?.readyState
@@ -65,6 +67,11 @@ export function useNotifications() {
     }
 
     try {
+      // Try to refresh token if needed
+      if (refreshToken && reconnectAttempts > 0) {
+        await refreshToken();
+      }
+
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/notifications-ws?token=${encodeURIComponent(token)}`;
       console.log('Attempting WebSocket connection to:', wsUrl);
@@ -76,11 +83,13 @@ export function useNotifications() {
         console.log('WebSocket connected');
         setIsConnected(true);
         setReconnectAttempts(0);
-        toast({
-          title: "Connected",
-          description: "Successfully connected to notification service",
-          duration: 3000,
-        });
+        if (reconnectAttempts > 0) {
+          toast({
+            title: "Reconnected",
+            description: "Successfully reconnected to notification service",
+            duration: 3000,
+          });
+        }
       };
 
       socket.onmessage = (event) => {
@@ -128,20 +137,26 @@ export function useNotifications() {
         setIsConnected(false);
         socketRef.current = null;
 
-        // Only attempt to reconnect if we have a user and haven't exceeded max attempts
-        if (user && !reconnectTimeoutRef.current && reconnectAttempts < maxReconnectAttempts) {
-          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}...`);
+        // Calculate retry delay with exponential backoff
+        const retryDelay = Math.min(
+          INITIAL_RETRY_DELAY * Math.pow(2, reconnectAttempts),
+          30000 // Max 30 seconds
+        );
+
+        // Only attempt to reconnect if we haven't exceeded max attempts
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS} in ${retryDelay}ms`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             reconnectTimeoutRef.current = null;
             connectWebSocket();
-          }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000)); // Exponential backoff with 30s max
-        } else if (reconnectAttempts >= maxReconnectAttempts) {
+          }, retryDelay);
+        } else if (!isConnected) {
           toast({
             title: "Connection Error",
-            description: "Unable to establish connection to notification service. Please refresh the page.",
+            description: "Unable to establish connection to notification service. Please refresh the page to try again.",
             variant: "destructive",
-            duration: 0,
+            duration: 0, // Keep visible until dismissed
           });
         }
       };
@@ -188,19 +203,14 @@ export function useNotifications() {
       }
     },
     onSuccess: (_, notificationId) => {
-      // Optimistically update the notifications in the cache
       queryClient.setQueryData(['notifications'], (oldData: PointsNotification[] | undefined) => {
         if (!oldData) return [];
-        // If notificationId is provided, remove that specific notification
-        // Otherwise, mark all as read
         return notificationId
           ? oldData.filter(n => n.id !== notificationId)
           : [];
       });
-      // Also invalidate the query to ensure server-side sync
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
-      // Show success toast for better UX
       toast({
         title: "Success",
         description: notificationId ? "Notification removed" : "All notifications cleared",
@@ -217,10 +227,6 @@ export function useNotifications() {
     }
   });
 
-  const markAsRead = (notificationId?: string) => {
-    markAsReadMutation.mutate(notificationId);
-  };
-
   return {
     notifications: notifications?.map(notification => ({
       ...notification,
@@ -228,7 +234,7 @@ export function useNotifications() {
         `${notification.points > 0 ? '+' : ''}${notification.points}` : undefined
     })) || [],
     unreadCount,
-    markAsRead,
+    markAsRead: (notificationId?: string) => markAsReadMutation.mutate(notificationId),
     isConnected
   };
 }

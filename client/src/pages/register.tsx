@@ -230,9 +230,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col items-center mb-8">
+    <div className="min-h-screen bg-background p-0">
+      <div className="max-w-[1800px] mx-auto">
+        <div className="flex flex-col items-center mb-4 pt-4">
           <img
             src="/Assets/opian-logo-white.png"
             alt="OPIAN Rewards"
@@ -243,7 +243,7 @@ export default function RegisterPage() {
               img.src = '/logo-fallback.png';
             }}
           />
-          <h2 className="mt-6 text-3xl font-semibold text-center">Create Your Account</h2>
+          <h2 className="mt-4 text-3xl font-semibold text-center">Create Your Account</h2>
           {referralCode && (
             <p className="mt-2 text-sm text-muted-foreground">
               You've been referred by a friend!
@@ -251,17 +251,17 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-4">
           {/* Registration Form - Left Column */}
-          <Card className="lg:col-span-2 p-6">
-            <CardHeader>
+          <Card className="lg:col-span-2 p-4">
+            <CardHeader className="p-4">
               <CardTitle>Personal Information</CardTitle>
               <CardDescription>
                 Please fill in your details to create your account
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleRegister} className="space-y-8">
+            <CardContent className="p-4">
+              <form onSubmit={handleRegister} className="space-y-6">
                 {/* Personal Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
@@ -353,16 +353,16 @@ export default function RegisterPage() {
                   <h3 className="text-lg font-semibold">Select Your Package</h3>
                   <div className="relative">
                     <Carousel className="w-full">
-                      <CarouselContent>
+                      <CarouselContent className="-ml-2 md:-ml-4">
                         {packages.map((pkg) => (
-                          <CarouselItem key={pkg.id} className="md:basis-1/3 lg:basis-1/4">
+                          <CarouselItem key={pkg.id} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
                             <Card
                               className={`cursor-pointer transition-all hover:border-primary h-full ${
                                 formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
                               }`}
                               onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
                             >
-                              <CardHeader>
+                              <CardHeader className="p-4">
                                 <CardTitle className="flex justify-between items-center">
                                   {pkg.name}
                                   {formData.selectedPackage === pkg.id && (
@@ -371,7 +371,7 @@ export default function RegisterPage() {
                                 </CardTitle>
                                 <CardDescription>R{pkg.price}/month</CardDescription>
                               </CardHeader>
-                              <CardContent>
+                              <CardContent className="p-4">
                                 <ul className="space-y-2">
                                   {pkg.perks.map((perk, index) => (
                                     <li key={index} className="flex items-center">
@@ -494,15 +494,15 @@ export default function RegisterPage() {
           </Card>
 
           {/* Information Section - Right Column */}
-          <div className="hidden lg:block space-y-6 sticky top-8 self-start">
+          <div className="hidden lg:block space-y-4 sticky top-8 self-start">
             <Card className="h-full">
-              <CardHeader>
+              <CardHeader className="p-4">
                 <CardTitle>Program Benefits</CardTitle>
                 <CardDescription>
                   Join our rewards program and enjoy these exclusive benefits
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="p-4 space-y-6">
                 {benefitsInfo.map((benefit, index) => (
                   <div key={index} className="space-y-2">
                     <h4 className="font-semibold text-primary">{benefit.title}</h4>
@@ -513,10 +513,10 @@ export default function RegisterPage() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4">
                 <CardTitle>Need Help?</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground mb-4">
                   If you have any questions about our packages or the registration process,
                   our support team is here to help.

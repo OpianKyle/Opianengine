@@ -5,7 +5,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, transactions } from "@db/schema"; // Added transactions import
+import { users, transactions } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -13,8 +13,19 @@ import { sendEmail, formatRegistrationEmail } from "./utils/emailService";
 import { parse as parseCookie } from 'cookie';
 import jwt from 'jsonwebtoken';
 
+interface JWTPayload {
+  id: number;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  exp?: number;
+  iat?: number;
+}
+
 const scryptAsync = promisify(scrypt);
 const MemoryStore = createMemoryStore(session);
+
+const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
+const TOKEN_EXPIRATION = '7d'; // Extending token expiration to 7 days
 
 // Session configuration
 export const sessionConfig = {
@@ -27,47 +38,71 @@ export const sessionConfig = {
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days to match JWT
     sameSite: 'lax' as const,
     path: '/'
   },
-  name: 'connect.sid' // Changed to match default Express session name
+  name: 'connect.sid'
 };
 
-// Verify session helper function
-export async function verifySession(req: Request): Promise<any> {
+export function verifyToken(token: string): JWTPayload | null {
   try {
-    console.log('Verifying session for request:', {
-      url: req.url,
-      headers: {
-        cookie: req.headers.cookie,
-        'sec-websocket-protocol': req.headers['sec-websocket-protocol']
-      }
+    console.log('Verifying token:', {
+      tokenLength: token.length,
+      firstChars: token.substring(0, 10) + '...',
     });
 
-    // If we already have user data from passport, return it
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    console.log('Token verified successfully:', {
+      userId: decoded.id,
+      isAdmin: decoded.isAdmin,
+      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
+    });
+
+    return decoded;
+  } catch (error: any) {
+    console.error('Token verification failed:', {
+      error: error.message,
+      name: error.name,
+      tokenLength: token?.length
+    });
+    return null;
+  }
+}
+
+export function generateToken(user: Express.User): string {
+  return jwt.sign(
+    {
+      id: user.id,
+      isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin
+    },
+    JWT_SECRET,
+    { expiresIn: TOKEN_EXPIRATION }
+  );
+}
+
+// Verify session helper function with proper error handling
+export async function verifySession(req: Request): Promise<Express.User | null> {
+  try {
     if (req.user) {
       console.log('Using existing session user:', req.user);
       return req.user;
     }
 
-    // For WebSocket requests, parse the cookie and verify the session
     if (!req.headers.cookie) {
       console.log('No cookie found in request');
       return null;
     }
 
     const cookies = parseCookie(req.headers.cookie);
-    const sessionId = cookies['connect.sid']; // Changed to match cookie name
+    const sessionId = cookies['connect.sid'];
 
     if (!sessionId) {
       console.log('No session ID found in cookies');
       return null;
     }
 
-    console.log('Found session ID:', sessionId);
-
-    // Verify session from store
     return new Promise((resolve) => {
       sessionConfig.store.get(sessionId, async (err: any, session: any) => {
         if (err || !session) {
@@ -77,22 +112,12 @@ export async function verifySession(req: Request): Promise<any> {
         }
 
         try {
-          console.log('Retrieved session data:', {
-            ...session,
-            // Redact sensitive data in logs
-            cookie: '[Redacted]',
-            passport: session.passport ? { user: session.passport.user } : undefined
-          });
-
-          // Get user data from passport session
           const userId = session.passport?.user;
           if (!userId) {
             console.log('No user ID in session');
             resolve(null);
             return;
           }
-
-          console.log('Found user ID in session:', userId);
 
           const [user] = await db
             .select()
@@ -117,57 +142,6 @@ export async function verifySession(req: Request): Promise<any> {
     });
   } catch (error) {
     console.error('Error in verifySession:', error);
-    return null;
-  }
-}
-
-export const crypto = {
-  async hashPassword(password: string) {
-    const salt = randomBytes(16).toString('hex');
-    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${salt}.${hash.toString('hex')}`;
-  },
-
-  async verifyPassword(password: string, storedHash: string) {
-    try {
-      const [salt, hash] = storedHash.split('.');
-      if (!salt || !hash) return false;
-
-      const hashBuffer = Buffer.from(hash, 'hex');
-      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
-
-      return timingSafeEqual(hashBuffer, suppliedBuffer);
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
-    }
-  }
-};
-
-const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
-
-// Add enhanced logging to verifyToken function
-export function verifyToken(token: string): any {
-  try {
-    console.log('Verifying token:', {
-      tokenLength: token.length,
-      firstChars: token.substring(0, 10) + '...',
-    });
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    console.log('Token verified successfully:', {
-      userId: decoded.id,
-      isAdmin: decoded.isAdmin,
-      exp: new Date(decoded.exp * 1000).toISOString()
-    });
-
-    return decoded;
-  } catch (error) {
-    console.error('Token verification failed:', {
-      error: error.message,
-      name: error.name,
-      tokenLength: token?.length
-    });
     return null;
   }
 }
@@ -409,7 +383,7 @@ export async function setupAuth(app: Express) {
           console.error('Session destruction error:', err);
           return res.status(500).json({ error: "Logout failed" });
         }
-        res.clearCookie("connect.sid"); //Updated cookie name
+        res.clearCookie("connect.sid");
         res.json({ message: "Logged out successfully" });
       });
     });
@@ -420,6 +394,30 @@ export async function setupAuth(app: Express) {
       return res.status(401).json({ error: "Not authenticated" });
     }
     res.json(req.user);
+  });
+
+  // Add refresh token endpoint
+  app.post("/api/refresh-token", async (req, res) => {
+    try {
+      // Verify the session is still valid
+      const user = await verifySession(req);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid session" });
+      }
+
+      // Generate a new token
+      const token = generateToken(user);
+
+      console.log('Token refreshed for user:', {
+        userId: user.id,
+        isAdmin: user.isAdmin
+      });
+
+      res.json({ token });
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      res.status(500).json({ error: "Failed to refresh token" });
+    }
   });
 }
 
@@ -437,14 +435,25 @@ const registerSchema = z.object({
   referralCode: z.string().optional().nullable(),
 });
 
-export function generateToken(user: any) {
-  return jwt.sign(
-    {
-      id: user.id,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin
-    },
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-}
+export const crypto = {
+  async hashPassword(password: string) {
+    const salt = randomBytes(16).toString('hex');
+    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${salt}.${hash.toString('hex')}`;
+  },
+
+  async verifyPassword(password: string, storedHash: string) {
+    try {
+      const [salt, hash] = storedHash.split('.');
+      if (!salt || !hash) return false;
+
+      const hashBuffer = Buffer.from(hash, 'hex');
+      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
+
+      return timingSafeEqual(hashBuffer, suppliedBuffer);
+    } catch (error) {
+      console.error('Password verification error:', error);
+      return false;
+    }
+  }
+};
