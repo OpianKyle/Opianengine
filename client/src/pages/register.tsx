@@ -24,6 +24,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const packages = [
   {
@@ -124,6 +125,25 @@ const benefitsInfo = [
   }
 ];
 
+const MandateText = `This signed Authority and Mandate refers to our contract dated ("the Agreement").
+
+I/We hereby authorise you to issue and deliver payment instructions of R550 per month for the program fee to your Banker for collection against my/our abovementioned account at my/our above-mentioned Bank (or any other bank or branch to which I/we may transfer my/our account) on condition that the sum of such payment instructions will never exceed my/our obligations as agreed to in the Agreement and commencing on 1rst of each month and continuing until this Authority and Mandate is terminated by me/us by giving you notice in writing of not less than 20 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
+
+The individual payment instructions so authorised to be issued must be issued and delivered as follows: R550 monthly.
+
+In the event that the payment day falls on a Sunday, or recognised South African public holiday, the payment day will automatically be the preceding ordinary business day.
+
+I/We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement.
+
+Mandate
+I/We acknowledge that all payment instructions issued by you shall be treated by my/our above-mentioned Bank as if the instructions have been issued by me/us personally.
+
+Cancellation
+I/We agree that although this Authority and Mandate may be cancelled by me/us, such cancellation will not cancel the Agreement. I/We shall not be entitled to any refund of amounts which you have withdrawn while this Authority was in force, if such amounts were legally owing to you.
+
+Assignment
+I/We acknowledge that this Authority may be ceded or assigned to a third party if the Agreement is also ceded or assigned to that third party, but in the absence of such assignment of the Agreement, this Authority and Mandate cannot be assigned to any third party.`;
+
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     email: "",
@@ -143,6 +163,7 @@ export default function RegisterPage() {
     branchCode: "",
     accountNumber: "",
     accountType: "",
+    acceptMandate: false, // Added acceptMandate field
   });
 
   const [signature, setSignature] = useState<SignatureCanvas | null>(null);
@@ -189,7 +210,7 @@ export default function RegisterPage() {
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName ||
         !formData.idNumber || !formData.dateOfBirth || !formData.gender || !formData.language ||
         !formData.mobileNumber || !formData.selectedPackage || !formData.accountHolderName ||
-        !formData.bankName || !formData.branchCode || !formData.accountNumber || !formData.accountType) {
+        !formData.bankName || !formData.branchCode || !formData.accountNumber || !formData.accountType || !formData.acceptMandate) {
       setError("Please fill in all required fields");
       return;
     }
@@ -230,8 +251,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 lg:p-8">
-      <div className="max-w-md mx-auto lg:max-w-7xl">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center mb-8">
           <img
             src="/Assets/opian-logo-white.png"
@@ -243,7 +264,7 @@ export default function RegisterPage() {
               img.src = '/logo-fallback.png';
             }}
           />
-          <h2 className="mt-6 text-3xl font-semibold text-center">Create Your Account</h2>
+          <h2 className="mt-6 text-2xl font-semibold text-center">Create Your Account</h2>
           {referralCode && (
             <p className="mt-2 text-sm text-muted-foreground">
               You've been referred by a friend!
@@ -251,112 +272,108 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Registration Form - Left Column */}
-          <Card className="lg:col-span-2 p-6">
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>
-                Please fill in your details to create your account
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleRegister} className="space-y-8">
+        <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          {/* Left Column - Form */}
+          <Card className="lg:col-span-2">
+            <CardContent className="p-6">
+              <form onSubmit={handleRegister} className="space-y-6">
                 {/* Personal Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
-                  <Input
-                    name="firstName"
-                    placeholder="First Name"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className="h-9 md:h-10 text-sm md:text-base"
-                  />
-                  <Input
-                    name="lastName"
-                    placeholder="Last Name"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    className="h-9 md:h-10 text-sm md:text-base"
-                  />
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="isSouthAfrican"
-                      name="isSouthAfrican"
-                      checked={formData.isSouthAfrican}
-                      onCheckedChange={(checked) =>
-                        setFormData(prev => ({ ...prev, isSouthAfrican: checked as boolean }))
-                      }
-                      className="h-4 w-4 md:h-5 md:w-5"
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Personal Information</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input
+                      name="firstName"
+                      placeholder="First Name"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      className="h-9"
                     />
-                    <label htmlFor="isSouthAfrican" className="text-xs md:text-sm">
-                      Are you a South African citizen?
-                    </label>
+                    <Input
+                      name="lastName"
+                      placeholder="Last Name"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      className="h-9"
+                    />
+                    <Input
+                      name="email"
+                      type="email"
+                      placeholder="Email address"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="h-9"
+                    />
+                    <Input
+                      name="password"
+                      type="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="h-9"
+                    />
+                    <Input
+                      name="mobileNumber"
+                      placeholder="Mobile Number"
+                      value={formData.mobileNumber}
+                      onChange={handleInputChange}
+                      className="h-9"
+                    />
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="isSouthAfrican"
+                        name="isSouthAfrican"
+                        checked={formData.isSouthAfrican}
+                        onCheckedChange={(checked) =>
+                          setFormData(prev => ({ ...prev, isSouthAfrican: checked as boolean }))
+                        }
+                      />
+                      <label htmlFor="isSouthAfrican" className="text-sm">
+                        South African citizen
+                      </label>
+                    </div>
+                    <Input
+                      name="idNumber"
+                      placeholder="ID Number/Passport"
+                      value={formData.idNumber}
+                      onChange={handleInputChange}
+                      className="h-9"
+                    />
+                    <Input
+                      name="dateOfBirth"
+                      type="date"
+                      placeholder="Date of Birth"
+                      value={formData.dateOfBirth}
+                      onChange={handleInputChange}
+                      className="h-9"
+                    />
+                    <Select
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select Gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select Language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {languages.map(lang => (
+                          <SelectItem key={lang} value={lang.toLowerCase()}>{lang}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Input
-                    name="idNumber"
-                    placeholder="ID Number/Passport"
-                    value={formData.idNumber}
-                    onChange={handleInputChange}
-                    className="h-9 md:h-10 text-sm md:text-base"
-                  />
-                  <Input
-                    name="dateOfBirth"
-                    type="date"
-                    placeholder="Date of Birth"
-                    value={formData.dateOfBirth}
-                    onChange={handleInputChange}
-                    className="h-9 md:h-10 text-sm md:text-base"
-                  />
-                  <Select
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
-                  >
-                    <SelectTrigger className="h-9 md:h-10 text-sm md:text-base">
-                      <SelectValue placeholder="Select Gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, language: value }))}
-                  >
-                    <SelectTrigger className="h-9 md:h-10 text-sm md:text-base">
-                      <SelectValue placeholder="Select Language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {languages.map(lang => (
-                        <SelectItem key={lang} value={lang.toLowerCase()}>{lang}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    name="email"
-                    type="email"
-                    placeholder="Email address"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="h-9 md:h-10 text-sm md:text-base"
-                  />
-                  <Input
-                    name="password"
-                    type="password"
-                    placeholder="Password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="h-9 md:h-10 text-sm md:text-base"
-                  />
-                  <Input
-                    name="mobileNumber"
-                    placeholder="Mobile Number"
-                    value={formData.mobileNumber}
-                    onChange={handleInputChange}
-                    className="h-9 md:h-10 text-sm md:text-base"
-                  />
                 </div>
 
-                {/* Package Selection with Carousel */}
+                {/* Package Selection */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Select Your Package</h3>
                   <div className="relative">
@@ -370,19 +387,19 @@ export default function RegisterPage() {
                               }`}
                               onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
                             >
-                              <CardHeader className="p-4 md:p-6">
-                                <CardTitle className="flex justify-between items-center text-base md:text-lg">
+                              <CardHeader className="p-4">
+                                <CardTitle className="flex justify-between items-center text-base">
                                   {pkg.name}
                                   {formData.selectedPackage === pkg.id && (
-                                    <Check className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                                    <Check className="h-4 w-4 text-primary" />
                                   )}
                                 </CardTitle>
-                                <CardDescription className="text-sm md:text-base">R{pkg.price}/month</CardDescription>
+                                <CardDescription>R{pkg.price}/month</CardDescription>
                               </CardHeader>
-                              <CardContent className="p-4 md:p-6">
-                                <ul className="space-y-1 md:space-y-2">
+                              <CardContent className="p-4">
+                                <ul className="space-y-1">
                                   {pkg.perks.map((perk, index) => (
-                                    <li key={index} className="flex items-center text-xs md:text-sm">
+                                    <li key={index} className="flex items-center text-xs">
                                       <Badge variant="outline" className="mr-2 text-xs">✓</Badge>
                                       {perk}
                                     </li>
@@ -393,8 +410,8 @@ export default function RegisterPage() {
                           </CarouselItem>
                         ))}
                       </CarouselContent>
-                      <CarouselPrevious className="absolute -left-4 md:-left-6" />
-                      <CarouselNext className="absolute -right-4 md:-right-6" />
+                      <CarouselPrevious className="absolute -left-4" />
+                      <CarouselNext className="absolute -right-4" />
                     </Carousel>
                   </div>
                 </div>
@@ -402,39 +419,39 @@ export default function RegisterPage() {
                 {/* Banking Details */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Banking Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Input
                       name="accountHolderName"
                       placeholder="Account Holder Name"
                       value={formData.accountHolderName}
                       onChange={handleInputChange}
-                      className="h-9 md:h-10 text-sm md:text-base"
+                      className="h-9"
                     />
                     <Input
                       name="bankName"
                       placeholder="Bank Name"
                       value={formData.bankName}
                       onChange={handleInputChange}
-                      className="h-9 md:h-10 text-sm md:text-base"
+                      className="h-9"
                     />
                     <Input
                       name="branchCode"
                       placeholder="Branch & Code"
                       value={formData.branchCode}
                       onChange={handleInputChange}
-                      className="h-9 md:h-10 text-sm md:text-base"
+                      className="h-9"
                     />
                     <Input
                       name="accountNumber"
                       placeholder="Account Number"
                       value={formData.accountNumber}
                       onChange={handleInputChange}
-                      className="h-9 md:h-10 text-sm md:text-base"
+                      className="h-9"
                     />
                     <Select
                       onValueChange={(value) => setFormData(prev => ({ ...prev, accountType: value }))}
                     >
-                      <SelectTrigger className="h-9 md:h-10 text-sm md:text-base">
+                      <SelectTrigger className="h-9">
                         <SelectValue placeholder="Type of Account" />
                       </SelectTrigger>
                       <SelectContent>
@@ -445,6 +462,32 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
+                {/* Mandate Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Mandate Agreement</h3>
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                      <ScrollArea className="h-[200px] w-full rounded-md">
+                        <div className="p-4 text-sm whitespace-pre-wrap">
+                          {MandateText}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="acceptMandate"
+                      checked={formData.acceptMandate}
+                      onCheckedChange={(checked) =>
+                        setFormData(prev => ({ ...prev, acceptMandate: checked as boolean }))
+                      }
+                    />
+                    <label htmlFor="acceptMandate" className="text-sm">
+                      I accept the terms of the mandate
+                    </label>
+                  </div>
+                </div>
+
                 {/* Digital Signature */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Digital Signature</h3>
@@ -452,7 +495,7 @@ export default function RegisterPage() {
                     <SignatureCanvas
                       ref={(ref) => setSignature(ref)}
                       canvasProps={{
-                        className: "signature-canvas w-full h-40 border rounded",
+                        className: "signature-canvas w-full h-32 border rounded",
                         style: { backgroundColor: 'white' }
                       }}
                     />
@@ -505,7 +548,7 @@ export default function RegisterPage() {
             </CardContent>
           </Card>
 
-          {/* Information Section - Right Column */}
+          {/* Right Column - Benefits */}
           <div className="hidden lg:block space-y-6 sticky top-8 self-start">
             <Card className="h-full">
               <CardHeader>
