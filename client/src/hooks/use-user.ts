@@ -35,21 +35,16 @@ export type User = z.infer<typeof userSchema>;
 
 const loginResponseSchema = z.object({
   user: userSchema,
-  token: z.string()
+  token: z.string().optional() // Make token optional as we're using cookies
 });
 
 export function useUser() {
   const queryClient = useQueryClient();
-  const tokenKey = 'auth_token';
-
-  // Helper function to get stored token
-  const getStoredToken = () => localStorage.getItem(tokenKey);
 
   const { data: user, isLoading, error } = useQuery({
     queryKey: ['/api/user'],
     queryFn: async () => {
       try {
-        console.log('Fetching user data...');
         const response = await fetch('/api/user', {
           credentials: 'include',
           headers: {
@@ -68,7 +63,6 @@ export function useUser() {
         }
 
         const data = await response.json();
-        console.log('User data received:', data);
         return userSchema.parse(data);
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -92,17 +86,35 @@ export function useUser() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Login failed');
+        const errorData = await response.json().catch(() => ({ error: 'Login failed' }));
+        throw new Error(errorData.error || 'Login failed');
       }
 
       const data = await response.json();
-      const loginResponse = loginResponseSchema.parse(data);
-      localStorage.setItem(tokenKey, loginResponse.token);
-      return loginResponse.user;
+      return loginResponseSchema.parse(data).user;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
+    },
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+
+      // Clear all user-related queries
+      queryClient.removeQueries({ queryKey: ['/api/user'] });
+      queryClient.setQueryData(['/api/user'], null);
     },
   });
 
@@ -154,34 +166,10 @@ export function useUser() {
     },
   });
 
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch('/api/logout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Logout failed');
-      }
-
-      // Clear token from localStorage
-      localStorage.removeItem(tokenKey);
-
-      // Clear all user-related queries
-      queryClient.removeQueries({ queryKey: ['/api/user'] });
-      queryClient.setQueryData(['/api/user'], null);
-    },
-  });
-
   return {
     user,
     isLoading,
     error,
-    token: getStoredToken(),
     loginMutation,
     logoutMutation,
     registerMutation,
