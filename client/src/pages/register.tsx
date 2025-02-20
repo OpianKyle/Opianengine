@@ -271,15 +271,28 @@ export default function RegisterPage() {
     }
   };
 
-  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-    }));
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | string, fieldName?: string) => {
+    if (typeof e === 'string' && fieldName) {
+      // Handle Select component changes
+      setFormData(prev => ({
+        ...prev,
+        [fieldName]: e
+      }));
 
-    if (name === 'agentReferralCode' && value) {
-      await validateReferralCode(value);
+      if (fieldName === 'agentReferralCode' && e) {
+        await validateReferralCode(e);
+      }
+    } else if (typeof e !== 'string') {
+      // Handle regular input changes
+      const { name, value, type } = e.target;
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      }));
+
+      if (name === 'agentReferralCode' && value) {
+        await validateReferralCode(value);
+      }
     }
   };
 
@@ -299,14 +312,40 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName ||
-      !formData.idNumber || !formData.dateOfBirth || !formData.gender ||
-      !formData.mobileNumber || !formData.selectedPackage || !formData.accountHolderName ||
-      !formData.bankName || !formData.branchCode || !formData.accountNumber || !formData.accountType || !formData.acceptMandate ||
-      !formData.occupation || !formData.industry || !formData.salaryBracket ||
-      !formData.addressLine1 || !formData.suburb || !formData.postalCode
-    ) {
-      setError("Please fill in all required fields");
+    // Required fields check
+    const requiredFields = {
+      email: "Email",
+      password: "Password",
+      firstName: "First Name",
+      lastName: "Last Name",
+      idNumber: "ID Number",
+      dateOfBirth: "Date of Birth",
+      mobileNumber: "Mobile Number",
+      selectedPackage: "Package",
+      occupation: "Occupation",
+      industry: "Industry",
+      salaryBracket: "Salary Bracket",
+      addressLine1: "Address Line 1",
+      suburb: "Suburb",
+      postalCode: "Postal Code",
+      accountHolderName: "Account Holder Name",
+      bankName: "Bank Name",
+      branchCode: "Branch Code",
+      accountNumber: "Account Number",
+      accountType: "Account Type"
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key]) => !formData[key as keyof typeof formData])
+      .map(([, label]) => label);
+
+    if (missingFields.length > 0) {
+      setError(`Please fill in the following required fields: ${missingFields.join(", ")}`);
+      return;
+    }
+
+    if (!formData.acceptMandate) {
+      setError("Please accept the mandate agreement");
       return;
     }
 
@@ -318,11 +357,13 @@ export default function RegisterPage() {
     const signatureData = signature?.toDataURL();
 
     try {
-      const user = await registerMutation.mutateAsync({
+      const registrationData = {
         ...formData,
         signature: signatureData,
-        ...(referralCode ? { referralCode } : {})
-      });
+        ...(formData.agentReferralCode ? { referralCode: formData.agentReferralCode } : {})
+      };
+
+      const user = await registerMutation.mutateAsync(registrationData);
 
       toast({
         title: "Success",
@@ -501,7 +542,7 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                         value={formData.occupation}
                         onChange={handleInputChange}
                       />
-                      <Select onValueChange={handleInputChange}>
+                      <Select onValueChange={(value) => handleInputChange(value, 'industry')}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select Industry" />
                         </SelectTrigger>
@@ -512,7 +553,7 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                         </SelectContent>
                       </Select>
                     </div>
-                    <Select name="industry" onValueChange={handleInputChange}>
+                    <Select name="salaryBracket" onValueChange={(value) => handleInputChange(value, 'salaryBracket')}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Salary Bracket" />
                       </SelectTrigger>
@@ -625,7 +666,7 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                         onChange={handleInputChange}
                       />
                     </div>
-                    <Select name="accountType" onValueChange={handleInputChange}>
+                    <Select name="accountType" onValueChange={(value) => handleInputChange(value, 'accountType')}>
                       <SelectTrigger>
                         <SelectValue placeholder="Type of Account" />
                       </SelectTrigger>
