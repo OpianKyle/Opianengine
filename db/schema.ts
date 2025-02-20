@@ -47,7 +47,7 @@ export const users = pgTable("users", {
   // Employment Information
   employerName: text("employer_name"),
   jobTitle: text("job_title"),
-  employmentDuration: text("employment_duration"),
+  employmentDuration: text("employment_duration"), 
   // Package Selection
   selectedPackage: integer("selected_package"),
   // Banking Information
