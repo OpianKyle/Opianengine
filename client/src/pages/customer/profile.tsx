@@ -10,25 +10,40 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const profileSchema = z.object({
   email: z.string().email("Invalid email address"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  address: z.string().min(1, "Address is required"),
-  city: z.string().min(1, "City is required"),
+  mobileNumber: z.string().min(1, "Mobile number is required"),
+  addressLine1: z.string().min(1, "Address is required"),
+  addressLine2: z.string().optional(),
+  suburb: z.string().min(1, "Suburb is required"),
   postalCode: z.string().min(1, "Postal code is required"),
   idNumber: z.string().min(1, "ID number is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
-  employerName: z.string().min(1, "Employer name is required"),
-  jobTitle: z.string().min(1, "Job title is required"),
+  industry: z.string().min(1, "Industry is required"),
+  occupation: z.string().min(1, "Occupation is required"),
   employmentDuration: z.string().min(1, "Employment duration is required"),
   isSouthAfrican: z.boolean(),
+  bankName: z.string().min(1, "Bank name is required"),
+  accountType: z.string().min(1, "Account type is required"),
+  accountNumber: z.string().min(1, "Account number is required"),
+  hasCreditCard: z.boolean(),
   password: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
+
+const accountTypes = [
+  "Savings",
+  "Cheque",
+  "Credit",
+  "Transmission",
+  "Business"
+];
 
 export default function ProfilePage() {
   const { user } = useUser();
@@ -41,16 +56,21 @@ export default function ProfilePage() {
       email: user?.email || "",
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
-      phoneNumber: user?.phoneNumber || "",
-      address: user?.address || "",
-      city: user?.city || "",
+      mobileNumber: user?.phoneNumber || "",
+      addressLine1: user?.address?.split('\n')[0] || "",
+      addressLine2: user?.address?.split('\n')[1] || "",
+      suburb: user?.city || "",
       postalCode: user?.postalCode || "",
       idNumber: user?.idNumber || "",
       dateOfBirth: user?.dateOfBirth || "",
-      employerName: user?.employerName || "",
-      jobTitle: user?.jobTitle || "",
+      industry: user?.employerName || "",
+      occupation: user?.jobTitle || "",
       employmentDuration: user?.employmentDuration || "",
       isSouthAfrican: user?.isSouthAfrican || false,
+      bankName: user?.bankName || "",
+      accountType: user?.accountType || "",
+      accountNumber: user?.accountNumber || "",
+      hasCreditCard: user?.hasCreditCard || false,
       password: "",
     },
   });
@@ -63,6 +83,11 @@ export default function ProfilePage() {
         credentials: 'include',
         body: JSON.stringify({
           ...data,
+          phoneNumber: data.mobileNumber,
+          address: data.addressLine1 + (data.addressLine2 ? `\n${data.addressLine2}` : ''),
+          city: data.suburb,
+          employerName: data.industry,
+          jobTitle: data.occupation,
           password: data.password || undefined,
         }),
       });
@@ -154,10 +179,10 @@ export default function ProfilePage() {
 
                   <FormField
                     control={form.control}
-                    name="phoneNumber"
+                    name="mobileNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
+                        <FormLabel>Mobile Number</FormLabel>
                         <FormControl>
                           <Input {...field} type="tel" />
                         </FormControl>
@@ -197,6 +222,25 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="isSouthAfrican"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>South African Citizen</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <Separator />
@@ -204,10 +248,10 @@ export default function ProfilePage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
-                    name="address"
+                    name="addressLine1"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Address</FormLabel>
+                        <FormLabel>Address Line 1</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -218,10 +262,24 @@ export default function ProfilePage() {
 
                   <FormField
                     control={form.control}
-                    name="city"
+                    name="addressLine2"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City</FormLabel>
+                        <FormLabel>Address Line 2 (Optional)</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="suburb"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Suburb</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -250,10 +308,10 @@ export default function ProfilePage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
-                    name="employerName"
+                    name="industry"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Employer Name</FormLabel>
+                        <FormLabel>Industry</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -264,10 +322,10 @@ export default function ProfilePage() {
 
                   <FormField
                     control={form.control}
-                    name="jobTitle"
+                    name="occupation"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Job Title</FormLabel>
+                        <FormLabel>Occupation</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -285,6 +343,85 @@ export default function ProfilePage() {
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="bankName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bank Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="accountType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Type</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select account type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {accountTypes.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="accountNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Number</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="hasCreditCard"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Has Credit Card</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
