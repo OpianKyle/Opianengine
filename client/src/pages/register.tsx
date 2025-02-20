@@ -280,7 +280,7 @@ export default function RegisterPage() {
                 {/* Personal Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Personal Information</h3>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                     <Input
                       name="firstName"
                       placeholder="First Name"
@@ -373,51 +373,10 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                {/* Package Selection */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Select Your Package</h3>
-                  <div className="relative -mx-4 sm:mx-0">
-                    <Carousel className="w-full">
-                      <CarouselContent>
-                        {packages.map((pkg) => (
-                          <CarouselItem key={pkg.id} className="sm:basis-1/2">
-                            <Card className={`mx-4 sm:mx-2 cursor-pointer transition-all hover:border-primary h-full ${
-                              formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
-                            }`}
-                            onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}>
-                              <CardHeader className="p-4">
-                                <CardTitle className="flex justify-between items-center text-base">
-                                  {pkg.name}
-                                  {formData.selectedPackage === pkg.id && (
-                                    <Check className="h-4 w-4 text-primary" />
-                                  )}
-                                </CardTitle>
-                                <CardDescription>R{pkg.price}/month</CardDescription>
-                              </CardHeader>
-                              <CardContent className="p-4">
-                                <ul className="space-y-1">
-                                  {pkg.perks.map((perk, index) => (
-                                    <li key={index} className="flex items-center text-xs">
-                                      <Badge variant="outline" className="mr-2 text-xs">✓</Badge>
-                                      {perk}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </CardContent>
-                            </Card>
-                          </CarouselItem>
-                        ))}
-                      </CarouselContent>
-                      <CarouselPrevious className="absolute -left-2 sm:-left-4" />
-                      <CarouselNext className="absolute -right-2 sm:-right-4" />
-                    </Carousel>
-                  </div>
-                </div>
-
                 {/* Banking Details */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Banking Details</h3>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                     <Input
                       name="accountHolderName"
                       placeholder="Account Holder Name"
@@ -457,6 +416,47 @@ export default function RegisterPage() {
                         <SelectItem value="current">Current</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                {/* Package Selection */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Select Your Package</h3>
+                  <div className="relative -mx-4 sm:mx-0">
+                    <Carousel className="w-full">
+                      <CarouselContent>
+                        {packages.map((pkg) => (
+                          <CarouselItem key={pkg.id} className="sm:basis-1/2">
+                            <Card className={`mx-4 sm:mx-2 cursor-pointer transition-all hover:border-primary h-full ${
+                              formData.selectedPackage === pkg.id ? 'border-primary ring-2 ring-primary' : ''
+                            }`}
+                            onClick={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}>
+                              <CardHeader className="p-4">
+                                <CardTitle className="flex justify-between items-center text-base">
+                                  {pkg.name}
+                                  {formData.selectedPackage === pkg.id && (
+                                    <Check className="h-4 w-4 text-primary" />
+                                  )}
+                                </CardTitle>
+                                <CardDescription>R{pkg.price}/month</CardDescription>
+                              </CardHeader>
+                              <CardContent className="p-4">
+                                <ul className="space-y-1">
+                                  {pkg.perks.map((perk, index) => (
+                                    <li key={index} className="flex items-center text-xs">
+                                      <Badge variant="outline" className="mr-2 text-xs">✓</Badge>
+                                      {perk}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </CardContent>
+                            </Card>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <CarouselPrevious className="absolute -left-2 sm:-left-4" />
+                      <CarouselNext className="absolute -right-2 sm:-right-4" />
+                    </Carousel>
                   </div>
                 </div>
 
