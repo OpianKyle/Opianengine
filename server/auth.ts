@@ -5,7 +5,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, transactions } from "@db/schema"; // Added transactions import
+import { users, transactions } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -16,7 +16,34 @@ import jwt from 'jsonwebtoken';
 const scryptAsync = promisify(scrypt);
 const MemoryStore = createMemoryStore(session);
 
-// Session configuration
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  // Identity Information
+  isSouthAfrican: z.boolean().optional(),
+  idNumber: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  // Address Information
+  address: z.string().optional(),
+  city: z.string().optional(),
+  postalCode: z.string().optional(),
+  // Employment Information
+  employerName: z.string().optional(),
+  jobTitle: z.string().optional(),
+  employmentDuration: z.string().optional(),
+  // Banking Information
+  bankName: z.string().optional(),
+  accountType: z.string().optional(),
+  accountNumber: z.string().optional(),
+  hasCreditCard: z.boolean().optional(),
+  // Referral Information
+  referralCode: z.string().optional().nullable(),
+});
+
+// Session configuration remains the same
 export const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'development-secret',
   resave: false,
@@ -31,10 +58,10 @@ export const sessionConfig = {
     sameSite: 'lax' as const,
     path: '/'
   },
-  name: 'connect.sid' // Changed to match default Express session name
+  name: 'connect.sid'
 };
 
-// Verify session helper function
+// Rest of the auth.ts file remains unchanged until the register endpoint
 export async function verifySession(req: Request): Promise<any> {
   try {
     console.log('Verifying session for request:', {
@@ -45,20 +72,18 @@ export async function verifySession(req: Request): Promise<any> {
       }
     });
 
-    // If we already have user data from passport, return it
     if (req.user) {
       console.log('Using existing session user:', req.user);
       return req.user;
     }
 
-    // For WebSocket requests, parse the cookie and verify the session
     if (!req.headers.cookie) {
       console.log('No cookie found in request');
       return null;
     }
 
     const cookies = parseCookie(req.headers.cookie);
-    const sessionId = cookies['connect.sid']; // Changed to match cookie name
+    const sessionId = cookies['connect.sid'];
 
     if (!sessionId) {
       console.log('No session ID found in cookies');
@@ -67,7 +92,6 @@ export async function verifySession(req: Request): Promise<any> {
 
     console.log('Found session ID:', sessionId);
 
-    // Verify session from store
     return new Promise((resolve) => {
       sessionConfig.store.get(sessionId, async (err: any, session: any) => {
         if (err || !session) {
@@ -79,12 +103,10 @@ export async function verifySession(req: Request): Promise<any> {
         try {
           console.log('Retrieved session data:', {
             ...session,
-            // Redact sensitive data in logs
             cookie: '[Redacted]',
             passport: session.passport ? { user: session.passport.user } : undefined
           });
 
-          // Get user data from passport session
           const userId = session.passport?.user;
           if (!userId) {
             console.log('No user ID in session');
@@ -146,7 +168,6 @@ export const crypto = {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
 
-// Add enhanced logging to verifyToken function
 export function verifyToken(token: string): any {
   try {
     console.log('Verifying token:', {
@@ -156,13 +177,13 @@ export function verifyToken(token: string): any {
 
     const decoded = jwt.verify(token, JWT_SECRET);
     console.log('Token verified successfully:', {
-      userId: decoded.id,
-      isAdmin: decoded.isAdmin,
-      exp: new Date(decoded.exp * 1000).toISOString()
+      userId: (decoded as any).id,
+      isAdmin: (decoded as any).isAdmin,
+      exp: new Date((decoded as any).exp * 1000).toISOString()
     });
 
     return decoded;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Token verification failed:', {
       error: error.message,
       name: error.name,
@@ -172,9 +193,8 @@ export function verifyToken(token: string): any {
   }
 }
 
-export async function setupAuth(app: Express) {
+export function setupAuth(app: Express) {
   app.use(session(sessionConfig));
-
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -243,6 +263,11 @@ export async function setupAuth(app: Express) {
     }
   ));
 
+  const loginSchema = z.object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+  });
+
   app.post("/api/login", (req, res, next) => {
     try {
       const result = loginSchema.safeParse(req.body);
@@ -269,9 +294,7 @@ export async function setupAuth(app: Express) {
             return res.status(500).json({ error: "Login failed" });
           }
 
-          // Generate token for WebSocket authentication
           const token = generateToken(user);
-
           console.log('User logged in successfully:', user);
           return res.json({ user, token });
         });
@@ -295,7 +318,27 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      const { email, password, firstName, lastName, phoneNumber, referralCode } = result.data;
+      const { 
+        email, 
+        password, 
+        firstName, 
+        lastName, 
+        phoneNumber,
+        isSouthAfrican,
+        idNumber,
+        dateOfBirth,
+        address,
+        city,
+        postalCode,
+        employerName,
+        jobTitle,
+        employmentDuration,
+        bankName,
+        accountType,
+        accountNumber,
+        hasCreditCard,
+        referralCode 
+      } = result.data;
 
       const [existingUser] = await db
         .select()
@@ -314,7 +357,7 @@ export async function setupAuth(app: Express) {
         [referrerUser] = await db
           .select()
           .from(users)
-          .where(eq(users.referral_code, referralCode))
+          .where(eq(users.referralCode, referralCode))
           .limit(1);
 
         if (!referrerUser) {
@@ -328,7 +371,6 @@ export async function setupAuth(app: Express) {
       const hashedPassword = await crypto.hashPassword(password);
 
       const newUser = await db.transaction(async (tx) => {
-        // First create the new user
         const [user] = await tx
           .insert(users)
           .values({
@@ -337,16 +379,28 @@ export async function setupAuth(app: Express) {
             firstName,
             lastName,
             phoneNumber,
+            isSouthAfrican: isSouthAfrican || false,
+            idNumber: idNumber || null,
+            dateOfBirth: dateOfBirth || null,
+            address: address || null,
+            city: city || null,
+            postalCode: postalCode || null,
+            employerName: employerName || null,
+            jobTitle: jobTitle || null,
+            employmentDuration: employmentDuration || null,
+            bankName: bankName || null,
+            accountType: accountType || null,
+            accountNumber: accountNumber || null,
+            hasCreditCard: hasCreditCard || false,
             isAdmin: false,
             isSuperAdmin: false,
             isEnabled: true,
-            points: referralCode ? 2000 : 1000, // More points if referred
-            referral_code: newReferralCode,
-            referred_by: referralCode || null,
+            points: referralCode ? 2000 : 1000,
+            referralCode: newReferralCode,
+            referredBy: referralCode || null,
           })
           .returning();
 
-        // Add welcome bonus transaction
         await tx
           .insert(transactions)
           .values({
@@ -354,9 +408,9 @@ export async function setupAuth(app: Express) {
             points: referralCode ? 2000 : 1000,
             type: "WELCOME_BONUS",
             description: "Welcome bonus for new registration",
+            status: "PROCESSED"
           });
 
-        // If user was referred, update referrer's points
         if (referrerUser) {
           await tx
             .update(users)
@@ -370,6 +424,7 @@ export async function setupAuth(app: Express) {
               points: 2500,
               type: "REFERRAL_BONUS",
               description: `Referral bonus for referring ${email}`,
+              status: "PROCESSED"
             });
         }
 
@@ -409,7 +464,7 @@ export async function setupAuth(app: Express) {
           console.error('Session destruction error:', err);
           return res.status(500).json({ error: "Logout failed" });
         }
-        res.clearCookie("connect.sid"); //Updated cookie name
+        res.clearCookie("connect.sid");
         res.json({ message: "Logged out successfully" });
       });
     });
@@ -422,20 +477,6 @@ export async function setupAuth(app: Express) {
     res.json(req.user);
   });
 }
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  referralCode: z.string().optional().nullable(),
-});
 
 export function generateToken(user: any) {
   return jwt.sign(
