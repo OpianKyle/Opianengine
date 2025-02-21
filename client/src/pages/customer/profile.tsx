@@ -31,13 +31,11 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 
-// Match the account types with the database schema
-const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
-
 // Update packages to match registration
 const packages = [
   {
-    name: "Beginner",
+    name: "BEGINNER",
+    display: "Beginner",
     price: 99,
     perks: [
       "5% Cashback on Purchases",
@@ -48,7 +46,8 @@ const packages = [
     ]
   },
   {
-    name: "Novice",
+    name: "NOVICE",
+    display: "Novice",
     price: 199,
     perks: [
       "10% Cashback on Purchases",
@@ -60,7 +59,8 @@ const packages = [
     ]
   },
   {
-    name: "Active",
+    name: "ACTIVE",
+    display: "Active",
     price: 299,
     perks: [
       "15% Cashback on Purchases",
@@ -73,7 +73,8 @@ const packages = [
     ]
   },
   {
-    name: "Professional",
+    name: "PROFESSIONAL",
+    display: "Professional",
     price: 499,
     perks: [
       "20% Cashback on Purchases",
@@ -87,7 +88,8 @@ const packages = [
     ]
   },
   {
-    name: "Expert",
+    name: "EXPERT",
+    display: "Expert",
     price: 999,
     perks: [
       "25% Cashback on Purchases",
@@ -122,7 +124,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
   >
     <CardHeader className="p-4 sm:p-6">
       <CardTitle className="flex justify-between items-center text-lg">
-        {pkg.name}
+        {pkg.display}
         {isSelected && (
           <Check className="h-5 w-5 text-[#43EB3E]" />
         )}
@@ -143,6 +145,9 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
     </CardContent>
   </Card>
 );
+
+// Match the account types with the database schema
+const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
 const profileSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -198,7 +203,7 @@ export default function ProfilePage() {
       industry: user?.industry || "",
       occupation: user?.occupation || "",
       isSouthAfrican: user?.isSouthAfrican || false,
-      selectedPackage: user?.selectedPackage || "Beginner",
+      selectedPackage: user?.selectedPackage || "BEGINNER",
       bankName: user?.bankName || "",
       accountType: (user?.accountType as ProfileFormData['accountType']) || "SAVINGS",
       accountNumber: user?.accountNumber || "",
@@ -223,7 +228,7 @@ export default function ProfilePage() {
           industry: data.industry,
           occupation: data.occupation,
           isSouthAfrican: data.isSouthAfrican,
-          selectedPackage: selectedPackage || "Beginner",
+          selectedPackage: selectedPackage || "BEGINNER",
           bankName: data.bankName,
           accountType: data.accountType,
           accountNumber: data.accountNumber,
@@ -289,10 +294,8 @@ export default function ProfilePage() {
   });
 
   const handlePackageSelect = (packageName: string) => {
-    // Convert to uppercase before comparing or saving
-    const upperPackageName = packageName.toUpperCase();
-    if (upperPackageName !== user?.selectedPackage) {
-      setSelectedPackage(upperPackageName);
+    if (packageName !== user?.selectedPackage) {
+      setSelectedPackage(packageName);
       setShowPackageDialog(true);
     }
   };
@@ -301,7 +304,7 @@ export default function ProfilePage() {
     const currentValues = form.getValues();
     updateProfileMutation.mutate({
       ...currentValues,
-      selectedPackage: selectedPackage?.toUpperCase() || "BEGINNER",
+      selectedPackage: selectedPackage || "BEGINNER",
     });
   };
 
@@ -309,7 +312,7 @@ export default function ProfilePage() {
     return null;
   }
 
-  const currentPackage = packages.find(pkg => pkg.name === user.selectedPackage);
+  const currentPackage = packages.find(pkg => pkg.name === user?.selectedPackage);
   const newPackage = packages.find(pkg => pkg.name === selectedPackage);
 
   return (
@@ -328,7 +331,7 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle>Package Selection</CardTitle>
             <CardDescription>
-              Your current package: {currentPackage?.name} (R{currentPackage?.price}/month)
+              Your current package: {currentPackage ? `${currentPackage.display} (R${currentPackage.price}/month)` : 'No package selected'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -339,7 +342,7 @@ export default function ProfilePage() {
                     <CarouselItem key={pkg.name} className="basis-full sm:basis-1/2 md:basis-1/2">
                       <PackageCard
                         pkg={pkg}
-                        isSelected={pkg.name.toUpperCase() === user?.selectedPackage}
+                        isSelected={pkg.name === user?.selectedPackage}
                         anySelected={!!user?.selectedPackage}
                         onSelect={() => handlePackageSelect(pkg.name)}
                       />
@@ -358,9 +361,26 @@ export default function ProfilePage() {
             <DialogHeader>
               <DialogTitle>Confirm Package Change</DialogTitle>
               <DialogDescription>
-                You are about to change your package from {currentPackage?.name} (R{currentPackage?.price}/month) to {newPackage?.name} (R{newPackage?.price}/month).
-                <br /><br />
-                This change will update your monthly debit order mandate. A new mandate agreement will be sent to you via email.
+                {currentPackage && newPackage ? (
+                  <>
+                    You are about to change your package from {currentPackage.display} (R{currentPackage.price}/month) to {newPackage.display} (R{newPackage.price}/month).
+                    <br /><br />
+                    {newPackage.price > currentPackage.price ? (
+                      <>
+                        This will increase your monthly payment by R{newPackage.price - currentPackage.price}.
+                        <br /><br />
+                      </>
+                    ) : newPackage.price < currentPackage.price ? (
+                      <>
+                        This will decrease your monthly payment by R{currentPackage.price - newPackage.price}.
+                        <br /><br />
+                      </>
+                    ) : null}
+                    This change will update your monthly debit order mandate. A new mandate agreement will be sent to you via email.
+                  </>
+                ) : (
+                  'Package information not available'
+                )}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
