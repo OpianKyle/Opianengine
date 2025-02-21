@@ -228,7 +228,7 @@ export default function ProfilePage() {
           industry: data.industry,
           occupation: data.occupation,
           isSouthAfrican: data.isSouthAfrican,
-          selectedPackage: data.selectedPackage,
+          selectedPackage: data.selectedPackage.toUpperCase(), //Convert to uppercase before sending
           bankName: data.bankName,
           accountType: data.accountType,
           accountNumber: data.accountNumber,
@@ -288,7 +288,7 @@ export default function ProfilePage() {
 
   const handlePackageSelect = (packageName: string) => {
     if (packageName !== user?.selectedPackage) {
-      setSelectedPackage(packageName);
+      setSelectedPackage(packageName.toUpperCase()); //Convert to uppercase immediately
       setShowPackageDialog(true);
     }
   };

@@ -30,7 +30,8 @@ import { Label } from "@/components/ui/label";
 
 const packages = [
   {
-    name: "Beginner",
+    id: "BEGINNER",
+    display: "Beginner",
     price: 99,
     perks: [
       "5% Cashback on Purchases",
@@ -41,7 +42,8 @@ const packages = [
     ]
   },
   {
-    name: "Novice",
+    id: "NOVICE",
+    display: "Novice",
     price: 199,
     perks: [
       "10% Cashback on Purchases",
@@ -53,7 +55,8 @@ const packages = [
     ]
   },
   {
-    name: "Active",
+    id: "ACTIVE",
+    display: "Active",
     price: 299,
     perks: [
       "15% Cashback on Purchases",
@@ -66,7 +69,8 @@ const packages = [
     ]
   },
   {
-    name: "Professional",
+    id: "PROFESSIONAL",
+    display: "Professional",
     price: 499,
     perks: [
       "20% Cashback on Purchases",
@@ -80,7 +84,8 @@ const packages = [
     ]
   },
   {
-    name: "Expert",
+    id: "EXPERT",
+    display: "Expert",
     price: 999,
     perks: [
       "25% Cashback on Purchases",
@@ -115,7 +120,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
   >
     <CardHeader className="p-4 sm:p-6">
       <CardTitle className="flex justify-between items-center text-lg">
-        {pkg.name}
+        {pkg.display}
         {isSelected && (
           <Check className="h-5 w-5 text-[#43EB3E]" />
         )}
@@ -155,7 +160,7 @@ export default function RegisterPage() {
     suburb: "",
     postalCode: "",
     hasCreditCard: false,
-    selectedPackage: "Beginner" as string,
+    selectedPackage: "BEGINNER" as string,
     accountHolderName: "",
     bankName: "",
     branchCode: "",
@@ -508,12 +513,12 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                     <Carousel className="w-full">
                       <CarouselContent>
                         {packages.map((pkg) => (
-                          <CarouselItem key={pkg.name} className="basis-full sm:basis-1/2 md:basis-1/2">
+                          <CarouselItem key={pkg.id} className="basis-full sm:basis-1/2 md:basis-1/2">
                             <PackageCard
                               pkg={pkg}
-                              isSelected={formData.selectedPackage === pkg.name}
-                              anySelected={formData.selectedPackage !== null}
-                              onSelect={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.name }))}
+                              isSelected={formData.selectedPackage === pkg.id}
+                              anySelected={!!formData.selectedPackage}
+                              onSelect={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
                             />
                           </CarouselItem>
                         ))}
