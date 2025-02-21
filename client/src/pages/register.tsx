@@ -135,7 +135,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
   anySelected: boolean
 }) => (
   <Card
-    className={`mx-2 h-[420px] cursor-pointer transition-all relative
+    className={`w-full cursor-pointer transition-all relative overflow-visible
       ${isSelected
         ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
         : anySelected
@@ -154,7 +154,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
       <CardDescription className="text-base">R{pkg.price}/month</CardDescription>
     </CardHeader>
     <CardContent className="p-4 sm:p-6">
-      <ScrollArea className="h-[280px] w-full pr-4">
+      <div className="space-y-4">
         <ul className="space-y-2">
           {pkg.perks.map((perk, index) => (
             <li key={index} className="flex items-center text-sm">
@@ -163,7 +163,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
             </li>
           ))}
         </ul>
-      </ScrollArea>
+      </div>
     </CardContent>
   </Card>
 );
