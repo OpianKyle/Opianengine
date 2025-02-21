@@ -30,7 +30,6 @@ import { Label } from "@/components/ui/label";
 
 const packages = [
   {
-    id: 1,
     name: "Beginner",
     price: 99,
     perks: [
@@ -42,7 +41,6 @@ const packages = [
     ]
   },
   {
-    id: 2,
     name: "Novice",
     price: 199,
     perks: [
@@ -55,7 +53,6 @@ const packages = [
     ]
   },
   {
-    id: 3,
     name: "Active",
     price: 299,
     perks: [
@@ -69,7 +66,6 @@ const packages = [
     ]
   },
   {
-    id: 4,
     name: "Professional",
     price: 499,
     perks: [
@@ -84,7 +80,6 @@ const packages = [
     ]
   },
   {
-    id: 5,
     name: "Expert",
     price: 999,
     perks: [
@@ -102,51 +97,12 @@ const packages = [
   }
 ];
 
-// Update the accountTypes array to match the schema
-const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"];
-
-const industries = [
-  "Agriculture",
-  "Construction",
-  "Education",
-  "Finance",
-  "Healthcare",
-  "Information Technology",
-  "Manufacturing",
-  "Mining",
-  "Retail",
-  "Services",
-  "Transport",
-  "Other"
-];
-
-const benefitsInfo = [
-  {
-    title: "Exclusive Rewards",
-    description: "Earn points on every purchase and redeem them for exciting rewards."
-  },
-  {
-    title: "Cashback Benefits",
-    description: "Get up to 25% cashback on your purchases depending on your package."
-  },
-  {
-    title: "Priority Service",
-    description: "Enjoy faster processing and dedicated support as you upgrade your package."
-  },
-  {
-    title: "Insurance Coverage",
-    description: "Comprehensive insurance benefits with higher-tier packages."
-  },
-  {
-    title: "Exclusive Events",
-    description: "Access to VIP events and experiences with premium packages."
-  }
-];
-
-let MandateText = `This signed Authority and Mandate refers to our contract dated
-`;
-
-const PackageCard = ({ pkg, isSelected, onSelect, anySelected }) => (
+const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
+  pkg: typeof packages[0],
+  isSelected: boolean,
+  onSelect: () => void,
+  anySelected: boolean
+}) => (
   <Card
     className={`mx-2 h-[420px] cursor-pointer transition-all relative
       ${isSelected
@@ -199,7 +155,7 @@ export default function RegisterPage() {
     suburb: "",
     postalCode: "",
     hasCreditCard: false,
-    selectedPackage: 1, 
+    selectedPackage: "Beginner" as string,
     accountHolderName: "",
     bankName: "",
     branchCode: "",
@@ -316,7 +272,7 @@ export default function RegisterPage() {
         employerName: formData.industry,
         jobTitle: formData.occupation,
         signature: signatureData,
-        selectedPackage: formData.selectedPackage, 
+        selectedPackage: formData.selectedPackage,
       };
 
       const user = await registerMutation.mutateAsync(registrationData);
@@ -343,7 +299,7 @@ export default function RegisterPage() {
   };
 
   const today = new Date().toISOString().split('T')[0];
-  MandateText = `This signed Authority and Mandate refers to our contract dated
+  let MandateText = `This signed Authority and Mandate refers to our contract dated
 ${today}
 ("the Agreement").
 
@@ -552,12 +508,12 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                     <Carousel className="w-full">
                       <CarouselContent>
                         {packages.map((pkg) => (
-                          <CarouselItem key={pkg.id} className="basis-full sm:basis-1/2 md:basis-1/2">
+                          <CarouselItem key={pkg.name} className="basis-full sm:basis-1/2 md:basis-1/2">
                             <PackageCard
                               pkg={pkg}
-                              isSelected={formData.selectedPackage === pkg.id}
+                              isSelected={formData.selectedPackage === pkg.name}
                               anySelected={formData.selectedPackage !== null}
-                              onSelect={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.id }))}
+                              onSelect={() => setFormData(prev => ({ ...prev, selectedPackage: pkg.name }))}
                             />
                           </CarouselItem>
                         ))}
@@ -771,3 +727,43 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
     </div>
   );
 }
+
+const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"];
+
+const industries = [
+  "Agriculture",
+  "Construction",
+  "Education",
+  "Finance",
+  "Healthcare",
+  "Information Technology",
+  "Manufacturing",
+  "Mining",
+  "Retail",
+  "Services",
+  "Transport",
+  "Other"
+];
+
+const benefitsInfo = [
+  {
+    title: "Exclusive Rewards",
+    description: "Earn points on every purchase and redeem them for exciting rewards."
+  },
+  {
+    title: "Cashback Benefits",
+    description: "Get up to 25% cashback on your purchases depending on your package."
+  },
+  {
+    title: "Priority Service",
+    description: "Enjoy faster processing and dedicated support as you upgrade your package."
+  },
+  {
+    title: "Insurance Coverage",
+    description: "Comprehensive insurance benefits with higher-tier packages."
+  },
+  {
+    title: "Exclusive Events",
+    description: "Access to VIP events and experiences with premium packages."
+  }
+];

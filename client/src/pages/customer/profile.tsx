@@ -37,7 +37,6 @@ const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 // Update packages to match registration
 const packages = [
   {
-    id: 1,
     name: "Beginner",
     price: 99,
     perks: [
@@ -49,7 +48,6 @@ const packages = [
     ]
   },
   {
-    id: 2,
     name: "Novice",
     price: 199,
     perks: [
@@ -62,7 +60,6 @@ const packages = [
     ]
   },
   {
-    id: 3,
     name: "Active",
     price: 299,
     perks: [
@@ -76,7 +73,6 @@ const packages = [
     ]
   },
   {
-    id: 4,
     name: "Professional",
     price: 499,
     perks: [
@@ -91,7 +87,6 @@ const packages = [
     ]
   },
   {
-    id: 5,
     name: "Expert",
     price: 999,
     perks: [
@@ -163,7 +158,7 @@ const profileSchema = z.object({
   industry: z.string().min(1, "Industry is required"),
   occupation: z.string().min(1, "Occupation is required"),
   isSouthAfrican: z.boolean(),
-  selectedPackage: z.number(),
+  selectedPackage: z.string(),
   bankName: z.string().min(1, "Bank name is required"),
   accountType: z.enum(accountTypes),
   accountNumber: z.string().min(1, "Account number is required"),
@@ -178,11 +173,11 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showPackageDialog, setShowPackageDialog] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<number>(1);
+  const [selectedPackage, setSelectedPackage] = useState<string>("Beginner");
 
   useEffect(() => {
     if (user?.selectedPackage) {
-      setSelectedPackage(Number(user.selectedPackage));
+      setSelectedPackage(user.selectedPackage);
     }
   }, [user]);
 
@@ -202,7 +197,7 @@ export default function ProfilePage() {
       industry: user?.industry || "",
       occupation: user?.occupation || "",
       isSouthAfrican: user?.isSouthAfrican || false,
-      selectedPackage: Number(user?.selectedPackage) || 1,
+      selectedPackage: user?.selectedPackage || "Beginner",
       bankName: user?.bankName || "",
       accountType: (user?.accountType as ProfileFormData['accountType']) || "SAVINGS",
       accountNumber: user?.accountNumber || "",
@@ -227,7 +222,7 @@ export default function ProfilePage() {
           industry: data.industry,
           occupation: data.occupation,
           isSouthAfrican: data.isSouthAfrican,
-          selectedPackage: Number(selectedPackage),
+          selectedPackage,
           bankName: data.bankName,
           accountType: data.accountType,
           accountNumber: data.accountNumber,
@@ -292,9 +287,9 @@ export default function ProfilePage() {
     },
   });
 
-  const handlePackageSelect = (packageId: number) => {
-    if (packageId !== user?.selectedPackage) {
-      setSelectedPackage(packageId);
+  const handlePackageSelect = (packageName: string) => {
+    if (packageName !== user?.selectedPackage) {
+      setSelectedPackage(packageName);
       setShowPackageDialog(true);
     }
   };
@@ -303,7 +298,7 @@ export default function ProfilePage() {
     const currentValues = form.getValues();
     updateProfileMutation.mutate({
       ...currentValues,
-      selectedPackage: selectedPackage,
+      selectedPackage,
     });
   };
 
@@ -311,8 +306,8 @@ export default function ProfilePage() {
     return null;
   }
 
-  const currentPackage = packages.find(pkg => pkg.id === Number(user.selectedPackage));
-  const newPackage = packages.find(pkg => pkg.id === selectedPackage);
+  const currentPackage = packages.find(pkg => pkg.name === user.selectedPackage);
+  const newPackage = packages.find(pkg => pkg.name === selectedPackage);
 
   return (
     <div className="space-y-6">
@@ -338,12 +333,12 @@ export default function ProfilePage() {
               <Carousel className="w-full">
                 <CarouselContent>
                   {packages.map((pkg) => (
-                    <CarouselItem key={pkg.id} className="basis-full sm:basis-1/2 md:basis-1/2">
+                    <CarouselItem key={pkg.name} className="basis-full sm:basis-1/2 md:basis-1/2">
                       <PackageCard
                         pkg={pkg}
-                        isSelected={pkg.id === Number(user.selectedPackage)}
+                        isSelected={pkg.name === user.selectedPackage}
                         anySelected={true}
-                        onSelect={() => handlePackageSelect(pkg.id)}
+                        onSelect={() => handlePackageSelect(pkg.name)}
                       />
                     </CarouselItem>
                   ))}

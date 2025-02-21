@@ -11,15 +11,54 @@ import { z } from "zod";
 import { sendEmail, formatRegistrationEmail } from "./utils/emailService";
 import { parse as parseCookie } from 'cookie';
 import jwt from 'jsonwebtoken';
+import memorystore from 'memorystore';
 
 const scryptAsync = promisify(scrypt);
-
-// Initialize MemoryStore synchronously
-import memorystore from 'memorystore';
 const MemoryStore = memorystore(session);
 
+// Define passport User type
+declare global {
+  namespace Express {
+    interface User {
+      id: number;
+      email: string;
+      firstName: string;
+      lastName: string;
+      isAdmin: boolean;
+      isSuperAdmin: boolean;
+      [key: string]: any;
+    }
+  }
+}
+
+export const crypto = {
+  async hashPassword(password: string) {
+    const salt = randomBytes(16).toString('hex');
+    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${salt}.${hash.toString('hex')}`;
+  },
+
+  async verifyPassword(password: string, storedHash: string) {
+    try {
+      const [salt, hash] = storedHash.split('.');
+      if (!salt || !hash) return false;
+
+      const hashBuffer = Buffer.from(hash, 'hex');
+      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
+
+      return timingSafeEqual(hashBuffer, suppliedBuffer);
+    } catch (error) {
+      console.error('Password verification error:', error);
+      return false;
+    }
+  }
+};
+
 export function setupAuth(app: Express) {
-  // Configure session middleware with MemoryStore
+  const store = new MemoryStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  });
+
   app.use(
     session({
       secret: process.env.SESSION_SECRET || 'development-secret',
@@ -28,9 +67,7 @@ export function setupAuth(app: Express) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax'
       },
-      store: new MemoryStore({
-        checkPeriod: 86400000 // prune expired entries every 24h
-      }),
+      store,
       resave: false,
       saveUninitialized: false
     })
@@ -39,7 +76,7 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  passport.serializeUser((user: any, done) => {
+  passport.serializeUser((user: Express.User, done) => {
     console.log('Serializing user:', user.id);
     done(null, user.id);
   });
@@ -75,7 +112,8 @@ export function setupAuth(app: Express) {
         const [user] = await db
           .select()
           .from(users)
-          .where(eq(users.email, email));
+          .where(eq(users.email, email))
+          .limit(1);
 
         if (!user) {
           console.log('User not found');
@@ -130,11 +168,8 @@ export function setupAuth(app: Express) {
             return res.status(500).json({ error: "Login failed" });
           }
 
-          // Generate token for WebSocket authentication
-          const token = generateToken(user);
-          console.log('Login successful, token generated for user:', (user as any).id);
-
-          return res.json({ user, token });
+          console.log('Login successful for user:', user.id);
+          return res.json({ user });
         });
       })(req, res, next);
     } catch (error) {
@@ -234,8 +269,8 @@ export function setupAuth(app: Express) {
               industry: industry || null,
               accountHolderName: accountHolderName || null,
               branchCode: branchCode || null,
-              referralCode: null, //Removed referral code
-              referredBy: null //Removed referredBy
+              referralCode: null,
+              referredBy: null
             })
             .returning();
 
@@ -270,7 +305,7 @@ export function setupAuth(app: Express) {
         // Send success response
         return res.status(201).json(safeUser);
 
-      } catch (dbError) {
+      } catch (dbError: any) {
         console.error('Database error during registration:', dbError);
         return res.status(500).json({ 
           error: "Registration failed. Please try again.",
@@ -278,7 +313,7 @@ export function setupAuth(app: Express) {
         });
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
       if (!res.headersSent) {
         return res.status(500).json({ error: "Registration failed. Please try again." });
@@ -304,11 +339,97 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
+    console.log('User request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user
+    });
+
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
     res.json(req.user);
   });
+}
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  // Personal Information
+  isSouthAfrican: z.boolean().default(false),
+  idNumber: z.string().optional().nullable(),
+  dateOfBirth: z.string().optional().nullable(),
+  gender: z.string().optional().nullable(),
+  occupation: z.string().optional().nullable(),
+  industry: z.string().optional().nullable(),
+  // Address Information
+  address: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  postalCode: z.string().optional().nullable(),
+  // Package Selection
+  selectedPackage: z.string().optional().nullable(),
+  // Banking Information
+  bankName: z.string().optional().nullable(),
+  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
+  accountNumber: z.string().optional().nullable(),
+  accountHolderName: z.string().optional().nullable(),
+  branchCode: z.string().optional().nullable(),
+  hasCreditCard: z.boolean().default(false),
+  // Digital signature
+  signature: z.string().optional().nullable(),
+});
+
+export const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
+
+interface JwtPayload {
+  id: number;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  exp?: number;
+}
+
+export function verifyToken(token: string): JwtPayload | null {
+  try {
+    console.log('Verifying token:', {
+      tokenLength: token.length,
+      firstChars: token.substring(0, 10) + '...',
+    });
+
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    console.log('Token verified successfully:', {
+      userId: decoded.id,
+      isAdmin: decoded.isAdmin,
+      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
+    });
+
+    return decoded;
+  } catch (error) {
+    console.error('Token verification failed:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown error type',
+      tokenLength: token?.length
+    });
+    return null;
+  }
+}
+
+export function generateToken(user: any): string {
+  return jwt.sign(
+    {
+      id: user.id,
+      isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin
+    },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
 }
 
 export async function verifySession(req: Request): Promise<any> {
@@ -409,80 +530,6 @@ export async function verifySession(req: Request): Promise<any> {
   }
 }
 
-export const crypto = {
-  async hashPassword(password: string) {
-    const salt = randomBytes(16).toString('hex');
-    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${salt}.${hash.toString('hex')}`;
-  },
-
-  async verifyPassword(password: string, storedHash: string) {
-    try {
-      const [salt, hash] = storedHash.split('.');
-      if (!salt || !hash) return false;
-
-      const hashBuffer = Buffer.from(hash, 'hex');
-      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
-
-      return timingSafeEqual(hashBuffer, suppliedBuffer);
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
-    }
-  }
-};
-
-const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
-
-interface JwtPayload {
-  id: number;
-  isAdmin: boolean;
-  isSuperAdmin: boolean;
-  exp?: number;
-}
-
-export function verifyToken(token: string): JwtPayload | null {
-  try {
-    console.log('Verifying token:', {
-      tokenLength: token.length,
-      firstChars: token.substring(0, 10) + '...',
-    });
-
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    console.log('Token verified successfully:', {
-      userId: decoded.id,
-      isAdmin: decoded.isAdmin,
-      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
-    });
-
-    return decoded;
-  } catch (error) {
-    console.error('Token verification failed:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      name: error instanceof Error ? error.name : 'Unknown error type',
-      tokenLength: token?.length
-    });
-    return null;
-  }
-}
-
-export function generateToken(user: any): string {
-  return jwt.sign(
-    {
-      id: user.id,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin
-    },
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-}
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
 const packageMap = {
   1: "BEGINNER",
   2: "NOVICE", 
@@ -490,36 +537,3 @@ const packageMap = {
   4: "PROFESSIONAL",
   5: "EXPERT"
 };
-
-const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  // Personal Information
-  isSouthAfrican: z.boolean().default(false),
-  idNumber: z.string().optional().nullable(),
-  dateOfBirth: z.string().optional().nullable(),
-  gender: z.string().optional().nullable(),
-  occupation: z.string().optional().nullable(),
-  industry: z.string().optional().nullable(),
-  // Address Information
-  address: z.string().optional().nullable(),
-  city: z.string().optional().nullable(),
-  postalCode: z.string().optional().nullable(),
-  // Package Selection
-  selectedPackage: z.union([
-    z.number().transform(val => packageMap[val]),
-    z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"])
-  ]).optional().nullable(),
-  // Banking Information
-  bankName: z.string().optional().nullable(),
-  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
-  accountNumber: z.string().optional().nullable(),
-  accountHolderName: z.string().optional().nullable(),
-  branchCode: z.string().optional().nullable(),
-  hasCreditCard: z.boolean().default(false),
-  // Digital signature
-  signature: z.string().optional().nullable(),
-});
