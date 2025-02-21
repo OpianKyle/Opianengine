@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,17 +21,20 @@ export default function LoginPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
+  // Handle user redirection in useEffect
+  useEffect(() => {
+    if (user) {
+      navigate(user.isAdmin || user.isSuperAdmin ? '/admin' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  // Show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (user) {
-    navigate(user.isAdmin || user.isSuperAdmin ? '/admin' : '/dashboard');
-    return null;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -54,8 +57,6 @@ export default function LoginPage() {
           title: "Success",
           description: "Login successful",
         });
-
-        navigate(response.isAdmin || response.isSuperAdmin ? '/admin' : '/dashboard');
       } else {
         throw new Error("Login failed");
       }

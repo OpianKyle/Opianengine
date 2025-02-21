@@ -1,0 +1,152 @@
+ning: Cannot update a component (`LoginPage`) while rendering a different component (`LoginPage`). To locate the bad setState() call inside `LoginPage`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+    at LoginPage (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/login.tsx:29:29)
+    at Route (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=48812ffb:323:16)
+    at Switch (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=48812ffb:379:17)
+    at div
+    at Provider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-VDBQGIEN.js?v=48812ffb:48:15)
+    at TooltipProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=48812ffb:61:5)
+    at https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/sidebar.tsx:54:7
+    at Router
+    at div
+    at QueryClientProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=48812ffb:2805:3)
+    at App
+printWarning @ chunk-276SZO74.js?v=48812ffb:521
+error @ chunk-276SZO74.js?v=48812ffb:505
+warnAboutRenderPhaseUpdatesInDEV @ chunk-276SZO74.js?v=48812ffb:19793
+scheduleUpdateOnFiber @ chunk-276SZO74.js?v=48812ffb:18546
+forceStoreRerender @ chunk-276SZO74.js?v=48812ffb:11999
+handleStoreChange @ chunk-276SZO74.js?v=48812ffb:11981
+history.<computed> @ wouter.js?v=48812ffb:224
+navigate @ wouter.js?v=48812ffb:214
+(anonymous) @ wouter.js?v=48812ffb:265
+(anonymous) @ wouter.js?v=48812ffb:178
+LoginPage @ login.tsx:33
+renderWithHooks @ chunk-276SZO74.js?v=48812ffb:11548
+updateFunctionComponent @ chunk-276SZO74.js?v=48812ffb:14582
+beginWork @ chunk-276SZO74.js?v=48812ffb:15924
+beginWork$1 @ chunk-276SZO74.js?v=48812ffb:19753
+performUnitOfWork @ chunk-276SZO74.js?v=48812ffb:19198
+workLoopSync @ chunk-276SZO74.js?v=48812ffb:19137
+renderRootSync @ chunk-276SZO74.js?v=48812ffb:19116
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=48812ffb:18874
+flushSyncCallbacks @ chunk-276SZO74.js?v=48812ffb:9119
+(anonymous) @ chunk-276SZO74.js?v=48812ffb:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=48812ffb:555
+flush @ @tanstack_react-query.js?v=48812ffb:569
+batch @ @tanstack_react-query.js?v=48812ffb:587
+dispatch_fn @ @tanstack_react-query.js?v=48812ffb:996
+setData @ @tanstack_react-query.js?v=48812ffb:696
+onSuccess @ @tanstack_react-query.js?v=48812ffb:897
+resolve @ @tanstack_react-query.js?v=48812ffb:456
+Promise.then
+run @ @tanstack_react-query.js?v=48812ffb:498
+start @ @tanstack_react-query.js?v=48812ffb:536
+fetch @ @tanstack_react-query.js?v=48812ffb:926
+executeFetch_fn @ @tanstack_react-query.js?v=48812ffb:2211
+onSubscribe @ @tanstack_react-query.js?v=48812ffb:1898
+subscribe @ @tanstack_react-query.js?v=48812ffb:24
+(anonymous) @ @tanstack_react-query.js?v=48812ffb:3022
+subscribeToStore @ chunk-276SZO74.js?v=48812ffb:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=48812ffb:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=48812ffb:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=48812ffb:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=48812ffb:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=48812ffb:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=48812ffb:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=48812ffb:19447
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=48812ffb:18868
+flushSyncCallbacks @ chunk-276SZO74.js?v=48812ffb:9119
+commitRootImpl @ chunk-276SZO74.js?v=48812ffb:19432
+commitRoot @ chunk-276SZO74.js?v=48812ffb:19277
+finishConcurrentRender @ chunk-276SZO74.js?v=48812ffb:18805
+performConcurrentWorkOnRoot @ chunk-276SZO74.js?v=48812ffb:18718
+workLoop @ chunk-276SZO74.js?v=48812ffb:197
+flushWork @ chunk-276SZO74.js?v=48812ffb:176
+performWorkUntilDeadline @ chunk-276SZO74.js?v=48812ffb:384Understand this errorAI
+referral-section.tsx:39 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/customer/referral 500 (Internal Server Error)
+queryFn @ referral-section.tsx:39
+fetchFn @ @tanstack_react-query.js?v=48812ffb:840
+run @ @tanstack_react-query.js?v=48812ffb:494
+start @ @tanstack_react-query.js?v=48812ffb:536
+fetch @ @tanstack_react-query.js?v=48812ffb:926
+executeFetch_fn @ @tanstack_react-query.js?v=48812ffb:2211
+onSubscribe @ @tanstack_react-query.js?v=48812ffb:1898
+subscribe @ @tanstack_react-query.js?v=48812ffb:24
+(anonymous) @ @tanstack_react-query.js?v=48812ffb:3022
+subscribeToStore @ chunk-276SZO74.js?v=48812ffb:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=48812ffb:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=48812ffb:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=48812ffb:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=48812ffb:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=48812ffb:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=48812ffb:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=48812ffb:19447
+commitRootImpl @ chunk-276SZO74.js?v=48812ffb:19416
+commitRoot @ chunk-276SZO74.js?v=48812ffb:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=48812ffb:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=48812ffb:9119
+(anonymous) @ chunk-276SZO74.js?v=48812ffb:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=48812ffb:555
+flush @ @tanstack_react-query.js?v=48812ffb:569
+batch @ @tanstack_react-query.js?v=48812ffb:587
+dispatch_fn @ @tanstack_react-query.js?v=48812ffb:996
+setData @ @tanstack_react-query.js?v=48812ffb:696
+onSuccess @ @tanstack_react-query.js?v=48812ffb:897
+resolve @ @tanstack_react-query.js?v=48812ffb:456
+Promise.then
+run @ @tanstack_react-query.js?v=48812ffb:498
+start @ @tanstack_react-query.js?v=48812ffb:536
+fetch @ @tanstack_react-query.js?v=48812ffb:926
+executeFetch_fn @ @tanstack_react-query.js?v=48812ffb:2211
+onSubscribe @ @tanstack_react-query.js?v=48812ffb:1898
+subscribe @ @tanstack_react-query.js?v=48812ffb:24
+(anonymous) @ @tanstack_react-query.js?v=48812ffb:3022
+subscribeToStore @ chunk-276SZO74.js?v=48812ffb:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=48812ffb:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=48812ffb:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=48812ffb:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=48812ffb:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=48812ffb:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=48812ffb:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=48812ffb:19447
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=48812ffb:18868
+flushSyncCallbacks @ chunk-276SZO74.js?v=48812ffb:9119
+commitRootImpl @ chunk-276SZO74.js?v=48812ffb:19432
+commitRoot @ chunk-276SZO74.js?v=48812ffb:19277
+finishConcurrentRender @ chunk-276SZO74.js?v=48812ffb:18805
+performConcurrentWorkOnRoot @ chunk-276SZO74.js?v=48812ffb:18718
+workLoop @ chunk-276SZO74.js?v=48812ffb:197
+flushWork @ chunk-276SZO74.js?v=48812ffb:176
+performWorkUntilDeadline @ chunk-276SZO74.js?v=48812ffb:384Understand this errorAI
+profile.tsx:233 Updating profile with payload: {firstName: 'Kyle', lastName: 'test', phoneNumber: '0769815243', address: '260 uys krige drive', city: 'Cape Town', …}
+profile.tsx:264 Profile update error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+mutationFn @ profile.tsx:264
+await in mutationFn
+fn @ @tanstack_react-query.js?v=48812ffb:1189
+run @ @tanstack_react-query.js?v=48812ffb:494
+start @ @tanstack_react-query.js?v=48812ffb:536
+execute @ @tanstack_react-query.js?v=48812ffb:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=48812ffb:2630
+(anonymous) @ @tanstack_react-query.js?v=48812ffb:3295
+confirmPackageChange @ profile.tsx:299
+callCallback2 @ chunk-276SZO74.js?v=48812ffb:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=48812ffb:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=48812ffb:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=48812ffb:3736
+executeDispatch @ chunk-276SZO74.js?v=48812ffb:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=48812ffb:7034
+processDispatchQueue @ chunk-276SZO74.js?v=48812ffb:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=48812ffb:7051
+(anonymous) @ chunk-276SZO74.js?v=48812ffb:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=48812ffb:18913
+batchedUpdates @ chunk-276SZO74.js?v=48812ffb:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=48812ffb:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=48812ffb:5478
+dispatchEvent @ chunk-276SZO74.js?v=48812ffb:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=48812ffb:5449Understand this errorAI
