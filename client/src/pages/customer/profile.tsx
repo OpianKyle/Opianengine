@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useUser } from "@/hooks/use-user";
@@ -9,12 +10,139 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 // Match the account types with the database schema
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
+
+const packages = [
+  {
+    id: 1,
+    name: "Beginner",
+    price: 99,
+    perks: [
+      "5% Cashback on Purchases",
+      "Basic Email Support",
+      "Monthly Newsletter",
+      "Basic Reward Points",
+      "Standard Processing Time"
+    ]
+  },
+  {
+    id: 2,
+    name: "Novice",
+    price: 199,
+    perks: [
+      "10% Cashback on Purchases",
+      "Priority Email Support",
+      "Quarterly Digital Magazine",
+      "1.5x Reward Points",
+      "Fast-Track Processing",
+      "Basic Insurance Coverage"
+    ]
+  },
+  {
+    id: 3,
+    name: "Active",
+    price: 299,
+    perks: [
+      "15% Cashback on Purchases",
+      "24/7 Phone Support",
+      "Monthly Digital Magazine",
+      "2x Reward Points",
+      "Priority Processing",
+      "Extended Insurance Coverage",
+      "Quarterly Bonus Points"
+    ]
+  },
+  {
+    id: 4,
+    name: "Professional",
+    price: 499,
+    perks: [
+      "20% Cashback on Purchases",
+      "Dedicated Account Manager",
+      "Premium Digital Content",
+      "3x Reward Points",
+      "VIP Processing",
+      "Premium Insurance Package",
+      "Monthly Bonus Points",
+      "Exclusive Event Access"
+    ]
+  },
+  {
+    id: 5,
+    name: "Expert",
+    price: 999,
+    perks: [
+      "25% Cashback on Purchases",
+      "Personal Concierge Service",
+      "Exclusive Print Magazine",
+      "5x Reward Points",
+      "Instant Priority Processing",
+      "Comprehensive Insurance",
+      "Weekly Bonus Points",
+      "VIP Event Access",
+      "Travel Benefits",
+      "Family Coverage"
+    ]
+  }
+];
+
+const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: any) => (
+  <Card
+    className={`mx-2 h-[420px] cursor-pointer transition-all relative
+      ${isSelected
+        ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
+        : anySelected
+          ? 'opacity-50 hover:opacity-75'
+          : 'hover:border-primary'
+      }`}
+    onClick={onSelect}
+  >
+    <CardHeader className="p-4 sm:p-6">
+      <CardTitle className="flex justify-between items-center text-lg">
+        {pkg.name}
+        {isSelected && (
+          <Check className="h-5 w-5 text-[#43EB3E]" />
+        )}
+      </CardTitle>
+      <CardDescription className="text-base">R{pkg.price}/month</CardDescription>
+    </CardHeader>
+    <CardContent className="p-4 sm:p-6">
+      <ScrollArea className="h-[280px] w-full pr-4">
+        <ul className="space-y-2">
+          {pkg.perks.map((perk: string, index: number) => (
+            <li key={index} className="flex items-center text-sm">
+              <Badge variant="outline" className="mr-2 shrink-0">✓</Badge>
+              <span>{perk}</span>
+            </li>
+          ))}
+        </ul>
+      </ScrollArea>
+    </CardContent>
+  </Card>
+);
 
 const profileSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -40,16 +168,12 @@ const profileSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
-const packages = [
-  { id: 1, name: "Basic Package" },
-  { id: 2, name: "Premium Package" },
-  { id: 3, name: "Gold Package" },
-];
-
 export default function ProfilePage() {
   const { user } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showPackageDialog, setShowPackageDialog] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -76,6 +200,12 @@ export default function ProfilePage() {
     },
   });
 
+  useEffect(() => {
+    if (user?.selectedPackage) {
+      setSelectedPackage(Number(user.selectedPackage));
+    }
+  }, [user]);
+
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
       const response = await fetch("/api/user/profile", {
@@ -89,6 +219,7 @@ export default function ProfilePage() {
           city: data.suburb,
           industry: data.industry,
           occupation: data.occupation,
+          selectedPackage: selectedPackage,
           password: data.password || undefined,
         }),
       });
@@ -111,6 +242,7 @@ export default function ProfilePage() {
         title: "Success",
         description: "Profile updated successfully",
       });
+      setShowPackageDialog(false);
     },
     onError: (error: Error) => {
       toast({
@@ -121,9 +253,27 @@ export default function ProfilePage() {
     },
   });
 
+  const handlePackageSelect = (packageId: number) => {
+    if (packageId !== user?.selectedPackage) {
+      setSelectedPackage(packageId);
+      setShowPackageDialog(true);
+    }
+  };
+
+  const confirmPackageChange = () => {
+    const currentValues = form.getValues();
+    updateProfileMutation.mutate({
+      ...currentValues,
+      selectedPackage: selectedPackage || 1,
+    });
+  };
+
   if (!user) {
     return null;
   }
+
+  const currentPackage = packages.find(pkg => pkg.id === Number(user.selectedPackage));
+  const newPackage = packages.find(pkg => pkg.id === selectedPackage);
 
   return (
     <div className="space-y-6">
@@ -137,6 +287,61 @@ export default function ProfilePage() {
       <Separator />
 
       <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Package Selection</CardTitle>
+            <CardDescription>
+              Your current package: {currentPackage?.name} (R{currentPackage?.price}/month)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="relative">
+              <Carousel className="w-full">
+                <CarouselContent>
+                  {packages.map((pkg) => (
+                    <CarouselItem key={pkg.id} className="basis-full sm:basis-1/2 md:basis-1/2">
+                      <PackageCard
+                        pkg={pkg}
+                        isSelected={pkg.id === Number(user.selectedPackage)}
+                        anySelected={true}
+                        onSelect={() => handlePackageSelect(pkg.id)}
+                      />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="absolute -left-4 -translate-y-1/2" />
+                <CarouselNext className="absolute -right-4 -translate-y-1/2" />
+              </Carousel>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Dialog open={showPackageDialog} onOpenChange={setShowPackageDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Package Change</DialogTitle>
+              <DialogDescription>
+                You are about to change your package from {currentPackage?.name} (R{currentPackage?.price}/month) to {newPackage?.name} (R{newPackage?.price}/month).
+                <br /><br />
+                This change will update your monthly debit order mandate. A new mandate agreement will be sent to you via email.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowPackageDialog(false)}>Cancel</Button>
+              <Button onClick={confirmPackageChange} disabled={updateProfileMutation.isPending}>
+                {updateProfileMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Updating...
+                  </>
+                ) : (
+                  'Confirm Change'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Card>
           <CardHeader>
             <CardTitle>Personal Information</CardTitle>
@@ -255,33 +460,9 @@ export default function ProfilePage() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="selectedPackage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Selected Package</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(Number(value))}
-                          defaultValue={field.value?.toString()}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a package" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {packages.map((pkg) => (
-                              <SelectItem key={pkg.id} value={pkg.id.toString()}>
-                                {pkg.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
+                  {/*Removed original selectedPackage FormField */}
+
                 </div>
 
                 <Separator />
