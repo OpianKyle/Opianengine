@@ -228,7 +228,7 @@ export default function ProfilePage() {
           industry: data.industry,
           occupation: data.occupation,
           isSouthAfrican: data.isSouthAfrican,
-          selectedPackage: selectedPackage || "BEGINNER",
+          selectedPackage: data.selectedPackage,
           bankName: data.bankName,
           accountType: data.accountType,
           accountNumber: data.accountNumber,
@@ -236,36 +236,30 @@ export default function ProfilePage() {
           ...(data.password ? { password: data.password } : {})
         };
 
-        console.log('Updating profile with payload:', payload);
-
         const response = await fetch("/api/user", {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            "Accept": "application/json"
           },
           credentials: 'include',
           body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
-          let errorMessage: string;
           const contentType = response.headers.get("content-type");
+          let errorMessage: string;
 
           if (contentType?.includes("application/json")) {
             const errorData = await response.json();
-            errorMessage = errorData.message || 'Failed to update profile';
+            errorMessage = errorData.message || errorData.error || 'Failed to update profile';
           } else {
-            errorMessage = await response.text();
-            console.error('Server response:', errorMessage);
             errorMessage = 'Failed to update profile. Please try again.';
           }
 
           throw new Error(errorMessage);
         }
 
-        const result = await response.json();
-        return result;
+        return await response.json();
       } catch (error) {
         console.error('Profile update error:', error);
         throw error instanceof Error ? error : new Error('An unexpected error occurred');
@@ -277,7 +271,6 @@ export default function ProfilePage() {
         ...data,
       }));
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      form.reset(form.getValues());
       toast({
         title: "Success",
         description: "Profile updated successfully",

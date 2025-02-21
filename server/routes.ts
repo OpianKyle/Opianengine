@@ -1728,5 +1728,75 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.put("/api/user", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const {
+        firstName,
+        lastName,
+        phoneNumber,
+        address,
+        city,
+        postalCode,
+        idNumber,
+        dateOfBirth,
+        industry,
+        occupation,
+        isSouthAfrican,
+        selectedPackage,
+        bankName,
+        accountType,
+        accountNumber,
+        hasCreditCard,
+        password
+      } = req.body;
+
+      const updates: any = {
+        firstName,
+        lastName,
+        phoneNumber,
+        address,
+        city,
+        postalCode,
+        idNumber,
+        dateOfBirth,
+        industry,
+        occupation,
+        isSouthAfrican,
+        selectedPackage,
+        bankName,
+        accountType,
+        accountNumber,
+        hasCreditCard
+      };
+
+      if (password) {
+        const hashedPassword = await crypto.hash(password);
+        updates.password = hashedPassword;
+      }
+
+      const [updatedUser] = await db
+        .update(users)
+        .set(updates)
+        .where(eq(users.id, req.user.id))
+        .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ 
+        error: 'Failed to update profile',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred'
+      });
+    }
+  });
+
   return httpServer;
 }
