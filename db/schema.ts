@@ -340,3 +340,52 @@ export type QuoteRequest = typeof quoteRequests.$inferSelect;
 export type InsertQuoteRequest = typeof quoteRequests.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+export const packagePremiums = pgEnum("package_premium", [
+  "BEGINNER_PREMIUM",
+  "NOVICE_PREMIUM", 
+  "ACTIVE_PREMIUM",
+  "PROFESSIONAL_PREMIUM",
+  "EXPERT_PREMIUM"
+]);
+
+export const referralCommissions = pgTable("referral_commissions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  month: timestamp("month").notNull(),
+  level1Amount: integer("level1_amount").default(0).notNull(),
+  level2Amount: integer("level2_amount").default(0).notNull(),
+  level3Amount: integer("level3_amount").default(0).notNull(),
+  totalAmount: integer("total_amount").default(0).notNull(),
+  isPaid: boolean("is_paid").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const packagePremiumAmounts = pgTable("package_premium_amounts", {
+  id: serial("id").primaryKey(),
+  packageType: packageTypes("package_type").notNull(),
+  premiumAmount: integer("premium_amount").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Add relations
+export const referralCommissionRelations = relations(referralCommissions, ({ one }) => ({
+  user: one(users, {
+    fields: [referralCommissions.userId],
+    references: [users.id],
+  }),
+}));
+
+// Add schemas
+export const insertReferralCommissionSchema = createInsertSchema(referralCommissions);
+export const selectReferralCommissionSchema = createSelectSchema(referralCommissions);
+export const insertPackagePremiumAmountSchema = createInsertSchema(packagePremiumAmounts);
+export const selectPackagePremiumAmountSchema = createSelectSchema(packagePremiumAmounts);
+
+// Add types
+export type ReferralCommission = typeof referralCommissions.$inferSelect;
+export type InsertReferralCommission = typeof referralCommissions.$inferInsert;
+export type PackagePremiumAmount = typeof packagePremiumAmounts.$inferSelect;
+export type InsertPackagePremiumAmount = typeof packagePremiumAmounts.$inferInsert;

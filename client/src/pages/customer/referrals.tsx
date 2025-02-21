@@ -28,8 +28,15 @@ interface ReferralStats {
     lastName: string;
     email: string;
     createdAt: string;
-    referralCount: number;
+    selectedPackage: string | null;
   }>;
+  commission: {
+    level1Amount: number;
+    level2Amount: number;
+    level3Amount: number;
+    totalAmount: number;
+    isPaid: boolean;
+  };
 }
 
 export default function ReferralsPage() {
@@ -86,9 +93,86 @@ export default function ReferralsPage() {
 
   const badges = calculateBadgeProgress(referralStats?.level1Count || 0);
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR'
+    }).format(amount / 100); // Assuming amount is in cents
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">My Referrals</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Monthly Commission Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Your commission earnings for the current month based on your referral network's premium packages.
+            </p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="py-3">
+                  <CardTitle className="text-sm font-medium">Level 1 (15%)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(referralStats?.commission.level1Amount || 0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    From {referralStats?.level1Count || 0} direct referrals
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="py-3">
+                  <CardTitle className="text-sm font-medium">Level 2 (10%)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(referralStats?.commission.level2Amount || 0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    From {referralStats?.level2Count || 0} indirect referrals
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="py-3">
+                  <CardTitle className="text-sm font-medium">Level 3 (5%)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(referralStats?.commission.level3Amount || 0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    From {referralStats?.level3Count || 0} level 3 referrals
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-primary/5">
+                <CardHeader className="py-3">
+                  <CardTitle className="text-sm font-medium">Total Commission</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">
+                    {formatCurrency(referralStats?.commission.totalAmount || 0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Paid out monthly
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -180,38 +264,6 @@ export default function ReferralsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Level 1 Referrals</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{referralStats?.level1Count || 0}</div>
-            <p className="text-sm text-muted-foreground">Direct referrals</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Level 2 Referrals</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{referralStats?.level2Count || 0}</div>
-            <p className="text-sm text-muted-foreground">Your referrals' referrals</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Level 3 Referrals</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{referralStats?.level3Count || 0}</div>
-            <p className="text-sm text-muted-foreground">Level 2's referrals</p>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle>Your Direct Referrals</CardTitle>
@@ -235,9 +287,11 @@ export default function ReferralsPage() {
                       Joined: {new Date(referral.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <Badge variant="secondary">
-                    {referral.referralCount} referrals
-                  </Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="outline">
+                      Package: {referral.selectedPackage || 'None'}
+                    </Badge>
+                  </div>
                 </div>
               ))}
               {(!referralStats?.referrals || referralStats.referrals.length === 0) && (
