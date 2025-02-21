@@ -135,39 +135,28 @@ router.get('/api/customer/referrals', async (req, res) => {
     let level3Amount = 0;
     let level3Count = 0;
     const level3Referrals = [];
-    for (const level1Ref of level1Referrals) {
-      if (!level1Ref.referralCode) continue;
+    for (const level2Ref of level2Referrals) { //Corrected loop to iterate through level2Referrals
+      if (!level2Ref.referralCode) continue;
 
-      const level2Refs = await db
+      const level3Refs = await db
         .select({
-          referralCode: users.referralCode
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          createdAt: users.createdAt,
+          selectedPackage: users.selectedPackage
         })
         .from(users)
-        .where(eq(users.referredBy, level1Ref.referralCode));
+        .where(eq(users.referredBy, level2Ref.referralCode))
+        .orderBy(desc(users.createdAt));
 
-      for (const level2Ref of level2Refs) {
-        if (!level2Ref.referralCode) continue;
+      level3Count += level3Refs.length;
+      level3Referrals.push(...level3Refs);
 
-        const level3Refs = await db
-          .select({
-            id: users.id,
-            firstName: users.firstName,
-            lastName: users.lastName,
-            email: users.email,
-            createdAt: users.createdAt,
-            selectedPackage: users.selectedPackage
-          })
-          .from(users)
-          .where(eq(users.referredBy, level2Ref.referralCode))
-          .orderBy(desc(users.createdAt));
-
-        level3Count += level3Refs.length;
-        level3Referrals.push(...level3Refs);
-
-        for (const ref of level3Refs) {
-          if (ref.selectedPackage && premiumMap[ref.selectedPackage]) {
-            level3Amount += calculateCommission(premiumMap[ref.selectedPackage], 3);
-          }
+      for (const ref of level3Refs) {
+        if (ref.selectedPackage && premiumMap[ref.selectedPackage]) {
+          level3Amount += calculateCommission(premiumMap[ref.selectedPackage], 3);
         }
       }
     }
@@ -206,7 +195,7 @@ router.get('/api/customer/referrals', async (req, res) => {
       .onConflictDoUpdate({
         target: [
           referralCommissions.userId,
-          sql`date_trunc('month', month)`
+          referralCommissions.month
         ],
         set: {
           level1Amount,
