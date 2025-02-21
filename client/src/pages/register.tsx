@@ -167,7 +167,7 @@ export default function RegisterPage() {
     accountNumber: "",
     accountType: "",
     acceptMandate: false,
-    referralCode: "" 
+    referralCode: ""
   });
 
   const [signature, setSignature] = useState<SignatureCanvas | null>(null);
@@ -176,6 +176,7 @@ export default function RegisterPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
+  // Enhanced referral code handling
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
@@ -185,8 +186,26 @@ export default function RegisterPage() {
         referralCode: ref
       }));
       console.log('Referral code set from URL:', ref);
+
+      // Verify the referral code
+      fetch(`/api/verify-referral/${ref}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.isValid) {
+            toast({
+              title: "Invalid Referral Code",
+              description: "The referral code is not valid.",
+              variant: "destructive",
+            });
+            // Clear invalid referral code
+            setFormData(prev => ({ ...prev, referralCode: "" }));
+          }
+        })
+        .catch(err => {
+          console.error('Error verifying referral code:', err);
+        });
     }
-  }, []);
+  }, [toast]);
 
   if (isLoading) {
     return (
@@ -285,7 +304,7 @@ export default function RegisterPage() {
         jobTitle: formData.occupation,
         signature: signatureData,
         selectedPackage: formData.selectedPackage,
-        referralCode: formData.referralCode 
+        referralCode: formData.referralCode // Ensure referral code is included
       };
 
       console.log('Submitting registration with referral code:', formData.referralCode);
