@@ -113,7 +113,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
   anySelected: boolean
 }) => (
   <Card
-    className={`mx-2 h-[420px] cursor-pointer transition-all relative
+    className={`mx-2 h-[520px] cursor-pointer transition-all relative
       ${isSelected
         ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
         : anySelected
@@ -122,21 +122,21 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
       }`}
     onClick={onSelect}
   >
-    <CardHeader className="p-4 sm:p-6">
-      <CardTitle className="flex justify-between items-center text-lg">
+    <CardHeader className="p-6">
+      <CardTitle className="flex justify-between items-center text-xl">
         {pkg.display}
         {isSelected && (
           <Check className="h-5 w-5 text-[#43EB3E]" />
         )}
       </CardTitle>
-      <CardDescription className="text-base">R{pkg.price}/month</CardDescription>
+      <CardDescription className="text-lg font-semibold">R{pkg.price}/month</CardDescription>
     </CardHeader>
-    <CardContent className="p-4 sm:p-6">
-      <ScrollArea className="h-[280px] w-full pr-4">
-        <ul className="space-y-2">
+    <CardContent className="p-6">
+      <ScrollArea className="h-[380px] w-full pr-4">
+        <ul className="space-y-3">
           {pkg.perks.map((perk, index) => (
-            <li key={index} className="flex items-center text-sm">
-              <Badge variant="outline" className="mr-2 shrink-0">✓</Badge>
+            <li key={index} className="flex items-start text-sm">
+              <Badge variant="outline" className="mr-2 mt-0.5 shrink-0">✓</Badge>
               <span>{perk}</span>
             </li>
           ))}
