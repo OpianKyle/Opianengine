@@ -21,7 +21,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -35,6 +34,7 @@ import {
 // Match the account types with the database schema
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
+// Update packages to match registration
 const packages = [
   {
     id: 1,
@@ -109,7 +109,12 @@ const packages = [
   }
 ];
 
-const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: any) => (
+const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
+  pkg: typeof packages[0],
+  isSelected: boolean,
+  onSelect: () => void,
+  anySelected: boolean
+}) => (
   <Card
     className={`mx-2 h-[420px] cursor-pointer transition-all relative
       ${isSelected
@@ -132,7 +137,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: any) => (
     <CardContent className="p-4 sm:p-6">
       <ScrollArea className="h-[280px] w-full pr-4">
         <ul className="space-y-2">
-          {pkg.perks.map((perk: string, index: number) => (
+          {pkg.perks.map((perk, index) => (
             <li key={index} className="flex items-center text-sm">
               <Badge variant="outline" className="mr-2 shrink-0">✓</Badge>
               <span>{perk}</span>
@@ -158,7 +163,7 @@ const profileSchema = z.object({
   industry: z.string().min(1, "Industry is required"),
   occupation: z.string().min(1, "Occupation is required"),
   isSouthAfrican: z.boolean(),
-  selectedPackage: z.number().optional(),
+  selectedPackage: z.number(),
   bankName: z.string().min(1, "Bank name is required"),
   accountType: z.enum(accountTypes),
   accountNumber: z.string().min(1, "Account number is required"),
@@ -177,47 +182,89 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user?.selectedPackage) {
-      // Ensure we're working with a number
       setSelectedPackage(Number(user.selectedPackage));
     }
   }, [user]);
 
+  const form = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      email: user?.email || "",
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      mobileNumber: user?.phoneNumber || "",
+      addressLine1: user?.address?.split('\n')[0] || "",
+      addressLine2: user?.address?.split('\n')[1] || "",
+      suburb: user?.city || "",
+      postalCode: user?.postalCode || "",
+      idNumber: user?.idNumber || "",
+      dateOfBirth: user?.dateOfBirth || "",
+      industry: user?.industry || "",
+      occupation: user?.occupation || "",
+      isSouthAfrican: user?.isSouthAfrican || false,
+      selectedPackage: Number(user?.selectedPackage) || 1,
+      bankName: user?.bankName || "",
+      accountType: (user?.accountType as ProfileFormData['accountType']) || "SAVINGS",
+      accountNumber: user?.accountNumber || "",
+      hasCreditCard: user?.hasCreditCard || false,
+      password: "",
+    },
+  });
+
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
       try {
-        const response = await fetch("/api/user/profile", {
+        // Simplify the payload to match the database schema
+        const payload = {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phoneNumber: data.mobileNumber,
+          address: data.addressLine1 + (data.addressLine2 ? `\n${data.addressLine2}` : ''),
+          city: data.suburb,
+          postalCode: data.postalCode,
+          idNumber: data.idNumber,
+          dateOfBirth: data.dateOfBirth,
+          industry: data.industry,
+          occupation: data.occupation,
+          isSouthAfrican: data.isSouthAfrican,
+          selectedPackage: Number(selectedPackage),
+          bankName: data.bankName,
+          accountType: data.accountType,
+          accountNumber: data.accountNumber,
+          hasCreditCard: data.hasCreditCard,
+          ...(data.password ? { password: data.password } : {})
+        };
+
+        console.log('Updating profile with payload:', payload);
+
+        const response = await fetch("/api/user", {
           method: "PUT",
           headers: { 
             "Content-Type": "application/json",
             "Accept": "application/json"
           },
           credentials: 'include',
-          body: JSON.stringify({
-            ...data,
-            phoneNumber: data.mobileNumber,
-            address: data.addressLine1 + (data.addressLine2 ? `\n${data.addressLine2}` : ''),
-            city: data.suburb,
-            industry: data.industry,
-            occupation: data.occupation,
-            selectedPackage: selectedPackage,
-            password: data.password || undefined,
-          }),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
-          let errorMessage = 'Failed to update profile';
-          try {
+          let errorMessage: string;
+          const contentType = response.headers.get("content-type");
+
+          if (contentType?.includes("application/json")) {
             const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch {
-            const errorText = await response.text();
-            if (errorText) errorMessage = errorText;
+            errorMessage = errorData.message || 'Failed to update profile';
+          } else {
+            errorMessage = await response.text();
+            console.error('Server response:', errorMessage);
+            errorMessage = 'Failed to update profile. Please try again.';
           }
+
           throw new Error(errorMessage);
         }
 
-        const responseData = await response.json();
-        return responseData;
+        const result = await response.json();
+        return result;
       } catch (error) {
         console.error('Profile update error:', error);
         throw error instanceof Error ? error : new Error('An unexpected error occurred');
@@ -242,31 +289,6 @@ export default function ProfilePage() {
         title: "Error",
         description: error.message,
       });
-    },
-  });
-
-  const form = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      email: user?.email || "",
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      mobileNumber: user?.phoneNumber || "",
-      addressLine1: user?.address?.split('\n')[0] || "",
-      addressLine2: user?.address?.split('\n')[1] || "",
-      suburb: user?.city || "",
-      postalCode: user?.postalCode || "",
-      idNumber: user?.idNumber || "",
-      dateOfBirth: user?.dateOfBirth || "",
-      industry: user?.industry || "",
-      occupation: user?.occupation || "",
-      isSouthAfrican: user?.isSouthAfrican || false,
-      selectedPackage: user?.selectedPackage || 1,
-      bankName: user?.bankName || "",
-      accountType: (user?.accountType as ProfileFormData['accountType']) || "SAVINGS",
-      accountNumber: user?.accountNumber || "",
-      hasCreditCard: user?.hasCreditCard || false,
-      password: "",
     },
   });
 
@@ -366,7 +388,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(data => updateProfileMutation.mutateAsync(data))} className="space-y-6">
+              <form onSubmit={form.handleSubmit(data => updateProfileMutation.mutate(data))} className="space-y-6">
                 {/* Basic Information */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
@@ -476,8 +498,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
-
                 </div>
 
                 <Separator />
