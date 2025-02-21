@@ -135,7 +135,8 @@ router.get('/api/customer/referrals', async (req, res) => {
     let level3Amount = 0;
     let level3Count = 0;
     const level3Referrals = [];
-    for (const level2Ref of level2Referrals) { //Corrected loop to iterate through level2Referrals
+
+    for (const level2Ref of level2Referrals) {
       if (!level2Ref.referralCode) continue;
 
       const level3Refs = await db
@@ -161,75 +162,80 @@ router.get('/api/customer/referrals', async (req, res) => {
       }
     }
 
-    // Update referral stats
-    await db.insert(referralStats)
-      .values({
-        userId: req.user.id,
-        level1Count,
-        level2Count,
-        level3Count,
-        updatedAt: currentDate
-      })
-      .onConflictDoUpdate({
-        target: [referralStats.userId],
-        set: {
+    try {
+      // Update referral stats
+      await db.insert(referralStats)
+        .values({
+          userId: req.user.id,
           level1Count,
           level2Count,
           level3Count,
           updatedAt: currentDate
-        }
-      });
+        })
+        .onConflictDoUpdate({
+          target: referralStats.userId,
+          set: {
+            level1Count,
+            level2Count,
+            level3Count,
+            updatedAt: currentDate
+          }
+        });
 
-    // Update or create monthly commission record
-    const [monthlyCommission] = await db
-      .insert(referralCommissions)
-      .values({
-        userId: req.user.id,
-        month: currentDate,
-        level1Amount,
-        level2Amount,
-        level3Amount,
-        totalAmount: level1Amount + level2Amount + level3Amount,
-        isPaid: false
-      })
-      .onConflictDoUpdate({
-        target: [
-          referralCommissions.userId,
-          referralCommissions.month
-        ],
-        set: {
+      // Update or create monthly commission record
+      const [monthlyCommission] = await db
+        .insert(referralCommissions)
+        .values({
+          userId: req.user.id,
+          month: currentDate,
           level1Amount,
           level2Amount,
           level3Amount,
           totalAmount: level1Amount + level2Amount + level3Amount,
-          updatedAt: currentDate
+          isPaid: false
+        })
+        .onConflictDoUpdate({
+          target: [
+            referralCommissions.userId,
+            referralCommissions.month
+          ],
+          set: {
+            level1Amount,
+            level2Amount,
+            level3Amount,
+            totalAmount: level1Amount + level2Amount + level3Amount,
+            updatedAt: currentDate
+          }
+        })
+        .returning();
+
+      console.log('Sending response with:', {
+        referralCounts: { level1Count, level2Count, level3Count },
+        commissionAmounts: { level1Amount, level2Amount, level3Amount }
+      });
+
+      res.json({
+        level1Count,
+        level2Count,
+        level3Count,
+        referralCode: currentUser.referralCode,
+        referrals: {
+          level1: level1Referrals,
+          level2: level2Referrals,
+          level3: level3Referrals
+        },
+        commission: {
+          level1Amount: monthlyCommission.level1Amount,
+          level2Amount: monthlyCommission.level2Amount,
+          level3Amount: monthlyCommission.level3Amount,
+          totalAmount: monthlyCommission.totalAmount,
+          isPaid: monthlyCommission.isPaid,
         }
-      })
-      .returning();
-
-    console.log('Sending response with:', {
-      referralCounts: { level1Count, level2Count, level3Count },
-      commissionAmounts: { level1Amount, level2Amount, level3Amount }
-    });
-
-    res.json({
-      level1Count,
-      level2Count,
-      level3Count,
-      referralCode: currentUser.referralCode,
-      referrals: {
-        level1: level1Referrals,
-        level2: level2Referrals,
-        level3: level3Referrals
-      },
-      commission: {
-        level1Amount: monthlyCommission.level1Amount,
-        level2Amount: monthlyCommission.level2Amount,
-        level3Amount: monthlyCommission.level3Amount,
-        totalAmount: monthlyCommission.totalAmount,
-        isPaid: monthlyCommission.isPaid,
-      }
-    });
+      });
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      res.status(500).json({ error: 'Failed to update referral statistics' });
+    }
   } catch (error) {
     console.error('Error fetching referral data:', error);
     res.status(500).json({ error: 'Failed to fetch referral data' });
