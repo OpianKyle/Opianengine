@@ -54,14 +54,16 @@ export const crypto = {
 };
 
 export function setupAuth(app: Express) {
-  const store = new MemoryStore({
-    checkPeriod: 86400000 // prune expired entries every 24h
-  });
-
   if (!process.env.SESSION_SECRET) {
     console.error('Missing SESSION_SECRET environment variable');
     process.exit(1);
   }
+
+  const store = new MemoryStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  });
+
+  app.set('trust proxy', 1);
 
   app.use(
     session({
@@ -76,7 +78,7 @@ export function setupAuth(app: Express) {
       store,
       resave: false,
       saveUninitialized: false,
-      name: 'session_id' // Use a generic name instead of connect.sid
+      name: 'session' // Changed from session_id to match client expectations
     })
   );
 
@@ -111,125 +113,87 @@ export function setupAuth(app: Express) {
     }
   });
 
-  passport.use(new LocalStrategy(
-    { usernameField: 'email' },
-    async (email, password, done) => {
-      try {
-        console.log('Login attempt for:', email);
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
+  passport.use(
+    new LocalStrategy(
+      { usernameField: 'email' },
+      async (email, password, done) => {
+        try {
+          console.log('Login attempt for:', email);
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1);
 
-        if (!user) {
-          console.log('User not found');
-          return done(null, false, { message: 'Invalid email or password' });
+          if (!user) {
+            console.log('User not found');
+            return done(null, false, { message: 'Invalid email or password' });
+          }
+
+          if (!user.isEnabled) {
+            console.log('Account is disabled');
+            return done(null, false, { message: 'Account is disabled' });
+          }
+
+          const isValid = await crypto.verifyPassword(password, user.password);
+          console.log('Password verification result:', isValid);
+
+          if (!isValid) {
+            return done(null, false, { message: 'Invalid email or password' });
+          }
+
+          const { password: _, ...safeUser } = user;
+          return done(null, safeUser);
+        } catch (error) {
+          console.error('Authentication error:', error);
+          return done(error);
         }
-
-        if (!user.isEnabled) {
-          console.log('Account is disabled');
-          return done(null, false, { message: 'Account is disabled' });
-        }
-
-        const isValid = await crypto.verifyPassword(password, user.password);
-        console.log('Password verification result:', isValid);
-
-        if (!isValid) {
-          return done(null, false, { message: 'Invalid email or password' });
-        }
-
-        const { password: _, ...safeUser } = user;
-        return done(null, safeUser);
-      } catch (error) {
-        console.error('Authentication error:', error);
-        return done(error);
       }
-    }
-  ));
+    )
+  );
 
+  // Login route
   app.post("/api/login", (req, res, next) => {
-    try {
-      console.log('Login request received:', { email: req.body.email });
-      const result = loginSchema.safeParse(req.body);
-      if (!result.success) {
-        console.error('Login validation failed:', result.error);
-        return res.status(400).json({
-          error: "Invalid input data",
-          details: result.error.errors
-        });
+    console.log('Login request received:', { email: req.body.email });
+
+    const result = loginSchema.safeParse(req.body);
+    if (!result.success) {
+      console.error('Login validation failed:', result.error);
+      return res.status(400).json({
+        error: "Invalid input data",
+        details: result.error.errors
+      });
+    }
+
+    passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
+      if (err) {
+        console.error('Authentication error:', err);
+        return res.status(500).json({ error: "Authentication error" });
       }
 
-      passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
-        if (err) {
-          console.error('Authentication error:', err);
-          return res.status(500).json({ error: "Authentication error" });
+      if (!user) {
+        console.log('Authentication failed:', info?.message);
+        return res.status(401).json({ error: info?.message || "Invalid email or password" });
+      }
+
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error('Login error:', loginErr);
+          return res.status(500).json({ error: "Login failed" });
         }
 
-        if (!user) {
-          console.log('Authentication failed:', info?.message);
-          return res.status(401).json({ error: info?.message || "Invalid email or password" });
-        }
-
-        console.log('Authentication successful for user:', user.id);
-        req.login(user, (loginErr) => {
-          if (loginErr) {
-            console.error('Login error:', loginErr);
-            return res.status(500).json({ error: "Login failed" });
-          }
-
-          if (req.session) {
-            req.session.cookie.maxAge = 86400000; // 24 hours
-            console.log('Session cookie set:', {
-              maxAge: req.session.cookie.maxAge,
-              path: req.session.cookie.path,
-              secure: req.session.cookie.secure,
-              httpOnly: req.session.cookie.httpOnly
-            });
-          }
-
-          console.log('Login successful for user:', user.id);
-          return res.json({ user });
-        });
-      })(req, res, next);
-    } catch (error) {
-      console.error('Login route error:', error);
-      res.status(500).json({ error: "Internal server error" });
-    }
+        console.log('Login successful for user:', user.id);
+        return res.json({ user });
+      });
+    })(req, res, next);
   });
 
+  // Register route
   app.post("/api/register", async (req, res) => {
     try {
       console.log('Registration attempt with data:', {
         ...req.body,
-        password: '[REDACTED]',
-        referralCode: req.body.referralCode
-      });
-
-      const registerSchema = z.object({
-        email: z.string().email("Invalid email address"),
-        password: z.string().min(6, "Password must be at least 6 characters"),
-        firstName: z.string().min(1, "First name is required"),
-        lastName: z.string().min(1, "Last name is required"),
-        phoneNumber: z.string().min(1, "Phone number is required"),
-        referralCode: z.string().optional(),
-        isSouthAfrican: z.boolean().default(false),
-        idNumber: z.string().optional().nullable(),
-        dateOfBirth: z.string().optional().nullable(),
-        gender: z.string().optional().nullable(),
-        occupation: z.string().optional().nullable(),
-        industry: z.string().optional().nullable(),
-        address: z.string().optional().nullable(),
-        city: z.string().optional().nullable(),
-        postalCode: z.string().optional().nullable(),
-        selectedPackage: z.string().optional().nullable(),
-        bankName: z.string().optional().nullable(),
-        accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
-        accountNumber: z.string().optional().nullable(),
-        accountHolderName: z.string().optional().nullable(),
-        branchCode: z.string().optional().nullable(),
-        hasCreditCard: z.boolean().default(false),
-        signature: z.string().optional().nullable(),
+        password: '[REDACTED]'
       });
 
       const result = registerSchema.safeParse(req.body);
@@ -248,23 +212,9 @@ export function setupAuth(app: Express) {
         lastName,
         phoneNumber,
         referralCode,
-        isSouthAfrican,
-        idNumber,
-        dateOfBirth,
-        address,
-        city,
-        postalCode,
+        points,
         selectedPackage,
-        bankName,
-        accountType,
-        accountNumber,
-        hasCreditCard,
-        signature,
-        gender,
-        occupation,
-        industry,
-        accountHolderName,
-        branchCode
+        ...otherFields
       } = result.data;
 
       const [existingUser] = await db
@@ -280,42 +230,12 @@ export function setupAuth(app: Express) {
         });
       }
 
-      let referrer = null;
-      if (referralCode) {
-        console.log('Verifying referral code:', referralCode);
-        [referrer] = await db
-          .select({
-            id: users.id,
-            isEnabled: users.isEnabled,
-            points: users.points,
-            referralCode: users.referralCode,
-            referredBy: users.referredBy
-          })
-          .from(users)
-          .where(eq(users.referralCode, referralCode))
-          .limit(1);
-
-        if (!referrer || !referrer.isEnabled) {
-          console.log('Invalid referral code:', referralCode);
-          return res.status(400).json({
-            error: "Invalid referral code"
-          });
-        }
-        console.log('Valid referral code found for referrer:', referrer.id);
-      }
-
       const hashedPassword = await crypto.hashPassword(password);
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       try {
         const newUser = await db.transaction(async (tx) => {
-          console.log('Starting registration transaction with data:', {
-            email,
-            firstName,
-            lastName,
-            newReferralCode,
-            referredBy: referralCode
-          });
+          console.log('Starting registration transaction');
 
           const [user] = await tx
             .insert(users)
@@ -328,87 +248,42 @@ export function setupAuth(app: Express) {
               isAdmin: false,
               isSuperAdmin: false,
               isEnabled: true,
-              points: 1000,
+              points: points || 0,
               referralCode: newReferralCode,
               referredBy: referralCode || null,
-              isSouthAfrican: isSouthAfrican || false,
-              idNumber: idNumber || null,
-              dateOfBirth: dateOfBirth || null,
-              address: address || null,
-              city: city || null,
-              postalCode: postalCode || null,
-              selectedPackage: selectedPackage || null,
-              bankName: bankName || null,
-              accountType: accountType || null,
-              accountNumber: accountNumber || null,
-              hasCreditCard: hasCreditCard || false,
-              signature: signature || null,
-              createdAt: new Date(),
-              gender: gender || null,
-              occupation: occupation || null,
-              industry: industry || null,
-              accountHolderName: accountHolderName || null,
-              branchCode: branchCode || null,
+              selectedPackage,
+              ...otherFields
             })
             .returning();
-
-          console.log('Created new user:', {
-            id: user.id,
-            email: user.email,
-            referralCode: user.referralCode,
-            referredBy: user.referredBy
-          });
 
           if (!user) {
             throw new Error("Failed to create user record");
           }
 
+          // Create activation points transaction
           await tx
             .insert(transactions)
             .values({
               userId: user.id,
-              points: 1000,
-              type: "WELCOME_BONUS",
-              description: "Welcome bonus for new registration",
+              points: points || 0,
+              type: "ACTIVATION_POINTS",
+              description: `Activation points for ${selectedPackage} package registration`,
             });
-
-          if (referrer) {
-            console.log('Processing referral bonus for referrer:', referrer.id);
-
-            await tx
-              .insert(transactions)
-              .values({
-                userId: referrer.id,
-                points: 2000,
-                type: "REFERRAL_BONUS",
-                description: `Referral bonus for inviting ${user.email}`,
-              });
-
-            await tx
-              .update(users)
-              .set({ points: referrer.points + 2000 })
-              .where(eq(users.id, referrer.id));
-          }
 
           return user;
         });
 
         const { password: _, ...safeUser } = newUser;
 
-        console.log('Logging in new user:', safeUser.id);
-        await new Promise((resolve, reject) => {
-          req.login(safeUser, (err) => {
-            if (err) {
-              console.error('Login error after registration:', err);
-              reject(err);
-            } else {
-              console.log('Login successful after registration');
-              resolve(null);
-            }
-          });
-        });
+        req.login(safeUser, (err) => {
+          if (err) {
+            console.error('Login error after registration:', err);
+            return res.status(500).json({ error: "Registration successful but login failed" });
+          }
 
-        return res.status(201).json(safeUser);
+          console.log('Registration and login successful for:', safeUser.email);
+          return res.status(201).json(safeUser);
+        });
 
       } catch (dbError: any) {
         console.error('Database error during registration:', dbError);
@@ -426,27 +301,34 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Logout route
   app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        console.error('Logout error:', err);
-        return res.status(500).json({ error: "Logout failed" });
-      }
-      req.session.destroy((err) => {
+    if (req.user) {
+      console.log('Logging out user:', req.user.id);
+      req.logout((err) => {
         if (err) {
-          console.error('Session destruction error:', err);
+          console.error('Logout error:', err);
           return res.status(500).json({ error: "Logout failed" });
         }
-        res.clearCookie("connect.sid");
-        res.json({ message: "Logged out successfully" });
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Session destruction error:', err);
+            return res.status(500).json({ error: "Logout failed" });
+          }
+          res.clearCookie("session");
+          res.json({ message: "Logged out successfully" });
+        });
       });
-    });
+    } else {
+      res.status(401).json({ message: "Not logged in" });
+    }
   });
 
+  // Get current user route
   app.get("/api/user", (req, res) => {
     console.log('User request:', {
       isAuthenticated: req.isAuthenticated(),
-      user: req.user
+      user: req.user ? req.user.id : undefined
     });
 
     if (!req.isAuthenticated()) {
@@ -467,16 +349,18 @@ const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
+  points: z.number().int().min(0).optional(),
+  selectedPackage: z.string().min(1, "Package selection is required"),
+  referralCode: z.string().optional(),
+  // Optional fields
   isSouthAfrican: z.boolean().default(false),
   idNumber: z.string().optional().nullable(),
   dateOfBirth: z.string().optional().nullable(),
-  gender: z.string().optional().nullable(),
-  occupation: z.string().optional().nullable(),
-  industry: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
-  selectedPackage: z.string().optional().nullable(),
+  industry: z.string().optional().nullable(),
+  occupation: z.string().optional().nullable(),
   bankName: z.string().optional().nullable(),
   accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
   accountNumber: z.string().optional().nullable(),

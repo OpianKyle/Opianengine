@@ -32,72 +32,98 @@ const packages = [
   {
     id: "BEGINNER",
     display: "Beginner",
-    price: 99,
+    price: 350,
+    activationPoints: 5000,
     perks: [
-      "5% Cashback on Purchases",
-      "Basic Email Support",
-      "Monthly Newsletter",
-      "Basic Reward Points",
-      "Standard Processing Time"
+      "Activation Points: 5,000",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call"
     ]
   },
   {
     id: "NOVICE",
     display: "Novice",
-    price: 199,
+    price: 450,
+    activationPoints: 10000,
     perks: [
-      "10% Cashback on Purchases",
-      "Priority Email Support",
-      "Quarterly Digital Magazine",
-      "1.5x Reward Points",
-      "Fast-Track Processing",
-      "Basic Insurance Coverage"
+      "Activation Points: 10,000",
+      "Funeral Cover: R5,000",
+      "Funeral Assist",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call"
     ]
   },
   {
     id: "ACTIVE",
     display: "Active",
-    price: 299,
+    price: 550,
+    activationPoints: 15000,
     perks: [
-      "15% Cashback on Purchases",
-      "24/7 Phone Support",
-      "Monthly Digital Magazine",
-      "2x Reward Points",
-      "Priority Processing",
-      "Extended Insurance Coverage",
-      "Quarterly Bonus Points"
+      "Activation Points: 15,000",
+      "Funeral Cover: R10,000",
+      "Accidental Death Cover: R20,000",
+      "Funeral Assist",
+      "Family Income Benefit: R5,000 x6",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call",
+      "Virtual GP Assistant",
+      "Medical Second Opinion"
     ]
   },
   {
     id: "PROFESSIONAL",
     display: "Professional",
-    price: 499,
+    price: 695,
+    activationPoints: 20000,
     perks: [
-      "20% Cashback on Purchases",
-      "Dedicated Account Manager",
-      "Premium Digital Content",
-      "3x Reward Points",
-      "VIP Processing",
-      "Premium Insurance Package",
-      "Monthly Bonus Points",
-      "Exclusive Event Access"
+      "Activation Points: 20,000",
+      "Funeral Cover: R15,000",
+      "Accidental Death Cover: R50,000",
+      "Funeral Assist",
+      "Family Income Benefit: R5,000 x6",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call",
+      "Virtual GP Assistant",
+      "Medical Second Opinion",
+      "Crime Victim Assist",
+      "Assault & Trauma Assist",
+      "Emergency Medical Services"
     ]
   },
   {
     id: "EXPERT",
     display: "Expert",
-    price: 999,
+    price: 825,
+    activationPoints: 25000,
     perks: [
-      "25% Cashback on Purchases",
-      "Personal Concierge Service",
-      "Exclusive Print Magazine",
-      "5x Reward Points",
-      "Instant Priority Processing",
-      "Comprehensive Insurance",
-      "Weekly Bonus Points",
-      "VIP Event Access",
-      "Travel Benefits",
-      "Family Coverage"
+      "Activation Points: 25,000",
+      "Funeral Cover: R20,000",
+      "Accidental Death Cover: R100,000",
+      "Funeral Assist",
+      "Family Income Benefit: R5,000 x6",
+      "EMS Assist",
+      "Legal Assist",
+      "Lawyer Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call",
+      "Virtual GP Assistant",
+      "Medical Second Opinion",
+      "Crime Victim Assist",
+      "Assault & Trauma Assist",
+      "Emergency Medical Services"
     ]
   }
 ];
@@ -252,6 +278,13 @@ export default function RegisterPage() {
       return;
     }
 
+    // Get activation points for selected package
+    const selectedPackageData = packages.find(pkg => pkg.id === formData.selectedPackage);
+    if (!selectedPackageData) {
+      setError("Invalid package selected");
+      return;
+    }
+
     const requiredFields = {
       email: "Email",
       password: "Password",
@@ -304,7 +337,8 @@ export default function RegisterPage() {
         jobTitle: formData.occupation,
         signature: signatureData,
         selectedPackage: formData.selectedPackage,
-        referralCode: formData.referralCode // Ensure referral code is included
+        points: selectedPackageData.activationPoints, // Include activation points
+        referralCode: formData.referralCode
       };
 
       console.log('Submitting registration with referral code:', formData.referralCode);
