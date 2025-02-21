@@ -125,7 +125,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
   anySelected: boolean
 }) => (
   <Card
-    className={`mx-4 h-[900px] cursor-pointer transition-all relative
+    className={`mx-4 h-[1200px] cursor-pointer transition-all relative
       ${isSelected
         ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
         : anySelected
