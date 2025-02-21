@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload } from "lucide-react";
@@ -13,10 +12,10 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import cn from 'classnames';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const getPointsMultiplier = (points: number, type: 'premium' | 'card' | 'pos'): number => {
   if (points >= 150000) { // Platinum
@@ -64,6 +63,7 @@ const pointsSchema = z.object({
   description: z.string().min(1, "Description is required"),
   selectedActivities: z.array(z.number()).optional(),
   posPoints: z.number().min(0).optional(),
+  posBaseValue: z.number().min(0).optional()
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -173,6 +173,7 @@ export default function AdminCustomers() {
       description: "",
       selectedActivities: [],
       posPoints: 0,
+      posBaseValue: 0
     },
   });
 
@@ -389,6 +390,31 @@ export default function AdminCustomers() {
     },
   });
 
+  const handleEditUser = (customer: any) => {
+    editDetailsForm.reset({
+      firstName: customer.firstName || "",
+      lastName: customer.lastName || "",
+      email: customer.email || "",
+      phoneNumber: customer.phoneNumber || "",
+      idNumber: customer.idNumber || "",
+      dateOfBirth: customer.dateOfBirth || "",
+      address: customer.address || "",
+      city: customer.city || "",
+      postalCode: customer.postalCode || "",
+      employerName: customer.employerName || "",
+      jobTitle: customer.jobTitle || "",
+      industry: customer.industry || "",
+      occupation: customer.occupation || "",
+      employmentDuration: customer.employmentDuration || "",
+      bankName: customer.bankName || "",
+      accountType: customer.accountType || "",
+      accountNumber: customer.accountNumber || "",
+      accountHolderName: customer.accountHolderName || "",
+      branchCode: customer.branchCode || "",
+      selectedPackage: customer.selectedPackage || "",
+    });
+  };
+
   const updateUserDetailsMutation = useMutation({
     mutationFn: async ({ userId, data }: { userId: number; data: any }) => {
       const res = await fetch(`/api/admin/users/${userId}/details`, {
@@ -416,7 +442,6 @@ export default function AdminCustomers() {
   const onSubmit = (data: any) => {
     updateUserDetailsMutation.mutate({ userId: 1, data }); // Replace 1 with actual userId
   };
-
 
   return (
     <div className="space-y-6">
@@ -465,7 +490,6 @@ export default function AdminCustomers() {
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Package</TableHead>
-                <TableHead>Registration Details</TableHead>
                 <TableHead>Tier</TableHead>
                 <TableHead>Points</TableHead>
                 <TableHead>Status</TableHead>
@@ -488,68 +512,8 @@ export default function AdminCustomers() {
                     <TableCell>{customer.phoneNumber}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">
-                        {customer.package?.name || 'No Package'}
+                        {customer.selectedPackage || 'No Package'}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            View Details
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
-                          <DialogHeader>
-                            <DialogTitle>Registration Details</DialogTitle>
-                          </DialogHeader>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <h3 className="font-semibold mb-2">Personal Information</h3>
-                              <div className="space-y-1">
-                                <p><span className="font-medium">ID Number:</span> {customer.idNumber}</p>
-                                <p><span className="font-medium">Date of Birth:</span> {customer.dateOfBirth}</p>
-                                <p><span className="font-medium">Nationality:</span> {customer.isSouthAfrican ? 'South African' : 'Other'}</p>
-                              </div>
-                            </div>
-                            <div>
-                              <h3 className="font-semibold mb-2">Contact Information</h3>
-                              <div className="space-y-1">
-                                <p><span className="font-medium">Address:</span> {customer.address}</p>
-                                <p><span className="font-medium">City:</span> {customer.city}</p>
-                                <p><span className="font-medium">Postal Code:</span> {customer.postalCode}</p>
-                              </div>
-                            </div>
-                            <div>
-                              <h3 className="font-semibold mb-2">Employment Information</h3>
-                              <div className="space-y-1">
-                                <p><span className="font-medium">Employer:</span> {customer.employerName}</p>
-                                <p><span className="font-medium">Job Title:</span> {customer.jobTitle}</p>
-                                <p><span className="font-medium">Industry:</span> {customer.industry}</p>
-                                <p><span className="font-medium">Occupation:</span> {customer.occupation}</p>
-                                <p><span className="font-medium">Employment Duration:</span> {customer.employmentDuration}</p>
-                              </div>
-                            </div>
-                            <div>
-                              <h3 className="font-semibold mb-2">Financial Information</h3>
-                              <div className="space-y-1">
-                                <p><span className="font-medium">Bank:</span> {customer.bankName}</p>
-                                <p><span className="font-medium">Account Type:</span> {customer.accountType}</p>
-                                <p><span className="font-medium">Account Number:</span> {customer.accountNumber}</p>
-                                <p><span className="font-medium">Account Holder Name:</span> {customer.accountHolderName}</p>
-                                <p><span className="font-medium">Branch Code:</span> {customer.branchCode}</p>
-                                <p><span className="font-medium">Has Credit Card:</span> {customer.hasCreditCard ? 'Yes' : 'No'}</p>
-                              </div>
-                            </div>
-                            <div className="col-span-2">
-                              <h3 className="font-semibold mb-2">Referral Information</h3>
-                              <div className="space-y-1">
-                                <p><span className="font-medium">Referral Code:</span> {customer.referralCode}</p>
-                                <p><span className="font-medium">Referrer:</span> {customer.referrer?.firstName} {customer.referrer?.lastName}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
@@ -598,1008 +562,666 @@ export default function AdminCustomers() {
                       </ScrollArea>
                     </TableCell>
                     <TableCell>
-                      <div className="flex space-x-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (confirm('Are you sure you want to toggle this user\'s status?')) {
-                                  toggleUserStatusMutation.mutate({
-                                    userId: customer.id,
-                                    enabled: !customer.isEnabled
-                                  });
-                                }
-                              }}
-                            >
-                              {customer.isEnabled ? (
-                                <PowerOff className="mr-2 h-4 w-4" />
-                              ) : (
-                                <Power className="mr-2 h-4 w-4" />
-                              )}
-                              <span>{customer.isEnabled ? 'Disable' : 'Enable'} User</span>
-                            </DropdownMenuItem>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <Package className="mr-2 h-4 w-4" />
-                                  Assign Product
-                                </DropdownMenuItem>
-                              </DialogTrigger>
-                              <DialogContent className="bg-[#011d3d] border-[#022b5c] text-white">
-                                <DialogHeader>
-                                  <DialogTitle className="text-[#43EB3E]">Assign Products to {customer.firstName}</DialogTitle>
-                                </DialogHeader>
-                                <div className="grid gap-4">
-                                  {products?.map((product: any) => {
-                                    const isAssigned = customer.productAssignments?.some(
-                                      (a: any) => a.product.id === product.id
-                                    );
-                                    return (
-                                      <div
-                                        key={product.id}
-                                        className="flex items-center justify-between p-4 rounded-lg border"
-                                      >
-                                        <div>
-                                          <h3 className="font-medium">{product.name}</h3>
-                                          <p className="text-sm text-muted-foreground">
-                                            {product.description}
-                                          </p>
-                                        </div>
-                                        <Button
-                                          variant={isAssigned ? "secondary" : "default"}
-                                          onClick={() => {
-                                            if (isAssigned) {
-                                              if (confirm('Are you sure you want to unassign this product?')) {
-                                                unassignProductMutation.mutate({
-                                                  productId: product.id,
-                                                  userId: customer.id
-                                                });
-                                              }
-                                            } else {
-                                              assignProductMutation.mutate({
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <DropdownMenuItem onSelect={(e) => {
+                                e.preventDefault();
+                                handleEditUser(customer);
+                              }}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit Details
+                              </DropdownMenuItem>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl bg-[#011d3d] border-[#022b5c] text-white">
+                              <DialogHeader>
+                                <DialogTitle className="text-[#43EB3E]">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
+                              </DialogHeader>
+                              <Form {...editDetailsForm}>
+                                <form onSubmit={editDetailsForm.handleSubmit((data) =>
+                                  updateUserDetailsMutation.mutate({ userId: customer.id, data })
+                                )} className="space-y-6">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <ScrollArea className="h-[600px] pr-4">
+                                      <div className="space-y-4">
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="firstName"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">First Name</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="lastName"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Last Name</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="email"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Email</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} type="email" className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="phoneNumber"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Phone Number</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="idNumber"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">ID Number</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="dateOfBirth"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Date of Birth</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} type="date" className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="address"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Address</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="city"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">City</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="postalCode"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Postal Code</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="employerName"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Employer Name</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="jobTitle"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Job Title</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="industry"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Industry</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="occupation"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Occupation</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="employmentDuration"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Employment Duration</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="bankName"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Bank Name</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="accountType"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Account Type</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="accountNumber"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Account Number</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="accountHolderName"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Account Holder Name</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="branchCode"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Branch Code</FormLabel>
+                                              <FormControl>
+                                                <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="selectedPackage"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel className="text-white">Package</FormLabel>
+                                              <FormControl>
+                                                <select {...field} className="w-full p-2 border rounded bg-[#022b5c] border-[#043875] text-white">
+                                                  <option value="BEGINNER">Beginner</option>
+                                                  <option value="NOVICE">Novice</option>
+                                                  <option value="ACTIVE">Active</option>
+                                                  <option value="PROFESSIONAL">Professional</option>
+                                                  <option value="EXPERT">Expert</option>
+                                                </select>
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </div>
+                                    </ScrollArea>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button type="submit" className="bg-[#43EB3E] text-black hover:bg-[#3ad936]">
+                                      Save Changes
+                                    </Button>
+                                  </DialogFooter>
+                               </form>
+                              </Form>
+                            </DialogContent>
+                          </Dialog>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (confirm('Are you sure you want to toggle this user\'s status?')) {
+                                toggleUserStatusMutation.mutate({
+                                  userId: customer.id,
+                                  enabled: !customer.isEnabled
+                                });
+                              }
+                            }}
+                          >
+                            {customer.isEnabled ? (
+                              <PowerOff className="mr-2 h-4 w-4" />
+                            ) : (
+                              <Power className="mr-2 h-4 w-4" />
+                            )}
+                            <span>{customer.isEnabled ? 'Disable' : 'Enable'} User</span>
+                          </DropdownMenuItem>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Package className="mr-2 h-4 w-4" />
+                                Assign Product
+                              </DropdownMenuItem>
+                            </DialogTrigger>
+                            <DialogContent className="bg-[#011d3d] border-[#022b5c] text-white">
+                              <DialogHeader>
+                                <DialogTitle className="text-[#43EB3E]">Assign Products to {customer.firstName}</DialogTitle>
+                              </DialogHeader>
+                              <div className="grid gap-4">
+                                {products?.map((product: any) => {
+                                  const isAssigned = customer.productAssignments?.some(
+                                    (a: any) => a.product.id === product.id
+                                  );
+                                  return (
+                                    <div
+                                      key={product.id}
+                                      className="flex items-center justify-between p-4 rounded-lg border border-[#043875]"
+                                    >
+                                      <div>
+                                        <h3 className="font-medium">{product.name}</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                          {product.description}
+                                        </p>
+                                      </div>
+                                      <Button
+                                        variant={isAssigned ? "secondary" : "default"}
+                                        onClick={() => {
+                                          if (isAssigned) {
+                                            if (confirm('Are you sure you want to unassign this product?')) {
+                                              unassignProductMutation.mutate({
                                                 productId: product.id,
                                                 userId: customer.id
                                               });
                                             }
-                                          }}
-                                        >
-                                          {isAssigned ? 'Unassign' : 'Assign'}
-                                        </Button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <TrendingUp className="mr-2 h-4 w-4" />
-                                  Assign Points
-                                </DropdownMenuItem>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
-                                <DialogHeader>
-                                  <DialogTitle className="text-[#43EB3E]">Assign Points to {customer.firstName}</DialogTitle>
-                                  <div className="flex items-center gap-2 mt-2">
-                                    <span className="text-sm text-muted-foreground">Current Tier:</span>
-                                    <Badge className={`${getTierInfo(customer.points).color}`}>
-                                      {getTierInfo(customer.points).name}
-                                    </Badge>
-                                    {getTierInfo(customer.points).nextTier && (
-                                      <span className="text-xs text-muted-foreground">
-                                        ({getTierInfo(customer.points).nextTier?.pointsNeeded.toLocaleString()} points to {getTierInfo(customer.points).nextTier?.name})
-                                      </span>
-                                    )}
-                                  </div>
-                                </DialogHeader>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                  <div className="space-y-6">
-                                    <h3 className="text-lg font-semibold">Product Activities</h3>
-                                    <ScrollArea className="h-[400px] pr-4">
-                                      <div className="space-y-4">
-                                        {customer.productAssignments?.map((assignment: any) => (
-                                          <Accordion type="single" collapsible key={assignment.id}>
-                                            <AccordionItem value="activities">
-                                              <AccordionTrigger className="p-3 bg-accent/50 rounded-lg hover:no-underline">
-                                                <div className="flex justify-between items-center w-full pr-4">
-                                                  <div className="text-left">
-                                                    <p className="font-medium">{assignment.product.name}</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                      {assignment.product.description}
-                                                    </p>
-                                                  </div>
-                                                  {pointsForm.watch("selectedActivities")?.some(id =>
-                                                    assignment.product.activities?.some((a: any) => a.id === id)
-                                                  ) && (
-                                                    <Badge variant="secondary" className="ml-2">
-                                                      {assignment.product.activities?.filter((a: any) =>
-                                                        pointsForm.watch("selectedActivities")?.includes(a.id)
-                                                      ).length} selected
-                                                    </Badge>
-                                                  )}
-                                                </div>
-                                              </AccordionTrigger>
-                                              <AccordionContent>
-                                                <div className="space-y-2 pt-2">
-                                                  {assignment.product.activities?.map((activity: any) => {
-                                                    const isSystemActivity = activity.type === "SYSTEM_ACTIVATION";
-                                                    if (isSystemActivity) return null;
-
-                                                    const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
-                                                    const multiplierType = activity.type === "PREMIUM_PAYMENT" ? 'premium' : 'card';
-                                                    const pointsMultiplier = getPointsMultiplier(customer.points, multiplierType);
-
-                                                    return (
-                                                      <div
-                                                        key={activity.id}
-                                                        className="flex items-center justify-between p-2 pl-6 border rounded-lg"
-                                                      >
-                                                        <div className="flex items-center space-x-2">
-                                                          <input
-                                                            type="checkbox"
-                                                            id={`activity-${activity.id}`}
-                                                            className="w-4 h-4 rounded border-gray-300"
-                                                            checked={pointsForm.watch("selectedActivities")?.includes(activity.id)}
-                                                            onChange={(e) => {
-                                                              const currentSelected = pointsForm.getValues("selectedActivities") || [];
-                                                              const currentPoints = pointsForm.getValues("points") || 0;
-
-                                                              if (e.target.checked) {
-                                                                pointsForm.setValue("selectedActivities", [...currentSelected, activity.id]);
-                                                                if (!isPremiumOrCard) {
-                                                                  pointsForm.setValue("points", currentPoints + activity.pointsValue);
-                                                                }
-                                                                const description = `Points for ${activity.type.toLowerCase().replace('_', ' ')} activity`;
-                                                                if (!pointsForm.getValues("description")) {
-                                                                  pointsForm.setValue("description", description);
-                                                                }
-                                                              } else {
-                                                                pointsForm.setValue(
-                                                                  "selectedActivities",
-                                                                  currentSelected.filter(id => id !== activity.id)
-                                                                );
-                                                                if (!isPremiumOrCard) {
-                                                                  pointsForm.setValue("points", currentPoints - activity.pointsValue);
-                                                                } else {
-                                                                  const oldValue = activity.currentValue || 0;
-                                                                  pointsForm.setValue("points", currentPoints - oldValue);
-                                                                  activity.currentValue = 0;
-                                                                  activity.baseValue = 0;
-                                                                }
-                                                              }
-                                                            }}
-                                                          />
-                                                          <label
-                                                            htmlFor={`activity-${activity.id}`}
-                                                            className="text-sm font-medium"
-                                                          >
-                                                            {activity.type.replace('_', ' ')}
-                                                            {isPremiumOrCard && pointsMultiplier > 0 && (
-                                                              <span className="ml-2 text-xs text-muted-foreground">
-                                                                (×{pointsMultiplier})
-                                                              </span>
-                                                            )}
-                                                          </label>
-                                                        </div>
-                                                        {isPremiumOrCard ? (
-                                                          <div className="flex items-center space-x-2">
-                                                            <Input
-                                                              type="number"
-                                                              className="w-32"
-                                                              placeholder="Enter points"
-                                                              disabled={!pointsForm.watch("selectedActivities")?.includes(activity.id)}
-                                                              onChange={(e) => {
-                                                                const baseValue = parseInt(e.target.value) || 0;
-                                                                const multipliedValue = Math.floor(baseValue * pointsMultiplier);
-                                                                const currentPoints = pointsForm.getValues("points") || 0;
-                                                                const oldValue = activity.currentValue || 0;
-                                                                pointsForm.setValue("points", currentPoints - oldValue + multipliedValue);
-                                                                activity.currentValue = multipliedValue;
-                                                                activity.baseValue = baseValue;
-                                                              }}
-                                                            />
-                                                            {pointsMultiplier > 0 && (
-                                                              <span className="text-sm text-muted-foreground">
-                                                                = {activity.currentValue || 0} points
-                                                              </span>
-                                                            )}
-                                                          </div>
-                                                        ) : (
-                                                          <span className="text-sm font-semibold">
-                                                            {activity.pointsValue} points
-                                                          </span>
-                                                        )}
-                                                      </div>
-                                                    );
-                                                  })}
-                                                </div>
-                                              </AccordionContent>
-                                            </AccordionItem>
-                                          </Accordion>
-                                        ))}
-                                      </div>
-                                    </ScrollArea>
-
-                                    <div className="pt-4 border-t">
-                                      <h3 className="text-lg font-semibold mb-4">POS Points Allocation</h3>
-                                      <div className="space-y-4">
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium">
-                                            POS Points
-                                            {getPointsMultiplier(customer.points, 'pos') > 0 && (
-                                              <span className="ml-2 text-xs text-muted-foreground">
-                                                (×{getPointsMultiplier(customer.points, 'pos')})
-                                              </span>
-                                            )}
-                                          </label>
-                                          <div className="flex items-center space-x-2">
-                                            <Input
-                                              type="number"
-                                              min="0"
-                                              placeholder="Enter POS points"
-                                              onChange={(e) => {
-                                                const baseValue = parseInt(e.target.value) || 0;
-                                                const multiplier = getPointsMultiplier(customer.points, 'pos');
-                                                const multipliedValue = Math.floor(baseValue * multiplier);
-                                                const currentPoints = pointsForm.getValues("points") || 0;
-                                                const oldPosPoints = pointsForm.getValues("posPoints") || 0;
-                                                pointsForm.setValue("points", currentPoints - oldPosPoints + multipliedValue);
-                                                pointsForm.setValue("posPoints", multipliedValue);
-                                                pointsForm.setValue("posBaseValue", baseValue);
-                                              }}
-                                            />
-                                            {getPointsMultiplier(customer.points, 'pos') > 0 && (
-                                              <span className="text-sm text-muted-foreground">
-                                                = {pointsForm.watch("posPoints") || 0} points
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-6">
-                                    <div className="space-y-4">
-                                      <h3 className="text-lg font-semibold">Points Summary</h3>
-
-                                      <div className="space-y-4 bg-accent/20 p-4 rounded-lg">
-                                        {customer.productAssignments?.map((assignment: any) => (
-                                          <div key={assignment.id}>
-                                            {assignment.product.activities
-                                              ?.filter((activity: any) => pointsForm.watch("selectedActivities")?.includes(activity.id))
-                                              .map((activity: any) => (
-                                                <div key={activity.id} className="flex justify-between items-center py-2">
-                                                  <span className="text-sm">
-                                                    {assignment.product.name} - {activity.type.replace('_', ' ')}
-                                                    {(activity.type=== "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE") && (
-                                                      <span className="text-xs text-muted-foreground ml-1">
-                                                        (Base: {activity.baseValue || 0})
-                                                      </span>
-                                                    )}
-                                                  </span>
-                                                  <span className="font-medium">
-                                                    {activity.currentValue || activity.pointsValue} points
-                                                  </span>
-                                                </div>
-                                              ))}
-                                          </div>
-                                        ))}
-
-                                        {pointsForm.watch("posPoints") > 0 && (
-                                          <div className="flex justify-between items-center py-2 border-t">
-                                            <span className="text-sm">
-                                              POS Points
-                                              <span className="text-xs text-muted-foreground ml-1">
-                                                (Base: {pointsForm.watch("posBaseValue") || 0})
-                                              </span>
-                                            </span>
-                                            <span className="font-medium">{pointsForm.watch("posPoints")} points</span>
-                                          </div>
-                                        )}
-
-                                        <div className="flex justify-between items-center pt-4 border-t border-t-2">
-                                          <span className="font-semibold">Total Points</span>
-                                          <span className="text-2xl font-bold">
-                                            {pointsForm.watch("points")}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      <div className="space-y-2">
-                                        <label>Description <span className="text-red-500">*</span></label>
-                                        <Input
-                                          {...pointsForm.register("description")}
-                                          placeholder="Enter description for points allocation"
-                                        />
-                                        {pointsForm.formState.errors.description && (
-                                          <p className="text-sm text-red-500">
-                                            {pointsForm.formState.errors.description.message}
-                                          </p>
-                                        )}
-                                      </div>
-
-                                      <Button
-                                        type="submit"
-                                        className="w-full"
-                                        disabled={!pointsForm.watch("points") || !pointsForm.watch("description")}
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          const formData = pointsForm.getValues();
-                                          if (!formData.description) {
-                                            toast({
-                                              variant: "destructive",
-                                              title: "Error",
-                                              description: "Please provide a description for the points adjustment"
+                                          } else {
+                                            assignProductMutation.mutate({
+                                              productId: product.id,
+                                              userId: customer.id
                                             });
-                                            return;
                                           }
-                                          assignPointsMutation.mutate({
-                                            userId: customer.id,
-                                            data: {
-                                              points: formData.points,
-                                              description: formData.description,
-                                              selectedActivities: formData.selectedActivities
-                                            }
-                                          });
                                         }}
                                       >
-                                        Assign {pointsForm.watch("points")} Points
+                                        {isAssigned ? 'Unassign' : 'Assign'}
                                       </Button>
                                     </div>
-                                  </div>
+                                  );
+                                })}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <TrendingUp className="mr-2 h-4 w-4" />
+                                Assign Points
+                              </DropdownMenuItem>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
+                              <DialogHeader>
+                                <DialogTitle className="text-[#43EB3E]">Assign Points to {customer.firstName}</DialogTitle>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className="text-sm text-muted-foreground">Current Tier:</span>
+                                  <Badge className={`${getTierInfo(customer.points).color}`}>
+                                    {getTierInfo(customer.points).name}
+                                  </Badge>
+                                  {getTierInfo(customer.points).nextTier && (
+                                    <span className="text-xs text-muted-foreground">
+                                      ({getTierInfo(customer.points).nextTier?.pointsNeeded.toLocaleString()} points to {getTierInfo(customer.points).nextTier?.name})
+                                    </span>
+                                  )}
                                 </div>
-                              </DialogContent>
-                            </Dialog>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  Edit Registration Details
-                                </DropdownMenuItem>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-4xl">
-                                <DialogHeader>
-                                  <DialogTitle>Edit Registration Details</DialogTitle>
-                                </DialogHeader>
-                                <Form {...editDetailsForm}>
-                                  <form onSubmit={editDetailsForm.handleSubmit(onSubmit)} className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="firstName"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>First Name</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="lastName"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Last Name</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="email"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Email</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} type="email" />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="phoneNumber"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Phone Number</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="idNumber"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>ID Number</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="dateOfBirth"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Date of Birth</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} type="date" />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="address"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Address</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="city"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>City</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="postalCode"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Postal Code</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="employerName"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Employer Name</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="jobTitle"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Job Title</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="industry"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Industry</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="occupation"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Occupation</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="employmentDuration"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Employment Duration</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="bankName"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Bank Name</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="accountType"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Account Type</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="accountNumber"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Account Number</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="accountHolderName"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Account Holder Name</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="branchCode"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Branch Code</FormLabel>
-                                            <FormControl>
-                                              <Input {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="selectedPackage"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Package</FormLabel>
-                                            <FormControl>
-                                              <select {...field} className="w-full p-2 border rounded">
-                                                <option value="BEGINNER">Beginner</option>
-                                                <option value="NOVICE">Novice</option>
-                                                <option value="ACTIVE">Active</option>
-                                                <option value="PROFESSIONAL">Professional</option>
-                                                <option value="EXPERT">Expert</option>
-                                              </select>
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                    </div>
-                                    <DialogFooter>
-                                      <Button type="submit">Save Changes</Button>
-                                    </DialogFooter>
-                                  </form>
-                                </Form>
-                              </DialogContent>
-                            </Dialog>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (confirm('Are you sure you want to toggle this user\'s status?')) {
-                                  toggleUserStatusMutation.mutate({
-                                    userId: customer.id,
-                                    enabled: !customer.isEnabled
-                                  });
-                                }
-                              }}
-                            >
-                              {customer.isEnabled ? (
-                                <PowerOff className="mr-2 h-4 w-4" />
-                              ) : (
-                                <Power className="mr-2 h-4 w-4" />
-                              )}
-                              <span>{customer.isEnabled ? 'Disable' : 'Enable'} User</span>
-                            </DropdownMenuItem>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <Package className="mr-2 h-4 w-4" />
-                                  Assign Product
-                                </DropdownMenuItem>
-                              </DialogTrigger>
-                              <DialogContent className="bg-[#011d3d] border-[#022b5c] text-white">
-                                <DialogHeader>
-                                  <DialogTitle className="text-[#43EB3E]">Assign Products to {customer.firstName}</DialogTitle>
-                                </DialogHeader>
-                                <div className="grid gap-4">
-                                  {products?.map((product: any) => {
-                                    const isAssigned = customer.productAssignments?.some(
-                                      (a: any) => a.product.id === product.id
-                                    );
-                                    return (
-                                      <div
-                                        key={product.id}
-                                        className="flex items-center justify-between p-4 rounded-lg border"
-                                      >
-                                        <div>
-                                          <h3 className="font-medium">{product.name}</h3>
-                                          <p className="text-sm text-muted-foreground">
-                                            {product.description}
-                                          </p>
-                                        </div>
-                                        <Button
-                                          variant={isAssigned ? "secondary" : "default"}
-                                          onClick={() => {
-                                            if (isAssigned) {
-                                              if (confirm('Are you sure you want to unassign this product?')) {
-                                                unassignProductMutation.mutate({
-                                                  productId: product.id,
-                                                  userId: customer.id
-                                                });
-                                              }
-                                            } else {
-                                              assignProductMutation.mutate({
-                                                productId: product.id,
-                                                userId: customer.id
-                                              });
-                                            }
-                                          }}
-                                        >
-                                          {isAssigned ? 'Unassign' : 'Assign'}
-                                        </Button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <TrendingUp className="mr-2 h-4 w-4" />
-                                  Assign Points
-                                </DropdownMenuItem>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
-                                <DialogHeader>
-                                  <DialogTitle className="text-[#43EB3E]">Assign Points to {customer.firstName}</DialogTitle>
-                                  <div className="flex items-center gap-2 mt-2">
-                                    <span className="text-sm text-muted-foreground">Current Tier:</span>
-                                    <Badge className={`${getTierInfo(customer.points).color}`}>
-                                      {getTierInfo(customer.points).name}
-                                    </Badge>
-                                    {getTierInfo(customer.points).nextTier && (
-                                      <span className="text-xs text-muted-foreground">
-                                        ({getTierInfo(customer.points).nextTier?.pointsNeeded.toLocaleString()} points to {getTierInfo(customer.points).nextTier?.name})
-                                      </span>
-                                    )}
-                                  </div>
-                                </DialogHeader>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                  <div className="space-y-6">
-                                    <h3 className="text-lg font-semibold">Product Activities</h3>
-                                    <ScrollArea className="h-[400px] pr-4">
-                                      <div className="space-y-4">
-                                        {customer.productAssignments?.map((assignment: any) => (
-                                          <Accordion type="single" collapsible key={assignment.id}>
-                                            <AccordionItem value="activities">
-                                              <AccordionTrigger className="p-3 bg-accent/50 rounded-lg hover:no-underline">
-                                                <div className="flex justify-between items-center w-full pr-4">
-                                                  <div className="text-left">
-                                                    <p className="font-medium">{assignment.product.name}</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                      {assignment.product.description}
-                                                    </p>
-                                                  </div>
-                                                  {pointsForm.watch("selectedActivities")?.some(id =>
-                                                    assignment.product.activities?.some((a: any) => a.id === id)
-                                                  ) && (
-                                                    <Badge variant="secondary" className="ml-2">
-                                                      {assignment.product.activities?.filter((a: any) =>
-                                                        pointsForm.watch("selectedActivities")?.includes(a.id)
-                                                      ).length} selected
-                                                    </Badge>
-                                                  )}
+                              </DialogHeader>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-6">
+                                  <h3 className="text-lg font-semibold">Product Activities</h3>
+                                  <ScrollArea className="h-[400px] pr-4">
+                                    <div className="space-y-4">
+                                      {customer.productAssignments?.map((assignment: any) => (
+                                        <Accordion type="single" collapsible key={assignment.id}>
+                                          <AccordionItem value="activities">
+                                            <AccordionTrigger className="p-3 bg-accent/50 rounded-lg hover:no-underline">
+                                              <div className="flex justify-between items-center w-full pr-4">
+                                                <div className="text-left">
+                                                  <p className="font-medium">{assignment.product.name}</p>
+                                                  <p className="text-sm text-muted-foreground">
+                                                    {assignment.product.description}
+                                                  </p>
                                                 </div>
-                                              </AccordionTrigger>
-                                              <AccordionContent>
-                                                <div className="space-y-2 pt-2">
-                                                  {assignment.product.activities?.map((activity: any) => {
-                                                    const isSystemActivity = activity.type === "SYSTEM_ACTIVATION";
-                                                    if (isSystemActivity) return null;
+                                                {pointsForm.watch("selectedActivities")?.some(id =>
+                                                  assignment.product.activities?.some((a: any) => a.id === id)
+                                                ) && (
+                                                  <Badge variant="secondary" className="ml-2">
+                                                    {assignment.product.activities?.filter((a: any) =>
+                                                      pointsForm.watch("selectedActivities")?.includes(a.id)
+                                                    ).length} selected
+                                                  </Badge>
+                                                )}
+                                              </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent>
+                                              <div className="space-y-2 pt-2">
+                                                {assignment.product.activities?.map((activity: any) => {
+                                                  const isSystemActivity = activity.type === "SYSTEM_ACTIVATION";
+                                                  if (isSystemActivity) return null;
 
-                                                    const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
-                                                    const multiplierType = activity.type === "PREMIUM_PAYMENT" ? 'premium' : 'card';
-                                                    const pointsMultiplier = getPointsMultiplier(customer.points, multiplierType);
+                                                  const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
+                                                  const multiplierType = activity.type === "PREMIUM_PAYMENT" ? 'premium' : 'card';
+                                                  const pointsMultiplier = getPointsMultiplier(customer.points, multiplierType);
 
-                                                    return (
-                                                      <div
-                                                        key={activity.id}
-                                                        className="flex items-center justify-between p-2 pl-6 border rounded-lg"
-                                                      >
-                                                        <div className="flex items-center space-x-2">
-                                                          <input
-                                                            type="checkbox"
-                                                            id={`activity-${activity.id}`}
-                                                            className="w-4 h-4 rounded border-gray-300"
-                                                            checked={pointsForm.watch("selectedActivities")?.includes(activity.id)}
-                                                            onChange={(e) => {
-                                                              const currentSelected = pointsForm.getValues("selectedActivities") || [];
-                                                              const currentPoints = pointsForm.getValues("points") || 0;
+                                                  return (
+                                                    <div
+                                                      key={activity.id}
+                                                      className="flex items-center justify-between p-2 pl-6 border rounded-lg"
+                                                    >
+                                                      <div className="flex items-center space-x-2">
+                                                        <input
+                                                          type="checkbox"
+                                                          id={`activity-${activity.id}`}
+                                                          className="w-4 h-4 rounded border-gray-300"
+                                                          checked={pointsForm.watch("selectedActivities")?.includes(activity.id)}
+                                                          onChange={(e) => {
+                                                            const currentSelected = pointsForm.getValues("selectedActivities") || [];
+                                                            const currentPoints = pointsForm.getValues("points") || 0;
 
-                                                              if (e.target.checked) {
-                                                                pointsForm.setValue("selectedActivities", [...currentSelected, activity.id]);
-                                                                if (!isPremiumOrCard) {
-                                                                  pointsForm.setValue("points", currentPoints + activity.pointsValue);
-                                                                }
-                                                                const description = `Points for ${activity.type.toLowerCase().replace('_', ' ')} activity`;
-                                                                if (!pointsForm.getValues("description")) {
-                                                                  pointsForm.setValue("description", description);
-                                                                }
-                                                              } else {
-                                                                pointsForm.setValue(
-                                                                  "selectedActivities",
-                                                                  currentSelected.filter(id => id !== activity.id)
-                                                                );
-                                                                if (!isPremiumOrCard) {
-                                                                  pointsForm.setValue("points", currentPoints - activity.pointsValue);
-                                                                } else {
-                                                                  const oldValue = activity.currentValue || 0;
-                                                                  pointsForm.setValue("points", currentPoints - oldValue);
-                                                                  activity.currentValue = 0;
-                                                                  activity.baseValue = 0;
-                                                                }
+                                                            if (e.target.checked) {
+                                                              pointsForm.setValue("selectedActivities", [...currentSelected, activity.id]);
+                                                              if (!isPremiumOrCard) {
+                                                                pointsForm.setValue("points", currentPoints + activity.pointsValue);
                                                               }
+                                                              const description = `Points for ${activity.type.toLowerCase().replace('_', ' ')} activity`;
+                                                              if (!pointsForm.getValues("description")) {
+                                                                pointsForm.setValue("description", description);
+                                                              }
+                                                            } else {
+                                                              pointsForm.setValue(
+                                                                "selectedActivities",
+                                                                currentSelected.filter(id => id !== activity.id)
+                                                              );
+                                                              if (!isPremiumOrCard) {
+                                                                pointsForm.setValue("points", currentPoints - activity.pointsValue);
+                                                              } else {
+                                                                const oldValue = activity.currentValue || 0;
+                                                                pointsForm.setValue("points", currentPoints - oldValue);
+                                                                activity.currentValue = 0;
+                                                                activity.baseValue = 0;
+                                                              }
+                                                            }
+                                                          }}
+                                                        />
+                                                        <label
+                                                          htmlFor={`activity-${activity.id}`}
+                                                          className="text-sm font-medium"
+                                                        >
+                                                          {activity.type.replace('_', ' ')}
+                                                          {isPremiumOrCard && pointsMultiplier > 0 && (
+                                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                              (×{pointsMultiplier})
+                                                            </span>
+                                                          )}
+                                                        </label>
+                                                      </div>
+                                                      {isPremiumOrCard ? (
+                                                        <div className="flex items-center space-x-2">
+                                                          <Input
+                                                            type="number"
+                                                            className="w-32"
+                                                            placeholder="Enter points"
+                                                            disabled={!pointsForm.watch("selectedActivities")?.includes(activity.id)}
+                                                            onChange={(e) => {
+                                                              const baseValue = parseInt(e.target.value) || 0;
+                                                              const multipliedValue = Math.floor(baseValue * pointsMultiplier);
+                                                              const currentPoints = pointsForm.getValues("points") || 0;
+                                                              const oldValue = activity.currentValue || 0;
+                                                              pointsForm.setValue("points", currentPoints - oldValue + multipliedValue);
+                                                              activity.currentValue = multipliedValue;
+                                                              activity.baseValue = baseValue;
                                                             }}
                                                           />
-                                                          <label
-                                                            htmlFor={`activity-${activity.id}`}
-                                                            className="text-sm font-medium"
-                                                          >
-                                                            {activity.type.replace('_', ' ')}
-                                                            {isPremiumOrCard && pointsMultiplier > 0 && (
-                                                              <span className="ml-2 text-xs text-muted-foreground">
-                                                                (×{pointsMultiplier})
-                                                              </span>
-                                                            )}
-                                                          </label>
+                                                          {pointsMultiplier > 0 && (
+                                                            <span className="text-sm text-muted-foreground">
+                                                              = {activity.currentValue || 0} points
+                                                            </span>
+                                                          )}
                                                         </div>
-                                                        {isPremiumOrCard ? (
-                                                          <div className="flex items-center space-x-2">
-                                                            <Input
-                                                              type="number"
-                                                              className="w-32"
-                                                              placeholder="Enter points"
-                                                              disabled={!pointsForm.watch("selectedActivities")?.includes(activity.id)}
-                                                              onChange={(e) => {
-                                                                const baseValue = parseInt(e.target.value) || 0;
-                                                                const multipliedValue = Math.floor(baseValue * pointsMultiplier);
-                                                                const currentPoints = pointsForm.getValues("points") || 0;
-                                                                const oldValue = activity.currentValue || 0;
-                                                                pointsForm.setValue("points", currentPoints - oldValue + multipliedValue);
-                                                                activity.currentValue = multipliedValue;
-                                                                activity.baseValue = baseValue;
-                                                              }}
-                                                            />
-                                                            {pointsMultiplier > 0 && (
-                                                              <span className="text-sm text-muted-foreground">
-                                                                = {activity.currentValue || 0} points
-                                                              </span>
-                                                            )}
-                                                          </div>
-                                                        ) : (
-                                                          <span className="text-sm font-semibold">
-                                                            {activity.pointsValue} points
-                                                          </span>
-                                                        )}
-                                                      </div>
-                                                    );
-                                                  })}
-                                                </div>
-                                              </AccordionContent>
-                                            </AccordionItem>
-                                          </Accordion>
-                                        ))}
-                                      </div>
-                                    </ScrollArea>
-
-                                    <div className="pt-4 border-t">
-                                      <h3 className="text-lg font-semibold mb-4">POS Points Allocation</h3>
-                                      <div className="space-y-4">
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium">
-                                            POS Points
-                                            {getPointsMultiplier(customer.points, 'pos') > 0 && (
-                                              <span className="ml-2 text-xs text-muted-foreground">
-                                                (×{getPointsMultiplier(customer.points, 'pos')})
-                                              </span>
-                                            )}
-                                          </label>
-                                          <div className="flex items-center space-x-2">
-                                            <Input
-                                              type="number"
-                                              min="0"
-                                              placeholder="Enter POS points"
-                                              onChange={(e) => {
-                                                const baseValue = parseInt(e.target.value) || 0;
-                                                const multiplier = getPointsMultiplier(customer.points, 'pos');
-                                                const multipliedValue = Math.floor(baseValue * multiplier);
-                                                const currentPoints = pointsForm.getValues("points") || 0;
-                                                const oldPosPoints = pointsForm.getValues("posPoints") || 0;
-                                                pointsForm.setValue("points", currentPoints - oldPosPoints + multipliedValue);
-                                                pointsForm.setValue("posPoints", multipliedValue);
-                                                pointsForm.setValue("posBaseValue", baseValue);
-                                              }}
-                                            />
-                                            {getPointsMultiplier(customer.points, 'pos') > 0 && (
-                                              <span className="text-sm text-muted-foreground">
-                                                = {pointsForm.watch("posPoints") || 0} points
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
+                                                      ) : (
+                                                        <span className="text-sm font-semibold">
+                                                          {activity.pointsValue} points
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </AccordionContent>
+                                          </AccordionItem>
+                                        </Accordion>
+                                      ))}
                                     </div>
-                                  </div>
+                                  </ScrollArea>
 
-                                  <div className="space-y-6">
+                                  <div className="pt-4 border-t">
+                                    <h3 className="text-lg font-semibold mb-4">POS Points Allocation</h3>
                                     <div className="space-y-4">
-                                      <h3 className="text-lg font-semibold">Points Summary</h3>
-
-                                      <div className="space-y-4 bg-accent/20 p-4 rounded-lg">
-                                        {customer.productAssignments?.map((assignment: any) => (
-                                          <div key={assignment.id}>
-                                            {assignment.product.activities
-                                              ?.filter((activity: any) => pointsForm.watch("selectedActivities")?.includes(activity.id))
-                                              .map((activity: any) => (
-                                                <div key={activity.id} className="flex justify-between items-center py-2">
-                                                  <span className="text-sm">
-                                                    {assignment.product.name} - {activity.type.replace('_', ' ')}
-                                                    {(activity.type=== "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE") && (
-                                                      <span className="text-xs text-muted-foreground ml-1">
-                                                        (Base: {activity.baseValue || 0})
-                                                      </span>
-                                                    )}
-                                                  </span>
-                                                  <span className="font-medium">
-                                                    {activity.currentValue || activity.pointsValue} points
-                                                  </span>
-                                                </div>
-                                              ))}
-                                          </div>
-                                        ))}
-
-                                        {pointsForm.watch("posPoints") > 0 && (
-                                          <div className="flex justify-between items-center py-2 border-t">
-                                            <span className="text-sm">
-                                              POS Points
-                                              <span className="text-xs text-muted-foreground ml-1">
-                                                (Base: {pointsForm.watch("posBaseValue") || 0})
-                                              </span>
+                                      <div className="space-y-2">
+                                        <label className="text-sm font-medium">
+                                          POS Points
+                                          {getPointsMultiplier(customer.points, 'pos') > 0 && (
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                              (×{getPointsMultiplier(customer.points, 'pos')})
                                             </span>
-                                            <span className="font-medium">{pointsForm.watch("posPoints")} points</span>
-                                          </div>
-                                        )}
-
-                                        <div className="flex justify-between items-center pt-4 border-t border-t-2">
-                                          <span className="font-semibold">Total Points</span>
-                                          <span className="text-2xl font-bold">
-                                            {pointsForm.watch("points")}
-                                          </span>
+                                          )}
+                                        </label>
+                                        <div className="flex items-center space-x-2">
+                                          <Input
+                                            type="number"
+                                            min="0"
+                                            placeholder="Enter POS points"
+                                            onChange={(e) => {
+                                              const baseValue = parseInt(e.target.value) || 0;
+                                              const multiplier = getPointsMultiplier(customer.points, 'pos');
+                                              const multipliedValue = Math.floor(baseValue * multiplier);
+                                              const currentPoints = pointsForm.getValues("points") || 0;
+                                              const oldPosPoints = pointsForm.getValues("posPoints") || 0;
+                                              pointsForm.setValue("points", currentPoints - oldPosPoints + multipliedValue);
+                                              pointsForm.setValue("posPoints", multipliedValue);
+                                              pointsForm.setValue("posBaseValue", baseValue);
+                                            }}
+                                          />
+                                          {getPointsMultiplier(customer.points, 'pos') > 0 && (
+                                            <span className="text-sm text-muted-foreground">
+                                              = {pointsForm.watch("posPoints") || 0} points
+                                            </span>
+                                          )}
                                         </div>
                                       </div>
-
-                                      <div className="space-y-2">
-                                        <label>Description <span className="text-red-500">*</span></label>
-                                        <Input
-                                          {...pointsForm.register("description")}
-                                          placeholder="Enter description for points allocation"
-                                        />
-                                        {pointsForm.formState.errors.description && (
-                                          <p className="text-sm text-red-500">
-                                            {pointsForm.formState.errors.description.message}
-                                          </p>
-                                        )}
-                                      </div>
-
-                                      <Button
-                                        type="submit"
-                                        className="w-full"
-                                        disabled={!pointsForm.watch("points") || !pointsForm.watch("description")}
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          const formData = pointsForm.getValues();
-                                          if (!formData.description) {
-                                            toast({
-                                              variant: "destructive",
-                                              title: "Error",
-                                              description: "Please provide a description for the points adjustment"
-                                            });
-                                            return;
-                                          }
-                                          assignPointsMutation.mutate({
-                                            userId: customer.id,
-                                            data: {
-                                              points: formData.points,
-                                              description: formData.description,
-                                              selectedActivities: formData.selectedActivities
-                                            }
-                                          });
-                                        }}
-                                      >
-                                        Assign {pointsForm.watch("points")} Points
-                                      </Button>
                                     </div>
                                   </div>
                                 </div>
-                              </DialogContent>
-                            </Dialog>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+
+                                <div className="space-y-6">
+                                  <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold">Points Summary</h3>
+
+                                    <div className="space-y-4 bg-accent/20 p-4 rounded-lg">
+                                      {customer.productAssignments?.map((assignment: any) => (
+                                        <div key={assignment.id}>
+                                          {assignment.product.activities
+                                            ?.filter((activity: any) => pointsForm.watch("selectedActivities")?.includes(activity.id))
+                                            .map((activity: any) => (
+                                              <div key={activity.id} className="flex justify-between items-center py-2">
+                                                <span className="text-sm">
+                                                  {assignment.product.name} - {activity.type.replace('_', ' ')}
+                                                  {(activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE") && (
+                                                    <span className="text-xs text-muted-foreground ml-1">
+                                                      (Base: {activity.baseValue || 0})
+                                                    </span>
+                                                  )}
+                                                </span>
+                                                <span className="font-medium">
+                                                  {activity.currentValue || activity.pointsValue} points
+                                                </span>
+                                              </div>
+                                            ))}
+                                        </div>
+                                      ))}
+
+                                      {pointsForm.watch("posPoints") > 0 && (
+                                        <div className="flex justify-between items-center py-2 border-t">
+                                          <span className="text-sm">
+                                            POS Points
+                                            <span className="text-xs text-muted-foreground ml-1">
+                                              (Base: {pointsForm.watch("posBaseValue") || 0})
+                                            </span>
+                                          </span>
+                                          <span className="font-medium">{pointsForm.watch("posPoints")} points</span>
+                                        </div>
+                                      )}
+
+                                      <div className="flex justify-between items-center pt-4 border-t border-t-2">
+                                        <span className="font-semibold">Total Points</span>
+                                        <span className="text-2xl font-bold">
+                                          {pointsForm.watch("points")}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <label>Description <span className="text-red-500">*</span></label>
+                                      <Input
+                                        {...pointsForm.register("description")}
+                                        placeholder="Enter description for points allocation"
+                                      />
+                                      {pointsForm.formState.errors.description && (
+                                        <p className="text-sm text-red-500">
+                                          {pointsForm.formState.errors.description.message}
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    <Button
+                                      type="submit"
+                                      className="w-full"
+                                      disabled={!pointsForm.watch("points") || !pointsForm.watch("description")}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        const formData = pointsForm.getValues();
+                                        if (!formData.description) {
+                                          toast({
+                                            variant: "destructive",
+                                            title: "Error",
+                                            description: "Please provide a description for the points adjustment"
+                                          });
+                                          return;
+                                        }
+                                        assignPointsMutation.mutate({
+                                          userId: customer.id,
+                                          data: {
+                                            points: formData.points,
+                                            description: formData.description,
+                                            selectedActivities: formData.selectedActivities
+                                          }
+                                        });
+                                      }}
+                                    >
+                                      Assign {pointsForm.watch("points")} Points
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 );
