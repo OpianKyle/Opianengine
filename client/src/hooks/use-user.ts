@@ -4,7 +4,7 @@ import { z } from "zod";
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
 // Base user schema with minimal required fields
-const userSchema = z.object({
+const baseUserSchema = z.object({
   id: z.number().optional(),  // Make ID optional for new users
   email: z.string().email(),
   firstName: z.string().min(1, "First name is required"),
@@ -14,7 +14,10 @@ const userSchema = z.object({
   isSuperAdmin: z.boolean().default(false),
   isEnabled: z.boolean().default(true),
   points: z.number().default(0),
-}).and(z.object({
+});
+
+// Extended schema with all optional fields
+const userSchema = baseUserSchema.extend({
   // All optional fields
   referralCode: z.string().nullable().optional(),
   referredBy: z.string().nullable().optional(),
@@ -38,7 +41,7 @@ const userSchema = z.object({
   branchCode: z.string().nullable().optional(),
   hasCreditCard: z.boolean().optional(),
   signature: z.string().nullable().optional(),
-}).partial()).passthrough();
+}).passthrough();
 
 export type User = z.infer<typeof userSchema>;
 export type AccountType = typeof accountTypes[number];
