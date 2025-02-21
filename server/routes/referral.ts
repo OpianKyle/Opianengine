@@ -24,7 +24,7 @@ router.get('/api/customer/referrals', async (req, res) => {
   try {
     console.log('Fetching referrals for user:', req.user.id);
 
-    // Get current month's date range and premium amounts
+    // Get current month's date range
     const currentDate = new Date();
     const startOfCurrentMonth = startOfMonth(currentDate);
     const endOfCurrentMonth = endOfMonth(currentDate);
@@ -51,7 +51,12 @@ router.get('/api/customer/referrals', async (req, res) => {
       return res.status(400).json({ error: "User has no referral code" });
     }
 
-    console.log('Found referral code:', currentUser.referralCode);
+    // Initialize package statistics and commission details
+    const packageStats = {
+      level1: {} as Record<string, { count: number, commission: number }>,
+      level2: {} as Record<string, { count: number, commission: number }>,
+      level3: {} as Record<string, { count: number, commission: number }>
+    };
 
     // Get direct referrals (Level 1)
     const level1Referrals = await db
@@ -68,21 +73,30 @@ router.get('/api/customer/referrals', async (req, res) => {
       .where(eq(users.referredBy, currentUser.referralCode))
       .orderBy(desc(users.createdAt));
 
-    console.log('Found level 1 referrals:', level1Referrals.length);
-
-    // Calculate Level 1 commissions
+    // Calculate Level 1 stats and commissions
     let level1Amount = 0;
     const level1Count = level1Referrals.length;
-    for (const referral of level1Referrals) {
-      if (referral.selectedPackage && premiumMap[referral.selectedPackage]) {
-        level1Amount += calculateCommission(premiumMap[referral.selectedPackage], 1);
-      }
-    }
 
-    // Calculate Level 2 commissions
+    level1Referrals.forEach(referral => {
+      if (referral.selectedPackage) {
+        if (!packageStats.level1[referral.selectedPackage]) {
+          packageStats.level1[referral.selectedPackage] = { count: 0, commission: 0 };
+        }
+        packageStats.level1[referral.selectedPackage].count++;
+
+        if (premiumMap[referral.selectedPackage]) {
+          const commission = calculateCommission(premiumMap[referral.selectedPackage], 1);
+          packageStats.level1[referral.selectedPackage].commission += commission;
+          level1Amount += commission;
+        }
+      }
+    });
+
+    // Get and calculate Level 2 referrals
     let level2Amount = 0;
     let level2Count = 0;
     const level2Referrals = [];
+
     for (const level1Ref of level1Referrals) {
       if (!level1Ref.referralCode) continue;
 
@@ -103,14 +117,23 @@ router.get('/api/customer/referrals', async (req, res) => {
       level2Count += level2Refs.length;
       level2Referrals.push(...level2Refs);
 
-      for (const ref of level2Refs) {
-        if (ref.selectedPackage && premiumMap[ref.selectedPackage]) {
-          level2Amount += calculateCommission(premiumMap[ref.selectedPackage], 2);
+      level2Refs.forEach(referral => {
+        if (referral.selectedPackage) {
+          if (!packageStats.level2[referral.selectedPackage]) {
+            packageStats.level2[referral.selectedPackage] = { count: 0, commission: 0 };
+          }
+          packageStats.level2[referral.selectedPackage].count++;
+
+          if (premiumMap[referral.selectedPackage]) {
+            const commission = calculateCommission(premiumMap[referral.selectedPackage], 2);
+            packageStats.level2[referral.selectedPackage].commission += commission;
+            level2Amount += commission;
+          }
         }
-      }
+      });
     }
 
-    // Calculate Level 3 commissions
+    // Get and calculate Level 3 referrals
     let level3Amount = 0;
     let level3Count = 0;
     const level3Referrals = [];
@@ -134,11 +157,20 @@ router.get('/api/customer/referrals', async (req, res) => {
       level3Count += level3Refs.length;
       level3Referrals.push(...level3Refs);
 
-      for (const ref of level3Refs) {
-        if (ref.selectedPackage && premiumMap[ref.selectedPackage]) {
-          level3Amount += calculateCommission(premiumMap[ref.selectedPackage], 3);
+      level3Refs.forEach(referral => {
+        if (referral.selectedPackage) {
+          if (!packageStats.level3[referral.selectedPackage]) {
+            packageStats.level3[referral.selectedPackage] = { count: 0, commission: 0 };
+          }
+          packageStats.level3[referral.selectedPackage].count++;
+
+          if (premiumMap[referral.selectedPackage]) {
+            const commission = calculateCommission(premiumMap[referral.selectedPackage], 3);
+            packageStats.level3[referral.selectedPackage].commission += commission;
+            level3Amount += commission;
+          }
         }
-      }
+      });
     }
 
     try {
@@ -202,7 +234,8 @@ router.get('/api/customer/referrals', async (req, res) => {
 
       console.log('Sending response with:', {
         referralCounts: { level1Count, level2Count, level3Count },
-        commissionAmounts: { level1Amount, level2Amount, level3Amount }
+        commissionAmounts: { level1Amount, level2Amount, level3Amount },
+        packageStats
       });
 
       res.json({
@@ -215,6 +248,7 @@ router.get('/api/customer/referrals', async (req, res) => {
           level2: level2Referrals,
           level3: level3Referrals
         },
+        packageStats,
         commission: {
           level1Amount: monthlyCommission.level1Amount,
           level2Amount: monthlyCommission.level2Amount,
