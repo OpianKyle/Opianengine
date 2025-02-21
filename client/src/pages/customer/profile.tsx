@@ -15,78 +15,105 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Update packages to match registration
 const packages = [
   {
     name: "BEGINNER",
     display: "Beginner",
-    price: 99,
+    price: 350,
+    points: 5000,
     perks: [
-      "5% Cashback on Purchases",
-      "Basic Email Support",
-      "Monthly Newsletter",
-      "Basic Reward Points",
-      "Standard Processing Time"
+      "Activation Points: 5000",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call"
     ]
   },
   {
     name: "NOVICE",
     display: "Novice",
-    price: 199,
+    price: 450,
+    points: 10000,
     perks: [
-      "10% Cashback on Purchases",
-      "Priority Email Support",
-      "Quarterly Digital Magazine",
-      "1.5x Reward Points",
-      "Fast-Track Processing",
-      "Basic Insurance Coverage"
+      "Activation Points: 10 000",
+      "Funeral Cover: R5 000",
+      "Funeral Assist",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call"
     ]
   },
   {
     name: "ACTIVE",
     display: "Active",
-    price: 299,
+    price: 550,
+    points: 15000,
     perks: [
-      "15% Cashback on Purchases",
-      "24/7 Phone Support",
-      "Monthly Digital Magazine",
-      "2x Reward Points",
-      "Priority Processing",
-      "Extended Insurance Coverage",
-      "Quarterly Bonus Points"
+      "Activation Points: 15 000",
+      "Funeral Cover: R10 000",
+      "Accidental Death Cover: R20 000",
+      "Funeral Assist",
+      "Family Income Benefit: R5 000 x6",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call",
+      "Virtual GP Assistant",
+      "Medical Second Opinion"
     ]
   },
   {
     name: "PROFESSIONAL",
     display: "Professional",
-    price: 499,
+    price: 695,
+    points: 20000,
     perks: [
-      "20% Cashback on Purchases",
-      "Dedicated Account Manager",
-      "Premium Digital Content",
-      "3x Reward Points",
-      "VIP Processing",
-      "Premium Insurance Package",
-      "Monthly Bonus Points",
-      "Exclusive Event Access"
+      "Activation Points: 20 000",
+      "Funeral Cover: R15 000",
+      "Accidental Death Cover: R50 000",
+      "Funeral Assist",
+      "Family Income Benefit: R5 000 x6",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call",
+      "Virtual GP Assistant",
+      "Medical Second Opinion",
+      "Crime Victim Assist",
+      "Assault & Trauma Assist",
+      "Emergency Medical Services"
     ]
   },
   {
     name: "EXPERT",
     display: "Expert",
-    price: 999,
+    price: 825,
+    points: 25000,
     perks: [
-      "25% Cashback on Purchases",
-      "Personal Concierge Service",
-      "Exclusive Print Magazine",
-      "5x Reward Points",
-      "Instant Priority Processing",
-      "Comprehensive Insurance",
-      "Weekly Bonus Points",
-      "VIP Event Access",
-      "Travel Benefits",
-      "Family Coverage"
+      "Activation Points: 25 000",
+      "Funeral Cover: R20 000",
+      "Accidental Death Cover: R100 000",
+      "Funeral Assist",
+      "Family Income Benefit: R5 000 x6",
+      "EMS Assist",
+      "Legal Assist",
+      "Lawyer Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call",
+      "Virtual GP Assistant",
+      "Medical Second Opinion",
+      "Crime Victim Assist",
+      "Assault & Trauma Assist",
+      "Emergency Medical Services"
     ]
   }
 ];
@@ -98,7 +125,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
   anySelected: boolean
 }) => (
   <Card
-    className={`mx-2 h-[680px] cursor-pointer transition-all relative
+    className={`mx-4 h-[900px] cursor-pointer transition-all relative
       ${isSelected
         ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
         : anySelected
@@ -107,21 +134,21 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
       }`}
     onClick={onSelect}
   >
-    <CardHeader className="p-6">
-      <CardTitle className="flex justify-between items-center text-xl">
+    <CardHeader className="p-8">
+      <CardTitle className="flex justify-between items-center text-2xl mb-2">
         {pkg.display}
         {isSelected && (
-          <Check className="h-5 w-5 text-[#43EB3E]" />
+          <Check className="h-6 w-6 text-[#43EB3E]" />
         )}
       </CardTitle>
-      <CardDescription className="text-lg font-semibold">R{pkg.price}/month</CardDescription>
+      <CardDescription className="text-xl font-semibold">R{pkg.price}/month</CardDescription>
     </CardHeader>
-    <CardContent className="p-6">
-      <div className="h-full">
-        <ul className="space-y-3">
+    <CardContent className="p-8">
+      <div className="space-y-6">
+        <ul className="space-y-4">
           {pkg.perks.map((perk, index) => (
-            <li key={index} className="flex items-start text-sm">
-              <Badge variant="outline" className="mr-2 mt-0.5 shrink-0">✓</Badge>
+            <li key={index} className="flex items-start text-base">
+              <Badge variant="outline" className="mr-3 mt-1 shrink-0">✓</Badge>
               <span>{perk}</span>
             </li>
           ))}
@@ -313,11 +340,11 @@ export default function ProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="relative">
+            <div className="relative px-12">
               <Carousel className="w-full">
-                <CarouselContent>
+                <CarouselContent className="-ml-4">
                   {packages.map((pkg) => (
-                    <CarouselItem key={pkg.name} className="basis-full sm:basis-1/2 md:basis-1/2">
+                    <CarouselItem key={pkg.name} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
                       <PackageCard
                         pkg={pkg}
                         isSelected={pkg.name === user?.selectedPackage}
@@ -327,8 +354,8 @@ export default function ProfilePage() {
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="absolute -left-4 -translate-y-1/2" />
-                <CarouselNext className="absolute -right-4 -translate-y-1/2" />
+                <CarouselPrevious className="absolute -left-12 -translate-y-1/2" />
+                <CarouselNext className="absolute -right-12 -translate-y-1/2" />
               </Carousel>
             </div>
           </CardContent>
