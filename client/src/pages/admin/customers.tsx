@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload } from "lucide-react";
+import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -74,6 +75,7 @@ const getTierInfo = (points: number): { name: string; color: string; nextTier?: 
 };
 
 export default function AdminCustomers() {
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { data: customers } = useQuery({
     queryKey: ["/api/admin/customers"],
     queryFn: async () => {
@@ -167,6 +169,7 @@ export default function AdminCustomers() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
       toast({ title: "Success", description: "User details updated successfully" });
       editDetailsForm.reset();
+      setEditDialogOpen(false); 
     },
     onError: (error: Error) => {
       toast({
@@ -491,11 +494,12 @@ export default function AdminCustomers() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <Dialog>
+                          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                             <DialogTrigger asChild>
                               <DropdownMenuItem onSelect={(e) => {
                                 e.preventDefault();
                                 handleEditUser(customer);
+                                setEditDialogOpen(true);
                               }}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Edit Details
@@ -508,7 +512,7 @@ export default function AdminCustomers() {
                               <Form {...editDetailsForm}>
                                 <form onSubmit={editDetailsForm.handleSubmit((data) =>
                                   updateUserDetailsMutation.mutate({ userId: customer.id, data })
-                                )} className="space-y-4">
+                                )}>
                                   <div className="grid grid-cols-2 gap-4">
                                     <FormField
                                       control={editDetailsForm.control}
@@ -740,8 +744,15 @@ export default function AdminCustomers() {
                                     />
                                   </div>
                                   <DialogFooter>
-                                    <Button type="submit" className="bg-[#43EB3E] text-black hover:bg-[#3ad936]">
-                                      Save Changes
+                                    <Button type="submit" disabled={updateUserDetailsMutation.isPending} className="bg-[#43EB3E] text-white hover:bg-[#3ad936]">
+                                      {updateUserDetailsMutation.isPending ? (
+                                        <>
+                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                          Saving...
+                                        </>
+                                      ) : (
+                                        'Save Changes'
+                                      )}
                                     </Button>
                                   </DialogFooter>
                                 </form>

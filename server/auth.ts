@@ -59,17 +59,26 @@ export function setupAuth(app: Express) {
     checkPeriod: 86400000 // prune expired entries every 24h
   });
 
+  // Check required environment variable
+  if (!process.env.SESSION_SECRET) {
+    console.error('Missing SESSION_SECRET environment variable');
+    process.exit(1);
+  }
+
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || 'development-secret',
+      secret: process.env.SESSION_SECRET,
       cookie: {
         maxAge: 86400000, // 24 hours
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
+        sameSite: 'lax',
+        path: '/',
+        httpOnly: true
       },
       store,
       resave: false,
-      saveUninitialized: false
+      saveUninitialized: false,
+      name: 'session_id' // Use a generic name instead of connect.sid
     })
   );
 
@@ -166,6 +175,11 @@ export function setupAuth(app: Express) {
           if (loginErr) {
             console.error('Login error:', loginErr);
             return res.status(500).json({ error: "Login failed" });
+          }
+
+          // Set cookie explicitly
+          if (req.session) {
+            req.session.cookie.maxAge = 86400000; // 24 hours
           }
 
           console.log('Login successful for user:', user.id);
@@ -307,7 +321,7 @@ export function setupAuth(app: Express) {
 
       } catch (dbError: any) {
         console.error('Database error during registration:', dbError);
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: "Registration failed. Please try again.",
           details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
         });
@@ -532,7 +546,7 @@ export async function verifySession(req: Request): Promise<any> {
 
 const packageMap = {
   1: "BEGINNER",
-  2: "NOVICE", 
+  2: "NOVICE",
   3: "ACTIVE",
   4: "PROFESSIONAL",
   5: "EXPERT"
