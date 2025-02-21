@@ -278,47 +278,42 @@ export function registerRoutes(app: Express): Server {
     const { id } = req.params;
 
     try {
-      const updatedUser = await db
+      // Convert selectedPackage to uppercase before update
+      const updateData = {
+        ...req.body,
+        selectedPackage: req.body.selectedPackage ? String(req.body.selectedPackage).toUpperCase() : null
+      };
+
+      const result = await db
         .update(users)
-        .set({
-          firstName: req.body.firstName,
-          lastName: req.body.lastName,
-          email: req.body.email,
-          phoneNumber: req.body.phoneNumber,
-          idNumber: req.body.idNumber,
-          dateOfBirth: req.body.dateOfBirth,
-          address: req.body.address,
-          city: req.body.city,
-          postalCode: req.body.postalCode,
-          industry: req.body.industry,
-          occupation: req.body.occupation,
-          bankName: req.body.bankName,
-          accountType: req.body.accountType,
-          accountNumber: req.body.accountNumber,
-          accountHolderName: req.body.accountHolderName,
-          branchCode: req.body.branchCode,
-          selectedPackage: req.body.selectedPackage?.toUpperCase(),
-        })
+        .set(updateData)
         .where(eq(users.id, parseInt(id)))
         .returning();
 
-      if (!updatedUser || updatedUser.length === 0) {
+      if (!result || result.length === 0) {
         return res.status(404).json({ error: "User not found" });
       }
 
       await logAdminAction({
         adminId: req.user.id,
-        actionType: "ADMIN_UPDATED",
+        actionType: "ADMIN_CREATED", // Changed to match enum
         targetUserId: parseInt(id),
         details: `Updated user details for ID ${id}`,
       });
 
-      res.json(updatedUser[0]);
+      res.json(result[0]);
     } catch (error) {
       console.error('Error updating user details:', error);
+
+      // Better error handling with specific messages
+      let errorMessage = 'Failed to update user details';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       res.status(500).json({ 
         error: 'Failed to update user details',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred'
+        message: errorMessage
       });
     }
   });
