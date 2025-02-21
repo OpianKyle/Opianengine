@@ -56,11 +56,15 @@ export function registerRoutes(app: Express): Server {
       // Get the user's referral data
       const [referralInfo] = await db
         .select({
-          referralCode: users.referral_code, //Corrected field name
+          referralCode: users.referralCode,
         })
         .from(users)
         .where(eq(users.id, req.user.id))
         .limit(1);
+
+      if (!referralInfo) {
+        return res.status(404).json({ error: "User not found" });
+      }
 
       // Get users who were referred by this user
       const referrals = await db
@@ -71,7 +75,7 @@ export function registerRoutes(app: Express): Server {
           createdAt: users.createdAt,
         })
         .from(users)
-        .where(eq(users.referred_by, referralInfo.referralCode)) //Corrected field name
+        .where(eq(users.referredBy, referralInfo.referralCode))
         .orderBy(desc(users.createdAt));
 
       res.json({
@@ -997,7 +1001,7 @@ export function registerRoutes(app: Express): Server {
         }
       })
       if (!assignment) {
-        return res.status(404).json({ error: "Assignment not found" });
+        return res.status(404).json({ error: "Assignment notfound" });
       }
       res.json(assignment);
     } catch (error) {
