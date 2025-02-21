@@ -206,7 +206,7 @@ export function setupAuth(app: Express) {
       console.log('Registration attempt with data:', {
         ...req.body,
         password: '[REDACTED]',
-        referralCode: req.body.referralCode // Log the referral code
+        referralCode: req.body.referralCode
       });
 
       const registerSchema = z.object({
@@ -289,7 +289,13 @@ export function setupAuth(app: Express) {
       if (referralCode) {
         console.log('Verifying referral code:', referralCode);
         [referrer] = await db
-          .select()
+          .select({
+            id: users.id,
+            isEnabled: users.isEnabled,
+            points: users.points,
+            referralCode: users.referralCode,
+            referredBy: users.referredBy
+          })
           .from(users)
           .where(eq(users.referralCode, referralCode))
           .limit(1);
@@ -300,7 +306,7 @@ export function setupAuth(app: Express) {
             error: "Invalid referral code"
           });
         }
-        console.log('Valid referral code found for referrer:', referrer.id);
+        console.log('Valid referral code found for referrer:', referrer);
       }
 
       const hashedPassword = await crypto.hashPassword(password);
@@ -324,8 +330,13 @@ export function setupAuth(app: Express) {
       try {
         // Start transaction
         const newUser = await db.transaction(async (tx) => {
-          console.log('Starting registration transaction');
-          console.log('Using referral code:', referralCode);
+          console.log('Starting registration transaction with data:', {
+            email,
+            firstName,
+            lastName,
+            newReferralCode,
+            referredBy: referralCode
+          });
 
           // Create new user with referral information
           const [user] = await tx
@@ -339,9 +350,9 @@ export function setupAuth(app: Express) {
               isAdmin: false,
               isSuperAdmin: false,
               isEnabled: true,
-              points: 1000, // Default welcome points
+              points: 1000,
               referralCode: newReferralCode,
-              referredBy: referralCode || null, // Explicitly set referredBy
+              referredBy: referralCode || null,
               isSouthAfrican: isSouthAfrican || false,
               idNumber: idNumber || null,
               dateOfBirth: dateOfBirth || null,
@@ -365,6 +376,7 @@ export function setupAuth(app: Express) {
 
           console.log('Created new user:', {
             id: user.id,
+            email: user.email,
             referralCode: user.referralCode,
             referredBy: user.referredBy
           });
