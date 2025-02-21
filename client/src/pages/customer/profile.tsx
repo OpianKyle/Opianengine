@@ -124,38 +124,40 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
   onSelect: () => void,
   anySelected: boolean
 }) => (
-  <Card
-    className={`mx-4 h-[1200px] cursor-pointer transition-all relative
-      ${isSelected
-        ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
-        : anySelected
-          ? 'opacity-50 hover:opacity-75'
-          : 'hover:border-primary'
-      }`}
-    onClick={onSelect}
-  >
-    <CardHeader className="p-8">
-      <CardTitle className="flex justify-between items-center text-2xl mb-2">
-        {pkg.display}
-        {isSelected && (
-          <Check className="h-6 w-6 text-[#43EB3E]" />
-        )}
-      </CardTitle>
-      <CardDescription className="text-xl font-semibold">R{pkg.price}/month</CardDescription>
-    </CardHeader>
-    <CardContent className="p-8">
-      <div className="space-y-6">
-        <ul className="space-y-4">
-          {pkg.perks.map((perk, index) => (
-            <li key={index} className="flex items-start text-base">
-              <Badge variant="outline" className="mr-3 mt-1 shrink-0">✓</Badge>
-              <span>{perk}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </CardContent>
-  </Card>
+  <div className="w-full px-4">
+    <Card
+      className={`w-full min-h-[1200px] cursor-pointer transition-all relative
+        ${isSelected
+          ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
+          : anySelected
+            ? 'opacity-50 hover:opacity-75'
+            : 'hover:border-primary'
+        }`}
+      onClick={onSelect}
+    >
+      <CardHeader className="p-8">
+        <CardTitle className="flex justify-between items-center text-2xl mb-2">
+          {pkg.display}
+          {isSelected && (
+            <Check className="h-6 w-6 text-[#43EB3E]" />
+          )}
+        </CardTitle>
+        <CardDescription className="text-xl font-semibold">R{pkg.price}/month</CardDescription>
+      </CardHeader>
+      <CardContent className="p-8">
+        <div className="space-y-6">
+          <ul className="space-y-4">
+            {pkg.perks.map((perk, index) => (
+              <li key={index} className="flex items-start text-base">
+                <Badge variant="outline" className="mr-3 mt-1 shrink-0">✓</Badge>
+                <span>{perk}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
 );
 
 // Match the account types with the database schema
@@ -340,11 +342,11 @@ export default function ProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="relative px-12">
+            <div className="relative px-12 overflow-visible">
               <Carousel className="w-full">
                 <CarouselContent className="-ml-4">
                   {packages.map((pkg) => (
-                    <CarouselItem key={pkg.name} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                    <CarouselItem key={pkg.name} className="pl-4 basis-full lg:basis-1/2 xl:basis-1/3">
                       <PackageCard
                         pkg={pkg}
                         isSelected={pkg.name === user?.selectedPackage}
