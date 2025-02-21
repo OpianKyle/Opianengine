@@ -126,7 +126,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
 }) => (
   <div className="w-full px-4">
     <Card
-      className={`w-full h-[600px] cursor-pointer transition-all relative overflow-visible
+      className={`w-full h-[700px] cursor-pointer transition-all relative overflow-visible
         ${isSelected
           ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
           : anySelected
