@@ -62,6 +62,7 @@ router.get('/api/customer/referrals', async (req, res) => {
         email: users.email,
         createdAt: users.createdAt,
         selectedPackage: users.selectedPackage,
+        referralCode: users.referralCode, // Add this field
       })
       .from(users)
       .where(eq(users.referredBy, currentUser.referralCode));
@@ -104,6 +105,8 @@ router.get('/api/customer/referrals', async (req, res) => {
 
       // Level 2 calculations (referrals of referrals)
       for (const directRef of referrals) {
+        if (!directRef.referralCode) continue;
+
         const level2Refs = await db
           .select({
             selectedPackage: users.selectedPackage
@@ -120,6 +123,8 @@ router.get('/api/customer/referrals', async (req, res) => {
 
       // Level 3 calculations
       for (const directRef of referrals) {
+        if (!directRef.referralCode) continue;
+
         const level2Refs = await db
           .select({
             referralCode: users.referralCode
@@ -128,6 +133,8 @@ router.get('/api/customer/referrals', async (req, res) => {
           .where(eq(users.referredBy, directRef.referralCode));
 
         for (const level2Ref of level2Refs) {
+          if (!level2Ref.referralCode) continue;
+
           const level3Refs = await db
             .select({
               selectedPackage: users.selectedPackage

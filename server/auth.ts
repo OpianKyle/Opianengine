@@ -4,7 +4,7 @@ import { type Express, Request } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, transactions } from "@db/schema";
+import { users, transactions, referralStats } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -155,6 +155,7 @@ export function setupAuth(app: Express) {
       console.log('Login request received:', { email: req.body.email });
       const result = loginSchema.safeParse(req.body);
       if (!result.success) {
+        console.error('Login validation failed:', result.error);
         return res.status(400).json({
           error: "Invalid input data",
           details: result.error.errors
@@ -168,9 +169,11 @@ export function setupAuth(app: Express) {
         }
 
         if (!user) {
+          console.log('Authentication failed:', info?.message);
           return res.status(401).json({ error: info?.message || "Invalid email or password" });
         }
 
+        console.log('Authentication successful for user:', user.id);
         req.login(user, (loginErr) => {
           if (loginErr) {
             console.error('Login error:', loginErr);
@@ -180,6 +183,12 @@ export function setupAuth(app: Express) {
           // Set cookie explicitly
           if (req.session) {
             req.session.cookie.maxAge = 86400000; // 24 hours
+            console.log('Session cookie set:', {
+              maxAge: req.session.cookie.maxAge,
+              path: req.session.cookie.path,
+              secure: req.session.cookie.secure,
+              httpOnly: req.session.cookie.httpOnly
+            });
           }
 
           console.log('Login successful for user:', user.id);
@@ -199,6 +208,32 @@ export function setupAuth(app: Express) {
         password: '[REDACTED]'
       });
 
+      const registerSchema = z.object({
+        email: z.string().email("Invalid email address"),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+        firstName: z.string().min(1, "First name is required"),
+        lastName: z.string().min(1, "Last name is required"),
+        phoneNumber: z.string().min(1, "Phone number is required"),
+        referralCode: z.string().optional(),
+        isSouthAfrican: z.boolean().default(false),
+        idNumber: z.string().optional().nullable(),
+        dateOfBirth: z.string().optional().nullable(),
+        gender: z.string().optional().nullable(),
+        occupation: z.string().optional().nullable(),
+        industry: z.string().optional().nullable(),
+        address: z.string().optional().nullable(),
+        city: z.string().optional().nullable(),
+        postalCode: z.string().optional().nullable(),
+        selectedPackage: z.string().optional().nullable(),
+        bankName: z.string().optional().nullable(),
+        accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
+        accountNumber: z.string().optional().nullable(),
+        accountHolderName: z.string().optional().nullable(),
+        branchCode: z.string().optional().nullable(),
+        hasCreditCard: z.boolean().default(false),
+        signature: z.string().optional().nullable(),
+      });
+
       const result = registerSchema.safeParse(req.body);
       if (!result.success) {
         console.error('Registration validation failed:', result.error);
@@ -214,6 +249,7 @@ export function setupAuth(app: Express) {
         firstName,
         lastName,
         phoneNumber,
+        referralCode,
         isSouthAfrican,
         idNumber,
         dateOfBirth,
@@ -247,11 +283,46 @@ export function setupAuth(app: Express) {
         });
       }
 
+      // Verify referral code if provided
+      let referrer = null;
+      if (referralCode) {
+        console.log('Verifying referral code:', referralCode);
+        [referrer] = await db
+          .select()
+          .from(users)
+          .where(eq(users.referralCode, referralCode))
+          .limit(1);
+
+        if (!referrer || !referrer.isEnabled) {
+          console.log('Invalid referral code:', referralCode);
+          return res.status(400).json({
+            error: "Invalid referral code"
+          });
+        }
+        console.log('Valid referral code found for user:', referrer.id);
+      }
+
       const hashedPassword = await crypto.hashPassword(password);
+
+      // Generate unique referral code for new user
+      const generateUniqueReferralCode = async () => {
+        while (true) {
+          const code = randomBytes(4).toString('hex').toUpperCase();
+          const [existing] = await db
+            .select()
+            .from(users)
+            .where(eq(users.referralCode, code))
+            .limit(1);
+          if (!existing) return code;
+        }
+      };
+
+      const newReferralCode = await generateUniqueReferralCode();
 
       try {
         // Start transaction
         const newUser = await db.transaction(async (tx) => {
+          console.log('Starting registration transaction');
           // Create new user
           const [user] = await tx
             .insert(users)
@@ -265,6 +336,8 @@ export function setupAuth(app: Express) {
               isSuperAdmin: false,
               isEnabled: true,
               points: 1000, // Default welcome points
+              referralCode: newReferralCode,
+              referredBy: referralCode || null,
               isSouthAfrican: isSouthAfrican || false,
               idNumber: idNumber || null,
               dateOfBirth: dateOfBirth || null,
@@ -283,10 +356,10 @@ export function setupAuth(app: Express) {
               industry: industry || null,
               accountHolderName: accountHolderName || null,
               branchCode: branchCode || null,
-              referralCode: null,
-              referredBy: null
             })
             .returning();
+
+          console.log('Created new user:', user.id);
 
           if (!user) {
             throw new Error("Failed to create user record");
@@ -302,6 +375,115 @@ export function setupAuth(app: Express) {
               description: "Welcome bonus for new registration",
             });
 
+          // If user was referred, create or update referral stats
+          if (referrer) {
+            console.log('Processing referral rewards for referrer:', referrer.id);
+            // Award referral bonus points to referrer
+            await tx
+              .insert(transactions)
+              .values({
+                userId: referrer.id,
+                points: 2000,
+                type: "REFERRAL_BONUS",
+                description: `Referral bonus for inviting ${user.email}`,
+              });
+
+            // Update referrer's points
+            await tx
+              .update(users)
+              .set({ points: referrer.points + 2000 })
+              .where(eq(users.id, referrer.id));
+
+            // Update or create referral stats
+            const [existingStats] = await tx
+              .select()
+              .from(referralStats)
+              .where(eq(referralStats.userId, referrer.id))
+              .limit(1);
+
+            if (existingStats) {
+              await tx
+                .update(referralStats)
+                .set({ level1Count: existingStats.level1Count + 1 })
+                .where(eq(referralStats.userId, referrer.id));
+            } else {
+              await tx
+                .insert(referralStats)
+                .values({
+                  userId: referrer.id,
+                  level1Count: 1,
+                  level2Count: 0,
+                  level3Count: 0,
+                });
+            }
+
+            // If the referrer was also referred by someone (level 2)
+            if (referrer.referredBy) {
+              const [level2Referrer] = await tx
+                .select()
+                .from(users)
+                .where(eq(users.referralCode, referrer.referredBy))
+                .limit(1);
+
+              if (level2Referrer) {
+                const [level2Stats] = await tx
+                  .select()
+                  .from(referralStats)
+                  .where(eq(referralStats.userId, level2Referrer.id))
+                  .limit(1);
+
+                if (level2Stats) {
+                  await tx
+                    .update(referralStats)
+                    .set({ level2Count: level2Stats.level2Count + 1 })
+                    .where(eq(referralStats.userId, level2Referrer.id));
+                } else {
+                  await tx
+                    .insert(referralStats)
+                    .values({
+                      userId: level2Referrer.id,
+                      level1Count: 0,
+                      level2Count: 1,
+                      level3Count: 0,
+                    });
+                }
+
+                // Check for level 3
+                if (level2Referrer.referredBy) {
+                  const [level3Referrer] = await tx
+                    .select()
+                    .from(users)
+                    .where(eq(users.referralCode, level2Referrer.referredBy))
+                    .limit(1);
+
+                  if (level3Referrer) {
+                    const [level3Stats] = await tx
+                      .select()
+                      .from(referralStats)
+                      .where(eq(referralStats.userId, level3Referrer.id))
+                      .limit(1);
+
+                    if (level3Stats) {
+                      await tx
+                        .update(referralStats)
+                        .set({ level3Count: level3Stats.level3Count + 1 })
+                        .where(eq(referralStats.userId, level3Referrer.id));
+                    } else {
+                      await tx
+                        .insert(referralStats)
+                        .values({
+                          userId: level3Referrer.id,
+                          level1Count: 0,
+                          level2Count: 0,
+                          level3Count: 1,
+                        });
+                    }
+                  }
+                }
+              }
+            }
+          }
+
           return user;
         });
 
@@ -309,10 +491,16 @@ export function setupAuth(app: Express) {
         const { password: _, ...safeUser } = newUser;
 
         // Log in the user
+        console.log('Logging in new user:', safeUser.id);
         await new Promise((resolve, reject) => {
           req.login(safeUser, (err) => {
-            if (err) reject(err);
-            else resolve(null);
+            if (err) {
+              console.error('Login error after registration:', err);
+              reject(err);
+            } else {
+              console.log('Login successful after registration');
+              resolve(null);
+            }
           });
         });
 
