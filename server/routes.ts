@@ -278,34 +278,32 @@ export function registerRoutes(app: Express): Server {
     const { id } = req.params;
 
     try {
-      const updates = {
-        firstName: req.body.firstName,
-        lastName: req.body.lastName,
-        email: req.body.email,
-        phoneNumber: req.body.phoneNumber,
-        idNumber: req.body.idNumber,
-        dateOfBirth: req.body.dateOfBirth,
-        address: req.body.address,
-        city: req.body.city,
-        postalCode: req.body.postalCode,
-        employerName: req.body.employerName,
-        jobTitle: req.body.jobTitle,
-        industry: req.body.industry,
-        occupation: req.body.occupation,
-        employmentDuration: req.body.employmentDuration,
-        bankName: req.body.bankName,
-        accountType: req.body.accountType,
-        accountNumber: req.body.accountNumber,
-        accountHolderName: req.body.accountHolderName,
-        branchCode: req.body.branchCode,
-        selectedPackage: req.body.selectedPackage?.toUpperCase(),
-      };
-
-      const [updatedUser] = await db
-        .update(users)
-        .set(updates)
-        .where(eq(users.id, parseInt(id)))
-        .returning();
+      const [updatedUser] = await db.transaction(async (tx) => {
+        const [updatedUser] = await tx
+          .update(users)
+          .set({
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            email: req.body.email,
+            phoneNumber: req.body.phoneNumber,
+            idNumber: req.body.idNumber,
+            dateOfBirth: req.body.dateOfBirth,
+            address: req.body.address,
+            city: req.body.city,
+            postalCode: req.body.postalCode,
+            industry: req.body.industry,
+            occupation: req.body.occupation,
+            bankName: req.body.bankName,
+            accountType: req.body.accountType,
+            accountNumber: req.body.accountNumber,
+            accountHolderName: req.body.accountHolderName,
+            branchCode: req.body.branchCode,
+            selectedPackage: req.body.selectedPackage?.toUpperCase(),
+          })
+          .where(eq(users.id, parseInt(id)))
+          .returning();
+        return updatedUser;
+      });
 
       if (!updatedUser) {
         return res.status(404).json({ error: "User not found" });
@@ -313,7 +311,7 @@ export function registerRoutes(app: Express): Server {
 
       await logAdminAction({
         adminId: req.user.id,
-        actionType: "ADMIN_UPDATED",
+        actionType: "ADMIN_CREATED", 
         targetUserId: parseInt(id),
         details: `Updated user details for ID ${id}`,
       });
@@ -1002,8 +1000,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const allProducts = await db.query.products.findMany({
         where: eq(products.isEnabled, true),
-        columns: {
-          id: true,
+        columns: {          id: true,
           name: true,
           description: true,
         },

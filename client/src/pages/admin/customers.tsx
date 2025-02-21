@@ -727,11 +727,11 @@ export default function AdminCustomers() {
                                           <FormControl>
                                             <select {...field} className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white">
                                               <option value="">Select Package</option>
-                                              <option value="BEGINNER">Beginner</option>
-                                              <option value="NOVICE">Novice</option>
-                                              <option value="ACTIVE">Active</option>
-                                              <option value="PROFESSIONAL">Professional</option>
-                                              <option value="EXPERT">Expert</option>
+                                              <option value="BEGINNER">BEGINNER</option>
+                                              <option value="NOVICE">NOVICE</option>
+                                              <option value="ACTIVE">ACTIVE</option>
+                                              <option value="PROFESSIONAL">PROFESSIONAL</option>
+                                              <option value="EXPERT">EXPERT</option>
                                             </select>
                                           </FormControl>
                                           <FormMessage />
