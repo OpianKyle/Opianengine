@@ -205,7 +205,8 @@ export function setupAuth(app: Express) {
     try {
       console.log('Registration attempt with data:', {
         ...req.body,
-        password: '[REDACTED]'
+        password: '[REDACTED]',
+        referralCode: req.body.referralCode // Log the referral code
       });
 
       const registerSchema = z.object({
@@ -279,7 +280,7 @@ export function setupAuth(app: Express) {
       if (existingUser) {
         console.log('User already exists with email:', email);
         return res.status(400).json({
-          error: "This email address is already registered. Please try logging in or use a different email address."
+          error: "This email address is already registered"
         });
       }
 
@@ -299,7 +300,7 @@ export function setupAuth(app: Express) {
             error: "Invalid referral code"
           });
         }
-        console.log('Valid referral code found for user:', referrer.id);
+        console.log('Valid referral code found for referrer:', referrer.id);
       }
 
       const hashedPassword = await crypto.hashPassword(password);
@@ -318,12 +319,15 @@ export function setupAuth(app: Express) {
       };
 
       const newReferralCode = await generateUniqueReferralCode();
+      console.log('Generated new referral code:', newReferralCode);
 
       try {
         // Start transaction
         const newUser = await db.transaction(async (tx) => {
           console.log('Starting registration transaction');
-          // Create new user
+          console.log('Using referral code:', referralCode);
+
+          // Create new user with referral information
           const [user] = await tx
             .insert(users)
             .values({
@@ -337,7 +341,7 @@ export function setupAuth(app: Express) {
               isEnabled: true,
               points: 1000, // Default welcome points
               referralCode: newReferralCode,
-              referredBy: referralCode || null,
+              referredBy: referralCode || null, // Explicitly set referredBy
               isSouthAfrican: isSouthAfrican || false,
               idNumber: idNumber || null,
               dateOfBirth: dateOfBirth || null,
@@ -359,7 +363,11 @@ export function setupAuth(app: Express) {
             })
             .returning();
 
-          console.log('Created new user:', user.id);
+          console.log('Created new user:', {
+            id: user.id,
+            referralCode: user.referralCode,
+            referredBy: user.referredBy
+          });
 
           if (!user) {
             throw new Error("Failed to create user record");
@@ -378,6 +386,7 @@ export function setupAuth(app: Express) {
           // If user was referred, create or update referral stats
           if (referrer) {
             console.log('Processing referral rewards for referrer:', referrer.id);
+
             // Award referral bonus points to referrer
             await tx
               .insert(transactions)
@@ -417,7 +426,7 @@ export function setupAuth(app: Express) {
                 });
             }
 
-            // If the referrer was also referred by someone (level 2)
+            // Process level 2 and 3 referrals
             if (referrer.referredBy) {
               const [level2Referrer] = await tx
                 .select()
@@ -426,6 +435,7 @@ export function setupAuth(app: Express) {
                 .limit(1);
 
               if (level2Referrer) {
+                // Update level 2 referrer stats
                 const [level2Stats] = await tx
                   .select()
                   .from(referralStats)
@@ -448,7 +458,7 @@ export function setupAuth(app: Express) {
                     });
                 }
 
-                // Check for level 3
+                // Process level 3
                 if (level2Referrer.referredBy) {
                   const [level3Referrer] = await tx
                     .select()
