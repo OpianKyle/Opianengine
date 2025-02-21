@@ -223,7 +223,7 @@ export default function ProfilePage() {
           industry: data.industry,
           occupation: data.occupation,
           isSouthAfrican: data.isSouthAfrican,
-          selectedPackage: selectedPackage || "Beginner", // added default value here
+          selectedPackage: selectedPackage || "Beginner",
           bankName: data.bankName,
           accountType: data.accountType,
           accountNumber: data.accountNumber,
@@ -289,8 +289,10 @@ export default function ProfilePage() {
   });
 
   const handlePackageSelect = (packageName: string) => {
-    if (packageName !== user?.selectedPackage) {
-      setSelectedPackage(packageName);
+    // Convert to uppercase before comparing or saving
+    const upperPackageName = packageName.toUpperCase();
+    if (upperPackageName !== user?.selectedPackage) {
+      setSelectedPackage(upperPackageName);
       setShowPackageDialog(true);
     }
   };
@@ -299,7 +301,7 @@ export default function ProfilePage() {
     const currentValues = form.getValues();
     updateProfileMutation.mutate({
       ...currentValues,
-      selectedPackage: selectedPackage || "Beginner", // added default value here
+      selectedPackage: selectedPackage?.toUpperCase() || "BEGINNER",
     });
   };
 
@@ -337,7 +339,7 @@ export default function ProfilePage() {
                     <CarouselItem key={pkg.name} className="basis-full sm:basis-1/2 md:basis-1/2">
                       <PackageCard
                         pkg={pkg}
-                        isSelected={pkg.name === user?.selectedPackage}
+                        isSelected={pkg.name.toUpperCase() === user?.selectedPackage}
                         anySelected={!!user?.selectedPackage}
                         onSelect={() => handlePackageSelect(pkg.name)}
                       />
