@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// Match the account types with the database schema
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
 const profileSchema = z.object({
@@ -31,7 +32,7 @@ const profileSchema = z.object({
   isSouthAfrican: z.boolean(),
   selectedPackage: z.number().optional(),
   bankName: z.string().min(1, "Bank name is required"),
-  accountType: z.enum(accountTypes).optional().nullable(),
+  accountType: z.enum(accountTypes),
   accountNumber: z.string().min(1, "Account number is required"),
   hasCreditCard: z.boolean(),
   password: z.string().optional(),
@@ -68,7 +69,7 @@ export default function ProfilePage() {
       isSouthAfrican: user?.isSouthAfrican || false,
       selectedPackage: user?.selectedPackage || 1,
       bankName: user?.bankName || "",
-      accountType: user?.accountType || "",
+      accountType: (user?.accountType as ProfileFormData['accountType']) || "SAVINGS",
       accountNumber: user?.accountNumber || "",
       hasCreditCard: user?.hasCreditCard || false,
       password: "",
