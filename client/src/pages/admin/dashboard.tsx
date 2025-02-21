@@ -7,21 +7,52 @@ import {
 import { Users, ShoppingBag, TrendingUp, Award } from 'lucide-react';
 import { formatTransactionType } from "@/lib/utils";
 
+interface Transaction {
+  createdAt: string;
+  points: number;
+  type: string;
+}
+
+interface Activity {
+  id: number;
+  type: string;
+  pointsValue: number;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  activities?: Activity[];
+}
+
+interface ProductAssignment {
+  id: number;
+  product: Product;
+}
+
+interface Customer {
+  id: number;
+  points: number;
+  transactions: Transaction[];
+  productAssignments?: ProductAssignment[];
+}
+
 export default function AdminDashboard() {
-  const { data: customers } = useQuery({
+  const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ["/api/admin/customers"],
   });
 
-  const { data: rewards } = useQuery({
+  const { data: rewards = [] } = useQuery<any[]>({
     queryKey: ["/api/rewards"],
   });
 
-  // Calculate key metrics
+  // Calculate key metrics with safe defaults
   const totalCustomers = customers?.length || 0;
-  const totalPoints = customers?.reduce((acc: number, c: any) => acc + c.points, 0) || 0;
-  const activeRewards = rewards?.filter((r: any) => r.available).length || 0;
-  const totalRedemptions = customers?.reduce((acc: number, c: any) => 
-    acc + c.transactions.filter((t: any) => t.type === 'REDEEMED').length, 0) || 0;
+  const totalPoints = customers?.reduce((acc, c) => acc + (c.points || 0), 0) || 0;
+  const activeRewards = rewards?.filter((r) => r?.available)?.length || 0;
+  const totalRedemptions = customers?.reduce((acc, c) => 
+    acc + (c.transactions?.filter(t => t.type === 'REDEEMED')?.length || 0), 0) || 0;
 
   const stats = [
     {
@@ -50,18 +81,20 @@ export default function AdminDashboard() {
     },
   ];
 
-  // Prepare transaction data for charts
-  const transactionData = customers?.flatMap((c: any) => 
-    c.transactions.map((t: any) => ({
+  // Prepare transaction data for charts with safe defaults
+  const transactionData = customers?.flatMap((c) => 
+    c.transactions?.map((t) => ({
       date: new Date(t.createdAt).toLocaleDateString(),
       points: Math.abs(t.points),
       type: t.type,
-    }))
+    })) || []
   ) || [];
 
-  // Group transactions by type
-  const transactionsByType = transactionData.reduce((acc: any, t: any) => {
-    acc[t.type] = (acc[t.type] || 0) + 1;
+  // Group transactions by type with safe access
+  const transactionsByType = transactionData.reduce((acc: Record<string, number>, t) => {
+    if (t.type) {
+      acc[t.type] = (acc[t.type] || 0) + 1;
+    }
     return acc;
   }, {});
 
