@@ -273,6 +273,61 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.put("/api/admin/users/:id/details", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+    const { id } = req.params;
+
+    try {
+      const updates = {
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        email: req.body.email,
+        phoneNumber: req.body.phoneNumber,
+        idNumber: req.body.idNumber,
+        dateOfBirth: req.body.dateOfBirth,
+        address: req.body.address,
+        city: req.body.city,
+        postalCode: req.body.postalCode,
+        employerName: req.body.employerName,
+        jobTitle: req.body.jobTitle,
+        industry: req.body.industry,
+        occupation: req.body.occupation,
+        employmentDuration: req.body.employmentDuration,
+        bankName: req.body.bankName,
+        accountType: req.body.accountType,
+        accountNumber: req.body.accountNumber,
+        accountHolderName: req.body.accountHolderName,
+        branchCode: req.body.branchCode,
+        selectedPackage: req.body.selectedPackage?.toUpperCase(),
+      };
+
+      const [updatedUser] = await db
+        .update(users)
+        .set(updates)
+        .where(eq(users.id, parseInt(id)))
+        .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await logAdminAction({
+        adminId: req.user.id,
+        actionType: "ADMIN_UPDATED",
+        targetUserId: parseInt(id),
+        details: `Updated user details for ID ${id}`,
+      });
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user details:', error);
+      res.status(500).json({ 
+        error: 'Failed to update user details',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred'
+      });
+    }
+  });
+
   app.post("/api/admin/users/:id/toggle-status", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
