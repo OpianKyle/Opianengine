@@ -14,15 +14,9 @@ import jwt from 'jsonwebtoken';
 
 const scryptAsync = promisify(scrypt);
 
-// Create the MemoryStore using a dynamic import
-let MemoryStore: any;
-try {
-  const memorystore = await import('memorystore');
-  MemoryStore = memorystore.default(session);
-} catch (error) {
-  console.error('Failed to import memorystore:', error);
-  process.exit(1);
-}
+// Initialize MemoryStore synchronously
+import memorystore from 'memorystore';
+const MemoryStore = memorystore(session);
 
 export function setupAuth(app: Express) {
   // Configure session middleware with MemoryStore
@@ -81,8 +75,7 @@ export function setupAuth(app: Express) {
         const [user] = await db
           .select()
           .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
+          .where(eq(users.email, email));
 
         if (!user) {
           console.log('User not found');
@@ -112,6 +105,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/login", (req, res, next) => {
     try {
+      console.log('Login request received:', { email: req.body.email });
       const result = loginSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({
@@ -138,8 +132,8 @@ export function setupAuth(app: Express) {
 
           // Generate token for WebSocket authentication
           const token = generateToken(user);
+          console.log('Login successful, token generated for user:', (user as any).id);
 
-          console.log('User logged in successfully:', user);
           return res.json({ user, token });
         });
       })(req, res, next);
@@ -440,32 +434,39 @@ export const crypto = {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
 
-export function verifyToken(token: string): any {
+interface JwtPayload {
+  id: number;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  exp?: number;
+}
+
+export function verifyToken(token: string): JwtPayload | null {
   try {
     console.log('Verifying token:', {
       tokenLength: token.length,
       firstChars: token.substring(0, 10) + '...',
     });
 
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     console.log('Token verified successfully:', {
       userId: decoded.id,
       isAdmin: decoded.isAdmin,
-      exp: new Date(decoded.exp * 1000).toISOString()
+      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
     });
 
     return decoded;
   } catch (error) {
     console.error('Token verification failed:', {
-      error: error.message,
-      name: error.name,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown error type',
       tokenLength: token?.length
     });
     return null;
   }
 }
 
-export function generateToken(user: any) {
+export function generateToken(user: any): string {
   return jwt.sign(
     {
       id: user.id,
