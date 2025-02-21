@@ -14,22 +14,7 @@ import { Loader2, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 // Update packages to match registration
 const packages = [
@@ -113,7 +98,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
   anySelected: boolean
 }) => (
   <Card
-    className={`mx-2 h-[520px] cursor-pointer transition-all relative
+    className={`mx-2 h-[680px] cursor-pointer transition-all relative
       ${isSelected
         ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
         : anySelected
@@ -132,7 +117,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
       <CardDescription className="text-lg font-semibold">R{pkg.price}/month</CardDescription>
     </CardHeader>
     <CardContent className="p-6">
-      <ScrollArea className="h-[380px] w-full pr-4">
+      <div className="h-full">
         <ul className="space-y-3">
           {pkg.perks.map((perk, index) => (
             <li key={index} className="flex items-start text-sm">
@@ -141,7 +126,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
             </li>
           ))}
         </ul>
-      </ScrollArea>
+      </div>
     </CardContent>
   </Card>
 );
