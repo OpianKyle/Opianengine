@@ -435,6 +435,8 @@ export default function AdminCustomers() {
                               <div className="space-y-1">
                                 <p><span className="font-medium">Employer:</span> {customer.employerName}</p>
                                 <p><span className="font-medium">Job Title:</span> {customer.jobTitle}</p>
+                                <p><span className="font-medium">Industry:</span> {customer.industry}</p>
+                                <p><span className="font-medium">Occupation:</span> {customer.occupation}</p>
                                 <p><span className="font-medium">Employment Duration:</span> {customer.employmentDuration}</p>
                               </div>
                             </div>
@@ -443,6 +445,9 @@ export default function AdminCustomers() {
                               <div className="space-y-1">
                                 <p><span className="font-medium">Bank:</span> {customer.bankName}</p>
                                 <p><span className="font-medium">Account Type:</span> {customer.accountType}</p>
+                                <p><span className="font-medium">Account Number:</span> {customer.accountNumber}</p>
+                                <p><span className="font-medium">Account Holder Name:</span> {customer.accountHolderName}</p>
+                                <p><span className="font-medium">Branch Code:</span> {customer.branchCode}</p>
                                 <p><span className="font-medium">Has Credit Card:</span> {customer.hasCreditCard ? 'Yes' : 'No'}</p>
                               </div>
                             </div>
@@ -785,7 +790,7 @@ export default function AdminCustomers() {
                                                 <div key={activity.id} className="flex justify-between items-center py-2">
                                                   <span className="text-sm">
                                                     {assignment.product.name} - {activity.type.replace('_', ' ')}
-                                                    {(activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE") && (
+                                                    {(activity.type=== "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE") && (
                                                       <span className="text-xs text-muted-foreground ml-1">
                                                         (Base: {activity.baseValue || 0})
                                                       </span>
