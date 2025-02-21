@@ -53,18 +53,36 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
+      console.log('Fetching referral info for user:', req.user.id);
+
       // Get the user's referral data
       const [referralInfo] = await db
         .select({
           referralCode: users.referralCode,
+          firstName: users.firstName,
+          lastName: users.lastName
         })
         .from(users)
         .where(eq(users.id, req.user.id))
         .limit(1);
 
       if (!referralInfo) {
+        console.error('User not found:', req.user.id);
         return res.status(404).json({ error: "User not found" });
       }
+
+      if (!referralInfo.referralCode) {
+        // Generate a new referral code if one doesn't exist
+        const newReferralCode = `REF${req.user.id}${Date.now().toString(36)}`;
+        await db
+          .update(users)
+          .set({ referralCode: newReferralCode })
+          .where(eq(users.id, req.user.id));
+
+        referralInfo.referralCode = newReferralCode;
+      }
+
+      console.log('Found referral code:', referralInfo.referralCode);
 
       // Get users who were referred by this user
       const referrals = await db
@@ -78,6 +96,8 @@ export function registerRoutes(app: Express): Server {
         .where(eq(users.referredBy, referralInfo.referralCode))
         .orderBy(desc(users.createdAt));
 
+      console.log('Found referrals count:', referrals.length);
+
       res.json({
         referralCode: referralInfo.referralCode,
         referralCount: referrals.length,
@@ -89,6 +109,28 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+
+  app.get("/api/products/assignments/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+    const { id } = req.params;
+
+    try {
+      const assignment = await db.query.productAssignments.findFirst({
+        where: eq(productAssignments.id, parseInt(id)),
+        with: {
+          product: true
+        }
+      });
+
+      if (!assignment) {
+        return res.status(404).json({ error: "Assignment not found" });
+      }
+      res.json(assignment);
+    } catch (error) {
+      console.error('Error fetching assignment:', error);
+      res.status(500).json({ error: 'Failed to fetch assignment' });
+    }
+  });
 
   const httpServer = createServer(app);
   const wsServer = setupWebSocketServer(httpServer);
@@ -989,7 +1031,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/products/assignments/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"})
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
 
     try {
@@ -999,16 +1041,17 @@ export function registerRoutes(app: Express): Server {
           product: true,
           user: true,
         }
-      })
+      });
+
       if (!assignment) {
-        return res.status(404).json({ error: "Assignment notfound" });
+        return res.status(404).json({ error: "Assignment not found" });
       }
       res.json(assignment);
     } catch (error) {
-      console.error("Error fetching assignment:", error);
-      res.status(500).json({ error: "Failed to fetch assignment" });
+      console.error('Error fetching assignment:', error);
+      res.status(500).json({ error: 'Failed to fetch assignment' });
     }
-  })
+  });
 
   app.get("/api/products/customer", async (req, res) => {
     try {      const allProducts = await db.query.products.findMany({
