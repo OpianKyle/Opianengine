@@ -47,6 +47,45 @@ export function registerRoutes(app: Express): Server {
   // Mount referral routes
   app.use(referralRouter);
 
+  app.get("/api/customer/referral", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      // Get the user's referral data
+      const [referralInfo] = await db
+        .select({
+          referralCode: users.referral_code, //Corrected field name
+        })
+        .from(users)
+        .where(eq(users.id, req.user.id))
+        .limit(1);
+
+      // Get users who were referred by this user
+      const referrals = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.referred_by, referralInfo.referralCode)) //Corrected field name
+        .orderBy(desc(users.createdAt));
+
+      res.json({
+        referralCode: referralInfo.referralCode,
+        referralCount: referrals.length,
+        referrals: referrals
+      });
+    } catch (error) {
+      console.error('Error fetching referral data:', error);
+      res.status(500).json({ error: 'Failed to fetch referral data' });
+    }
+  });
+
+
   const httpServer = createServer(app);
   const wsServer = setupWebSocketServer(httpServer);
 
@@ -968,8 +1007,7 @@ export function registerRoutes(app: Express): Server {
   })
 
   app.get("/api/products/customer", async (req, res) => {
-    try {
-      const allProducts = await db.query.products.findMany({
+    try {      const allProducts = await db.query.products.findMany({
         where: eq(products.isEnabled, true),
         columns: {          id: true,
           name: true,
