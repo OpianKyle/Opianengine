@@ -166,7 +166,8 @@ export default function RegisterPage() {
     branchCode: "",
     accountNumber: "",
     accountType: "",
-    acceptMandate: false
+    acceptMandate: false,
+    referralCode: "" 
   });
 
   const [signature, setSignature] = useState<SignatureCanvas | null>(null);
@@ -178,7 +179,13 @@ export default function RegisterPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
-    // Referral code handling removed
+    if (ref) {
+      setFormData(prev => ({
+        ...prev,
+        referralCode: ref
+      }));
+      console.log('Referral code set from URL:', ref);
+    }
   }, []);
 
   if (isLoading) {
@@ -278,8 +285,10 @@ export default function RegisterPage() {
         jobTitle: formData.occupation,
         signature: signatureData,
         selectedPackage: formData.selectedPackage,
+        referralCode: formData.referralCode 
       };
 
+      console.log('Submitting registration with referral code:', formData.referralCode);
       const user = await registerMutation.mutateAsync(registrationData);
 
       toast({
