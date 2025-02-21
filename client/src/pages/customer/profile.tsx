@@ -173,9 +173,10 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showPackageDialog, setShowPackageDialog] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<string>("Beginner");
+  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
   useEffect(() => {
+    // Update selected package when user data is loaded
     if (user?.selectedPackage) {
       setSelectedPackage(user.selectedPackage);
     }
@@ -222,7 +223,7 @@ export default function ProfilePage() {
           industry: data.industry,
           occupation: data.occupation,
           isSouthAfrican: data.isSouthAfrican,
-          selectedPackage,
+          selectedPackage: selectedPackage || "Beginner", // added default value here
           bankName: data.bankName,
           accountType: data.accountType,
           accountNumber: data.accountNumber,
@@ -234,7 +235,7 @@ export default function ProfilePage() {
 
         const response = await fetch("/api/user", {
           method: "PUT",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
             "Accept": "application/json"
           },
@@ -298,7 +299,7 @@ export default function ProfilePage() {
     const currentValues = form.getValues();
     updateProfileMutation.mutate({
       ...currentValues,
-      selectedPackage,
+      selectedPackage: selectedPackage || "Beginner", // added default value here
     });
   };
 
@@ -336,8 +337,8 @@ export default function ProfilePage() {
                     <CarouselItem key={pkg.name} className="basis-full sm:basis-1/2 md:basis-1/2">
                       <PackageCard
                         pkg={pkg}
-                        isSelected={pkg.name === user.selectedPackage}
-                        anySelected={true}
+                        isSelected={pkg.name === user?.selectedPackage}
+                        anySelected={!!user?.selectedPackage}
                         onSelect={() => handlePackageSelect(pkg.name)}
                       />
                     </CarouselItem>
