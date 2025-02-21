@@ -126,7 +126,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
 }) => (
   <div className="w-full px-4">
     <Card
-      className={`w-full cursor-pointer transition-all relative
+      className={`w-full cursor-pointer transition-all relative overflow-visible
         ${isSelected
           ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
           : anySelected
@@ -135,8 +135,8 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
         }`}
       onClick={onSelect}
     >
-      <CardHeader className="p-8">
-        <CardTitle className="flex justify-between items-center text-2xl mb-2">
+      <CardHeader className="p-6">
+        <CardTitle className="flex justify-between items-center text-2xl">
           {pkg.display}
           {isSelected && (
             <Check className="h-6 w-6 text-[#43EB3E]" />
@@ -144,12 +144,12 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
         </CardTitle>
         <CardDescription className="text-xl font-semibold">R{pkg.price}/month</CardDescription>
       </CardHeader>
-      <CardContent className="p-8">
-        <div className="space-y-6">
-          <ul className="space-y-4">
+      <CardContent className="p-6">
+        <div className="space-y-4">
+          <ul className="space-y-3">
             {pkg.perks.map((perk, index) => (
-              <li key={index} className="flex items-start text-base">
-                <Badge variant="outline" className="mr-3 mt-1 shrink-0">✓</Badge>
+              <li key={index} className="flex items-start text-sm">
+                <Badge variant="outline" className="mr-2 mt-0.5 shrink-0">✓</Badge>
                 <span>{perk}</span>
               </li>
             ))}
