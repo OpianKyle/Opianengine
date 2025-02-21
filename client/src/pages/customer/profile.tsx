@@ -13,6 +13,8 @@ import { Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
+
 const profileSchema = z.object({
   email: z.string().email("Invalid email address"),
   firstName: z.string().min(1, "First name is required"),
@@ -29,21 +31,13 @@ const profileSchema = z.object({
   isSouthAfrican: z.boolean(),
   selectedPackage: z.number().optional(),
   bankName: z.string().min(1, "Bank name is required"),
-  accountType: z.string().min(1, "Account type is required"),
+  accountType: z.enum(accountTypes).optional().nullable(),
   accountNumber: z.string().min(1, "Account number is required"),
   hasCreditCard: z.boolean(),
   password: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
-
-const accountTypes = [
-  "Savings",
-  "Cheque",
-  "Credit",
-  "Transmission",
-  "Business"
-];
 
 const packages = [
   { id: 1, name: "Basic Package" },
@@ -419,7 +413,7 @@ export default function ProfilePage() {
                           <SelectContent>
                             {accountTypes.map((type) => (
                               <SelectItem key={type} value={type}>
-                                {type}
+                                {type.charAt(0) + type.slice(1).toLowerCase()}
                               </SelectItem>
                             ))}
                           </SelectContent>
