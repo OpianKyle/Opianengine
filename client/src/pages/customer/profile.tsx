@@ -69,8 +69,8 @@ export default function ProfilePage() {
       postalCode: user?.postalCode || "",
       idNumber: user?.idNumber || "",
       dateOfBirth: user?.dateOfBirth || "",
-      industry: user?.employerName || "",
-      occupation: user?.jobTitle || "",
+      industry: user?.industry || "",
+      occupation: user?.occupation || "",
       isSouthAfrican: user?.isSouthAfrican || false,
       selectedPackage: user?.selectedPackage || 1,
       bankName: user?.bankName || "",
@@ -92,8 +92,8 @@ export default function ProfilePage() {
           phoneNumber: data.mobileNumber,
           address: data.addressLine1 + (data.addressLine2 ? `\n${data.addressLine2}` : ''),
           city: data.suburb,
-          employerName: data.industry,
-          jobTitle: data.occupation,
+          industry: data.industry,
+          occupation: data.occupation,
           password: data.password || undefined,
         }),
       });
@@ -407,8 +407,8 @@ export default function ProfilePage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Account Type</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
+                        <Select
+                          onValueChange={field.onChange}
                           defaultValue={field.value}
                         >
                           <FormControl>
@@ -473,9 +473,9 @@ export default function ProfilePage() {
                     <FormItem>
                       <FormLabel>New Password (leave empty to keep current)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="password" 
-                          {...field} 
+                        <Input
+                          type="password"
+                          {...field}
                           autoComplete="new-password"
                         />
                       </FormControl>
@@ -484,8 +484,8 @@ export default function ProfilePage() {
                   )}
                 />
 
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full"
                   disabled={updateProfileMutation.isPending}
                 >

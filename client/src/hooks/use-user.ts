@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from "zod";
 
+const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
+
 const userSchema = z.object({
   id: z.number(),
   email: z.string().email(),
@@ -21,17 +23,25 @@ const userSchema = z.object({
   address: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
   postalCode: z.string().nullable().optional(),
+  // Employment information
+  industry: z.string().nullable().optional(),
+  occupation: z.string().nullable().optional(),
   employerName: z.string().nullable().optional(),
   jobTitle: z.string().nullable().optional(),
+  employmentDuration: z.string().nullable().optional(),
+  // Banking information
   selectedPackage: z.union([z.string(), z.number()]).nullable().optional(),
   bankName: z.string().nullable().optional(),
-  accountType: z.string().nullable().optional(),
+  accountType: z.enum(accountTypes).nullable().optional(),
   accountNumber: z.string().nullable().optional(),
+  accountHolderName: z.string().nullable().optional(),
+  branchCode: z.string().nullable().optional(),
   hasCreditCard: z.boolean().optional(),
   signature: z.string().nullable().optional(),
 });
 
 export type User = z.infer<typeof userSchema>;
+export type AccountType = typeof accountTypes[number];
 
 const loginResponseSchema = z.object({
   user: userSchema,
@@ -134,12 +144,19 @@ export function useUser() {
       address?: string;
       city?: string;
       postalCode?: string;
+      // Employment information
+      industry?: string;
+      occupation?: string;
       employerName?: string;
       jobTitle?: string;
+      employmentDuration?: string;
+      // Banking information
       selectedPackage?: number | string;
       bankName?: string;
-      accountType?: string;
+      accountType?: AccountType;
       accountNumber?: string;
+      accountHolderName?: string;
+      branchCode?: string;
       hasCreditCard?: boolean;
       signature?: string;
     }) => {

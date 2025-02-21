@@ -373,29 +373,78 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/admin/customers", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const customers = await db.query.users.findMany({
-      where: eq(users.isAdmin, false),
-      orderBy: desc(users.createdAt),
-      with: {
-        transactions: true,
-        productAssignments: {
-          with: {
-            product: {
-              with: {
-                activities: {
-                  columns: {
-                    id: true,
-                    type: true,
-                    pointsValue: true
+    try {
+      console.log('Fetching customers with all fields...');
+      const customers = await db.query.users.findMany({
+        where: eq(users.isAdmin, false),
+        orderBy: desc(users.createdAt),
+        columns: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
+          isEnabled: true,
+          points: true,
+          createdAt: true,
+          // Adding missing fields
+          industry: true,
+          occupation: true,
+          employerName: true,
+          employmentDuration: true,
+          jobTitle: true,
+          // Banking information
+          bankName: true,
+          accountType: true,
+          accountNumber: true,
+          accountHolderName: true,
+          branchCode: true,
+          hasCreditCard: true,
+          // Address information
+          address: true,
+          city: true,
+          postalCode: true,
+          // Personal information
+          idNumber: true,
+          dateOfBirth: true,
+          isSouthAfrican: true,
+          // Referral information
+          referral_code: true,
+          referred_by: true
+        },
+        with: {
+          transactions: true,
+          productAssignments: {
+            with: {
+              product: {
+                with: {
+                  activities: {
+                    columns: {
+                      id: true,
+                      type: true,
+                      pointsValue: true
+                    }
                   }
                 }
-              }
+              },
             },
           },
         },
-      },
-    });
-    res.json(customers);
+      });
+
+      console.log('Customers fetched:', customers.map(c => ({
+        id: c.id,
+        name: `${c.firstName} ${c.lastName}`,
+        industry: c.industry,
+        occupation: c.occupation,
+        accountType: c.accountType
+      })));
+
+      res.json(customers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    }
   });
 
   app.delete("/api/admin/customers/:id", async (req, res) => {
@@ -964,8 +1013,7 @@ export function registerRoutes(app: Express): Server {
       });
 
       const adminUsers = await db
-        .select()
-        .from(users)
+        .select        .from(users)
         .where(eq(users.isAdmin, true));
 
       for(const admin of adminUsers) {

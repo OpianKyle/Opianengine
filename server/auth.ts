@@ -515,11 +515,7 @@ const registerSchema = z.object({
   ]).optional().nullable(),
   // Banking Information
   bankName: z.string().optional().nullable(),
-  accountType: z.string()
-    .transform(val => val?.toUpperCase())
-    .pipe(z.enum(["CHEQUE", "SAVINGS", "CURRENT"]))
-    .optional()
-    .nullable(),
+  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
   accountNumber: z.string().optional().nullable(),
   accountHolderName: z.string().optional().nullable(),
   branchCode: z.string().optional().nullable(),

@@ -102,7 +102,8 @@ const packages = [
   }
 ];
 
-// Removed salaryBrackets array
+// Update the accountTypes array to match the schema
+const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"];
 
 const industries = [
   "Agriculture",
@@ -602,8 +603,11 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                         <SelectValue placeholder="Type of Account" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="savings">Savings</SelectItem>
-                        <SelectItem value="current">Current</SelectItem>
+                        {accountTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type.charAt(0) + type.slice(1).toLowerCase()}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
