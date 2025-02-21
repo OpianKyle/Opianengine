@@ -11,31 +11,31 @@ const userSchema = z.object({
   isSuperAdmin: z.boolean().default(false),
   isEnabled: z.boolean().default(true),
   points: z.number().default(0),
-  referralCode: z.string().nullable().optional(),
-  referredBy: z.string().nullable().optional(),
+  referralCode: z.string().nullable(),
+  referredBy: z.string().nullable(),
   createdAt: z.string(),
-  // Extended fields
+  // Extended fields - all optional and nullable
   isSouthAfrican: z.boolean().optional(),
-  idNumber: z.string().optional(),
-  dateOfBirth: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  postalCode: z.string().optional(),
-  employerName: z.string().optional(),
-  jobTitle: z.string().optional(),
-  selectedPackage: z.number().optional(),
-  bankName: z.string().optional(),
-  accountType: z.string().optional(),
-  accountNumber: z.string().optional(),
+  idNumber: z.string().nullable().optional(),
+  dateOfBirth: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  postalCode: z.string().nullable().optional(),
+  employerName: z.string().nullable().optional(),
+  jobTitle: z.string().nullable().optional(),
+  selectedPackage: z.union([z.string(), z.number()]).nullable().optional(),
+  bankName: z.string().nullable().optional(),
+  accountType: z.string().nullable().optional(),
+  accountNumber: z.string().nullable().optional(),
   hasCreditCard: z.boolean().optional(),
-  signature: z.string().optional(),
+  signature: z.string().nullable().optional(),
 });
 
 export type User = z.infer<typeof userSchema>;
 
 const loginResponseSchema = z.object({
   user: userSchema,
-  token: z.string().optional()
+  token: z.string()
 });
 
 export function useUser() {
@@ -91,8 +91,8 @@ export function useUser() {
       }
 
       const data = await response.json();
-      const user = loginResponseSchema.parse(data).user;
-      return user;
+      const parsedData = loginResponseSchema.parse(data);
+      return parsedData.user;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
@@ -136,7 +136,7 @@ export function useUser() {
       postalCode?: string;
       employerName?: string;
       jobTitle?: string;
-      selectedPackage?: number;
+      selectedPackage?: number | string;
       bankName?: string;
       accountType?: string;
       accountNumber?: string;
