@@ -17,25 +17,35 @@ import {
   FaEnvelope as EmailIcon
 } from "react-icons/fa6";
 
-interface ReferralStats {
+interface Referral {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  createdAt: string;
+  selectedPackage: string | null;
+}
+
+interface ReferralResponse {
   level1Count: number;
   level2Count: number;
   level3Count: number;
   referralCode: string;
-  referrals: Array<{
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    createdAt: string;
-    selectedPackage: string | null;
-  }>;
+  referrals: {
+    level1: Referral[];
+    level2: Referral[];
+    level3: Referral[];
+  };
+  packageStats: {
+    level1: Record<string, { count: number; commission: number }>;
+    level2: Record<string, { count: number; commission: number }>;
+    level3: Record<string, { count: number; commission: number }>;
+  };
   commission: {
     level1Amount: number;
     level2Amount: number;
     level3Amount: number;
     totalAmount: number;
-    isPaid: boolean;
   };
 }
 
@@ -43,7 +53,7 @@ export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const { data: referralStats, isLoading } = useQuery<ReferralStats>({
+  const { data: referralStats, isLoading } = useQuery<ReferralResponse>({
     queryKey: ["/api/customer/referrals"],
     queryFn: async () => {
       const response = await fetch("/api/customer/referrals", {
@@ -271,7 +281,7 @@ export default function ReferralsPage() {
         <CardContent>
           <ScrollArea className="h-[400px]">
             <div className="space-y-4">
-              {referralStats?.referrals.map((referral) => (
+              {referralStats?.referrals.level1.map((referral) => (
                 <div
                   key={referral.id}
                   className="flex items-center justify-between p-4 border rounded-lg"
@@ -294,7 +304,7 @@ export default function ReferralsPage() {
                   </div>
                 </div>
               ))}
-              {(!referralStats?.referrals || referralStats.referrals.length === 0) && (
+              {(!referralStats?.referrals.level1 || referralStats.referrals.level1.length === 0) && (
                 <p className="text-center text-muted-foreground py-4">
                   No referrals yet. Share your referral link to get started!
                 </p>
