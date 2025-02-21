@@ -208,28 +208,45 @@ export default function ProfilePage() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      const response = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: 'include',
-        body: JSON.stringify({
-          ...data,
-          phoneNumber: data.mobileNumber,
-          address: data.addressLine1 + (data.addressLine2 ? `\n${data.addressLine2}` : ''),
-          city: data.suburb,
-          industry: data.industry,
-          occupation: data.occupation,
-          selectedPackage: selectedPackage,
-          password: data.password || undefined,
-        }),
-      });
+      try {
+        const response = await fetch("/api/user/profile", {
+          method: "PUT",
+          headers: { 
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            ...data,
+            phoneNumber: data.mobileNumber,
+            address: data.addressLine1 + (data.addressLine2 ? `\n${data.addressLine2}` : ''),
+            city: data.suburb,
+            industry: data.industry,
+            occupation: data.occupation,
+            selectedPackage: selectedPackage,
+            password: data.password || undefined,
+          }),
+        });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
+        if (!response.ok) {
+          // Try to parse error message from JSON response
+          try {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update profile');
+          } catch (e) {
+            // If parsing JSON fails, use text response
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to update profile');
+          }
+        }
+
+        return response.json();
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error('An unexpected error occurred');
       }
-
-      return response.json();
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/user"], (oldData: any) => ({
@@ -460,8 +477,6 @@ export default function ProfilePage() {
                     )}
                   />
 
-
-                  {/*Removed original selectedPackage FormField */}
 
                 </div>
 
