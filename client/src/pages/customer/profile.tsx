@@ -173,35 +173,11 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showPackageDialog, setShowPackageDialog] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
-
-  const form = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      email: user?.email || "",
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      mobileNumber: user?.phoneNumber || "",
-      addressLine1: user?.address?.split('\n')[0] || "",
-      addressLine2: user?.address?.split('\n')[1] || "",
-      suburb: user?.city || "",
-      postalCode: user?.postalCode || "",
-      idNumber: user?.idNumber || "",
-      dateOfBirth: user?.dateOfBirth || "",
-      industry: user?.industry || "",
-      occupation: user?.occupation || "",
-      isSouthAfrican: user?.isSouthAfrican || false,
-      selectedPackage: user?.selectedPackage || 1,
-      bankName: user?.bankName || "",
-      accountType: (user?.accountType as ProfileFormData['accountType']) || "SAVINGS",
-      accountNumber: user?.accountNumber || "",
-      hasCreditCard: user?.hasCreditCard || false,
-      password: "",
-    },
-  });
+  const [selectedPackage, setSelectedPackage] = useState<number>(1);
 
   useEffect(() => {
     if (user?.selectedPackage) {
+      // Ensure we're working with a number
       setSelectedPackage(Number(user.selectedPackage));
     }
   }, [user]);
@@ -229,23 +205,22 @@ export default function ProfilePage() {
         });
 
         if (!response.ok) {
-          // Try to parse error message from JSON response
+          let errorMessage = 'Failed to update profile';
           try {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to update profile');
-          } catch (e) {
-            // If parsing JSON fails, use text response
+            errorMessage = errorData.message || errorMessage;
+          } catch {
             const errorText = await response.text();
-            throw new Error(errorText || 'Failed to update profile');
+            if (errorText) errorMessage = errorText;
           }
+          throw new Error(errorMessage);
         }
 
-        return response.json();
+        const responseData = await response.json();
+        return responseData;
       } catch (error) {
-        if (error instanceof Error) {
-          throw error;
-        }
-        throw new Error('An unexpected error occurred');
+        console.error('Profile update error:', error);
+        throw error instanceof Error ? error : new Error('An unexpected error occurred');
       }
     },
     onSuccess: (data) => {
@@ -270,6 +245,31 @@ export default function ProfilePage() {
     },
   });
 
+  const form = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      email: user?.email || "",
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      mobileNumber: user?.phoneNumber || "",
+      addressLine1: user?.address?.split('\n')[0] || "",
+      addressLine2: user?.address?.split('\n')[1] || "",
+      suburb: user?.city || "",
+      postalCode: user?.postalCode || "",
+      idNumber: user?.idNumber || "",
+      dateOfBirth: user?.dateOfBirth || "",
+      industry: user?.industry || "",
+      occupation: user?.occupation || "",
+      isSouthAfrican: user?.isSouthAfrican || false,
+      selectedPackage: user?.selectedPackage || 1,
+      bankName: user?.bankName || "",
+      accountType: (user?.accountType as ProfileFormData['accountType']) || "SAVINGS",
+      accountNumber: user?.accountNumber || "",
+      hasCreditCard: user?.hasCreditCard || false,
+      password: "",
+    },
+  });
+
   const handlePackageSelect = (packageId: number) => {
     if (packageId !== user?.selectedPackage) {
       setSelectedPackage(packageId);
@@ -281,7 +281,7 @@ export default function ProfilePage() {
     const currentValues = form.getValues();
     updateProfileMutation.mutate({
       ...currentValues,
-      selectedPackage: selectedPackage || 1,
+      selectedPackage: selectedPackage,
     });
   };
 

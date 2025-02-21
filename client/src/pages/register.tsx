@@ -199,7 +199,7 @@ export default function RegisterPage() {
     suburb: "",
     postalCode: "",
     hasCreditCard: false,
-    selectedPackage: null,
+    selectedPackage: 1, 
     accountHolderName: "",
     bankName: "",
     branchCode: "",
@@ -315,7 +315,8 @@ export default function RegisterPage() {
         city: formData.suburb,
         employerName: formData.industry,
         jobTitle: formData.occupation,
-        signature: signatureData
+        signature: signatureData,
+        selectedPackage: formData.selectedPackage, 
       };
 
       const user = await registerMutation.mutateAsync(registrationData);
