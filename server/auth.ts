@@ -4,7 +4,7 @@ import { type Express, Request } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, transactions, referralStats } from "@db/schema";
+import { users, transactions } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -16,7 +16,6 @@ import memorystore from 'memorystore';
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
 
-// Define passport User type
 declare global {
   namespace Express {
     interface User {
@@ -59,7 +58,6 @@ export function setupAuth(app: Express) {
     checkPeriod: 86400000 // prune expired entries every 24h
   });
 
-  // Check required environment variable
   if (!process.env.SESSION_SECRET) {
     console.error('Missing SESSION_SECRET environment variable');
     process.exit(1);
@@ -180,7 +178,6 @@ export function setupAuth(app: Express) {
             return res.status(500).json({ error: "Login failed" });
           }
 
-          // Set cookie explicitly
           if (req.session) {
             req.session.cookie.maxAge = 86400000; // 24 hours
             console.log('Session cookie set:', {
@@ -270,7 +267,6 @@ export function setupAuth(app: Express) {
         branchCode
       } = result.data;
 
-      // Check for existing user
       const [existingUser] = await db
         .select()
         .from(users)
@@ -284,7 +280,6 @@ export function setupAuth(app: Express) {
         });
       }
 
-      // Verify referral code if provided
       let referrer = null;
       if (referralCode) {
         console.log('Verifying referral code:', referralCode);
@@ -378,7 +373,7 @@ export function setupAuth(app: Express) {
             });
 
           if (referrer) {
-            console.log('Processing referral rewards for referrer:', referrer.id);
+            console.log('Processing referral bonus for referrer:', referrer.id);
 
             await tx
               .insert(transactions)
@@ -393,92 +388,6 @@ export function setupAuth(app: Express) {
               .update(users)
               .set({ points: referrer.points + 2000 })
               .where(eq(users.id, referrer.id));
-
-            const [existingStats] = await tx
-              .select()
-              .from(referralStats)
-              .where(eq(referralStats.userId, referrer.id))
-              .limit(1);
-
-            if (existingStats) {
-              await tx
-                .update(referralStats)
-                .set({ level1Count: existingStats.level1Count + 1 })
-                .where(eq(referralStats.userId, referrer.id));
-            } else {
-              await tx
-                .insert(referralStats)
-                .values({
-                  userId: referrer.id,
-                  level1Count: 1,
-                  level2Count: 0,
-                  level3Count: 0,
-                });
-            }
-
-            if (referrer.referredBy) {
-              const [level2Referrer] = await tx
-                .select()
-                .from(users)
-                .where(eq(users.referralCode, referrer.referredBy))
-                .limit(1);
-
-              if (level2Referrer) {
-                const [level2Stats] = await tx
-                  .select()
-                  .from(referralStats)
-                  .where(eq(referralStats.userId, level2Referrer.id))
-                  .limit(1);
-
-                if (level2Stats) {
-                  await tx
-                    .update(referralStats)
-                    .set({ level2Count: level2Stats.level2Count + 1 })
-                    .where(eq(referralStats.userId, level2Referrer.id));
-                } else {
-                  await tx
-                    .insert(referralStats)
-                    .values({
-                      userId: level2Referrer.id,
-                      level1Count: 0,
-                      level2Count: 1,
-                      level3Count: 0,
-                    });
-                }
-
-                if (level2Referrer.referredBy) {
-                  const [level3Referrer] = await tx
-                    .select()
-                    .from(users)
-                    .where(eq(users.referralCode, level2Referrer.referredBy))
-                    .limit(1);
-
-                  if (level3Referrer) {
-                    const [level3Stats] = await tx
-                      .select()
-                      .from(referralStats)
-                      .where(eq(referralStats.userId, level3Referrer.id))
-                      .limit(1);
-
-                    if (level3Stats) {
-                      await tx
-                        .update(referralStats)
-                        .set({ level3Count: level3Stats.level3Count + 1 })
-                        .where(eq(referralStats.userId, level3Referrer.id));
-                    } else {
-                      await tx
-                        .insert(referralStats)
-                        .values({
-                          userId: level3Referrer.id,
-                          level1Count: 0,
-                          level2Count: 0,
-                          level3Count: 1,
-                        });
-                    }
-                  }
-                }
-              }
-            }
           }
 
           return user;
@@ -558,27 +467,22 @@ const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
-  // Personal Information
   isSouthAfrican: z.boolean().default(false),
   idNumber: z.string().optional().nullable(),
   dateOfBirth: z.string().optional().nullable(),
   gender: z.string().optional().nullable(),
   occupation: z.string().optional().nullable(),
   industry: z.string().optional().nullable(),
-  // Address Information
   address: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
-  // Package Selection
   selectedPackage: z.string().optional().nullable(),
-  // Banking Information
   bankName: z.string().optional().nullable(),
   accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
   accountNumber: z.string().optional().nullable(),
   accountHolderName: z.string().optional().nullable(),
   branchCode: z.string().optional().nullable(),
   hasCreditCard: z.boolean().default(false),
-  // Digital signature
   signature: z.string().optional().nullable(),
 });
 
@@ -638,13 +542,11 @@ export async function verifySession(req: Request): Promise<any> {
       }
     });
 
-    // If we already have user data from passport, return it
     if (req.user) {
       console.log('Using existing session user:', req.user);
       return req.user;
     }
 
-    // For WebSocket requests, parse the cookie and verify the session
     if (!req.headers.cookie) {
       console.log('No cookie found in request');
       return null;
@@ -660,7 +562,6 @@ export async function verifySession(req: Request): Promise<any> {
 
     console.log('Found session ID:', sessionId);
 
-    // Verify session from store
     return new Promise((resolve) => {
       session({
         secret: process.env.SESSION_SECRET || 'development-secret',
@@ -684,12 +585,10 @@ export async function verifySession(req: Request): Promise<any> {
         try {
           console.log('Retrieved session data:', {
             ...session,
-            // Redact sensitive data in logs
             cookie: '[Redacted]',
             passport: session.passport ? { user: session.passport.user } : undefined
           });
 
-          // Get user data from passport session
           const userId = session.passport?.user;
           if (!userId) {
             console.log('No user ID in session');

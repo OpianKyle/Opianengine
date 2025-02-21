@@ -1,8 +1,7 @@
 import { Router } from 'express';
 import { db } from '@db';
-import { users, referralStats, referralCommissions, packagePremiumAmounts } from '@db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { users, packagePremiumAmounts } from '@db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 
 const router = Router();
 
@@ -23,11 +22,6 @@ router.get('/api/customer/referrals', async (req, res) => {
 
   try {
     console.log('Fetching referrals for user:', req.user.id);
-
-    // Get current month's date range
-    const currentDate = new Date();
-    const startOfCurrentMonth = startOfMonth(currentDate);
-    const endOfCurrentMonth = endOfMonth(currentDate);
 
     // Get package premium amounts
     const premiumAmounts = await db
@@ -173,94 +167,30 @@ router.get('/api/customer/referrals', async (req, res) => {
       });
     }
 
-    try {
-      // Check if stats exist first
-      const [existingStats] = await db
-        .select()
-        .from(referralStats)
-        .where(eq(referralStats.userId, req.user.id))
-        .limit(1);
+    console.log('Sending response with:', {
+      referralCounts: { level1Count, level2Count, level3Count },
+      commissionAmounts: { level1Amount, level2Amount, level3Amount },
+      packageStats
+    });
 
-      if (existingStats) {
-        // Update existing stats
-        await db
-          .update(referralStats)
-          .set({
-            level1Count,
-            level2Count,
-            level3Count,
-            updatedAt: currentDate
-          })
-          .where(eq(referralStats.userId, req.user.id));
-      } else {
-        // Insert new stats
-        await db
-          .insert(referralStats)
-          .values({
-            userId: req.user.id,
-            level1Count,
-            level2Count,
-            level3Count,
-            updatedAt: currentDate
-          });
+    res.json({
+      level1Count,
+      level2Count,
+      level3Count,
+      referralCode: currentUser.referralCode,
+      referrals: {
+        level1: level1Referrals,
+        level2: level2Referrals,
+        level3: level3Referrals
+      },
+      packageStats,
+      commission: {
+        level1Amount,
+        level2Amount,
+        level3Amount,
+        totalAmount: level1Amount + level2Amount + level3Amount
       }
-
-      // Update or create monthly commission record
-      const [monthlyCommission] = await db
-        .insert(referralCommissions)
-        .values({
-          userId: req.user.id,
-          month: currentDate,
-          level1Amount,
-          level2Amount,
-          level3Amount,
-          totalAmount: level1Amount + level2Amount + level3Amount,
-          isPaid: false
-        })
-        .onConflictDoUpdate({
-          target: [
-            referralCommissions.userId,
-            referralCommissions.month
-          ],
-          set: {
-            level1Amount,
-            level2Amount,
-            level3Amount,
-            totalAmount: level1Amount + level2Amount + level3Amount,
-            updatedAt: currentDate
-          }
-        })
-        .returning();
-
-      console.log('Sending response with:', {
-        referralCounts: { level1Count, level2Count, level3Count },
-        commissionAmounts: { level1Amount, level2Amount, level3Amount },
-        packageStats
-      });
-
-      res.json({
-        level1Count,
-        level2Count,
-        level3Count,
-        referralCode: currentUser.referralCode,
-        referrals: {
-          level1: level1Referrals,
-          level2: level2Referrals,
-          level3: level3Referrals
-        },
-        packageStats,
-        commission: {
-          level1Amount: monthlyCommission.level1Amount,
-          level2Amount: monthlyCommission.level2Amount,
-          level3Amount: monthlyCommission.level3Amount,
-          totalAmount: monthlyCommission.totalAmount,
-          isPaid: monthlyCommission.isPaid,
-        }
-      });
-    } catch (dbError) {
-      console.error('Database error:', dbError);
-      res.status(500).json({ error: 'Failed to update referral statistics' });
-    }
+    });
   } catch (error) {
     console.error('Error fetching referral data:', error);
     res.status(500).json({ error: 'Failed to fetch referral data' });

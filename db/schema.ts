@@ -84,15 +84,6 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const referralStats = pgTable("referral_stats", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  level1Count: integer("level1_count").default(0).notNull(),
-  level2Count: integer("level2_count").default(0).notNull(),
-  level3Count: integer("level3_count").default(0).notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
 export const productAssignments = pgTable("product_assignments", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
@@ -185,10 +176,6 @@ export const userRelations = relations(users, ({ many, one }) => ({
   productAssignments: many(productAssignments),
   quoteRequests: many(quoteRequests, { relationName: "userQuoteRequests" }),
   completedQuoteRequests: many(quoteRequests, { relationName: "adminCompletedQuotes" }),
-  referralStats: one(referralStats, {
-    fields: [users.id],
-    references: [referralStats.userId],
-  }),
   referredUsers: many(users, {
     relationName: "referralRelation",
     fields: [users.referralCode],
@@ -237,12 +224,6 @@ export const adminLogRelations = relations(adminLogs, ({ one }) => ({
   }),
 }));
 
-export const referralStatsRelations = relations(referralStats, ({ one }) => ({
-  user: one(users, {
-    fields: [referralStats.userId],
-    references: [users.id],
-  }),
-}));
 
 export const quoteRequestStatus = pgEnum("quote_request_status", ["PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED"]);
 
@@ -299,6 +280,22 @@ export const notificationRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+export const packagePremiums = pgEnum("package_premium", [
+  "BEGINNER_PREMIUM",
+  "NOVICE_PREMIUM", 
+  "ACTIVE_PREMIUM",
+  "PROFESSIONAL_PREMIUM",
+  "EXPERT_PREMIUM"
+]);
+
+export const packagePremiumAmounts = pgTable("package_premium_amounts", {
+  id: serial("id").primaryKey(),
+  packageType: packageTypes("package_type").notNull(),
+  premiumAmount: integer("premium_amount").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertProductSchema = createInsertSchema(products);
 export const selectProductSchema = createSelectSchema(products);
 export const insertProductActivitySchema = createInsertSchema(product_activities);
@@ -313,12 +310,12 @@ export const insertAdminLogSchema = createInsertSchema(adminLogs);
 export const selectAdminLogSchema = createSelectSchema(adminLogs);
 export const insertProductAssignmentSchema = createInsertSchema(productAssignments);
 export const selectProductAssignmentSchema = createSelectSchema(productAssignments);
-export const insertReferralStatsSchema = createInsertSchema(referralStats);
-export const selectReferralStatsSchema = createSelectSchema(referralStats);
 export const insertQuoteRequestSchema = createInsertSchema(quoteRequests);
 export const selectQuoteRequestSchema = createSelectSchema(quoteRequests);
 export const insertNotificationSchema = createInsertSchema(notifications);
 export const selectNotificationSchema = createSelectSchema(notifications);
+export const insertPackagePremiumAmountSchema = createInsertSchema(packagePremiumAmounts);
+export const selectPackagePremiumAmountSchema = createSelectSchema(packagePremiumAmounts);
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
@@ -334,58 +331,9 @@ export type AdminLog = typeof adminLogs.$inferSelect;
 export type InsertAdminLog = typeof adminLogs.$inferInsert;
 export type ProductAssignment = typeof productAssignments.$inferSelect;
 export type InsertProductAssignment = typeof productAssignments.$inferInsert;
-export type ReferralStats = typeof referralStats.$inferSelect;
-export type InsertReferralStats = typeof referralStats.$inferInsert;
 export type QuoteRequest = typeof quoteRequests.$inferSelect;
 export type InsertQuoteRequest = typeof quoteRequests.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
-
-export const packagePremiums = pgEnum("package_premium", [
-  "BEGINNER_PREMIUM",
-  "NOVICE_PREMIUM", 
-  "ACTIVE_PREMIUM",
-  "PROFESSIONAL_PREMIUM",
-  "EXPERT_PREMIUM"
-]);
-
-export const referralCommissions = pgTable("referral_commissions", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  month: timestamp("month").notNull(),
-  level1Amount: integer("level1_amount").default(0).notNull(),
-  level2Amount: integer("level2_amount").default(0).notNull(),
-  level3Amount: integer("level3_amount").default(0).notNull(),
-  totalAmount: integer("total_amount").default(0).notNull(),
-  isPaid: boolean("is_paid").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const packagePremiumAmounts = pgTable("package_premium_amounts", {
-  id: serial("id").primaryKey(),
-  packageType: packageTypes("package_type").notNull(),
-  premiumAmount: integer("premium_amount").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Add relations
-export const referralCommissionRelations = relations(referralCommissions, ({ one }) => ({
-  user: one(users, {
-    fields: [referralCommissions.userId],
-    references: [users.id],
-  }),
-}));
-
-// Add schemas
-export const insertReferralCommissionSchema = createInsertSchema(referralCommissions);
-export const selectReferralCommissionSchema = createSelectSchema(referralCommissions);
-export const insertPackagePremiumAmountSchema = createInsertSchema(packagePremiumAmounts);
-export const selectPackagePremiumAmountSchema = createSelectSchema(packagePremiumAmounts);
-
-// Add types
-export type ReferralCommission = typeof referralCommissions.$inferSelect;
-export type InsertReferralCommission = typeof referralCommissions.$inferInsert;
 export type PackagePremiumAmount = typeof packagePremiumAmounts.$inferSelect;
 export type InsertPackagePremiumAmount = typeof packagePremiumAmounts.$inferInsert;

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { setupWebSocketServer } from "./websocket";
 import { db } from "@db";
-import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, referralStats, quoteRequests, notifications } from "@db/schema";
+import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, quoteRequests, notifications } from "@db/schema";
 import { eq, desc, sql, inArray, and } from "drizzle-orm";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -596,10 +596,6 @@ export function registerRoutes(app: Express): Server {
         await tx
           .delete(transactions)
           .where(eq(transactions.userId, userId));
-
-        await tx
-          .delete(referralStats)
-          .where(eq(referralStats.userId, userId));
 
         await tx
           .update(users)
@@ -1859,8 +1855,8 @@ export function registerRoutes(app: Express): Server {
         bankName,
         accountType,
         accountNumber,
-        hasCreditCard,
-        password
+        hasCreditCard
+        
       } = req.body;
 
       const updates: any = {
