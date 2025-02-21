@@ -171,7 +171,6 @@ export function setupAuth(app: Express) {
         firstName,
         lastName,
         phoneNumber,
-        referralCode,
         isSouthAfrican,
         idNumber,
         dateOfBirth,
@@ -205,24 +204,6 @@ export function setupAuth(app: Express) {
         });
       }
 
-      // Check referral code if provided
-      let referrerUser = null;
-      if (referralCode) {
-        console.log('Looking up referral code:', referralCode);
-        [referrerUser] = await db
-          .select()
-          .from(users)
-          .where(eq(users.referralCode, referralCode))
-          .limit(1);
-
-        if (!referrerUser) {
-          return res.status(400).json({
-            error: "Invalid referral code"
-          });
-        }
-      }
-
-      const newReferralCode = randomBytes(8).toString('hex');
       const hashedPassword = await crypto.hashPassword(password);
 
       try {
@@ -240,9 +221,7 @@ export function setupAuth(app: Express) {
               isAdmin: false,
               isSuperAdmin: false,
               isEnabled: true,
-              points: referralCode ? 2000 : 1000,
-              referralCode: newReferralCode,
-              referredBy: referralCode || null,
+              points: 1000, // Default welcome points
               isSouthAfrican: isSouthAfrican || false,
               idNumber: idNumber || null,
               dateOfBirth: dateOfBirth || null,
@@ -260,7 +239,9 @@ export function setupAuth(app: Express) {
               occupation: occupation || null,
               industry: industry || null,
               accountHolderName: accountHolderName || null,
-              branchCode: branchCode || null
+              branchCode: branchCode || null,
+              referralCode: null, //Removed referral code
+              referredBy: null //Removed referredBy
             })
             .returning();
 
@@ -273,27 +254,10 @@ export function setupAuth(app: Express) {
             .insert(transactions)
             .values({
               userId: user.id,
-              points: referralCode ? 2000 : 1000,
+              points: 1000,
               type: "WELCOME_BONUS",
               description: "Welcome bonus for new registration",
             });
-
-          // Handle referral bonus if applicable
-          if (referrerUser) {
-            await tx
-              .update(users)
-              .set({ points: referrerUser.points + 2500 })
-              .where(eq(users.id, referrerUser.id));
-
-            await tx
-              .insert(transactions)
-              .values({
-                userId: referrerUser.id,
-                points: 2500,
-                type: "REFERRAL_BONUS",
-                description: `Referral bonus for referring ${email}`,
-              });
-          }
 
           return user;
         });
@@ -532,7 +496,6 @@ const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
-  referralCode: z.string().optional().nullable(),
   // Personal Information
   isSouthAfrican: z.boolean().default(false),
   idNumber: z.string().optional().nullable(),

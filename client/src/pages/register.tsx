@@ -204,16 +204,11 @@ export default function RegisterPage() {
     branchCode: "",
     accountNumber: "",
     accountType: "",
-    acceptMandate: false,
-    agentReferralCode: "",
+    acceptMandate: false
   });
 
   const [signature, setSignature] = useState<SignatureCanvas | null>(null);
   const [error, setError] = useState("");
-  const [referralCode, setReferralCode] = useState<string | null>(null);
-  const [isValidatingReferral, setIsValidatingReferral] = useState(false);
-  const [referralValid, setReferralValid] = useState<boolean | null>(null);
-
   const { registerMutation, user, isLoading } = useUser();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -221,9 +216,7 @@ export default function RegisterPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
-    if (ref) {
-      setReferralCode(ref);
-    }
+    // Referral code handling removed
   }, []);
 
   if (isLoading) {
@@ -239,49 +232,19 @@ export default function RegisterPage() {
     return null;
   }
 
-  const validateReferralCode = async (code: string) => {
-    if (!code) {
-      setReferralValid(null);
-      return;
-    }
 
-    setIsValidatingReferral(true);
-    try {
-      const response = await fetch(`/api/verify-referral/${code}`);
-      const data = await response.json();
-      setReferralValid(data.isValid);
-    } catch (error) {
-      setReferralValid(false);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to validate referral code",
-      });
-    } finally {
-      setIsValidatingReferral(false);
-    }
-  };
-
-  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | string, fieldName?: string) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | string, fieldName?: string) => {
     if (typeof e === 'string' && fieldName) {
       setFormData(prev => ({
         ...prev,
         [fieldName]: e
       }));
-
-      if (fieldName === 'agentReferralCode' && e) {
-        await validateReferralCode(e);
-      }
     } else if (typeof e !== 'string') {
       const { name, value, type } = e.target;
       setFormData(prev => ({
         ...prev,
         [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
       }));
-
-      if (name === 'agentReferralCode' && value) {
-        await validateReferralCode(value);
-      }
     }
   };
 
@@ -351,8 +314,7 @@ export default function RegisterPage() {
         city: formData.suburb,
         employerName: formData.industry,
         jobTitle: formData.occupation,
-        signature: signatureData,
-        ...(formData.agentReferralCode ? { referralCode: formData.agentReferralCode } : {})
+        signature: signatureData
       };
 
       const user = await registerMutation.mutateAsync(registrationData);
@@ -416,11 +378,6 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
             }}
           />
           <h2 className="text-2xl font-semibold text-center">Create Your Account</h2>
-          {referralCode && (
-            <p className="text-sm text-muted-foreground text-center">
-              You've been referred by a friend!
-            </p>
-          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-[1400px] mx-auto">
@@ -701,43 +658,6 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">Agent Referral</h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="agentReferralCode">Agent Referral Code (Optional)</Label>
-                    <div className="relative">
-                      <Input
-                        id="agentReferralCode"
-                        name="agentReferralCode"
-                        placeholder="Enter agent's referral code if you have one"
-                        value={formData.agentReferralCode}
-                        onChange={handleInputChange}
-                        className={`${
-                          referralValid === true ? 'border-green-500' :
-                            referralValid === false ? 'border-red-500' : ''
-                        }`}
-                      />
-                      {isValidatingReferral && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        </div>
-                      )}
-                      {!isValidatingReferral && referralValid !== null && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          {referralValid ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <X className="h-4 w-4 text-red-500" />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    {referralValid === false && (
-                      <p className="text-sm text-red-500">Invalid referral code</p>
-                    )}
-                  </div>
                 </div>
 
                 {error && (
