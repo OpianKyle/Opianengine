@@ -306,29 +306,13 @@ export function setupAuth(app: Express) {
             error: "Invalid referral code"
           });
         }
-        console.log('Valid referral code found for referrer:', referrer);
+        console.log('Valid referral code found for referrer:', referrer.id);
       }
 
       const hashedPassword = await crypto.hashPassword(password);
-
-      // Generate unique referral code for new user
-      const generateUniqueReferralCode = async () => {
-        while (true) {
-          const code = randomBytes(4).toString('hex').toUpperCase();
-          const [existing] = await db
-            .select()
-            .from(users)
-            .where(eq(users.referralCode, code))
-            .limit(1);
-          if (!existing) return code;
-        }
-      };
-
-      const newReferralCode = await generateUniqueReferralCode();
-      console.log('Generated new referral code:', newReferralCode);
+      const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       try {
-        // Start transaction
         const newUser = await db.transaction(async (tx) => {
           console.log('Starting registration transaction with data:', {
             email,
@@ -338,7 +322,6 @@ export function setupAuth(app: Express) {
             referredBy: referralCode
           });
 
-          // Create new user with referral information
           const [user] = await tx
             .insert(users)
             .values({
@@ -385,7 +368,6 @@ export function setupAuth(app: Express) {
             throw new Error("Failed to create user record");
           }
 
-          // Add welcome bonus transaction
           await tx
             .insert(transactions)
             .values({
@@ -395,11 +377,9 @@ export function setupAuth(app: Express) {
               description: "Welcome bonus for new registration",
             });
 
-          // If user was referred, create or update referral stats
           if (referrer) {
             console.log('Processing referral rewards for referrer:', referrer.id);
 
-            // Award referral bonus points to referrer
             await tx
               .insert(transactions)
               .values({
@@ -409,13 +389,11 @@ export function setupAuth(app: Express) {
                 description: `Referral bonus for inviting ${user.email}`,
               });
 
-            // Update referrer's points
             await tx
               .update(users)
               .set({ points: referrer.points + 2000 })
               .where(eq(users.id, referrer.id));
 
-            // Update or create referral stats
             const [existingStats] = await tx
               .select()
               .from(referralStats)
@@ -438,7 +416,6 @@ export function setupAuth(app: Express) {
                 });
             }
 
-            // Process level 2 and 3 referrals
             if (referrer.referredBy) {
               const [level2Referrer] = await tx
                 .select()
@@ -447,7 +424,6 @@ export function setupAuth(app: Express) {
                 .limit(1);
 
               if (level2Referrer) {
-                // Update level 2 referrer stats
                 const [level2Stats] = await tx
                   .select()
                   .from(referralStats)
@@ -470,7 +446,6 @@ export function setupAuth(app: Express) {
                     });
                 }
 
-                // Process level 3
                 if (level2Referrer.referredBy) {
                   const [level3Referrer] = await tx
                     .select()
@@ -509,10 +484,8 @@ export function setupAuth(app: Express) {
           return user;
         });
 
-        // Remove password from user object
         const { password: _, ...safeUser } = newUser;
 
-        // Log in the user
         console.log('Logging in new user:', safeUser.id);
         await new Promise((resolve, reject) => {
           req.login(safeUser, (err) => {
@@ -526,7 +499,6 @@ export function setupAuth(app: Express) {
           });
         });
 
-        // Send success response
         return res.status(201).json(safeUser);
 
       } catch (dbError: any) {

@@ -54,12 +54,6 @@ router.get('/api/customer/referrals', async (req, res) => {
       return acc;
     }, {} as Record<string, number>);
 
-    // Get user's referral stats
-    const [stats] = await db
-      .select()
-      .from(referralStats)
-      .where(eq(referralStats.userId, req.user.id));
-
     // Get user's referral code
     const [currentUser] = await db
       .select({
@@ -68,10 +62,9 @@ router.get('/api/customer/referrals', async (req, res) => {
       .from(users)
       .where(eq(users.id, req.user.id));
 
-    // Calculate commissions for each level
-    let level1Amount = 0;
-    let level2Amount = 0;
-    let level3Amount = 0;
+    if (!currentUser?.referralCode) {
+      return res.status(400).json({ error: "User has no referral code" });
+    }
 
     // Get direct referrals (Level 1)
     const level1Referrals = await db
@@ -82,12 +75,14 @@ router.get('/api/customer/referrals', async (req, res) => {
         email: users.email,
         createdAt: users.createdAt,
         selectedPackage: users.selectedPackage,
-        referralCode: users.referralCode,
+        referralCode: users.referralCode
       })
       .from(users)
       .where(eq(users.referredBy, currentUser.referralCode));
 
     // Calculate Level 1 commissions
+    let level1Amount = 0;
+    const level1Count = level1Referrals.length;
     for (const referral of level1Referrals) {
       if (referral.selectedPackage && premiumMap[referral.selectedPackage]) {
         level1Amount += calculateCommission(premiumMap[referral.selectedPackage], 1);
@@ -95,6 +90,8 @@ router.get('/api/customer/referrals', async (req, res) => {
     }
 
     // Calculate Level 2 commissions
+    let level2Amount = 0;
+    let level2Count = 0;
     for (const level1Ref of level1Referrals) {
       if (!level1Ref.referralCode) continue;
 
@@ -105,6 +102,7 @@ router.get('/api/customer/referrals', async (req, res) => {
         .from(users)
         .where(eq(users.referredBy, level1Ref.referralCode));
 
+      level2Count += level2Refs.length;
       for (const ref of level2Refs) {
         if (ref.selectedPackage && premiumMap[ref.selectedPackage]) {
           level2Amount += calculateCommission(premiumMap[ref.selectedPackage], 2);
@@ -113,6 +111,8 @@ router.get('/api/customer/referrals', async (req, res) => {
     }
 
     // Calculate Level 3 commissions
+    let level3Amount = 0;
+    let level3Count = 0;
     for (const level1Ref of level1Referrals) {
       if (!level1Ref.referralCode) continue;
 
@@ -133,6 +133,7 @@ router.get('/api/customer/referrals', async (req, res) => {
           .from(users)
           .where(eq(users.referredBy, level2Ref.referralCode));
 
+        level3Count += level3Refs.length;
         for (const ref of level3Refs) {
           if (ref.selectedPackage && premiumMap[ref.selectedPackage]) {
             level3Amount += calculateCommission(premiumMap[ref.selectedPackage], 3);
@@ -140,6 +141,25 @@ router.get('/api/customer/referrals', async (req, res) => {
         }
       }
     }
+
+    // Update referral stats
+    await db.insert(referralStats)
+      .values({
+        userId: req.user.id,
+        level1Count,
+        level2Count,
+        level3Count,
+        updatedAt: new Date()
+      })
+      .onConflictDoUpdate({
+        target: [referralStats.userId],
+        set: {
+          level1Count,
+          level2Count,
+          level3Count,
+          updatedAt: new Date()
+        }
+      });
 
     // Update or create monthly commission record
     const [monthlyCommission] = await db
@@ -156,21 +176,22 @@ router.get('/api/customer/referrals', async (req, res) => {
       .onConflictDoUpdate({
         target: [
           referralCommissions.userId,
-          sql`DATE_TRUNC('month', ${referralCommissions.month})`
+          sql`date_trunc('month', month)`
         ],
         set: {
           level1Amount,
           level2Amount,
           level3Amount,
-          totalAmount: level1Amount + level2Amount + level3Amount
+          totalAmount: level1Amount + level2Amount + level3Amount,
+          updatedAt: new Date()
         }
       })
       .returning();
 
     res.json({
-      level1Count: stats?.level1Count || 0,
-      level2Count: stats?.level2Count || 0,
-      level3Count: stats?.level3Count || 0,
+      level1Count,
+      level2Count,
+      level3Count,
       referralCode: currentUser.referralCode,
       referrals: level1Referrals,
       commission: {
