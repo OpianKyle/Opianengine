@@ -91,7 +91,8 @@ export function useUser() {
       }
 
       const data = await response.json();
-      return loginResponseSchema.parse(data).user;
+      const user = loginResponseSchema.parse(data).user;
+      return user;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);

@@ -30,7 +30,7 @@ export default function LoginPage() {
   }
 
   if (user) {
-    navigate(user.isAdmin ? '/admin' : '/dashboard');
+    navigate(user.isAdmin || user.isSuperAdmin ? '/admin' : '/dashboard');
     return null;
   }
 
@@ -44,18 +44,23 @@ export default function LoginPage() {
     }
 
     try {
-      const user = await loginMutation.mutateAsync({
+      const response = await loginMutation.mutateAsync({
         email,
         password
       });
 
-      toast({
-        title: "Success",
-        description: "Login successful",
-      });
+      if (response) {
+        toast({
+          title: "Success",
+          description: "Login successful",
+        });
 
-      navigate(user.isAdmin ? '/admin' : '/dashboard');
+        navigate(response.isAdmin || response.isSuperAdmin ? '/admin' : '/dashboard');
+      } else {
+        throw new Error("Login failed");
+      }
     } catch (err) {
+      console.error("Login error:", err);
       setError("Invalid email or password");
       toast({
         variant: "destructive",
@@ -164,7 +169,7 @@ export default function LoginPage() {
               >
                 Forgot password?
               </Button>
-              
+
               <Button
                 type="button"
                 variant="ghost"
