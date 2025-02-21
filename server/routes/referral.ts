@@ -16,27 +16,6 @@ const calculateCommission = (amount: number, level: number) => {
   return Math.floor(amount * percentages[level as keyof typeof percentages]);
 };
 
-router.get('/api/verify-referral/:code', async (req, res) => {
-  try {
-    const { code } = req.params;
-    console.log('Verifying referral code:', code);
-
-    const referrer = await db.query.users.findFirst({
-      where: eq(users.referralCode, code),
-      columns: {
-        id: true,
-        isEnabled: true,
-      }
-    });
-
-    console.log('Referral verification result:', { isValid: !!referrer?.isEnabled });
-    res.json({ isValid: !!referrer?.isEnabled });
-  } catch (error) {
-    console.error('Error verifying referral:', error);
-    res.status(500).json({ error: 'Failed to verify referral code' });
-  }
-});
-
 router.get('/api/customer/referrals', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -163,24 +142,36 @@ router.get('/api/customer/referrals', async (req, res) => {
     }
 
     try {
-      // Update referral stats
-      await db.insert(referralStats)
-        .values({
-          userId: req.user.id,
-          level1Count,
-          level2Count,
-          level3Count,
-          updatedAt: currentDate
-        })
-        .onConflictDoUpdate({
-          target: referralStats.userId,
-          set: {
+      // Check if stats exist first
+      const [existingStats] = await db
+        .select()
+        .from(referralStats)
+        .where(eq(referralStats.userId, req.user.id))
+        .limit(1);
+
+      if (existingStats) {
+        // Update existing stats
+        await db
+          .update(referralStats)
+          .set({
             level1Count,
             level2Count,
             level3Count,
             updatedAt: currentDate
-          }
-        });
+          })
+          .where(eq(referralStats.userId, req.user.id));
+      } else {
+        // Insert new stats
+        await db
+          .insert(referralStats)
+          .values({
+            userId: req.user.id,
+            level1Count,
+            level2Count,
+            level3Count,
+            updatedAt: currentDate
+          });
+      }
 
       // Update or create monthly commission record
       const [monthlyCommission] = await db
@@ -239,6 +230,27 @@ router.get('/api/customer/referrals', async (req, res) => {
   } catch (error) {
     console.error('Error fetching referral data:', error);
     res.status(500).json({ error: 'Failed to fetch referral data' });
+  }
+});
+
+router.get('/api/verify-referral/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    console.log('Verifying referral code:', code);
+
+    const referrer = await db.query.users.findFirst({
+      where: eq(users.referralCode, code),
+      columns: {
+        id: true,
+        isEnabled: true,
+      }
+    });
+
+    console.log('Referral verification result:', { isValid: !!referrer?.isEnabled });
+    res.json({ isValid: !!referrer?.isEnabled });
+  } catch (error) {
+    console.error('Error verifying referral:', error);
+    res.status(500).json({ error: 'Failed to verify referral code' });
   }
 });
 
