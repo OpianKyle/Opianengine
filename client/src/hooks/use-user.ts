@@ -30,7 +30,7 @@ const userSchema = z.object({
   jobTitle: z.string().nullable().optional(),
   employmentDuration: z.string().nullable().optional(),
   // Banking information
-  selectedPackage: z.union([z.string(), z.number()]).nullable().optional(),
+  selectedPackage: z.string().nullable().optional(),
   bankName: z.string().nullable().optional(),
   accountType: z.enum(accountTypes).nullable().optional(),
   accountNumber: z.string().nullable().optional(),
@@ -42,11 +42,6 @@ const userSchema = z.object({
 
 export type User = z.infer<typeof userSchema>;
 export type AccountType = typeof accountTypes[number];
-
-const loginResponseSchema = z.object({
-  user: userSchema,
-  token: z.string()
-});
 
 export function useUser() {
   const queryClient = useQueryClient();
@@ -101,8 +96,7 @@ export function useUser() {
       }
 
       const data = await response.json();
-      const parsedData = loginResponseSchema.parse(data);
-      return parsedData.user;
+      return userSchema.parse(data);
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
@@ -151,7 +145,7 @@ export function useUser() {
       jobTitle?: string;
       employmentDuration?: string;
       // Banking information
-      selectedPackage?: number | string;
+      selectedPackage?: string;
       bankName?: string;
       accountType?: AccountType;
       accountNumber?: string;
