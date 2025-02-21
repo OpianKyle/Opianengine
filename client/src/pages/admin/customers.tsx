@@ -133,9 +133,9 @@ export default function AdminCustomers() {
 
   const handleEditUser = (customer: any) => {
     editDetailsForm.reset({
+      email: customer.email || "",
       firstName: customer.firstName || "",
       lastName: customer.lastName || "",
-      email: customer.email || "",
       phoneNumber: customer.phoneNumber || "",
       idNumber: customer.idNumber || "",
       dateOfBirth: customer.dateOfBirth || "",

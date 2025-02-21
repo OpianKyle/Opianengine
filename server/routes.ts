@@ -278,45 +278,42 @@ export function registerRoutes(app: Express): Server {
     const { id } = req.params;
 
     try {
-      const [updatedUser] = await db.transaction(async (tx) => {
-        const [updatedUser] = await tx
-          .update(users)
-          .set({
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
-            email: req.body.email,
-            phoneNumber: req.body.phoneNumber,
-            idNumber: req.body.idNumber,
-            dateOfBirth: req.body.dateOfBirth,
-            address: req.body.address,
-            city: req.body.city,
-            postalCode: req.body.postalCode,
-            industry: req.body.industry,
-            occupation: req.body.occupation,
-            bankName: req.body.bankName,
-            accountType: req.body.accountType,
-            accountNumber: req.body.accountNumber,
-            accountHolderName: req.body.accountHolderName,
-            branchCode: req.body.branchCode,
-            selectedPackage: req.body.selectedPackage?.toUpperCase(),
-          })
-          .where(eq(users.id, parseInt(id)))
-          .returning();
-        return updatedUser;
-      });
+      const updatedUser = await db
+        .update(users)
+        .set({
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          email: req.body.email,
+          phoneNumber: req.body.phoneNumber,
+          idNumber: req.body.idNumber,
+          dateOfBirth: req.body.dateOfBirth,
+          address: req.body.address,
+          city: req.body.city,
+          postalCode: req.body.postalCode,
+          industry: req.body.industry,
+          occupation: req.body.occupation,
+          bankName: req.body.bankName,
+          accountType: req.body.accountType,
+          accountNumber: req.body.accountNumber,
+          accountHolderName: req.body.accountHolderName,
+          branchCode: req.body.branchCode,
+          selectedPackage: req.body.selectedPackage?.toUpperCase(),
+        })
+        .where(eq(users.id, parseInt(id)))
+        .returning();
 
-      if (!updatedUser) {
+      if (!updatedUser || updatedUser.length === 0) {
         return res.status(404).json({ error: "User not found" });
       }
 
       await logAdminAction({
         adminId: req.user.id,
-        actionType: "ADMIN_CREATED", 
+        actionType: "ADMIN_UPDATED",
         targetUserId: parseInt(id),
         details: `Updated user details for ID ${id}`,
       });
 
-      res.json(updatedUser);
+      res.json(updatedUser[0]);
     } catch (error) {
       console.error('Error updating user details:', error);
       res.status(500).json({ 
@@ -440,33 +437,21 @@ export function registerRoutes(app: Express): Server {
           isEnabled: true,
           points: true,
           createdAt: true,
-          // Adding missing fields
+          selectedPackage: true,  // Ensure this field is included
           industry: true,
           occupation: true,
-          employerName: true,
-          employmentDuration: true,
-          jobTitle: true,
-          // Banking information
           bankName: true,
           accountType: true,
           accountNumber: true,
           accountHolderName: true,
           branchCode: true,
-          hasCreditCard: true,
-          // Address information
           address: true,
           city: true,
           postalCode: true,
-          // Personal information
           idNumber: true,
           dateOfBirth: true,
-          isSouthAfrican: true,
-          // Referral information
-          referral_code: true,
-          referred_by: true
         },
         with: {
-          transactions: true,
           productAssignments: {
             with: {
               product: {
@@ -484,14 +469,6 @@ export function registerRoutes(app: Express): Server {
           },
         },
       });
-
-      console.log('Customers fetched:', customers.map(c => ({
-        id: c.id,
-        name: `${c.firstName} ${c.lastName}`,
-        industry: c.industry,
-        occupation: c.occupation,
-        accountType: c.accountType
-      })));
 
       res.json(customers);
     } catch (error) {
@@ -728,8 +705,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const allProducts = await db.query.products.findMany({
         where: eq(products.isEnabled, true),
-        columns: {
-          id: true,
+        columns: {          id: true,
           name: true,
           description: true,
         },
@@ -1065,7 +1041,8 @@ export function registerRoutes(app: Express): Server {
       });
 
       const adminUsers = await db
-        .select        .from(users)
+        .select()
+        .from(users)
         .where(eq(users.isAdmin, true));
 
       for(const admin of adminUsers) {
