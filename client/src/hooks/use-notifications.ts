@@ -70,8 +70,11 @@ export function useNotifications() {
         socketRef.current = null;
       }
 
+      // Get the current host without port
+      const host = window.location.host;
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/notifications-ws`;
+      const wsUrl = `${protocol}//${host}/notifications-ws`;
+
       console.log('Attempting WebSocket connection to:', wsUrl);
 
       const socket = new WebSocket(wsUrl);

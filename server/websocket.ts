@@ -30,11 +30,15 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
         });
 
         // Try to verify session
-        const user = await verifySession(info.req);
-        if (user) {
-          console.log('WebSocket connection authorized via session for user:', user.id);
-          info.req.user = user;
-          return done(true);
+        try {
+          const user = await verifySession(info.req);
+          if (user) {
+            console.log('WebSocket connection authorized via session for user:', user.id);
+            info.req.user = user;
+            return done(true);
+          }
+        } catch (error) {
+          console.error('Session verification failed:', error);
         }
 
         console.log('WebSocket connection rejected: No valid session');
@@ -63,7 +67,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
       // Initialize user data from verified token/session
       const userData = {
         userId: req.user.id,
-        isAdmin: req.user.isAdmin
+        isAdmin: req.user.isAdmin || false
       };
       clients.set(ws, userData);
 
