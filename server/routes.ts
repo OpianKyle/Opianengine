@@ -27,25 +27,28 @@ const crypto = {
 
 export function registerRoutes(app: Express): Server {
   const MemoryStoreSession = MemoryStore(session);
-  app.use(
-    session({
-      cookie: { 
-        maxAge: 86400000, // 24 hours
-        secure: false // Set to true in production
-      },
-      store: new MemoryStoreSession({
-        checkPeriod: 86400000 // prune expired entries every 24h
-      }),
-      resave: false,
-      saveUninitialized: false,
-      secret: process.env.SESSION_SECRET || 'development-secret'
-    })
-  );
+  const sessionMiddleware = session({
+    cookie: { 
+      maxAge: 86400000, // 24 hours
+      secure: false, // Set to true in production
+      sameSite: 'lax'
+    },
+    store: new MemoryStoreSession({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    }),
+    resave: false,
+    saveUninitialized: false,
+    secret: process.env.SESSION_SECRET || 'development-secret'
+  });
 
+  app.use(sessionMiddleware);
   setupAuth(app);
 
   // Mount referral routes
   app.use(referralRouter);
+
+  const httpServer = createServer(app);
+  const wsServer = setupWebSocketServer(httpServer, sessionMiddleware);
 
   app.get("/api/customer/referral", async (req, res) => {
     if (!req.user) {
@@ -110,6 +113,7 @@ export function registerRoutes(app: Express): Server {
   });
 
 
+
   app.get("/api/products/assignments/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
@@ -131,9 +135,6 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: 'Failed to fetch assignment' });
     }
   });
-
-  const httpServer = createServer(app);
-  const wsServer = setupWebSocketServer(httpServer);
 
   app.get("/api/admin/logs", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});

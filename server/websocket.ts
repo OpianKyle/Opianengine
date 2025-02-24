@@ -12,25 +12,24 @@ const clients = new Map<WebSocket, {
   isAdmin: boolean;
 }>();
 
-export function setupWebSocketServer(server: Server) {
+export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
   const wss = new WebSocketServer({ 
     server,
     path: '/notifications-ws',
     verifyClient: async (info: any, done) => {
       try {
-        console.log('WebSocket connection attempt:', {
-          url: info.req.url,
-          headers: info.req.headers,
-          origin: info.origin
-        });
-
         // Check for Vite HMR connection
         if (info.req.headers['sec-websocket-protocol']?.includes('vite-hmr')) {
           console.log('Allowing Vite HMR WebSocket connection');
           return done(true);
         }
 
-        // Try to verify session first
+        // Apply session middleware to parse session
+        await new Promise((resolve) => {
+          sessionMiddleware(info.req, {} as any, () => resolve(true));
+        });
+
+        // Try to verify session
         const user = await verifySession(info.req);
         if (user) {
           console.log('WebSocket connection authorized via session for user:', user.id);
@@ -38,24 +37,8 @@ export function setupWebSocketServer(server: Server) {
           return done(true);
         }
 
-        // Fallback to token verification if session not available
-        const url = new URL(info.req.url, `http://${info.req.headers.host}`);
-        const token = url.searchParams.get('token');
-
-        if (!token) {
-          console.log('WebSocket connection rejected: No token or session found');
-          return done(false, 401, 'Authentication required');
-        }
-
-        const userData = verifyToken(token);
-        if (!userData) {
-          console.log('WebSocket connection rejected: Invalid token');
-          return done(false, 401, 'Invalid token');
-        }
-
-        console.log('WebSocket connection authorized via token for user:', userData.id);
-        info.req.user = userData;
-        return done(true);
+        console.log('WebSocket connection rejected: No valid session');
+        return done(false, 401, 'Authentication required');
 
       } catch (error) {
         console.error('WebSocket verification error:', error);
