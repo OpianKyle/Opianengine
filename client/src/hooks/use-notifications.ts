@@ -65,28 +65,19 @@ export function useNotifications() {
     }
 
     try {
-      // Close any existing connection
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
       }
 
-      // Construct WebSocket URL using the current window location
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
 
-      // Debug log the URL components
-      console.log('URL Components:', {
+      console.log('WebSocket connection details:', {
         protocol,
         host,
-        currentUrl: window.location.href,
-        hostname: window.location.hostname,
-        origin: window.location.origin
+        token: token ? 'present' : 'missing'
       });
-
-      if (!host) {
-        throw new Error('Invalid host: Host is undefined');
-      }
 
       const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(token)}`;
       console.log('Attempting WebSocket connection to:', wsUrl);
@@ -154,14 +145,13 @@ export function useNotifications() {
         setIsConnected(false);
         socketRef.current = null;
 
-        // Only attempt to reconnect if we have a user and haven't exceeded max attempts
         if (user && !reconnectTimeoutRef.current && reconnectAttempts < maxReconnectAttempts) {
           console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}...`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             reconnectTimeoutRef.current = null;
             connectWebSocket();
-          }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000)); // Exponential backoff with 30s max
+          }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000));
         } else if (reconnectAttempts >= maxReconnectAttempts) {
           toast({
             title: "Connection Error",
