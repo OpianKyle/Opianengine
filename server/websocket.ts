@@ -50,7 +50,24 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
           console.error('Session verification failed:', error);
         }
 
-        console.log('WebSocket connection rejected: No valid session');
+        // If session verification fails, try token verification
+        const url = new URL(info.req.url, `http://${info.req.headers.host}`);
+        const token = url.searchParams.get('token');
+
+        if (token) {
+          try {
+            const user = await verifyToken(token);
+            if (user) {
+              console.log('WebSocket connection authorized via token for user:', user.id);
+              info.req.user = user;
+              return done(true);
+            }
+          } catch (error) {
+            console.error('Token verification failed:', error);
+          }
+        }
+
+        console.log('WebSocket connection rejected: No valid session or token');
         return done(false, 401, 'Authentication required');
 
       } catch (error) {
@@ -82,7 +99,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
 
       // Send connection confirmation
       ws.send(JSON.stringify({
-        type: 'CONNECTION_SUCCESS',
+        type: 'auth_success',
         message: 'Successfully connected to notification system',
         timestamp: new Date().toISOString(),
         id: Date.now().toString()
@@ -135,7 +152,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
 
     broadcastToAdmins: (notification: any) => {
       console.log('Broadcasting to admins:', notification);
-      Array.from(clients.entries()).forEach(([_ws, client]) => {
+      Array.from(clients.entries()).forEach(([ws, client]) => {
         if (client.isAdmin) {
           storeAndBroadcastNotification(client.userId, notification);
         }
@@ -144,7 +161,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
 
     broadcastToAll: (notification: any) => {
       console.log('Broadcasting to all:', notification);
-      Array.from(clients.entries()).forEach(([_ws, client]) => {
+      Array.from(clients.entries()).forEach(([ws, client]) => {
         storeAndBroadcastNotification(client.userId, notification);
       });
     }
