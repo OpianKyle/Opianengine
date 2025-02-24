@@ -64,6 +64,12 @@ export function useNotifications() {
     }
 
     try {
+      // Close existing connection if any
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/notifications-ws`;
       console.log('Attempting WebSocket connection to:', wsUrl);
@@ -118,7 +124,7 @@ export function useNotifications() {
       };
 
       socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('WebSocket connection error:', error);
         setIsConnected(false);
       };
 
