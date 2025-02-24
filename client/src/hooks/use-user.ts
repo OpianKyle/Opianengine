@@ -9,7 +9,7 @@ const baseUserSchema = z.object({
   email: z.string().email(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
+  phoneNumber: z.string().optional(), // Make phone number optional
   isAdmin: z.boolean().default(false),
   isSuperAdmin: z.boolean().default(false),
   isEnabled: z.boolean().default(true),
@@ -133,7 +133,7 @@ export function useUser() {
       password: string; 
       firstName: string; 
       lastName: string; 
-      phoneNumber: string;
+      phoneNumber?: string;
       isAdmin?: boolean;
       isSuperAdmin?: boolean;
       // Extended fields
