@@ -18,9 +18,10 @@ export function useNotifications() {
   const socketRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const queryClient = useQueryClient();
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const maxReconnectAttempts = 5;
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isConnectingRef = useRef(false);
 
   // Fetch notifications from API
   const { data: notifications = [] } = useQuery<PointsNotification[]>({
@@ -42,9 +43,9 @@ export function useNotifications() {
     enabled: !!user && !!token
   });
 
-  useEffect(() => {
+  const connectWebSocket = () => {
     if (!user || !token) {
-      console.log('WebSocket connection skipped:', {
+      console.log('WebSocket setup skipped:', {
         hasUser: !!user,
         hasToken: !!token,
         userId: user?.id
@@ -52,31 +53,26 @@ export function useNotifications() {
       return;
     }
 
-    try {
-      // Close any existing connection
-      if (socketRef.current) {
-        console.log('Closing existing WebSocket connection');
-        socketRef.current.close();
-        socketRef.current = null;
-      }
+    // Skip if already connecting or connected
+    if (isConnectingRef.current || (socketRef.current?.readyState === WebSocket.OPEN)) {
+      console.log('WebSocket connection skipped - already connected:', {
+        isConnecting: isConnectingRef.current,
+        readyState: socketRef.current?.readyState
+      });
+      return;
+    }
 
-      // Get origin and construct WebSocket URL
-      const origin = window.location.origin;
+    try {
+      isConnectingRef.current = true;
+
+      // Construct WebSocket URL using origin
+      const wsUrl = `${window.location.origin.replace(/^http/, 'ws')}/ws?token=${encodeURIComponent(token)}`;
+
       console.log('WebSocket setup:', {
-        origin,
+        origin: window.location.origin,
+        wsUrl: wsUrl.replace(token, '[REDACTED]'),
         hasToken: !!token,
         userId: user.id
-      });
-
-      // Convert http(s) to ws(s)
-      const wsProtocol = origin.startsWith('https') ? 'wss' : 'ws';
-      const wsHost = window.location.host;
-      const wsUrl = `${wsProtocol}://${wsHost}/ws?token=${encodeURIComponent(token)}`;
-
-      console.log('Attempting WebSocket connection:', {
-        wsProtocol,
-        wsHost,
-        wsUrl: wsUrl.replace(token, '[REDACTED]')
       });
 
       const socket = new WebSocket(wsUrl);
@@ -86,6 +82,8 @@ export function useNotifications() {
         console.log('WebSocket connection established');
         setIsConnected(true);
         setReconnectAttempts(0);
+        isConnectingRef.current = false;
+
         toast({
           title: "Connected",
           description: "Successfully connected to notification service",
@@ -94,6 +92,8 @@ export function useNotifications() {
       };
 
       socket.onmessage = (event) => {
+        if (!socketRef.current) return;
+
         try {
           const data = JSON.parse(event.data);
           console.log('Received WebSocket message:', data);
@@ -122,18 +122,23 @@ export function useNotifications() {
       };
 
       socket.onerror = (error) => {
+        if (!socketRef.current) return;
         console.error('WebSocket error:', error);
         setIsConnected(false);
+        isConnectingRef.current = false;
       };
 
       socket.onclose = (event) => {
+        if (!socketRef.current) return;
         console.log('WebSocket connection closed:', {
           code: event.code,
           reason: event.reason,
           wasClean: event.wasClean
         });
+
         setIsConnected(false);
         socketRef.current = null;
+        isConnectingRef.current = false;
 
         // Clear any existing reconnect timeout
         if (reconnectTimeoutRef.current) {
@@ -141,12 +146,16 @@ export function useNotifications() {
           reconnectTimeoutRef.current = null;
         }
 
-        // Attempt reconnection if not max attempts
-        if (reconnectAttempts < maxReconnectAttempts && user && token) {
+        // Only attempt reconnection if:
+        // 1. Not a clean closure
+        // 2. Under max attempts
+        // 3. Have valid user and token
+        if (!event.wasClean && reconnectAttempts < maxReconnectAttempts && user && token) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
           console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts} in ${delay}ms`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
+            connectWebSocket();
           }, delay);
         } else if (reconnectAttempts >= maxReconnectAttempts) {
           console.log('Max reconnection attempts reached');
@@ -158,16 +167,17 @@ export function useNotifications() {
           });
         }
       };
-
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
       setIsConnected(false);
-      toast({
-        title: "Connection Error",
-        description: `Failed to establish connection: ${error.message}`,
-        variant: "destructive",
-        duration: 5000,
-      });
+      isConnectingRef.current = false;
+    }
+  };
+
+  // Set up WebSocket connection when user and token are available
+  useEffect(() => {
+    if (user && token) {
+      connectWebSocket();
     }
 
     return () => {
@@ -181,13 +191,16 @@ export function useNotifications() {
         socketRef.current.close();
         socketRef.current = null;
       }
+
+      isConnectingRef.current = false;
       setIsConnected(false);
     };
-  }, [user, token, reconnectAttempts, queryClient, toast]);
+  }, [user?.id, token]); // Only depend on user ID and token to prevent unnecessary reconnections
 
-  // Mark notifications as read
   const markAsRead = useMutation({
     mutationFn: async (notificationId?: string) => {
+      if (!token) throw new Error('No authentication token');
+
       const response = await fetch('/api/notifications/mark-read', {
         method: 'POST',
         credentials: 'include',
