@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useUser } from "./use-user";
 import { useToast } from "./use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 interface PointsNotification {
   id: string;
@@ -19,7 +19,6 @@ export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const queryClient = useQueryClient();
   const maxReconnectAttempts = 5;
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
@@ -67,24 +66,22 @@ export function useNotifications() {
       // Close existing connection if any
       if (socketRef.current) {
         socketRef.current.close();
-        socketRef.current = null;
       }
 
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/notifications-ws`;
+      // Get the current hostname from the browser
+      const currentHost = window.location.host;
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+      // Construct WebSocket URL with explicit path
+      const wsUrl = `${wsProtocol}//${currentHost}/notifications-ws`;
       console.log('Attempting WebSocket connection to:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
 
       socket.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected successfully');
         setIsConnected(true);
         setReconnectAttempts(0);
-        toast({
-          title: "Connected",
-          description: "Successfully connected to notification service",
-          duration: 3000,
-        });
       };
 
       socket.onmessage = (event) => {
@@ -97,10 +94,6 @@ export function useNotifications() {
             return;
           }
 
-          // Refresh notifications after receiving a new one
-          queryClient.invalidateQueries({ queryKey: ['notifications'] });
-
-          // Show toast for different notification types
           if (data.type === "POINTS_ALLOCATION" || data.type === "POINTS_AWARDED") {
             const points = data.points ?? 0;
             const sign = points >= 0 ? '+' : '';

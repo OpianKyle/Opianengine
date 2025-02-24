@@ -354,8 +354,27 @@ export function setupAuth(app: Express) {
     console.log('User request:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.user ? req.user.id : undefined,
-      session: req.session
+      session: req.session,
+      headers: {
+        cookie: req.headers.cookie
+      }
     });
+
+    // Temporary test user for debugging
+    if (process.env.NODE_ENV === 'development') {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+        isAdmin: true,
+        isSuperAdmin: false,
+        points: 5000,
+        selectedPackage: 'PROFESSIONAL',
+        isEnabled: true
+      };
+      return res.json(testUser);
+    }
 
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });

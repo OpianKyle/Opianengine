@@ -90,7 +90,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
     try {
       console.log('New WebSocket connection established:', {
         url: req.url,
-        userId: req.user?.id,
+        userId: req.user?.id
       });
 
       if (!req.user) {
