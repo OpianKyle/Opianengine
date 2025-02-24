@@ -3,7 +3,7 @@ import { Server } from 'http';
 import { type User } from '@db/schema';
 import { db } from "@db";
 import { notifications } from "@db/schema";
-import { verifyToken, verifySession } from './auth';
+import { verifyToken } from './auth';
 import { eq, desc, sql } from 'drizzle-orm';
 
 // Store active connections with user information
@@ -19,12 +19,10 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
     verifyClient: async (info: any, done) => {
       try {
         // Log the incoming connection request
-        console.log('Verifying session for request:', {
+        console.log('Verifying WebSocket connection:', {
           url: info.req.url,
-          headers: {
-            cookie: info.req.headers.cookie,
-            'sec-websocket-protocol': info.req.headers['sec-websocket-protocol']
-          }
+          headers: info.req.headers,
+          query: info.req.url ? new URL(info.req.url, `http://${info.req.headers.host}`).searchParams : null
         });
 
         // Check for Vite HMR connection
@@ -33,29 +31,13 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
           return done(true);
         }
 
-        // Apply session middleware to parse session
-        await new Promise((resolve) => {
-          sessionMiddleware(info.req, {} as any, () => resolve(true));
-        });
-
-        // Try to verify session
-        try {
-          const user = await verifySession(info.req);
-          if (user) {
-            console.log('WebSocket connection authorized via session for user:', user.id);
-            info.req.user = user;
-            return done(true);
-          }
-        } catch (error) {
-          console.error('Session verification failed:', error);
-        }
-
-        // If session verification fails, try token verification
+        // Try token authentication first
         const url = new URL(info.req.url, `http://${info.req.headers.host}`);
         const token = url.searchParams.get('token');
 
         if (token) {
           try {
+            console.log('Attempting token verification');
             const user = await verifyToken(token);
             if (user) {
               console.log('WebSocket connection authorized via token for user:', user.id);
@@ -65,9 +47,27 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
           } catch (error) {
             console.error('Token verification failed:', error);
           }
+        } else {
+          console.log('No token found in WebSocket URL');
         }
 
-        console.log('WebSocket connection rejected: No valid session or token');
+        // If token auth fails, try session auth
+        try {
+          console.log('Attempting session verification');
+          await new Promise((resolve) => {
+            sessionMiddleware(info.req, {} as any, () => resolve(true));
+          });
+
+          if (info.req.session?.user) {
+            console.log('WebSocket connection authorized via session for user:', info.req.session.user.id);
+            info.req.user = info.req.session.user;
+            return done(true);
+          }
+        } catch (error) {
+          console.error('Session middleware error:', error);
+        }
+
+        console.log('WebSocket connection rejected: No valid authentication');
         return done(false, 401, 'Authentication required');
 
       } catch (error) {
@@ -79,11 +79,6 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
 
   wss.on('connection', async (ws: WebSocket, req: any) => {
     try {
-      console.log('New WebSocket connection established:', {
-        url: req.url,
-        userId: req.user?.id
-      });
-
       if (!req.user) {
         console.error('No user data found in WebSocket connection');
         ws.close(1008, 'Authentication required');
@@ -105,13 +100,11 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
         id: Date.now().toString()
       }));
 
-      // Send unread notifications immediately
+      // Send unread notifications on connection
       const unreadNotifications = await db.query.notifications.findMany({
         where: sql`${notifications.userId} = ${userData.userId} AND ${notifications.isRead} = false`,
         orderBy: desc(notifications.createdAt),
       });
-
-      console.log(`Sending ${unreadNotifications.length} unread notifications to user ${userData.userId}`);
 
       for (const notification of unreadNotifications) {
         ws.send(JSON.stringify({
@@ -140,10 +133,6 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
     }
   });
 
-  wss.on('error', (error) => {
-    console.error('WebSocket server error:', error);
-  });
-
   return {
     broadcastToUser: (userId: number, notification: any) => {
       console.log(`Broadcasting to user ${userId}:`, notification);
@@ -169,8 +158,6 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
 }
 
 const storeAndBroadcastNotification = async (userId: number, notificationData: any) => {
-  console.log(`Storing and broadcasting notification for user ${userId}:`, notificationData);
-
   try {
     // Store notification in database
     const [notification] = await db.insert(notifications)
