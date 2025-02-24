@@ -1,10 +1,11 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
-import { type User } from '@db/schema';
+import { users } from '@db/schema';
 import { db } from "@db";
 import { notifications } from "@db/schema";
-import { verifyToken, verifySession } from './auth';
+import { sessionStore } from './auth';
 import { eq, desc, sql } from 'drizzle-orm';
+import { parse as parseCookie } from 'cookie';
 
 // Store active connections with user information
 const clients = new Map<WebSocket, {
@@ -18,6 +19,14 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
     path: '/notifications-ws',
     verifyClient: async (info: any, done) => {
       try {
+        console.log('WebSocket connection attempt:', {
+          url: info.req.url,
+          headers: {
+            cookie: info.req.headers.cookie,
+            'sec-websocket-protocol': info.req.headers['sec-websocket-protocol']
+          }
+        });
+
         // Check for Vite HMR connection
         if (info.req.headers['sec-websocket-protocol']?.includes('vite-hmr')) {
           console.log('Allowing Vite HMR WebSocket connection');
@@ -29,16 +38,46 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
           sessionMiddleware(info.req, {} as any, () => resolve(true));
         });
 
-        // Try to verify session
-        const user = await verifySession(info.req);
-        if (user) {
-          console.log('WebSocket connection authorized via session for user:', user.id);
-          info.req.user = user;
-          return done(true);
+        if (!info.req.headers.cookie) {
+          console.log('No cookies found in WebSocket request');
+          return done(false, 401, 'No session cookie found');
         }
 
-        console.log('WebSocket connection rejected: No valid session');
-        return done(false, 401, 'Authentication required');
+        const cookies = parseCookie(info.req.headers.cookie);
+        const sessionId = cookies['connect.sid'];
+
+        if (!sessionId) {
+          console.log('No session ID found in WebSocket cookies');
+          return done(false, 401, 'No session ID found');
+        }
+
+        sessionStore.get(sessionId, async (err: any, session: any) => {
+          if (err || !session) {
+            console.log('Invalid session:', err);
+            return done(false, 401, 'Invalid session');
+          }
+
+          const userId = session.passport?.user;
+          if (!userId) {
+            console.log('No user ID in session');
+            return done(false, 401, 'No user ID found');
+          }
+
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+
+          if (!user) {
+            console.log('User not found');
+            return done(false, 401, 'User not found');
+          }
+
+          info.req.user = user;
+          console.log('WebSocket connection authorized for user:', user.id);
+          done(true);
+        });
 
       } catch (error) {
         console.error('WebSocket verification error:', error);
@@ -51,7 +90,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
     try {
       console.log('New WebSocket connection established:', {
         url: req.url,
-        userId: req.user?.id
+        userId: req.user?.id,
       });
 
       if (!req.user) {
@@ -60,34 +99,28 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
         return;
       }
 
-      // Initialize user data from verified token/session
-      const userData = {
+      // Store connection with user data
+      clients.set(ws, {
         userId: req.user.id,
         isAdmin: req.user.isAdmin
-      };
-      clients.set(ws, userData);
+      });
 
       // Send connection confirmation
       ws.send(JSON.stringify({
         type: 'CONNECTION_SUCCESS',
         message: 'Successfully connected to notification system',
-        timestamp: new Date().toISOString(),
-        id: Date.now().toString()
+        timestamp: new Date().toISOString()
       }));
 
-      // Send unread notifications immediately
+      // Send unread notifications
       const unreadNotifications = await db.query.notifications.findMany({
-        where: sql`${notifications.userId} = ${userData.userId} AND ${notifications.isRead} = false`,
+        where: sql`${notifications.userId} = ${req.user.id} AND ${notifications.isRead} = false`,
         orderBy: desc(notifications.createdAt),
       });
-
-      console.log(`Sending ${unreadNotifications.length} unread notifications to user ${userData.userId}`);
 
       for (const notification of unreadNotifications) {
         ws.send(JSON.stringify({
           type: notification.type,
-          points: notification.type === 'POINTS_AWARDED' ? 
-            parseInt(notification.title.match(/-?\d+/)?.[0] || '0') : undefined,
           description: notification.message,
           timestamp: notification.createdAt.toISOString(),
           id: notification.id.toString()
@@ -100,7 +133,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
       });
 
       ws.on('close', () => {
-        console.log(`Client disconnected: User ${userData.userId}`);
+        console.log(`Client disconnected: User ${req.user.id}`);
         clients.delete(ws);
       });
 
@@ -118,7 +151,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
 
     broadcastToAdmins: (notification: any) => {
       console.log('Broadcasting to admins:', notification);
-      Array.from(clients.entries()).forEach(([_ws, client]) => {
+      Array.from(clients.entries()).forEach(([ws, client]) => {
         if (client.isAdmin) {
           storeAndBroadcastNotification(client.userId, notification);
         }
@@ -127,7 +160,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
 
     broadcastToAll: (notification: any) => {
       console.log('Broadcasting to all:', notification);
-      Array.from(clients.entries()).forEach(([_ws, client]) => {
+      Array.from(clients.entries()).forEach(([ws, client]) => {
         storeAndBroadcastNotification(client.userId, notification);
       });
     }

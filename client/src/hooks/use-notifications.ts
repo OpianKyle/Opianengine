@@ -75,7 +75,6 @@ export function useNotifications() {
       console.log('Attempting WebSocket connection to:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
-      socketRef.current = socket;
 
       socket.onopen = () => {
         console.log('WebSocket connected');
@@ -131,15 +130,20 @@ export function useNotifications() {
       socket.onclose = (event) => {
         console.log('WebSocket connection closed:', event);
         setIsConnected(false);
-        socketRef.current = null;
 
-        if (user && !reconnectTimeoutRef.current && reconnectAttempts < maxReconnectAttempts) {
-          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}...`);
+        // Clear existing timeout if any
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
+
+        if (user && reconnectAttempts < maxReconnectAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts} in ${delay}ms`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
-            reconnectTimeoutRef.current = null;
             connectWebSocket();
-          }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000));
+          }, delay);
         } else if (reconnectAttempts >= maxReconnectAttempts) {
           toast({
             title: "Connection Error",
@@ -149,6 +153,9 @@ export function useNotifications() {
           });
         }
       };
+
+      socketRef.current = socket;
+
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
       setIsConnected(false);
@@ -168,57 +175,13 @@ export function useNotifications() {
       }
 
       if (socketRef.current) {
-        console.log('Cleaning up WebSocket connection');
-        const socket = socketRef.current;
+        socketRef.current.close();
         socketRef.current = null;
-        socket.close();
       }
 
       setIsConnected(false);
     };
   }, [user]);
-
-  const markAsReadMutation = useMutation({
-    mutationFn: async (notificationId?: string) => {
-      const response = await fetch('/api/notifications/mark-read', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId })
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to mark notifications as read');
-      }
-    },
-    onSuccess: (_, notificationId) => {
-      queryClient.setQueryData(['notifications'], (oldData: PointsNotification[] | undefined) => {
-        if (!oldData) return [];
-        return notificationId
-          ? oldData.filter(n => n.id !== notificationId)
-          : [];
-      });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-
-      toast({
-        title: "Success",
-        description: notificationId ? "Notification removed" : "All notifications cleared",
-        duration: 3000,
-      });
-    },
-    onError: (error: Error) => {
-      console.error('Failed to mark notification as read:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to remove notification. Please try again.",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const markAsRead = (notificationId?: string) => {
-    markAsReadMutation.mutate(notificationId);
-  };
 
   return {
     notifications: notifications?.map(notification => ({
@@ -227,7 +190,6 @@ export function useNotifications() {
         `${notification.points > 0 ? '+' : ''}${notification.points}` : undefined
     })) || [],
     unreadCount,
-    markAsRead,
     isConnected
   };
 }
