@@ -6,7 +6,7 @@ const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
 // Base user schema with minimal required fields
 const baseUserSchema = z.object({
-  id: z.number().optional(),  // Make ID optional for new users
+  id: z.number().optional(),
   email: z.string().email(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
@@ -30,17 +30,12 @@ const userSchema = baseUserSchema.extend({
   postalCode: z.string().nullable().optional(),
   industry: z.string().nullable().optional(),
   occupation: z.string().nullable().optional(),
-  employerName: z.string().nullable().optional(),
-  jobTitle: z.string().nullable().optional(),
-  employmentDuration: z.string().nullable().optional(),
-  selectedPackage: z.string().nullable().optional(),
   bankName: z.string().nullable().optional(),
   accountType: z.enum(accountTypes).nullable().optional(),
   accountNumber: z.string().nullable().optional(),
   accountHolderName: z.string().nullable().optional(),
   branchCode: z.string().nullable().optional(),
-  hasCreditCard: z.boolean().optional(),
-  signature: z.string().nullable().optional(),
+  selectedPackage: z.string().nullable().optional(),
 }).passthrough();
 
 export type User = z.infer<typeof userSchema>;

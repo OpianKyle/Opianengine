@@ -4,7 +4,7 @@ import { type User } from '@db/schema';
 import { db } from "@db";
 import { notifications } from "@db/schema";
 import { verifyToken } from './auth';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 // Store active connections with user information
 const clients = new Map<WebSocket, {
@@ -12,64 +12,51 @@ const clients = new Map<WebSocket, {
   isAdmin: boolean;
 }>();
 
-export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
+export function setupWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ 
     server,
     path: '/ws',
     verifyClient: async (info: any, done) => {
       try {
-        // Log the incoming connection request
-        console.log('Verifying WebSocket connection:', {
+        // Log connection attempt details
+        console.log('WebSocket connection attempt:', {
           url: info.req.url,
-          headers: info.req.headers,
-          query: info.req.url ? new URL(info.req.url, `http://${info.req.headers.host}`).searchParams : null
+          protocol: info.req.headers['sec-websocket-protocol']
         });
 
         // Check for Vite HMR connection
         if (info.req.headers['sec-websocket-protocol']?.includes('vite-hmr')) {
-          console.log('Allowing Vite HMR WebSocket connection');
           return done(true);
         }
 
-        // Try token authentication first
+        // Extract and verify token
         const url = new URL(info.req.url, `http://${info.req.headers.host}`);
         const token = url.searchParams.get('token');
 
-        if (token) {
-          try {
-            console.log('Attempting token verification');
-            const user = await verifyToken(token);
-            if (user) {
-              console.log('WebSocket connection authorized via token for user:', user.id);
-              info.req.user = user;
-              return done(true);
-            }
-          } catch (error) {
-            console.error('Token verification failed:', error);
-          }
-        } else {
-          console.log('No token found in WebSocket URL');
+        console.log('Token verification:', {
+          hasToken: !!token,
+          tokenLength: token?.length
+        });
+
+        if (!token) {
+          console.log('WebSocket connection rejected: No token provided');
+          return done(false, 401, 'Authentication required');
         }
 
-        // If token auth fails, try session auth
+        // Verify token
         try {
-          console.log('Attempting session verification');
-          await new Promise((resolve) => {
-            sessionMiddleware(info.req, {} as any, () => resolve(true));
-          });
-
-          if (info.req.session?.user) {
-            console.log('WebSocket connection authorized via session for user:', info.req.session.user.id);
-            info.req.user = info.req.session.user;
+          const user = await verifyToken(token);
+          if (user) {
+            console.log('WebSocket authenticated for user:', user.id);
+            info.req.user = user;
             return done(true);
           }
         } catch (error) {
-          console.error('Session middleware error:', error);
+          console.error('Token verification failed:', error);
+          return done(false, 401, 'Invalid token');
         }
 
-        console.log('WebSocket connection rejected: No valid authentication');
-        return done(false, 401, 'Authentication required');
-
+        return done(false, 401, 'Authentication failed');
       } catch (error) {
         console.error('WebSocket verification error:', error);
         return done(false, 500, 'Internal Server Error');
@@ -80,31 +67,36 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
   wss.on('connection', async (ws: WebSocket, req: any) => {
     try {
       if (!req.user) {
-        console.error('No user data found in WebSocket connection');
         ws.close(1008, 'Authentication required');
         return;
       }
 
-      // Initialize user data from verified token/session
+      // Store user information
       const userData = {
         userId: req.user.id,
         isAdmin: req.user.isAdmin || false
       };
       clients.set(ws, userData);
 
+      console.log('WebSocket client connected:', {
+        userId: userData.userId,
+        isAdmin: userData.isAdmin
+      });
+
       // Send connection confirmation
       ws.send(JSON.stringify({
         type: 'auth_success',
-        message: 'Successfully connected to notification system',
-        timestamp: new Date().toISOString(),
-        id: Date.now().toString()
+        message: 'Connected to notification system',
+        timestamp: new Date().toISOString()
       }));
 
-      // Send unread notifications on connection
+      // Send unread notifications
       const unreadNotifications = await db.query.notifications.findMany({
-        where: sql`${notifications.userId} = ${userData.userId} AND ${notifications.isRead} = false`,
+        where: eq(notifications.userId, userData.userId),
         orderBy: desc(notifications.createdAt),
       });
+
+      console.log(`Sending ${unreadNotifications.length} unread notifications to user ${userData.userId}`);
 
       for (const notification of unreadNotifications) {
         ws.send(JSON.stringify({
@@ -117,13 +109,8 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
         }));
       }
 
-      ws.on('error', (error) => {
-        console.error('WebSocket connection error:', error);
-        clients.delete(ws);
-      });
-
       ws.on('close', () => {
-        console.log(`Client disconnected: User ${userData.userId}`);
+        console.log(`WebSocket client disconnected: User ${userData.userId}`);
         clients.delete(ws);
       });
 
@@ -134,61 +121,41 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
   });
 
   return {
-    broadcastToUser: (userId: number, notification: any) => {
-      console.log(`Broadcasting to user ${userId}:`, notification);
-      storeAndBroadcastNotification(userId, notification);
-    },
+    notifyPointsUpdate: async (userId: number, points: number, description: string) => {
+      try {
+        // Store notification
+        const [notification] = await db.insert(notifications).values({
+          userId,
+          type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
+          title: `${points >= 0 ? '+' : ''}${points} points`,
+          message: description,
+          isRead: false,
+          createdAt: new Date()
+        }).returning();
 
-    broadcastToAdmins: (notification: any) => {
-      console.log('Broadcasting to admins:', notification);
-      Array.from(clients.entries()).forEach(([ws, client]) => {
-        if (client.isAdmin) {
-          storeAndBroadcastNotification(client.userId, notification);
+        const message = {
+          type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
+          points: Math.abs(points),
+          description,
+          timestamp: notification.createdAt.toISOString(),
+          id: notification.id.toString()
+        };
+
+        console.log('Sending points notification:', {
+          userId,
+          points,
+          type: message.type
+        });
+
+        // Send to connected user
+        for (const [ws, client] of clients.entries()) {
+          if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(message));
+          }
         }
-      });
-    },
-
-    broadcastToAll: (notification: any) => {
-      console.log('Broadcasting to all:', notification);
-      Array.from(clients.entries()).forEach(([ws, client]) => {
-        storeAndBroadcastNotification(client.userId, notification);
-      });
+      } catch (error) {
+        console.error('Error sending points notification:', error);
+      }
     }
   };
 }
-
-const storeAndBroadcastNotification = async (userId: number, notificationData: any) => {
-  try {
-    // Store notification in database
-    const [notification] = await db.insert(notifications)
-      .values({
-        userId,
-        type: notificationData.type === "POINTS_ALLOCATION" ? "POINTS_AWARDED" : "SYSTEM_UPDATE",
-        title: notificationData.type === "POINTS_ALLOCATION" ? 
-          `${notificationData.points > 0 ? "+" : ""}${notificationData.points} points` : 
-          "System Update",
-        message: notificationData.description,
-        isRead: false,
-        createdAt: new Date()
-      })
-      .returning();
-
-    console.log('Notification stored:', notification.id);
-
-    const enrichedNotification = {
-      ...notificationData,
-      id: notification.id.toString(),
-      timestamp: notification.createdAt.toISOString()
-    };
-
-    // Broadcast to connected clients
-    Array.from(clients.entries()).forEach(([ws, client]) => {
-      if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
-        console.log(`Sending notification to user ${userId}`);
-        ws.send(JSON.stringify(enrichedNotification));
-      }
-    });
-  } catch (error) {
-    console.error('Error storing notification:', error);
-  }
-};
