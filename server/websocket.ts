@@ -3,7 +3,7 @@ import { Server } from 'http';
 import { type User } from '@db/schema';
 import { db } from "@db";
 import { notifications } from "@db/schema";
-import { verifyToken } from './auth';
+import { verifyToken, verifySession } from './auth';
 import { eq, desc, sql } from 'drizzle-orm';
 
 // Store active connections with user information
@@ -30,25 +30,33 @@ export function setupWebSocketServer(server: Server) {
           return done(true);
         }
 
-        // Get token from query parameter
+        // Try to verify session first
+        const user = await verifySession(info.req);
+        if (user) {
+          console.log('WebSocket connection authorized via session for user:', user.id);
+          info.req.user = user;
+          return done(true);
+        }
+
+        // Fallback to token verification if session not available
         const url = new URL(info.req.url, `http://${info.req.headers.host}`);
         const token = url.searchParams.get('token');
 
         if (!token) {
-          console.log('WebSocket connection rejected: No token provided');
-          return done(false, 401, 'No token provided');
+          console.log('WebSocket connection rejected: No token or session found');
+          return done(false, 401, 'Authentication required');
         }
 
-        // Verify token
         const userData = verifyToken(token);
         if (!userData) {
           console.log('WebSocket connection rejected: Invalid token');
           return done(false, 401, 'Invalid token');
         }
 
-        console.log('WebSocket connection authorized for user:', userData.id);
+        console.log('WebSocket connection authorized via token for user:', userData.id);
         info.req.user = userData;
         return done(true);
+
       } catch (error) {
         console.error('WebSocket verification error:', error);
         return done(false, 500, 'Internal Server Error');
@@ -56,33 +64,42 @@ export function setupWebSocketServer(server: Server) {
     }
   });
 
-  wss.on('connection', (ws: WebSocket, req: any) => {
-    console.log('New WebSocket connection established:', {
-      url: req.url,
-      userId: req.user?.id
-    });
+  wss.on('connection', async (ws: WebSocket, req: any) => {
+    try {
+      console.log('New WebSocket connection established:', {
+        url: req.url,
+        userId: req.user?.id
+      });
 
-    // Initialize user data from verified token
-    const userData = {
-      userId: req.user.id,
-      isAdmin: req.user.isAdmin
-    };
-    clients.set(ws, userData);
+      if (!req.user) {
+        console.error('No user data found in WebSocket connection');
+        ws.close(1008, 'Authentication required');
+        return;
+      }
 
-    // Send connection confirmation
-    ws.send(JSON.stringify({
-      type: 'auth_success',
-      message: 'Successfully connected to notification system',
-      timestamp: new Date().toISOString(),
-      id: Date.now().toString()
-    }));
+      // Initialize user data from verified token/session
+      const userData = {
+        userId: req.user.id,
+        isAdmin: req.user.isAdmin
+      };
+      clients.set(ws, userData);
 
-    // Send unread notifications immediately
-    db.query.notifications.findMany({
-      where: sql`${notifications.userId} = ${userData.userId} AND ${notifications.isRead} = false`,
-      orderBy: desc(notifications.createdAt),
-    }).then(unreadNotifications => {
+      // Send connection confirmation
+      ws.send(JSON.stringify({
+        type: 'CONNECTION_SUCCESS',
+        message: 'Successfully connected to notification system',
+        timestamp: new Date().toISOString(),
+        id: Date.now().toString()
+      }));
+
+      // Send unread notifications immediately
+      const unreadNotifications = await db.query.notifications.findMany({
+        where: sql`${notifications.userId} = ${userData.userId} AND ${notifications.isRead} = false`,
+        orderBy: desc(notifications.createdAt),
+      });
+
       console.log(`Sending ${unreadNotifications.length} unread notifications to user ${userData.userId}`);
+
       for (const notification of unreadNotifications) {
         ws.send(JSON.stringify({
           type: notification.type,
@@ -93,19 +110,21 @@ export function setupWebSocketServer(server: Server) {
           id: notification.id.toString()
         }));
       }
-    }).catch(error => {
-      console.error('Error fetching unread notifications:', error);
-    });
 
-    ws.on('error', (error) => {
-      console.error('WebSocket connection error:', error);
-      clients.delete(ws);
-    });
+      ws.on('error', (error) => {
+        console.error('WebSocket connection error:', error);
+        clients.delete(ws);
+      });
 
-    ws.on('close', () => {
-      console.log(`Client disconnected: User ${userData.userId}`);
-      clients.delete(ws);
-    });
+      ws.on('close', () => {
+        console.log(`Client disconnected: User ${userData.userId}`);
+        clients.delete(ws);
+      });
+
+    } catch (error) {
+      console.error('Error handling WebSocket connection:', error);
+      ws.close(1011, 'Internal Server Error');
+    }
   });
 
   return {
@@ -133,42 +152,39 @@ export function setupWebSocketServer(server: Server) {
 }
 
 const storeAndBroadcastNotification = async (userId: number, notificationData: any) => {
-    console.log(`Storing and broadcasting notification for user ${userId}:`, notificationData);
+  console.log(`Storing and broadcasting notification for user ${userId}:`, notificationData);
+
+  try {
+    // Store notification in database
+    const [notification] = await db.insert(notifications)
+      .values({
+        userId,
+        type: notificationData.type === "POINTS_ALLOCATION" ? "POINTS_AWARDED" : "SYSTEM_UPDATE",
+        title: notificationData.type === "POINTS_ALLOCATION" ? 
+          `${notificationData.points > 0 ? "+" : ""}${notificationData.points} points` : 
+          "System Update",
+        message: notificationData.description,
+        isRead: false,
+        createdAt: new Date()
+      })
+      .returning();
+
+    console.log('Notification stored:', notification.id);
 
     const enrichedNotification = {
       ...notificationData,
-      timestamp: new Date().toISOString(),
-      id: Date.now().toString()
+      id: notification.id.toString(),
+      timestamp: notification.createdAt.toISOString()
     };
 
-    try {
-      // Store notification in database
-      const [notification] = await db.insert(notifications)
-        .values({
-          userId,
-          type: notificationData.type === "POINTS_ALLOCATION" ? "POINTS_AWARDED" : "SYSTEM_UPDATE",
-          title: notificationData.type === "POINTS_ALLOCATION" ? 
-            `${notificationData.points > 0 ? "+" : ""}${notificationData.points} points` : 
-            "System Update",
-          message: notificationData.description,
-          isRead: false,
-          createdAt: new Date()
-        })
-        .returning();
-
-      console.log('Notification stored:', notification.id);
-
-      // Broadcast to connected clients
-      Array.from(clients.entries()).forEach(([ws, client]) => {
-        if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
-          console.log(`Sending notification to user ${userId}`);
-          ws.send(JSON.stringify({
-            ...enrichedNotification,
-            id: notification.id.toString()
-          }));
-        }
-      });
-    } catch (error) {
-      console.error('Error storing notification:', error);
-    }
-  };
+    // Broadcast to connected clients
+    Array.from(clients.entries()).forEach(([ws, client]) => {
+      if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
+        console.log(`Sending notification to user ${userId}`);
+        ws.send(JSON.stringify(enrichedNotification));
+      }
+    });
+  } catch (error) {
+    console.error('Error storing notification:', error);
+  }
+};

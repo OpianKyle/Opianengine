@@ -65,23 +65,22 @@ export function setupAuth(app: Express) {
 
   app.set('trust proxy', 1);
 
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET,
-      cookie: {
-        maxAge: 86400000, // 24 hours
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        httpOnly: true
-      },
-      store,
-      resave: false,
-      saveUninitialized: false,
-      name: 'session' // Changed from session_id to match client expectations
-    })
-  );
+  const sessionMiddleware = session({
+    secret: process.env.SESSION_SECRET,
+    cookie: {
+      maxAge: 86400000, // 24 hours
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      httpOnly: true
+    },
+    store,
+    resave: false,
+    saveUninitialized: false,
+    name: 'session'
+  });
 
+  app.use(sessionMiddleware);
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -94,7 +93,17 @@ export function setupAuth(app: Express) {
     try {
       console.log('Deserializing user:', id);
       const [user] = await db
-        .select()
+        .select({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          isAdmin: users.isAdmin,
+          isSuperAdmin: users.isSuperAdmin,
+          points: users.points,
+          selectedPackage: users.selectedPackage,
+          isEnabled: users.isEnabled
+        })
         .from(users)
         .where(eq(users.id, id))
         .limit(1);
@@ -104,9 +113,8 @@ export function setupAuth(app: Express) {
         return done(null, false);
       }
 
-      const { password: _, ...safeUser } = user;
-      console.log('User deserialized successfully:', safeUser.id);
-      done(null, safeUser);
+      console.log('User deserialized successfully:', user.id);
+      done(null, user);
     } catch (error) {
       console.error('Deserialization error:', error);
       done(error);
@@ -260,14 +268,14 @@ export function setupAuth(app: Express) {
             throw new Error("Failed to create user record");
           }
 
-          // Create activation points transaction
+          // Create welcome bonus points transaction
           await tx
             .insert(transactions)
             .values({
               userId: user.id,
               points: points || 0,
-              type: "ACTIVATION_POINTS",
-              description: `Activation points for ${selectedPackage} package registration`,
+              type: "WELCOME_BONUS",
+              description: `Welcome bonus points for ${selectedPackage} package registration`,
             });
 
           return user;
@@ -282,7 +290,7 @@ export function setupAuth(app: Express) {
           }
 
           console.log('Registration and login successful for:', safeUser.email);
-          return res.status(201).json(safeUser);
+          res.status(201).json(safeUser);
         });
 
       } catch (dbError: any) {
@@ -328,7 +336,8 @@ export function setupAuth(app: Express) {
   app.get("/api/user", (req, res) => {
     console.log('User request:', {
       isAuthenticated: req.isAuthenticated(),
-      user: req.user ? req.user.id : undefined
+      user: req.user ? req.user.id : undefined,
+      session: req.session
     });
 
     if (!req.isAuthenticated()) {
@@ -336,6 +345,8 @@ export function setupAuth(app: Express) {
     }
     res.json(req.user);
   });
+
+  return sessionMiddleware;
 }
 
 const loginSchema = z.object({

@@ -13,7 +13,7 @@ interface PointsNotification {
 }
 
 export function useNotifications() {
-  const { user, token } = useUser();
+  const { user } = useUser();
   const { toast } = useToast();
   const socketRef = useRef<WebSocket | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -55,10 +55,9 @@ export function useNotifications() {
   }, [notifications]);
 
   const connectWebSocket = () => {
-    if (!user || !token || socketRef.current?.readyState === WebSocket.OPEN) {
-      console.log('Skipping WebSocket connection - no user/token or already connected', {
+    if (!user || socketRef.current?.readyState === WebSocket.OPEN) {
+      console.log('Skipping WebSocket connection - no user or already connected', {
         hasUser: !!user,
-        hasToken: !!token,
         socketState: socketRef.current?.readyState
       });
       return;
@@ -66,7 +65,7 @@ export function useNotifications() {
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/notifications-ws?token=${encodeURIComponent(token)}`;
+      const wsUrl = `${protocol}//${window.location.host}/notifications-ws`;
       console.log('Attempting WebSocket connection to:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
@@ -88,7 +87,7 @@ export function useNotifications() {
           const data = JSON.parse(event.data);
           console.log('Received WebSocket message:', data);
 
-          if (data.type === 'auth_success') {
+          if (data.type === 'CONNECTION_SUCCESS') {
             console.log('WebSocket authentication successful');
             return;
           }
@@ -128,14 +127,13 @@ export function useNotifications() {
         setIsConnected(false);
         socketRef.current = null;
 
-        // Only attempt to reconnect if we have a user and haven't exceeded max attempts
         if (user && !reconnectTimeoutRef.current && reconnectAttempts < maxReconnectAttempts) {
           console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}...`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             reconnectTimeoutRef.current = null;
             connectWebSocket();
-          }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000)); // Exponential backoff with 30s max
+          }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000));
         } else if (reconnectAttempts >= maxReconnectAttempts) {
           toast({
             title: "Connection Error",
@@ -152,7 +150,7 @@ export function useNotifications() {
   };
 
   useEffect(() => {
-    if (user && token) {
+    if (user) {
       console.log('User authenticated, initiating WebSocket connection');
       connectWebSocket();
     }
@@ -172,7 +170,7 @@ export function useNotifications() {
 
       setIsConnected(false);
     };
-  }, [user, token]);
+  }, [user]);
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId?: string) => {
@@ -188,19 +186,14 @@ export function useNotifications() {
       }
     },
     onSuccess: (_, notificationId) => {
-      // Optimistically update the notifications in the cache
       queryClient.setQueryData(['notifications'], (oldData: PointsNotification[] | undefined) => {
         if (!oldData) return [];
-        // If notificationId is provided, remove that specific notification
-        // Otherwise, mark all as read
         return notificationId
           ? oldData.filter(n => n.id !== notificationId)
           : [];
       });
-      // Also invalidate the query to ensure server-side sync
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
-      // Show success toast for better UX
       toast({
         title: "Success",
         description: notificationId ? "Notification removed" : "All notifications cleared",

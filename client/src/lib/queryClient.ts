@@ -1,30 +1,35 @@
 import { QueryClient } from "@tanstack/react-query";
 
+// Helper function for making API requests
+export async function apiRequest(method: string, url: string, body?: any) {
+  const response = await fetch(url, {
+    method,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    ...(body ? { body: JSON.stringify(body) } : {})
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Please log in to continue");
+    }
+
+    const errorText = await response.text();
+    throw new Error(errorText || `${response.status}: ${response.statusText}`);
+  }
+
+  return response;
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: async ({ queryKey }) => {
-        const res = await fetch(queryKey[0] as string, {
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!res.ok) {
-          if (res.status === 401) {
-            throw new Error("Please log in to continue");
-          }
-
-          if (res.status >= 500) {
-            throw new Error(`${res.status}: ${res.statusText}`);
-          }
-
-          const errorText = await res.text();
-          throw new Error(errorText || `${res.status}: ${res.statusText}`);
-        }
-
-        return res.json();
+        const response = await apiRequest("GET", queryKey[0] as string);
+        return response.json();
       },
       retry: false,
       refetchOnWindowFocus: false,
