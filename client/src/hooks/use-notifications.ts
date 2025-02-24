@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useUser } from "./use-user";
 import { useToast } from "./use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface PointsNotification {
   id: string;
@@ -19,6 +19,7 @@ export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const queryClient = useQueryClient();
   const maxReconnectAttempts = 5;
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
@@ -66,22 +67,25 @@ export function useNotifications() {
       // Close existing connection if any
       if (socketRef.current) {
         socketRef.current.close();
+        socketRef.current = null;
       }
 
-      // Get the current hostname from the browser
-      const currentHost = window.location.host;
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-
-      // Construct WebSocket URL with explicit path
-      const wsUrl = `${wsProtocol}//${currentHost}/notifications-ws`;
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/notifications-ws`;
       console.log('Attempting WebSocket connection to:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log('WebSocket connected successfully');
+        console.log('WebSocket connected');
         setIsConnected(true);
         setReconnectAttempts(0);
+        toast({
+          title: "Connected",
+          description: "Successfully connected to notification service",
+          duration: 3000,
+        });
       };
 
       socket.onmessage = (event) => {
@@ -94,6 +98,10 @@ export function useNotifications() {
             return;
           }
 
+          // Refresh notifications after receiving a new one
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+          // Show toast for different notification types
           if (data.type === "POINTS_ALLOCATION" || data.type === "POINTS_AWARDED") {
             const points = data.points ?? 0;
             const sign = points >= 0 ? '+' : '';
@@ -123,20 +131,15 @@ export function useNotifications() {
       socket.onclose = (event) => {
         console.log('WebSocket connection closed:', event);
         setIsConnected(false);
+        socketRef.current = null;
 
-        // Clear existing timeout if any
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = null;
-        }
-
-        if (user && reconnectAttempts < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts} in ${delay}ms`);
+        if (user && !reconnectTimeoutRef.current && reconnectAttempts < maxReconnectAttempts) {
+          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}...`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
+            reconnectTimeoutRef.current = null;
             connectWebSocket();
-          }, delay);
+          }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000));
         } else if (reconnectAttempts >= maxReconnectAttempts) {
           toast({
             title: "Connection Error",
@@ -146,9 +149,6 @@ export function useNotifications() {
           });
         }
       };
-
-      socketRef.current = socket;
-
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
       setIsConnected(false);
@@ -168,13 +168,57 @@ export function useNotifications() {
       }
 
       if (socketRef.current) {
-        socketRef.current.close();
+        console.log('Cleaning up WebSocket connection');
+        const socket = socketRef.current;
         socketRef.current = null;
+        socket.close();
       }
 
       setIsConnected(false);
     };
   }, [user]);
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId?: string) => {
+      const response = await fetch('/api/notifications/mark-read', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to mark notifications as read');
+      }
+    },
+    onSuccess: (_, notificationId) => {
+      queryClient.setQueryData(['notifications'], (oldData: PointsNotification[] | undefined) => {
+        if (!oldData) return [];
+        return notificationId
+          ? oldData.filter(n => n.id !== notificationId)
+          : [];
+      });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+      toast({
+        title: "Success",
+        description: notificationId ? "Notification removed" : "All notifications cleared",
+        duration: 3000,
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to mark notification as read:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove notification. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const markAsRead = (notificationId?: string) => {
+    markAsReadMutation.mutate(notificationId);
+  };
 
   return {
     notifications: notifications?.map(notification => ({
@@ -183,6 +227,7 @@ export function useNotifications() {
         `${notification.points > 0 ? '+' : ''}${notification.points}` : undefined
     })) || [],
     unreadCount,
+    markAsRead,
     isConnected
   };
 }

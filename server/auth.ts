@@ -4,30 +4,33 @@ import { type Express, Request } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users } from "@db/schema";
+import { users, transactions } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import memorystore from 'memorystore';
+import { sendEmail, formatRegistrationEmail } from "./utils/emailService";
+import { parse as parseCookie } from 'cookie';
 import jwt from 'jsonwebtoken';
+import memorystore from 'memorystore';
 
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
 
-const sessionStore = new MemoryStore({
-  checkPeriod: 86400000 // prune expired entries every 24h
-});
-
-export const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
-
-interface JwtPayload {
-  id: number;
-  isAdmin: boolean;
-  isSuperAdmin: boolean;
-  exp?: number;
+declare global {
+  namespace Express {
+    interface User {
+      id: number;
+      email: string;
+      firstName: string;
+      lastName: string;
+      isAdmin: boolean;
+      isSuperAdmin: boolean;
+      [key: string]: any;
+    }
+  }
 }
 
-const crypto = {
+export const crypto = {
   async hashPassword(password: string) {
     const salt = randomBytes(16).toString('hex');
     const hash = (await scryptAsync(password, salt, 64)) as Buffer;
@@ -50,51 +53,15 @@ const crypto = {
   }
 };
 
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  points: z.number().int().min(0).optional(),
-  selectedPackage: z.string().min(1, "Package selection is required"),
-  referralCode: z.string().optional(),
-  // Optional fields
-  isSouthAfrican: z.boolean().default(false),
-  idNumber: z.string().optional().nullable(),
-  dateOfBirth: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
-  city: z.string().optional().nullable(),
-  postalCode: z.string().optional().nullable(),
-  industry: z.string().optional().nullable(),
-  occupation: z.string().optional().nullable(),
-  bankName: z.string().optional().nullable(),
-  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
-  accountNumber: z.string().optional().nullable(),
-  accountHolderName: z.string().optional().nullable(),
-  branchCode: z.string().optional().nullable(),
-  hasCreditCard: z.boolean().default(false),
-  signature: z.string().optional().nullable(),
-});
-
-const packageMap = {
-  1: "BEGINNER",
-  2: "NOVICE",
-  3: "ACTIVE",
-  4: "PROFESSIONAL",
-  5: "EXPERT"
-};
-
 export function setupAuth(app: Express) {
   if (!process.env.SESSION_SECRET) {
     console.error('Missing SESSION_SECRET environment variable');
     process.exit(1);
   }
+
+  const store = new MemoryStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  });
 
   app.set('trust proxy', 1);
 
@@ -102,15 +69,15 @@ export function setupAuth(app: Express) {
     secret: process.env.SESSION_SECRET,
     cookie: {
       maxAge: 86400000, // 24 hours
-      secure: false, // Set to true in production with HTTPS
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
       httpOnly: true
     },
-    name: 'connect.sid',
-    store: sessionStore,
+    store,
     resave: false,
     saveUninitialized: false,
+    name: 'session'
   });
 
   app.use(sessionMiddleware);
@@ -275,28 +242,44 @@ export function setupAuth(app: Express) {
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       try {
-        const [newUser] = await db
-          .insert(users)
-          .values({
-            email,
-            password: hashedPassword,
-            firstName,
-            lastName,
-            phoneNumber,
-            isAdmin: false,
-            isSuperAdmin: false,
-            isEnabled: true,
-            points: points || 0,
-            referralCode: newReferralCode,
-            referredBy: referralCode || null,
-            selectedPackage,
-            ...otherFields
-          })
-          .returning();
+        const newUser = await db.transaction(async (tx) => {
+          console.log('Starting registration transaction');
 
-        if (!newUser) {
-          throw new Error("Failed to create user record");
-        }
+          const [user] = await tx
+            .insert(users)
+            .values({
+              email,
+              password: hashedPassword,
+              firstName,
+              lastName,
+              phoneNumber,
+              isAdmin: false,
+              isSuperAdmin: false,
+              isEnabled: true,
+              points: points || 0,
+              referralCode: newReferralCode,
+              referredBy: referralCode || null,
+              selectedPackage,
+              ...otherFields
+            })
+            .returning();
+
+          if (!user) {
+            throw new Error("Failed to create user record");
+          }
+
+          // Create welcome bonus points transaction
+          await tx
+            .insert(transactions)
+            .values({
+              userId: user.id,
+              points: points || 0,
+              type: "WELCOME_BONUS",
+              description: `Welcome bonus points for ${selectedPackage} package registration`,
+            });
+
+          return user;
+        });
 
         const { password: _, ...safeUser } = newUser;
 
@@ -340,7 +323,7 @@ export function setupAuth(app: Express) {
             console.error('Session destruction error:', err);
             return res.status(500).json({ error: "Logout failed" });
           }
-          res.clearCookie("connect.sid");
+          res.clearCookie("session");
           res.json({ message: "Logged out successfully" });
         });
       });
@@ -354,27 +337,8 @@ export function setupAuth(app: Express) {
     console.log('User request:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.user ? req.user.id : undefined,
-      session: req.session,
-      headers: {
-        cookie: req.headers.cookie
-      }
+      session: req.session
     });
-
-    // Temporary test user for debugging
-    if (process.env.NODE_ENV === 'development') {
-      const testUser = {
-        id: 1,
-        email: 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-        isAdmin: true,
-        isSuperAdmin: false,
-        points: 5000,
-        selectedPackage: 'PROFESSIONAL',
-        isEnabled: true
-      };
-      return res.json(testUser);
-    }
 
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
@@ -383,6 +347,47 @@ export function setupAuth(app: Express) {
   });
 
   return sessionMiddleware;
+}
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  points: z.number().int().min(0).optional(),
+  selectedPackage: z.string().min(1, "Package selection is required"),
+  referralCode: z.string().optional(),
+  // Optional fields
+  isSouthAfrican: z.boolean().default(false),
+  idNumber: z.string().optional().nullable(),
+  dateOfBirth: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  postalCode: z.string().optional().nullable(),
+  industry: z.string().optional().nullable(),
+  occupation: z.string().optional().nullable(),
+  bankName: z.string().optional().nullable(),
+  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
+  accountNumber: z.string().optional().nullable(),
+  accountHolderName: z.string().optional().nullable(),
+  branchCode: z.string().optional().nullable(),
+  hasCreditCard: z.boolean().default(false),
+  signature: z.string().optional().nullable(),
+});
+
+export const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
+
+interface JwtPayload {
+  id: number;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  exp?: number;
 }
 
 export function verifyToken(token: string): JwtPayload | null {
@@ -422,4 +427,103 @@ export function generateToken(user: any): string {
   );
 }
 
-export { sessionStore };
+export async function verifySession(req: Request): Promise<any> {
+  try {
+    console.log('Verifying session for request:', {
+      url: req.url,
+      headers: {
+        cookie: req.headers.cookie,
+        'sec-websocket-protocol': req.headers['sec-websocket-protocol']
+      }
+    });
+
+    if (req.user) {
+      console.log('Using existing session user:', req.user);
+      return req.user;
+    }
+
+    if (!req.headers.cookie) {
+      console.log('No cookie found in request');
+      return null;
+    }
+
+    const cookies = parseCookie(req.headers.cookie);
+    const sessionId = cookies['connect.sid'];
+
+    if (!sessionId) {
+      console.log('No session ID found in cookies');
+      return null;
+    }
+
+    console.log('Found session ID:', sessionId);
+
+    return new Promise((resolve) => {
+      session({
+        secret: process.env.SESSION_SECRET || 'development-secret',
+        cookie: {
+          maxAge: 86400000, // 24 hours
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        },
+        store: new MemoryStore({
+          checkPeriod: 86400000 // prune expired entries every 24h
+        }),
+        resave: false,
+        saveUninitialized: false
+      }).store.get(sessionId, async (err: any, session: any) => {
+        if (err || !session) {
+          console.log('Session not found or error:', err);
+          resolve(null);
+          return;
+        }
+
+        try {
+          console.log('Retrieved session data:', {
+            ...session,
+            cookie: '[Redacted]',
+            passport: session.passport ? { user: session.passport.user } : undefined
+          });
+
+          const userId = session.passport?.user;
+          if (!userId) {
+            console.log('No user ID in session');
+            resolve(null);
+            return;
+          }
+
+          console.log('Found user ID in session:', userId);
+
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+
+          if (!user) {
+            console.log('User not found in database');
+            resolve(null);
+            return;
+          }
+
+          const { password: _, ...safeUser } = user;
+          console.log('Session verified for user:', safeUser.id);
+          resolve(safeUser);
+        } catch (error) {
+          console.error('Error verifying session:', error);
+          resolve(null);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error in verifySession:', error);
+    return null;
+  }
+}
+
+const packageMap = {
+  1: "BEGINNER",
+  2: "NOVICE",
+  3: "ACTIVE",
+  4: "PROFESSIONAL",
+  5: "EXPERT"
+};
