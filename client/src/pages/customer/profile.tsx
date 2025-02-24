@@ -156,6 +156,14 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
           </ul>
         </div>
       </CardContent>
+      <div className="absolute bottom-6 left-6 right-6">
+        <Button 
+          className={`w-full ${isSelected ? 'bg-[#43EB3E] hover:bg-[#43EB3E]' : ''}`}
+          variant={isSelected ? "default" : "outline"}
+        >
+          {isSelected ? "Selected" : "Select Package"}
+        </Button>
+      </div>
     </Card>
   </div>
 );
