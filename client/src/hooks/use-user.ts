@@ -41,23 +41,33 @@ const userSchema = baseUserSchema.extend({
 export type User = z.infer<typeof userSchema>;
 export type AccountType = typeof accountTypes[number];
 
+const TOKEN_STORAGE_KEY = 'auth_token';
+
 export function useUser() {
   const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(() => {
-    // Try to get token from localStorage on init
-    const savedToken = localStorage.getItem('auth_token');
-    console.log('Initial token from storage:', savedToken ? 'present' : 'missing');
-    return savedToken;
+    try {
+      const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+      console.log('Initial token load:', savedToken ? `${savedToken.slice(0, 10)}...` : 'missing');
+      return savedToken;
+    } catch (error) {
+      console.error('Error reading token from storage:', error);
+      return null;
+    }
   });
 
   // Persist token to localStorage when it changes
   useEffect(() => {
-    if (token) {
-      console.log('Saving token to storage');
-      localStorage.setItem('auth_token', token);
-    } else {
-      console.log('Removing token from storage');
-      localStorage.removeItem('auth_token');
+    try {
+      if (token) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, token);
+        console.log('Token saved to storage:', `${token.slice(0, 10)}...`);
+      } else {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        console.log('Token removed from storage');
+      }
+    } catch (error) {
+      console.error('Error managing token in storage:', error);
     }
   }, [token]);
 
@@ -65,6 +75,7 @@ export function useUser() {
     queryKey: ['/api/user'],
     queryFn: async () => {
       try {
+        console.log('Fetching user data with token:', token ? 'present' : 'missing');
         const response = await fetch('/api/user', {
           credentials: 'include',
           headers: {
@@ -92,7 +103,7 @@ export function useUser() {
       }
     },
     retry: false,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   const loginMutation = useMutation({
@@ -118,13 +129,12 @@ export function useUser() {
         hasUser: !!data.user
       });
 
-      if (data.token) {
-        console.log('Setting new token from login');
-        setToken(data.token);
+      if (!data.token) {
+        throw new Error('No token received from server');
       }
 
-      const user = data.user || data;
-      return userSchema.parse(user);
+      setToken(data.token);
+      return userSchema.parse(data.user || data);
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
