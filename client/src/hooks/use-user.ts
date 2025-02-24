@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from "zod";
+import { useState, useEffect } from 'react';
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
@@ -48,6 +49,23 @@ export type AccountType = typeof accountTypes[number];
 
 export function useUser() {
   const queryClient = useQueryClient();
+  const [token, setToken] = useState<string | null>(() => {
+    // Try to get token from localStorage on init
+    const savedToken = localStorage.getItem('auth_token');
+    console.log('Initial token from storage:', savedToken ? 'present' : 'missing');
+    return savedToken;
+  });
+
+  // Persist token to localStorage when it changes
+  useEffect(() => {
+    if (token) {
+      console.log('Saving token to storage');
+      localStorage.setItem('auth_token', token);
+    } else {
+      console.log('Removing token from storage');
+      localStorage.removeItem('auth_token');
+    }
+  }, [token]);
 
   const { data: user, isLoading, error } = useQuery({
     queryKey: ['/api/user'],
@@ -58,11 +76,13 @@ export function useUser() {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
           },
         });
 
         if (response.status === 401) {
-          console.log('User not authenticated');
+          console.log('User not authenticated, clearing token');
+          setToken(null);
           return null;
         }
 
@@ -99,7 +119,16 @@ export function useUser() {
       }
 
       const data = await response.json();
-      console.log('Login response:', data); // Debug log
+      console.log('Login response:', {
+        hasToken: !!data.token,
+        hasUser: !!data.user
+      });
+
+      if (data.token) {
+        console.log('Setting new token from login');
+        setToken(data.token);
+      }
+
       const user = data.user || data;
       return userSchema.parse(user);
     },
@@ -115,6 +144,7 @@ export function useUser() {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
       });
 
@@ -122,6 +152,8 @@ export function useUser() {
         throw new Error('Logout failed');
       }
 
+      console.log('Clearing token on logout');
+      setToken(null);
       queryClient.removeQueries({ queryKey: ['/api/user'] });
       queryClient.setQueryData(['/api/user'], null);
     },
@@ -175,6 +207,12 @@ export function useUser() {
       }
 
       const data = await response.json();
+
+      // Store the token if provided
+      if (data.token) {
+        setToken(data.token);
+      }
+
       return userSchema.parse(data);
     },
     onSuccess: (user) => {
@@ -184,6 +222,7 @@ export function useUser() {
 
   return {
     user,
+    token,
     isLoading,
     error,
     loginMutation,

@@ -36,7 +36,7 @@ export function useNotifications() {
       return data.map((notification: any) => ({
         id: notification.id.toString(),
         type: notification.type,
-        points: notification.type === 'POINTS_AWARDED' ? 
+        points: notification.type === 'POINTS_AWARDED' ?
           parseInt(notification.title.match(/-?\d+/)?.[0] || '0') : undefined,
         description: notification.message,
         timestamp: notification.createdAt,
@@ -56,33 +56,42 @@ export function useNotifications() {
 
   const connectWebSocket = () => {
     if (!user || !token || socketRef.current?.readyState === WebSocket.OPEN) {
-      console.log('Skipping WebSocket connection - no user/token or already connected', {
+      console.log('WebSocket connection skipped:', {
         hasUser: !!user,
         hasToken: !!token,
-        socketState: socketRef.current?.readyState
+        currentSocket: socketRef.current?.readyState
       });
       return;
     }
 
     try {
+      // Close any existing connection
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
       }
 
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-
-      console.log('WebSocket connection details:', {
-        protocol,
-        host,
-        token: token ? 'present' : 'missing'
+      // Get the complete URL information
+      const pageUrl = new URL(window.location.href);
+      console.log('Page URL information:', {
+        href: pageUrl.href,
+        origin: pageUrl.origin,
+        host: pageUrl.host,
+        protocol: pageUrl.protocol
       });
 
-      const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(token)}`;
-      console.log('Attempting WebSocket connection to:', wsUrl);
+      // Construct WebSocket URL
+      const wsProtocol = pageUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = new URL(`${wsProtocol}//${pageUrl.host}/ws`);
+      wsUrl.searchParams.append('token', token);
 
-      const socket = new WebSocket(wsUrl);
+      console.log('Attempting WebSocket connection:', {
+        wsProtocol,
+        wsHost: wsUrl.host,
+        wsUrl: wsUrl.toString()
+      });
+
+      const socket = new WebSocket(wsUrl.toString());
       socketRef.current = socket;
 
       socket.onopen = () => {
@@ -127,12 +136,12 @@ export function useNotifications() {
             });
           }
         } catch (error) {
-          console.error('Error processing notification:', error);
+          console.error('Error processing WebSocket message:', error);
         }
       };
 
       socket.onerror = (error) => {
-        console.error('WebSocket connection error:', error);
+        console.error('WebSocket error:', error);
         setIsConnected(false);
       };
 
@@ -146,7 +155,7 @@ export function useNotifications() {
         socketRef.current = null;
 
         if (user && !reconnectTimeoutRef.current && reconnectAttempts < maxReconnectAttempts) {
-          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}...`);
+          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             reconnectTimeoutRef.current = null;
@@ -166,7 +175,7 @@ export function useNotifications() {
       setIsConnected(false);
       toast({
         title: "Connection Error",
-        description: "Failed to establish connection. Please refresh the page.",
+        description: `Failed to establish connection: ${error.message}`,
         variant: "destructive",
         duration: 5000,
       });
@@ -175,7 +184,10 @@ export function useNotifications() {
 
   useEffect(() => {
     if (user && token) {
-      console.log('User authenticated, initiating WebSocket connection');
+      console.log('Initiating WebSocket connection:', {
+        hasUser: !!user,
+        hasToken: !!token
+      });
       connectWebSocket();
     }
 
@@ -187,9 +199,8 @@ export function useNotifications() {
 
       if (socketRef.current) {
         console.log('Cleaning up WebSocket connection');
-        const socket = socketRef.current;
+        socketRef.current.close();
         socketRef.current = null;
-        socket.close();
       }
 
       setIsConnected(false);
@@ -239,11 +250,7 @@ export function useNotifications() {
   };
 
   return {
-    notifications: notifications?.map(notification => ({
-      ...notification,
-      formattedPoints: notification.points !== undefined ? 
-        `${notification.points > 0 ? '+' : ''}${notification.points}` : undefined
-    })) || [],
+    notifications,
     unreadCount,
     markAsRead,
     isConnected
