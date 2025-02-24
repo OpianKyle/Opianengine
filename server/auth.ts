@@ -9,6 +9,7 @@ import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import memorystore from 'memorystore';
+import jwt from 'jsonwebtoken';
 
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
@@ -16,6 +17,78 @@ const MemoryStore = memorystore(session);
 const sessionStore = new MemoryStore({
   checkPeriod: 86400000 // prune expired entries every 24h
 });
+
+export const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
+
+interface JwtPayload {
+  id: number;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  exp?: number;
+}
+
+const crypto = {
+  async hashPassword(password: string) {
+    const salt = randomBytes(16).toString('hex');
+    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${salt}.${hash.toString('hex')}`;
+  },
+
+  async verifyPassword(password: string, storedHash: string) {
+    try {
+      const [salt, hash] = storedHash.split('.');
+      if (!salt || !hash) return false;
+
+      const hashBuffer = Buffer.from(hash, 'hex');
+      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
+
+      return timingSafeEqual(hashBuffer, suppliedBuffer);
+    } catch (error) {
+      console.error('Password verification error:', error);
+      return false;
+    }
+  }
+};
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  points: z.number().int().min(0).optional(),
+  selectedPackage: z.string().min(1, "Package selection is required"),
+  referralCode: z.string().optional(),
+  // Optional fields
+  isSouthAfrican: z.boolean().default(false),
+  idNumber: z.string().optional().nullable(),
+  dateOfBirth: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  postalCode: z.string().optional().nullable(),
+  industry: z.string().optional().nullable(),
+  occupation: z.string().optional().nullable(),
+  bankName: z.string().optional().nullable(),
+  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
+  accountNumber: z.string().optional().nullable(),
+  accountHolderName: z.string().optional().nullable(),
+  branchCode: z.string().optional().nullable(),
+  hasCreditCard: z.boolean().default(false),
+  signature: z.string().optional().nullable(),
+});
+
+const packageMap = {
+  1: "BEGINNER",
+  2: "NOVICE",
+  3: "ACTIVE",
+  4: "PROFESSIONAL",
+  5: "EXPERT"
+};
 
 export function setupAuth(app: Express) {
   if (!process.env.SESSION_SECRET) {
@@ -156,158 +229,6 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // Logout route
-  app.post("/api/logout", (req, res) => {
-    if (req.user) {
-      console.log('Logging out user:', req.user.id);
-      req.logout((err) => {
-        if (err) {
-          console.error('Logout error:', err);
-          return res.status(500).json({ error: "Logout failed" });
-        }
-        req.session.destroy((err) => {
-          if (err) {
-            console.error('Session destruction error:', err);
-            return res.status(500).json({ error: "Logout failed" });
-          }
-          res.clearCookie("connect.sid");
-          res.json({ message: "Logged out successfully" });
-        });
-      });
-    } else {
-      res.status(401).json({ message: "Not logged in" });
-    }
-  });
-
-  // Get current user route
-  app.get("/api/user", (req, res) => {
-    console.log('User request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? req.user.id : undefined,
-      session: req.session
-    });
-
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-    res.json(req.user);
-  });
-
-  return sessionMiddleware;
-}
-
-const crypto = {
-  async hashPassword(password: string) {
-    const salt = randomBytes(16).toString('hex');
-    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${salt}.${hash.toString('hex')}`;
-  },
-
-  async verifyPassword(password: string, storedHash: string) {
-    try {
-      const [salt, hash] = storedHash.split('.');
-      if (!salt || !hash) return false;
-
-      const hashBuffer = Buffer.from(hash, 'hex');
-      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
-
-      return timingSafeEqual(hashBuffer, suppliedBuffer);
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
-    }
-  }
-};
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-export { sessionStore };
-
-const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  points: z.number().int().min(0).optional(),
-  selectedPackage: z.string().min(1, "Package selection is required"),
-  referralCode: z.string().optional(),
-  // Optional fields
-  isSouthAfrican: z.boolean().default(false),
-  idNumber: z.string().optional().nullable(),
-  dateOfBirth: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
-  city: z.string().optional().nullable(),
-  postalCode: z.string().optional().nullable(),
-  industry: z.string().optional().nullable(),
-  occupation: z.string().optional().nullable(),
-  bankName: z.string().optional().nullable(),
-  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
-  accountNumber: z.string().optional().nullable(),
-  accountHolderName: z.string().optional().nullable(),
-  branchCode: z.string().optional().nullable(),
-  hasCreditCard: z.boolean().default(false),
-  signature: z.string().optional().nullable(),
-});
-
-export const JWT_SECRET = process.env.JWT_SECRET || 'development-jwt-secret';
-
-interface JwtPayload {
-  id: number;
-  isAdmin: boolean;
-  isSuperAdmin: boolean;
-  exp?: number;
-}
-
-export function verifyToken(token: string): JwtPayload | null {
-  try {
-    console.log('Verifying token:', {
-      tokenLength: token.length,
-      firstChars: token.substring(0, 10) + '...',
-    });
-
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    console.log('Token verified successfully:', {
-      userId: decoded.id,
-      isAdmin: decoded.isAdmin,
-      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
-    });
-
-    return decoded;
-  } catch (error) {
-    console.error('Token verification failed:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      name: error instanceof Error ? error.name : 'Unknown error type',
-      tokenLength: token?.length
-    });
-    return null;
-  }
-}
-
-export function generateToken(user: any): string {
-  return jwt.sign(
-    {
-      id: user.id,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin
-    },
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-}
-
-const packageMap = {
-  1: "BEGINNER",
-  2: "NOVICE",
-  3: "ACTIVE",
-  4: "PROFESSIONAL",
-  5: "EXPERT"
-};
-
-//The register route was missing from the edited code.  I have added it back.
   // Register route
   app.post("/api/register", async (req, res) => {
     try {
@@ -354,44 +275,28 @@ const packageMap = {
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       try {
-        const newUser = await db.transaction(async (tx) => {
-          console.log('Starting registration transaction');
+        const [newUser] = await db
+          .insert(users)
+          .values({
+            email,
+            password: hashedPassword,
+            firstName,
+            lastName,
+            phoneNumber,
+            isAdmin: false,
+            isSuperAdmin: false,
+            isEnabled: true,
+            points: points || 0,
+            referralCode: newReferralCode,
+            referredBy: referralCode || null,
+            selectedPackage,
+            ...otherFields
+          })
+          .returning();
 
-          const [user] = await tx
-            .insert(users)
-            .values({
-              email,
-              password: hashedPassword,
-              firstName,
-              lastName,
-              phoneNumber,
-              isAdmin: false,
-              isSuperAdmin: false,
-              isEnabled: true,
-              points: points || 0,
-              referralCode: newReferralCode,
-              referredBy: referralCode || null,
-              selectedPackage,
-              ...otherFields
-            })
-            .returning();
-
-          if (!user) {
-            throw new Error("Failed to create user record");
-          }
-
-          // Create welcome bonus points transaction
-          await tx
-            .insert(transactions)
-            .values({
-              userId: user.id,
-              points: points || 0,
-              type: "WELCOME_BONUS",
-              description: `Welcome bonus points for ${selectedPackage} package registration`,
-            });
-
-          return user;
-        });
+        if (!newUser) {
+          throw new Error("Failed to create user record");
+        }
 
         const { password: _, ...safeUser } = newUser;
 
@@ -421,4 +326,81 @@ const packageMap = {
     }
   });
 
-import jwt from 'jsonwebtoken';
+  // Logout route
+  app.post("/api/logout", (req, res) => {
+    if (req.user) {
+      console.log('Logging out user:', req.user.id);
+      req.logout((err) => {
+        if (err) {
+          console.error('Logout error:', err);
+          return res.status(500).json({ error: "Logout failed" });
+        }
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Session destruction error:', err);
+            return res.status(500).json({ error: "Logout failed" });
+          }
+          res.clearCookie("connect.sid");
+          res.json({ message: "Logged out successfully" });
+        });
+      });
+    } else {
+      res.status(401).json({ message: "Not logged in" });
+    }
+  });
+
+  // Get current user route
+  app.get("/api/user", (req, res) => {
+    console.log('User request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? req.user.id : undefined,
+      session: req.session
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    res.json(req.user);
+  });
+
+  return sessionMiddleware;
+}
+
+export function verifyToken(token: string): JwtPayload | null {
+  try {
+    console.log('Verifying token:', {
+      tokenLength: token.length,
+      firstChars: token.substring(0, 10) + '...',
+    });
+
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    console.log('Token verified successfully:', {
+      userId: decoded.id,
+      isAdmin: decoded.isAdmin,
+      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
+    });
+
+    return decoded;
+  } catch (error) {
+    console.error('Token verification failed:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown error type',
+      tokenLength: token?.length
+    });
+    return null;
+  }
+}
+
+export function generateToken(user: any): string {
+  return jwt.sign(
+    {
+      id: user.id,
+      isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin
+    },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}
+
+export { sessionStore };
