@@ -72,7 +72,7 @@ export function useNotifications() {
 
       // Get the current location and construct WebSocket URL
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host || window.location.hostname;
+      const host = window.location.host;
 
       if (!host) {
         throw new Error('Could not determine host for WebSocket connection');
