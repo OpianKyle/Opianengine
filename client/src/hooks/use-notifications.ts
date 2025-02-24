@@ -72,18 +72,14 @@ export function useNotifications() {
 
       // Get the current URL information and construct WebSocket URL
       try {
-        // Ensure we have a valid host
-        if (!window.location.host) {
-          throw new Error('Invalid host');
-        }
+        // Get full URL from window.location
+        const fullUrl = new URL(window.location.href);
+        const wsProtocol = fullUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${fullUrl.host}/ws`;
 
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsHost = window.location.host; // This includes the port if present
-        const wsUrl = `${wsProtocol}//${wsHost}/notifications-ws`;
-
-        console.log('Attempting WebSocket connection to:', wsUrl, {
+        console.log('Attempting WebSocket connection to:', {
           protocol: wsProtocol,
-          host: wsHost,
+          host: fullUrl.host,
           fullUrl: wsUrl
         });
 

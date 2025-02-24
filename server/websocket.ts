@@ -15,9 +15,18 @@ const clients = new Map<WebSocket, {
 export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
   const wss = new WebSocketServer({ 
     server,
-    path: '/notifications-ws',
+    path: '/ws',
     verifyClient: async (info: any, done) => {
       try {
+        // Log the incoming connection request
+        console.log('Verifying session for request:', {
+          url: info.req.url,
+          headers: {
+            cookie: info.req.headers.cookie,
+            'sec-websocket-protocol': info.req.headers['sec-websocket-protocol']
+          }
+        });
+
         // Check for Vite HMR connection
         if (info.req.headers['sec-websocket-protocol']?.includes('vite-hmr')) {
           console.log('Allowing Vite HMR WebSocket connection');
@@ -112,6 +121,10 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
       console.error('Error handling WebSocket connection:', error);
       ws.close(1011, 'Internal Server Error');
     }
+  });
+
+  wss.on('error', (error) => {
+    console.error('WebSocket server error:', error);
   });
 
   return {
