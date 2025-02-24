@@ -21,11 +21,16 @@ export function setupWebSocketServer(server: Server) {
         // Log connection attempt details
         console.log('WebSocket connection attempt:', {
           url: info.req.url,
-          protocol: info.req.headers['sec-websocket-protocol']
+          headers: {
+            protocol: info.req.headers['sec-websocket-protocol'],
+            upgrade: info.req.headers.upgrade,
+            connection: info.req.headers.connection
+          }
         });
 
         // Check for Vite HMR connection
         if (info.req.headers['sec-websocket-protocol']?.includes('vite-hmr')) {
+          console.log('Allowing Vite HMR WebSocket connection');
           return done(true);
         }
 
@@ -35,7 +40,9 @@ export function setupWebSocketServer(server: Server) {
 
         console.log('Token verification:', {
           hasToken: !!token,
-          tokenLength: token?.length
+          tokenLength: token?.length,
+          urlPath: url.pathname,
+          urlParams: Array.from(url.searchParams.keys())
         });
 
         if (!token) {
@@ -47,7 +54,10 @@ export function setupWebSocketServer(server: Server) {
         try {
           const user = await verifyToken(token);
           if (user) {
-            console.log('WebSocket authenticated for user:', user.id);
+            console.log('WebSocket authenticated for user:', {
+              userId: user.id,
+              isAdmin: user.isAdmin
+            });
             info.req.user = user;
             return done(true);
           }
@@ -67,6 +77,7 @@ export function setupWebSocketServer(server: Server) {
   wss.on('connection', async (ws: WebSocket, req: any) => {
     try {
       if (!req.user) {
+        console.log('Rejecting WebSocket connection: No user in request');
         ws.close(1008, 'Authentication required');
         return;
       }
@@ -80,7 +91,8 @@ export function setupWebSocketServer(server: Server) {
 
       console.log('WebSocket client connected:', {
         userId: userData.userId,
-        isAdmin: userData.isAdmin
+        isAdmin: userData.isAdmin,
+        totalConnections: clients.size
       });
 
       // Send connection confirmation
@@ -144,11 +156,13 @@ export function setupWebSocketServer(server: Server) {
         console.log('Sending points notification:', {
           userId,
           points,
-          type: message.type
+          type: message.type,
+          activeConnections: Array.from(clients.values())
+            .filter(client => client.userId === userId).length
         });
 
         // Send to connected user
-        for (const [ws, client] of clients.entries()) {
+        for (const [ws, client] of clients) {
           if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(message));
           }

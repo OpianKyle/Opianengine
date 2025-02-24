@@ -113,7 +113,6 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-
   app.get("/api/products/assignments/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
@@ -223,12 +222,8 @@ export function registerRoutes(app: Express): Server {
         else if (tierPoints >= 50000) currentTier = "Purple";
         else if (tierPoints >= 10000) currentTier = "Silver";
 
-        wsServer.broadcastToUser(userId, {
-          type: "POINTS_ALLOCATION",
-          points,
-          description,
-          timestamp: new Date().toISOString()
-        });
+        // Update WebSocket notification using the correct method
+        await wsServer.notifyPointsUpdate(userId, points, description);
 
         const customerEmail = formatPointsAssignmentEmail(
           targetUser.firstName || "Valued Customer",
@@ -1006,7 +1001,12 @@ export function registerRoutes(app: Express): Server {
     try {
       const [deletedAssignment] = await db
         .delete(productAssignments)
-        .where(sql`${productAssignments.userId} = ${userId} AND ${productAssignments.productId} = ${parseInt(id)}`)
+        .where(
+          and(
+            eq(productAssignments.userId, userId),
+            eq(productAssignments.productId, parseInt(id))
+          )
+        )
         .returning();
 
       if (!deletedAssignment) {
@@ -1015,7 +1015,7 @@ export function registerRoutes(app: Express): Server {
 
       await logAdminAction({
         adminId: req.user.id,
-        actionType: "PRODUCT_UNASSIGNED",
+        actionType: "PRODUCT_REMOVED",
         targetUserId: userId,
         details: `Unassigned product ID ${id} from user ID ${userId}`,
       });

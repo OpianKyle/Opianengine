@@ -45,7 +45,7 @@ export function useNotifications() {
 
   const connectWebSocket = () => {
     if (!user || !token) {
-      console.log('WebSocket setup skipped:', {
+      console.log('WebSocket setup skipped - no auth:', {
         hasUser: !!user,
         hasToken: !!token,
         userId: user?.id
@@ -65,14 +65,17 @@ export function useNotifications() {
     try {
       isConnectingRef.current = true;
 
-      // Construct WebSocket URL using origin
-      const wsUrl = `${window.location.origin.replace(/^http/, 'ws')}/ws?token=${encodeURIComponent(token)}`;
+      // Enhanced logging for WebSocket URL construction
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
 
       console.log('WebSocket setup:', {
-        origin: window.location.origin,
-        wsUrl: wsUrl.replace(token, '[REDACTED]'),
+        protocol,
+        host: window.location.host,
         hasToken: !!token,
-        userId: user.id
+        tokenLength: token?.length,
+        userId: user.id,
+        wsUrl: wsUrl.replace(token, '[REDACTED]')
       });
 
       const socket = new WebSocket(wsUrl);
@@ -122,14 +125,12 @@ export function useNotifications() {
       };
 
       socket.onerror = (error) => {
-        if (!socketRef.current) return;
         console.error('WebSocket error:', error);
         setIsConnected(false);
         isConnectingRef.current = false;
       };
 
       socket.onclose = (event) => {
-        if (!socketRef.current) return;
         console.log('WebSocket connection closed:', {
           code: event.code,
           reason: event.reason,
