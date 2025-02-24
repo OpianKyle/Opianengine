@@ -65,15 +65,37 @@ export function useNotifications() {
     }
 
     try {
+      // Close any existing connection
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+
+      // Construct WebSocket URL using the current window location
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
+      const host = window.location.host;
+
+      // Debug log the URL components
+      console.log('URL Components:', {
+        protocol,
+        host,
+        currentUrl: window.location.href,
+        hostname: window.location.hostname,
+        origin: window.location.origin
+      });
+
+      if (!host) {
+        throw new Error('Invalid host: Host is undefined');
+      }
+
+      const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(token)}`;
       console.log('Attempting WebSocket connection to:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected successfully');
         setIsConnected(true);
         setReconnectAttempts(0);
         toast({
@@ -124,7 +146,11 @@ export function useNotifications() {
       };
 
       socket.onclose = (event) => {
-        console.log('WebSocket connection closed:', event);
+        console.log('WebSocket connection closed:', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean
+        });
         setIsConnected(false);
         socketRef.current = null;
 
@@ -148,6 +174,12 @@ export function useNotifications() {
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
       setIsConnected(false);
+      toast({
+        title: "Connection Error",
+        description: "Failed to establish connection. Please refresh the page.",
+        variant: "destructive",
+        duration: 5000,
+      });
     }
   };
 
