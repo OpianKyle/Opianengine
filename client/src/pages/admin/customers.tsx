@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import cn from 'classnames';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -307,15 +308,39 @@ export default function AdminCustomers() {
 
   const assignPointsMutation = useMutation({
     mutationFn: async ({ userId, data }: { userId: number, data: PointsFormData }) => {
+      // Calculate total points from selected activities
+      const activityPoints = data.selectedActivities?.reduce((sum, activityId) => {
+        const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
+        return sum + (activity?.pointsValue || 0);
+      }, 0) || 0;
+
+      // Add POS points
+      const totalPoints = activityPoints + (data.posPoints || 0);
+
+      // Create description including selected activities and POS points
+      const activityDescriptions = data.selectedActivities?.map(activityId => {
+        const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
+        return activity?.type;
+      }).filter(Boolean) || [];
+
+      let description = data.description;
+      if (activityDescriptions.length > 0) {
+        description += ` (Activities: ${activityDescriptions.join(", ")})`;
+      }
+      if (data.posPoints > 0) {
+        description += ` (POS Value: R${data.posBaseValue})`;
+      }
+
       const res = await fetch("/api/admin/points", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
-          points: data.points,
-          description: data.description,
+          points: totalPoints,
+          description: description,
         }),
       });
+
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
@@ -335,11 +360,10 @@ export default function AdminCustomers() {
   });
 
   const pointsSchema = z.object({
-    points: z.number().min(1, "Points must be greater than 0"),
-    description: z.string().min(1, "Description is required"),
     selectedActivities: z.array(z.number()).optional(),
-    posPoints: z.number().min(0).optional(),
-    posBaseValue: z.number().min(0).optional()
+    posPoints: z.number().min(0, "POS points must be 0 or greater"),
+    posBaseValue: z.number().min(0, "POS base value must be 0 or greater"),
+    description: z.string().min(1, "Description is required"),
   });
 
   type PointsFormData = z.infer<typeof pointsSchema>;
@@ -347,11 +371,10 @@ export default function AdminCustomers() {
   const pointsForm = useForm<PointsFormData>({
     resolver: zodResolver(pointsSchema),
     defaultValues: {
-      points: 0,
-      description: "",
       selectedActivities: [],
       posPoints: 0,
-      posBaseValue: 0
+      posBaseValue: 0,
+      description: "",
     },
   });
 
@@ -642,7 +665,7 @@ export default function AdminCustomers() {
                                 Assign Points
                               </DropdownMenuItem>
                             </DialogTrigger>
-                            <DialogContent className="max-w-md bg-[#011d3d] border-[#022b5c] text-white">
+                            <DialogContent className="max-w-4xl bg-[#011d3d] border-[#022b5c] text-white">
                               <DialogHeader>
                                 <DialogTitle className="text-[#43EB3E]">
                                   Assign Points - {customer.firstName} {customer.lastName}
@@ -655,40 +678,138 @@ export default function AdminCustomers() {
                                   )}
                                   className="space-y-4"
                                 >
-                                  <FormField
-                                    control={pointsForm.control}
-                                    name="points"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel className="text-white">Points</FormLabel>
-                                        <FormControl>
-                                          <Input
-                                            type="number"
-                                            {...field}
-                                            onChange={(e) => field.onChange(Number(e.target.value))}
-                                            className="bg-[#022b5c] border-[#043875] text-white"
+                                  <div className="grid grid-cols-2 gap-6">
+                                    {/* Left Column - Product Activities and POS Points */}
+                                    <div className="space-y-4">
+                                      <div className="space-y-4">
+                                        <h3 className="font-medium">Product Activities</h3>
+                                        {products?.map((product: any) => (
+                                          <div key={product.id} className="rounded-lg border border-[#043875] p-4">
+                                            <h4 className="font-medium mb-2">{product.name}</h4>
+                                            <div className="space-y-2">
+                                              {product.activities?.map((activity: any) => (
+                                                <div key={activity.id} className="flex items-center space-x-2">
+                                                  <Checkbox
+                                                    id={`activity-${activity.id}`}
+                                                    checked={pointsForm.watch('selectedActivities')?.includes(activity.id)}
+                                                    onCheckedChange={(checked) => {
+                                                      const currentActivities = pointsForm.watch('selectedActivities') || [];
+                                                      if (checked) {
+                                                        pointsForm.setValue('selectedActivities', [...currentActivities, activity.id]);
+                                                      } else {
+                                                        pointsForm.setValue(
+                                                          'selectedActivities',
+                                                          currentActivities.filter((id) => id !== activity.id)
+                                                        );
+                                                      }
+                                                    }}
+                                                  />
+                                                  <label
+                                                    htmlFor={`activity-${activity.id}`}
+                                                    className="text-sm cursor-pointer"
+                                                  >
+                                                    {activity.type} ({activity.pointsValue} points)
+                                                  </label>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+
+                                      <div className="space-y-4 pt-4 border-t border-[#043875]">
+                                        <h3 className="font-medium">POS Points</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <FormField
+                                            control={pointsForm.control}
+                                            name="posBaseValue"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">Base Value (R)</FormLabel>
+                                                <FormControl>
+                                                  <Input
+                                                    type="number"
+                                                    {...field}
+                                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                                    className="bg-[#022b5c] border-[#043875] text-white"
+                                                  />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
                                           />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={pointsForm.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel className="text-white">Description</FormLabel>
-                                        <FormControl>
-                                          <Input
-                                            {...field}
-                                            className="bg-[#022b5c] border-[#043875] text-white"
+                                          <FormField
+                                            control={pointsForm.control}
+                                            name="posPoints"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">Points</FormLabel>
+                                                <FormControl>
+                                                  <Input
+                                                    type="number"
+                                                    {...field}
+                                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                                    className="bg-[#022b5c] border-[#043875] text-white"
+                                                  />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
                                           />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Right Column - Points Summary */}
+                                    <div className="space-y-4">
+                                      <h3 className="font-medium">Points Summary</h3>
+                                      <div className="rounded-lg border border-[#043875] p-4 space-y-2">
+                                        {pointsForm.watch('selectedActivities')?.map((activityId) => {
+                                          const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
+                                          if (!activity) return null;
+                                          return (
+                                            <div key={activity.id} className="flex justify-between">
+                                              <span>{activity.type}</span>
+                                              <span>{activity.pointsValue} points</span>
+                                            </div>
+                                          );
+                                        })}
+                                        {pointsForm.watch('posPoints') > 0 && (
+                                          <div className="flex justify-between">
+                                            <span>POS Points (R{pointsForm.watch('posBaseValue')})</span>
+                                            <span>{pointsForm.watch('posPoints')} points</span>
+                                          </div>
+                                        )}
+                                        <div className="pt-2 border-t border-[#043875] flex justify-between font-medium">
+                                          <span>Total</span>
+                                          <span>
+                                            {(pointsForm.watch('selectedActivities')?.reduce((sum, activityId) => {
+                                              const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
+                                              return sum + (activity?.pointsValue || 0);
+                                            }, 0) || 0) + (pointsForm.watch('posPoints') || 0)} points
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <FormField
+                                        control={pointsForm.control}
+                                        name="description"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Description</FormLabel>
+                                            <FormControl>
+                                              <Input
+                                                {...field}
+                                                className="bg-[#022b5c] border-[#043875] text-white"
+                                              />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+                                  </div>
+
                                   <DialogFooter>
                                     <Button
                                       type="submit"
