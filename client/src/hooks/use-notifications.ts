@@ -32,9 +32,10 @@ export function useNotifications() {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
+          'Authorization': `Bearer ${token}`
         }
       });
+
       if (!response.ok) throw new Error('Failed to fetch notifications');
       return response.json();
     },
@@ -59,22 +60,23 @@ export function useNotifications() {
         socketRef.current = null;
       }
 
-      // Get the origin from window.location
+      // Get origin and construct WebSocket URL
       const origin = window.location.origin;
       console.log('WebSocket setup:', {
         origin,
-        token: token ? 'present' : 'missing'
+        hasToken: !!token,
+        userId: user.id
       });
 
       // Convert http(s) to ws(s)
       const wsProtocol = origin.startsWith('https') ? 'wss' : 'ws';
-      const wsHost = origin.replace(/^https?:\/\//, '');
+      const wsHost = window.location.host;
       const wsUrl = `${wsProtocol}://${wsHost}/ws?token=${encodeURIComponent(token)}`;
 
       console.log('Attempting WebSocket connection:', {
         wsProtocol,
         wsHost,
-        wsUrl
+        wsUrl: wsUrl.replace(token, '[REDACTED]')
       });
 
       const socket = new WebSocket(wsUrl);
@@ -191,7 +193,7 @@ export function useNotifications() {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ notificationId })
       });
