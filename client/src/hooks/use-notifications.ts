@@ -70,88 +70,112 @@ export function useNotifications() {
         socketRef.current = null;
       }
 
-      // Get the current host without port
-      const host = window.location.host;
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${host}/notifications-ws`;
+      // Get the current URL information and construct WebSocket URL
+      try {
+        // Ensure we have a valid host
+        if (!window.location.host) {
+          throw new Error('Invalid host');
+        }
 
-      console.log('Attempting WebSocket connection to:', wsUrl);
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsHost = window.location.host; // This includes the port if present
+        const wsUrl = `${wsProtocol}//${wsHost}/notifications-ws`;
 
-      const socket = new WebSocket(wsUrl);
-      socketRef.current = socket;
-
-      socket.onopen = () => {
-        console.log('WebSocket connected');
-        setIsConnected(true);
-        setReconnectAttempts(0);
-        toast({
-          title: "Connected",
-          description: "Successfully connected to notification service",
-          duration: 3000,
+        console.log('Attempting WebSocket connection to:', wsUrl, {
+          protocol: wsProtocol,
+          host: wsHost,
+          fullUrl: wsUrl
         });
-      };
 
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('Received WebSocket message:', data);
+        const socket = new WebSocket(wsUrl);
+        socketRef.current = socket;
 
-          if (data.type === 'CONNECTION_SUCCESS') {
-            console.log('WebSocket authentication successful');
-            return;
-          }
-
-          // Refresh notifications after receiving a new one
-          queryClient.invalidateQueries({ queryKey: ['notifications'] });
-
-          // Show toast for different notification types
-          if (data.type === "POINTS_ALLOCATION" || data.type === "POINTS_AWARDED") {
-            const points = data.points ?? 0;
-            const sign = points >= 0 ? '+' : '';
-            toast({
-              title: `${sign}${points} Points ${data.type === "POINTS_ALLOCATION" ? "Allocated" : "Awarded"}`,
-              description: data.description,
-              duration: 5000,
-              variant: points >= 0 ? "default" : "destructive",
-            });
-          } else {
-            toast({
-              title: "Notification",
-              description: data.description || data.message,
-              duration: 5000,
-            });
-          }
-        } catch (error) {
-          console.error('Error processing notification:', error);
-        }
-      };
-
-      socket.onerror = (error) => {
-        console.error('WebSocket connection error:', error);
-        setIsConnected(false);
-      };
-
-      socket.onclose = (event) => {
-        console.log('WebSocket connection closed:', event);
-        setIsConnected(false);
-        socketRef.current = null;
-
-        if (user && !reconnectTimeoutRef.current && reconnectAttempts < maxReconnectAttempts) {
-          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}...`);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            setReconnectAttempts(prev => prev + 1);
-            reconnectTimeoutRef.current = null;
-            connectWebSocket();
-          }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000));
-        } else if (reconnectAttempts >= maxReconnectAttempts) {
+        socket.onopen = () => {
+          console.log('WebSocket connected successfully');
+          setIsConnected(true);
+          setReconnectAttempts(0);
           toast({
-            title: "Connection Error",
-            description: "Unable to establish connection to notification service. Please refresh the page.",
-            variant: "destructive",
-            duration: 0,
+            title: "Connected",
+            description: "Successfully connected to notification service",
+            duration: 3000,
           });
-        }
-      };
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log('Received WebSocket message:', data);
+
+            if (data.type === 'CONNECTION_SUCCESS') {
+              console.log('WebSocket authentication successful');
+              return;
+            }
+
+            // Refresh notifications after receiving a new one
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+            // Show toast for different notification types
+            if (data.type === "POINTS_ALLOCATION" || data.type === "POINTS_AWARDED") {
+              const points = data.points ?? 0;
+              const sign = points >= 0 ? '+' : '';
+              toast({
+                title: `${sign}${points} Points ${data.type === "POINTS_ALLOCATION" ? "Allocated" : "Awarded"}`,
+                description: data.description,
+                duration: 5000,
+                variant: points >= 0 ? "default" : "destructive",
+              });
+            } else {
+              toast({
+                title: "Notification",
+                description: data.description || data.message,
+                duration: 5000,
+              });
+            }
+          } catch (error) {
+            console.error('Error processing notification:', error);
+          }
+        };
+
+        socket.onerror = (error) => {
+          console.error('WebSocket connection error:', error);
+          setIsConnected(false);
+        };
+
+        socket.onclose = (event) => {
+          console.log('WebSocket connection closed:', {
+            code: event.code,
+            reason: event.reason,
+            wasClean: event.wasClean
+          });
+          setIsConnected(false);
+          socketRef.current = null;
+
+          if (user && !reconnectTimeoutRef.current && reconnectAttempts < maxReconnectAttempts) {
+            console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}...`);
+            reconnectTimeoutRef.current = setTimeout(() => {
+              setReconnectAttempts(prev => prev + 1);
+              reconnectTimeoutRef.current = null;
+              connectWebSocket();
+            }, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000));
+          } else if (reconnectAttempts >= maxReconnectAttempts) {
+            toast({
+              title: "Connection Error",
+              description: "Unable to establish connection to notification service. Please refresh the page.",
+              variant: "destructive",
+              duration: 0,
+            });
+          }
+        };
+
+      } catch (error) {
+        console.error('Error constructing WebSocket URL:', error);
+        toast({
+          title: "Connection Error",
+          description: "Failed to establish connection. Please refresh the page.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
       setIsConnected(false);
