@@ -10,7 +10,7 @@ const baseUserSchema = z.object({
   email: z.string().email(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().optional(), // Make phone number optional
+  phoneNumber: z.string().optional(),
   isAdmin: z.boolean().default(false),
   isSuperAdmin: z.boolean().default(false),
   isEnabled: z.boolean().default(true),
@@ -19,7 +19,6 @@ const baseUserSchema = z.object({
 
 // Extended schema with all optional fields
 const userSchema = baseUserSchema.extend({
-  // All optional fields
   referralCode: z.string().nullable().optional(),
   referredBy: z.string().nullable().optional(),
   createdAt: z.string().optional(),
@@ -159,67 +158,6 @@ export function useUser() {
     },
   });
 
-  const registerMutation = useMutation({
-    mutationFn: async (userData: { 
-      email: string; 
-      password: string; 
-      firstName: string; 
-      lastName: string; 
-      phoneNumber?: string;
-      isAdmin?: boolean;
-      isSuperAdmin?: boolean;
-      // Extended fields
-      isSouthAfrican?: boolean;
-      idNumber?: string;
-      dateOfBirth?: string;
-      address?: string;
-      city?: string;
-      postalCode?: string;
-      // Employment information
-      industry?: string;
-      occupation?: string;
-      employerName?: string;
-      jobTitle?: string;
-      employmentDuration?: string;
-      // Banking information
-      selectedPackage?: string;
-      bankName?: string;
-      accountType?: AccountType;
-      accountNumber?: string;
-      accountHolderName?: string;
-      branchCode?: string;
-      hasCreditCard?: boolean;
-      signature?: string;
-    }) => {
-      const response = await fetch('/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(userData),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Registration failed');
-      }
-
-      const data = await response.json();
-
-      // Store the token if provided
-      if (data.token) {
-        setToken(data.token);
-      }
-
-      return userSchema.parse(data);
-    },
-    onSuccess: (user) => {
-      queryClient.setQueryData(['/api/user'], user);
-    },
-  });
-
   return {
     user,
     token,
@@ -227,6 +165,5 @@ export function useUser() {
     error,
     loginMutation,
     logoutMutation,
-    registerMutation,
   };
 }

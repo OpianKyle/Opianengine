@@ -29,7 +29,10 @@ export function useNotifications() {
     queryFn: async () => {
       if (!user) return [];
       const response = await fetch('/api/notifications', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
       });
       if (!response.ok) throw new Error('Failed to fetch notifications');
       const data = await response.json();
@@ -80,7 +83,6 @@ export function useNotifications() {
         protocol: pageUrl.protocol
       });
 
-      // Construct WebSocket URL
       const wsProtocol = pageUrl.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = new URL(`${wsProtocol}//${pageUrl.host}/ws`);
       wsUrl.searchParams.append('token', token);
@@ -212,7 +214,10 @@ export function useNotifications() {
       const response = await fetch('/api/notifications/mark-read', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: JSON.stringify({ notificationId })
       });
       if (!response.ok) {
@@ -224,14 +229,14 @@ export function useNotifications() {
       queryClient.setQueryData(['notifications'], (oldData: PointsNotification[] | undefined) => {
         if (!oldData) return [];
         return notificationId
-          ? oldData.filter(n => n.id !== notificationId)
-          : [];
+          ? oldData.map(n => n.id === notificationId ? { ...n, read: true } : n)
+          : oldData.map(n => ({ ...n, read: true }));
       });
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
       toast({
         title: "Success",
-        description: notificationId ? "Notification removed" : "All notifications cleared",
+        description: notificationId ? "Notification marked as read" : "All notifications marked as read",
         duration: 3000,
       });
     },
@@ -239,7 +244,7 @@ export function useNotifications() {
       console.error('Failed to mark notification as read:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to remove notification. Please try again.",
+        description: error.message || "Failed to mark notification as read. Please try again.",
         variant: "destructive",
       });
     }
