@@ -129,40 +129,14 @@ export function useUser() {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: any) => {
-      // Convert to backend format
-      const apiData = {
-        email: userData.email,
-        password: userData.password,
-        first_name: userData.firstName,
-        last_name: userData.lastName,
-        phone_number: userData.mobileNumber || userData.phoneNumber,
-        is_south_african: userData.isSouthAfrican,
-        id_number: userData.idNumber,
-        date_of_birth: userData.dateOfBirth,
-        postal_code: userData.postalCode,
-        has_credit_card: userData.hasCreditCard,
-        bank_name: userData.bankName,
-        account_type: userData.accountType,
-        account_number: userData.accountNumber,
-        account_holder_name: userData.accountHolderName,
-        branch_code: userData.branchCode,
-        selected_package: userData.selectedPackage,
-        gender: userData.gender,
-        occupation: userData.occupation,
-        industry: userData.industry,
-        address: userData.addressLine1,
-        city: userData.suburb,
-        signature: userData.signature,
-        referral_code: userData.referralCode
-      };
-
+      // Don't modify the incoming data structure
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify(apiData),
+        body: JSON.stringify(userData),
         credentials: 'include',
       });
 

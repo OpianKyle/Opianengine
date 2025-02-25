@@ -8,7 +8,6 @@ import { users, transactions } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { sendEmail, formatRegistrationEmail } from "./utils/emailService";
 import { parse as parseCookie } from 'cookie';
 import jwt from 'jsonwebtoken';
 import memorystore from 'memorystore';
@@ -17,20 +16,6 @@ import mysql from 'mysql2/promise';
 
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
-
-declare global {
-  namespace Express {
-    interface User {
-      id: number;
-      email: string;
-      firstName: string;
-      lastName: string;
-      isAdmin: boolean;
-      isSuperAdmin: boolean;
-      [key: string]: any;
-    }
-  }
-}
 
 export const crypto = {
   async hashPassword(password: string) {
@@ -43,10 +28,8 @@ export const crypto = {
     try {
       const [salt, hash] = storedHash.split('.');
       if (!salt || !hash) return false;
-
       const hashBuffer = Buffer.from(hash, 'hex');
       const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
-
       return timingSafeEqual(hashBuffer, suppliedBuffer);
     } catch (error) {
       console.error('Password verification error:', error);
@@ -58,7 +41,6 @@ export const crypto = {
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().optional(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   mobileNumber: z.string().min(1, "Mobile number is required"),
@@ -217,7 +199,6 @@ export function setupAuth(app: Express) {
         acceptMandate
       } = result.data;
 
-      // Check for existing user
       const [existingUser] = await db
         .select()
         .from(users)
@@ -249,7 +230,6 @@ export function setupAuth(app: Express) {
         await connection.beginTransaction();
 
         try {
-          // Insert the user with all fields
           const [userResult] = await connection.execute(
             `INSERT INTO users (
               email, password, first_name, last_name, 
@@ -296,7 +276,6 @@ export function setupAuth(app: Express) {
 
           const userId = userResult.insertId;
 
-          // Create welcome bonus points transaction
           await connection.execute(
             `INSERT INTO transactions (
               user_id, points, type, description
@@ -309,7 +288,6 @@ export function setupAuth(app: Express) {
             ]
           );
 
-          // Fetch the complete user record
           const [users] = await connection.execute(
             'SELECT * FROM users WHERE id = ?',
             [userId]
@@ -324,7 +302,6 @@ export function setupAuth(app: Express) {
 
           const { password: _, ...safeUser } = newUser;
 
-          // Log the user in
           req.login(safeUser, (err) => {
             if (err) {
               console.error('Login error after registration:', err);
@@ -358,7 +335,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Login route
   app.post("/api/login", (req, res, next) => {
     console.log('Login request received:', { email: req.body.email });
 
@@ -388,11 +364,9 @@ export function setupAuth(app: Express) {
           return res.status(500).json({ error: "Login failed" });
         }
 
-        // Generate token for WebSocket authentication
         const token = generateToken(user); 
         console.log('Login successful, token generated for user:', user.id);
 
-        // Return both user data and token
         return res.json({
           user,
           token
@@ -401,7 +375,6 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // Logout route
   app.post("/api/logout", (req, res) => {
     if (req.user) {
       console.log('Logging out user:', req.user.id);
@@ -424,7 +397,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Get current user route
   app.get("/api/user", (req, res) => {
     console.log('User request:', {
       isAuthenticated: req.isAuthenticated(),
