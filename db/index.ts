@@ -1,15 +1,16 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
-import ws from "ws";
+import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
 import * as schema from "@db/schema";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
-
-export const db = drizzle({
-  connection: process.env.DATABASE_URL,
-  schema,
-  ws: ws,
+const poolConnection = mysql.createPool({
+  host: 'dedi1350.jnb1.host-h.net',
+  user: 'admin',
+  password: '8E33U976qa800F',
+  database: 'opianrewards',
+  port: 3306,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
+
+export const db = drizzle(poolConnection, { schema, mode: 'default' });
