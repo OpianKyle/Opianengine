@@ -34,16 +34,32 @@ const connectWithRetry = async (retries = 5) => {
   throw new Error('Failed to connect to database after multiple attempts');
 };
 
-let db: ReturnType<typeof drizzle>;
-
-(async () => {
+// Initialize database connection
+const initializeDb = async () => {
   try {
     const connection = await connectWithRetry();
-    db = drizzle(connection, { schema, mode: 'default' });
+    return drizzle(connection, { schema, mode: 'default' });
   } catch (error) {
     console.error('Failed to establish database connection:', error);
-    process.exit(1);
+    throw error;
   }
-})();
+};
 
-export { db };
+// Export the database initialization promise
+export const dbPromise = initializeDb();
+
+// For backward compatibility, also export a lazy-loaded db instance
+export const db = new Proxy({} as ReturnType<typeof drizzle>, {
+  get(target, prop) {
+    return new Proxy(() => {}, {
+      apply: async (target, thisArg, args) => {
+        const dbInstance = await dbPromise;
+        return (dbInstance as any)[prop](...args);
+      },
+      get: async (target, innerProp) => {
+        const dbInstance = await dbPromise;
+        return (dbInstance as any)[prop][innerProp];
+      }
+    });
+  }
+});
