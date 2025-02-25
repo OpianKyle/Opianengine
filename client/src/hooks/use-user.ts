@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
-// Base user schema with minimal required fields
 const baseUserSchema = z.object({
   id: z.number().optional(),
   email: z.string().email(),
@@ -17,7 +16,6 @@ const baseUserSchema = z.object({
   points: z.number().default(0),
 });
 
-// Extended schema with all optional fields
 const userSchema = baseUserSchema.extend({
   referralCode: z.string().nullable().optional(),
   referredBy: z.string().nullable().optional(),
@@ -56,7 +54,6 @@ export function useUser() {
     }
   });
 
-  // Persist token to localStorage when it changes
   useEffect(() => {
     try {
       if (token) {
@@ -103,7 +100,7 @@ export function useUser() {
       }
     },
     retry: false,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000, 
   });
 
   const loginMutation = useMutation({
@@ -175,6 +172,9 @@ export function useUser() {
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
     },
+    onError: (error: Error) => {
+      console.error('Registration error:', error);
+    },
   });
 
   const logoutMutation = useMutation({
@@ -206,6 +206,9 @@ export function useUser() {
     error,
     loginMutation,
     logoutMutation,
-    registerMutation,
+    registerMutation: {
+      ...registerMutation,
+      isPending: registerMutation.isPending || false,
+    },
   };
 }
