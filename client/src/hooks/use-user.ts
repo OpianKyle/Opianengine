@@ -4,38 +4,37 @@ import { useState, useEffect } from 'react';
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
-const baseUserSchema = z.object({
-  id: z.number().optional(),
+// Base schema that matches the backend response format
+const userSchema = z.object({
+  id: z.number(),
   email: z.string().email(),
-  first_name: z.string().min(1, "First name is required"),
-  last_name: z.string().min(1, "Last name is required"),
-  phone_number: z.string().optional(),
+  first_name: z.string(),
+  last_name: z.string(),
+  phone_number: z.string().nullable(),
   is_admin: z.boolean().default(false),
   is_super_admin: z.boolean().default(false),
   is_enabled: z.boolean().default(true),
   points: z.number().default(0),
-});
-
-const userSchema = baseUserSchema.extend({
-  referral_code: z.string().nullable().optional(),
-  referred_by: z.string().nullable().optional(),
-  created_at: z.string().optional(),
-  is_south_african: z.boolean().optional(),
-  id_number: z.string().nullable().optional(),
-  date_of_birth: z.string().nullable().optional(),
-  address: z.string().nullable().optional(),
-  city: z.string().nullable().optional(),
-  postal_code: z.string().nullable().optional(),
-  industry: z.string().nullable().optional(),
-  occupation: z.string().nullable().optional(),
-  bank_name: z.string().nullable().optional(),
-  account_type: z.enum(accountTypes).nullable().optional(),
-  account_number: z.string().nullable().optional(),
-  account_holder_name: z.string().nullable().optional(),
-  branch_code: z.string().nullable().optional(),
-  selected_package: z.string().nullable().optional(),
+  referral_code: z.string().nullable(),
+  referred_by: z.string().nullable(),
+  created_at: z.string().nullable(),
+  is_south_african: z.boolean().nullable(),
+  id_number: z.string().nullable(),
+  date_of_birth: z.string().nullable(),
+  address: z.string().nullable(),
+  city: z.string().nullable(),
+  postal_code: z.string().nullable(),
+  industry: z.string().nullable(),
+  occupation: z.string().nullable(),
+  bank_name: z.string().nullable(),
+  account_type: z.enum(accountTypes).nullable(),
+  account_number: z.string().nullable(),
+  account_holder_name: z.string().nullable(),
+  branch_code: z.string().nullable(),
+  selected_package: z.string().nullable(),
   gender: z.string().nullable(),
-  has_credit_card: z.boolean().optional(),
+  has_credit_card: z.boolean().nullable(),
+  signature: z.string().nullable(),
 }).passthrough();
 
 export type User = z.infer<typeof userSchema>;
@@ -89,12 +88,7 @@ export function useUser() {
         }
 
         const data = await response.json();
-        try {
-          return userSchema.parse(data);
-        } catch (error) {
-          console.warn('User schema validation warning:', error);
-          return data;
-        }
+        return data;
       } catch (error) {
         console.error('Error fetching user:', error);
         throw error;
@@ -126,12 +120,7 @@ export function useUser() {
         setToken(data.token);
       }
 
-      try {
-        return userSchema.parse(data.user || data);
-      } catch (error) {
-        console.warn('User schema validation warning:', error);
-        return data.user || data;
-      }
+      return data.user || data;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
@@ -160,12 +149,7 @@ export function useUser() {
         setToken(data.token);
       }
 
-      try {
-        return userSchema.parse(data);
-      } catch (error) {
-        console.warn('User schema validation warning:', error);
-        return data;
-      }
+      return data;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
