@@ -12,9 +12,8 @@ import { sendEmail, formatRegistrationEmail } from "./utils/emailService";
 import { parse as parseCookie } from 'cookie';
 import jwt from 'jsonwebtoken';
 import memorystore from 'memorystore';
-import { JWT_SECRET } from './config'; // Added import for JWT_SECRET
-import mysql from 'mysql2/promise'; // Added import for mysql
-
+import { JWT_SECRET } from './config';
+import mysql from 'mysql2/promise';
 
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
@@ -56,6 +55,33 @@ export const crypto = {
   }
 };
 
+const registerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  selectedPackage: z.string().min(1, "Package selection is required"),
+  referralCode: z.string().optional(),
+  points: z.number().int().min(0).optional(),
+  isSouthAfrican: z.boolean().optional().default(false),
+  idNumber: z.string().optional().nullable(),
+  dateOfBirth: z.string().optional().nullable(),
+  gender: z.string().optional().nullable(),
+  occupation: z.string().optional().nullable(),
+  industry: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  postalCode: z.string().optional().nullable(),
+  hasCreditCard: z.boolean().optional().default(false),
+  bankName: z.string().optional().nullable(),
+  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
+  accountNumber: z.string().optional().nullable(),
+  accountHolderName: z.string().optional().nullable(),
+  branchCode: z.string().optional().nullable(),
+  signature: z.string().optional().nullable()
+});
+
 export function setupAuth(app: Express) {
   if (!process.env.SESSION_SECRET) {
     console.error('Missing SESSION_SECRET environment variable');
@@ -63,7 +89,7 @@ export function setupAuth(app: Express) {
   }
 
   const store = new MemoryStore({
-    checkPeriod: 86400000 // prune expired entries every 24h
+    checkPeriod: 86400000
   });
 
   app.set('trust proxy', 1);
@@ -71,7 +97,7 @@ export function setupAuth(app: Express) {
   const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET,
     cookie: {
-      maxAge: 86400000, // 24 hours
+      maxAge: 86400000,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
@@ -87,68 +113,27 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  passport.serializeUser((user: Express.User, done) => {
-    console.log('Serializing user:', user.id);
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      console.log('Deserializing user:', id);
-      const [user] = await db
-        .select({
-          id: users.id,
-          email: users.email,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          isAdmin: users.isAdmin,
-          isSuperAdmin: users.isSuperAdmin,
-          points: users.points,
-          selectedPackage: users.selectedPackage,
-          isEnabled: users.isEnabled
-        })
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-
-      if (!user) {
-        console.log('User not found during deserialization');
-        return done(null, false);
-      }
-
-      console.log('User deserialized successfully:', user.id);
-      done(null, user);
-    } catch (error) {
-      console.error('Deserialization error:', error);
-      done(error);
-    }
-  });
-
   passport.use(
     new LocalStrategy(
       { usernameField: 'email' },
       async (email, password, done) => {
         try {
-          console.log('Login attempt for:', email);
           const [user] = await db
             .select()
             .from(users)
             .where(eq(users.email, email))
-            .limit(1);
+            .limit(1)
+            .execute();
 
           if (!user) {
-            console.log('User not found');
             return done(null, false, { message: 'Invalid email or password' });
           }
 
           if (!user.isEnabled) {
-            console.log('Account is disabled');
             return done(null, false, { message: 'Account is disabled' });
           }
 
           const isValid = await crypto.verifyPassword(password, user.password);
-          console.log('Password verification result:', isValid);
-
           if (!isValid) {
             return done(null, false, { message: 'Invalid email or password' });
           }
@@ -163,50 +148,29 @@ export function setupAuth(app: Express) {
     )
   );
 
-  // Login route
-  app.post("/api/login", (req, res, next) => {
-    console.log('Login request received:', { email: req.body.email });
-
-    const result = loginSchema.safeParse(req.body);
-    if (!result.success) {
-      console.error('Login validation failed:', result.error);
-      return res.status(400).json({
-        error: "Invalid input data",
-        details: result.error.errors
-      });
-    }
-
-    passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
-      if (err) {
-        console.error('Authentication error:', err);
-        return res.status(500).json({ error: "Authentication error" });
-      }
-
-      if (!user) {
-        console.log('Authentication failed:', info?.message);
-        return res.status(401).json({ error: info?.message || "Invalid email or password" });
-      }
-
-      req.login(user, async (loginErr) => {
-        if (loginErr) {
-          console.error('Login error:', loginErr);
-          return res.status(500).json({ error: "Login failed" });
-        }
-
-        // Generate token for WebSocket authentication
-        const token = generateToken(user); // Using the updated generateToken function
-        console.log('Login successful, token generated for user:', user.id);
-
-        // Return both user data and token
-        return res.json({
-          user,
-          token
-        });
-      });
-    })(req, res, next);
+  passport.serializeUser((user: Express.User, done) => {
+    console.log('Serializing user:', user.id);
+    done(null, user.id);
   });
 
-  // Register route
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1)
+        .execute();
+
+      if (!user) {
+        return done(null, false);
+      }
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
+  });
+
   app.post("/api/register", async (req, res) => {
     try {
       console.log('Registration attempt with data:', {
@@ -230,9 +194,24 @@ export function setupAuth(app: Express) {
         lastName,
         phoneNumber,
         referralCode,
-        points,
         selectedPackage,
-        ...otherFields
+        points,
+        isSouthAfrican,
+        idNumber,
+        dateOfBirth,
+        gender,
+        occupation,
+        industry,
+        address,
+        city,
+        postalCode,
+        hasCreditCard,
+        bankName,
+        accountType,
+        accountNumber,
+        accountHolderName,
+        branchCode,
+        signature
       } = result.data;
 
       // Check for existing user
@@ -244,7 +223,6 @@ export function setupAuth(app: Express) {
         .execute();
 
       if (existingUser) {
-        console.log('User already exists with email:', email);
         return res.status(400).json({
           error: "This email address is already registered"
         });
@@ -254,7 +232,6 @@ export function setupAuth(app: Express) {
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       try {
-        // Use a direct connection for better transaction control
         const connection = await mysql.createConnection({
           host: 'dedi1350.jnb1.host-h.net',
           user: 'admin',
@@ -269,27 +246,48 @@ export function setupAuth(app: Express) {
         await connection.beginTransaction();
 
         try {
-          // Insert the user first
+          // Insert the user with all fields
           const [userResult] = await connection.execute(
             `INSERT INTO users (
               email, password, first_name, last_name, 
               phone_number, is_admin, is_super_admin, 
               is_enabled, points, referral_code, 
-              referred_by, selected_package
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              referred_by, selected_package,
+              is_south_african, id_number, date_of_birth,
+              gender, occupation, industry, address,
+              city, postal_code, has_credit_card,
+              bank_name, account_type, account_number,
+              account_holder_name, branch_code, signature
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               email,
               hashedPassword,
               firstName,
               lastName,
               phoneNumber,
-              false,
-              false,
-              true,
+              false, // is_admin
+              false, // is_super_admin
+              true,  // is_enabled
               points || 0,
               newReferralCode,
               referralCode || null,
-              selectedPackage
+              selectedPackage,
+              isSouthAfrican || false,
+              idNumber || null,
+              dateOfBirth || null,
+              gender || null,
+              occupation || null,
+              industry || null,
+              address || null,
+              city || null,
+              postalCode || null,
+              hasCreditCard || false,
+              bankName || null,
+              accountType || null,
+              accountNumber || null,
+              accountHolderName || null,
+              branchCode || null,
+              signature || null
             ]
           );
 
@@ -357,6 +355,49 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Login route
+  app.post("/api/login", (req, res, next) => {
+    console.log('Login request received:', { email: req.body.email });
+
+    const result = loginSchema.safeParse(req.body);
+    if (!result.success) {
+      console.error('Login validation failed:', result.error);
+      return res.status(400).json({
+        error: "Invalid input data",
+        details: result.error.errors
+      });
+    }
+
+    passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
+      if (err) {
+        console.error('Authentication error:', err);
+        return res.status(500).json({ error: "Authentication error" });
+      }
+
+      if (!user) {
+        console.log('Authentication failed:', info?.message);
+        return res.status(401).json({ error: info?.message || "Invalid email or password" });
+      }
+
+      req.login(user, async (loginErr) => {
+        if (loginErr) {
+          console.error('Login error:', loginErr);
+          return res.status(500).json({ error: "Login failed" });
+        }
+
+        // Generate token for WebSocket authentication
+        const token = generateToken(user); 
+        console.log('Login successful, token generated for user:', user.id);
+
+        // Return both user data and token
+        return res.json({
+          user,
+          token
+        });
+      });
+    })(req, res, next);
+  });
+
   // Logout route
   app.post("/api/logout", (req, res) => {
     if (req.user) {
@@ -401,34 +442,6 @@ const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
-
-const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  points: z.number().int().min(0).optional(),
-  selectedPackage: z.string().min(1, "Package selection is required"),
-  referralCode: z.string().optional(),
-  // Optional fields
-  isSouthAfrican: z.boolean().default(false),
-  idNumber: z.string().optional().nullable(),
-  dateOfBirth: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
-  city: z.string().optional().nullable(),
-  postalCode: z.string().optional().nullable(),
-  industry: z.string().optional().nullable(),
-  occupation: z.string().optional().nullable(),
-  bankName: z.string().optional().nullable(),
-  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
-  accountNumber: z.string().optional().nullable(),
-  accountHolderName: z.string().optional().nullable(),
-  branchCode: z.string().optional().nullable(),
-  hasCreditCard: z.boolean().default(false),
-  signature: z.string().optional().nullable(),
-});
-
 
 export function generateToken(user: Express.User): string {
   console.log('Generating token for user:', {
@@ -556,7 +569,8 @@ export async function verifySession(req: Request): Promise<any> {
             .select()
             .from(users)
             .where(eq(users.id, userId))
-            .limit(1);
+            .limit(1)
+            .execute();
 
           if (!user) {
             console.log('User not found in database');
