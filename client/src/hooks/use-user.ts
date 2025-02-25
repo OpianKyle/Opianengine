@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
-// Base schema that matches the backend response format
+// Define strict schema for type safety but make fields optional
 const userSchema = z.object({
   id: z.number(),
   email: z.string().email(),
@@ -35,7 +35,7 @@ const userSchema = z.object({
   gender: z.string().nullable(),
   has_credit_card: z.boolean().nullable(),
   signature: z.string().nullable(),
-}).passthrough();
+}).partial();
 
 export type User = z.infer<typeof userSchema>;
 export type AccountType = typeof accountTypes[number];
@@ -88,7 +88,7 @@ export function useUser() {
         }
 
         const data = await response.json();
-        return data;
+        return userSchema.parse(data);
       } catch (error) {
         console.error('Error fetching user:', error);
         throw error;
@@ -120,7 +120,8 @@ export function useUser() {
         setToken(data.token);
       }
 
-      return data.user || data;
+      const userData = data.user || data;
+      return userSchema.parse(userData);
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
@@ -149,7 +150,7 @@ export function useUser() {
         setToken(data.token);
       }
 
-      return data;
+      return userSchema.parse(data);
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
