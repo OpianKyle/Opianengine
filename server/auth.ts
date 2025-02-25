@@ -13,6 +13,8 @@ import { parse as parseCookie } from 'cookie';
 import jwt from 'jsonwebtoken';
 import memorystore from 'memorystore';
 import { JWT_SECRET } from './config'; // Added import for JWT_SECRET
+import mysql from 'mysql2/promise'; // Added import for mysql
+
 
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
@@ -233,6 +235,7 @@ export function setupAuth(app: Express) {
         ...otherFields
       } = result.data;
 
+      // Check for existing user
       const [existingUser] = await db
         .select()
         .from(users)
@@ -251,68 +254,94 @@ export function setupAuth(app: Express) {
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       try {
-        const newUser = await db.transaction(async (tx) => {
-          console.log('Starting registration transaction');
+        // Use a direct connection for better transaction control
+        const connection = await mysql.createConnection({
+          host: 'dedi1350.jnb1.host-h.net',
+          user: 'admin',
+          password: '8E33U976qa800F',
+          database: 'opianrewards',
+          port: 3306,
+          ssl: {
+            rejectUnauthorized: false
+          }
+        });
 
+        await connection.beginTransaction();
+
+        try {
           // Insert the user first
-          const result = await tx
-            .insert(users)
-            .values({
+          const [userResult] = await connection.execute(
+            `INSERT INTO users (
+              email, password, first_name, last_name, 
+              phone_number, is_admin, is_super_admin, 
+              is_enabled, points, referral_code, 
+              referred_by, selected_package
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
               email,
-              password: hashedPassword,
+              hashedPassword,
               firstName,
               lastName,
               phoneNumber,
-              isAdmin: false,
-              isSuperAdmin: false,
-              isEnabled: true,
-              points: points || 0,
-              referralCode: newReferralCode,
-              referredBy: referralCode || null,
-              selectedPackage,
-              ...otherFields
-            });
+              false,
+              false,
+              true,
+              points || 0,
+              newReferralCode,
+              referralCode || null,
+              selectedPackage
+            ]
+          );
 
-          // Get the inserted user's ID
-          const userId = result.insertId;
+          const userId = userResult.insertId;
 
           // Create welcome bonus points transaction
-          await tx
-            .insert(transactions)
-            .values({
+          await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description
+            ) VALUES (?, ?, ?, ?)`,
+            [
               userId,
-              points: points || 0,
-              type: "WELCOME_BONUS",
-              description: `Welcome bonus points for ${selectedPackage} package registration`,
-            });
+              points || 0,
+              "WELCOME_BONUS",
+              `Welcome bonus points for ${selectedPackage} package registration`
+            ]
+          );
 
-          // Fetch the newly created user
-          const [user] = await tx
-            .select()
-            .from(users)
-            .where(eq(users.id, userId))
-            .limit(1);
+          // Fetch the complete user record
+          const [users] = await connection.execute(
+            'SELECT * FROM users WHERE id = ?',
+            [userId]
+          );
 
-          return user;
-        });
+          await connection.commit();
 
-        if (!newUser) {
-          throw new Error("Failed to create user record");
-        }
-
-        const { password: _, ...safeUser } = newUser;
-
-        req.login(safeUser, (err) => {
-          if (err) {
-            console.error('Login error after registration:', err);
-            return res.status(500).json({ error: "Registration successful but login failed" });
+          const newUser = users[0];
+          if (!newUser) {
+            throw new Error("Failed to retrieve created user");
           }
 
-          console.log('Registration and login successful for:', safeUser.email);
-          res.status(201).json(safeUser);
-        });
+          const { password: _, ...safeUser } = newUser;
 
-      } catch (dbError: any) {
+          // Log the user in
+          req.login(safeUser, (err) => {
+            if (err) {
+              console.error('Login error after registration:', err);
+              return res.status(500).json({ error: "Registration successful but login failed" });
+            }
+
+            console.log('Registration and login successful for:', safeUser.email);
+            res.status(201).json(safeUser);
+          });
+
+        } catch (error) {
+          await connection.rollback();
+          throw error;
+        } finally {
+          await connection.end();
+        }
+
+      } catch (dbError) {
         console.error('Database error during registration:', dbError);
         return res.status(500).json({
           error: "Registration failed. Please try again.",
@@ -320,7 +349,7 @@ export function setupAuth(app: Express) {
         });
       }
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Registration error:', error);
       if (!res.headersSent) {
         return res.status(500).json({ error: "Registration failed. Please try again." });
