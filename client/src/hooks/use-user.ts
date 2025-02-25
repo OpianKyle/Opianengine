@@ -43,6 +43,35 @@ export type AccountType = typeof accountTypes[number];
 
 const TOKEN_STORAGE_KEY = 'auth_token';
 
+const registrationSchema = z.object({
+  email: z.string().email(),
+  password: z.string(),
+  confirmPassword: z.string().optional(),
+  firstName: z.string(),
+  lastName: z.string(),
+  mobileNumber: z.string(),
+  selectedPackage: z.string(),
+  points: z.number().optional(),
+  referralCode: z.string().optional(),
+  isSouthAfrican: z.boolean().optional(),
+  idNumber: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.string().optional(),
+  occupation: z.string().optional(),
+  industry: z.string().optional(),
+  addressLine1: z.string().optional(),
+  suburb: z.string().optional(),
+  postalCode: z.string().optional(),
+  hasCreditCard: z.boolean().optional(),
+  bankName: z.string().optional(),
+  accountType: z.string().optional(),
+  accountNumber: z.string().optional(),
+  accountHolderName: z.string().optional(),
+  branchCode: z.string().optional(),
+  signature: z.string().optional(),
+  acceptMandate: z.boolean().optional(),
+}).passthrough();
+
 export function useUser() {
   const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(() => {
@@ -123,11 +152,6 @@ export function useUser() {
       }
 
       const data = await response.json();
-      console.log('Login response:', {
-        hasToken: !!data.token,
-        hasUser: !!data.user
-      });
-
       if (data.token) {
         setToken(data.token);
       }
@@ -140,15 +164,19 @@ export function useUser() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (userData: Omit<User, 'id'>) => {
+    mutationFn: async (userData: any) => {
       console.log('Starting registration with data:', { ...userData, password: '[REDACTED]' });
+
+      // Validate registration data
+      const validatedData = registrationSchema.parse(userData);
+
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(validatedData),
         credentials: 'include',
       });
 
