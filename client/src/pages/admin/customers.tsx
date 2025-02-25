@@ -37,6 +37,10 @@ const userSchema = z.object({
   accountHolderName: z.string().optional(),
   branchCode: z.string().optional(),
   selectedPackage: z.string().optional(),
+  gender: z.string().optional(),
+  hasCreditCard: z.boolean().optional(),
+  isSouthAfrican: z.boolean().optional(),
+  signature: z.string().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -148,6 +152,10 @@ export default function AdminCustomers() {
       accountHolderName: "",
       branchCode: "",
       selectedPackage: "",
+      gender: "",
+      hasCreditCard: false,
+      isSouthAfrican: false,
+      signature: "",
     },
   });
 
@@ -170,6 +178,10 @@ export default function AdminCustomers() {
       accountHolderName: customer.accountHolderName || "",
       branchCode: customer.branchCode || "",
       selectedPackage: customer.selectedPackage || "",
+      gender: customer.gender || "",
+      hasCreditCard: customer.hasCreditCard || false,
+      isSouthAfrican: customer.isSouthAfrican || false,
+      signature: customer.signature || "",
     });
   };
 
@@ -542,55 +554,330 @@ export default function AdminCustomers() {
                                 <form onSubmit={editDetailsForm.handleSubmit((data) =>
                                   updateUserDetailsMutation.mutate({ userId: customer.id, data })
                                 )}>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="firstName"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">First Name</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    {/* ...rest of the form fields */}
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="selectedPackage"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Package</FormLabel>
-                                          <FormControl>
-                                            <select {...field} className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white">
-                                              <option value="">Select Package</option>
-                                              <option value="BEGINNER">BEGINNER</option>
-                                              <option value="NOVICE">NOVICE</option>
-                                              <option value="ACTIVE">ACTIVE</option>
-                                              <option value="PROFESSIONAL">PROFESSIONAL</option>
-                                              <option value="EXPERT">EXPERT</option>
-                                            </select>
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  <DialogFooter>
-                                    <Button type="submit" disabled={updateUserDetailsMutation.isPending} className="bg-[#43EB3E] text-white hover:bg-[#3ad936]">
-                                      {updateUserDetailsMutation.isPending ? (
-                                        <>
-                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                          Saving...
-                                        </>
-                                      ) : (
-                                        'Save Changes'
-                                      )}
-                                    </Button>
-                                  </DialogFooter>
-                                </form>
+                                  <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-4">
+                                      {/* Personal Information */}
+                                      <div className="col-span-2">
+                                        <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
+                                      </div>
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="firstName"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">First Name</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="lastName"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Last Name</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="email"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Email</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="phoneNumber"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Phone Number</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="gender"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Gender</FormLabel>
+                                            <FormControl>
+                                              <select {...field} className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white">
+                                                <option value="">Select Gender</option>
+                                                <option value="male">Male</option>
+                                                <option value="female">Female</option>
+                                                <option value="other">Other</option>
+                                              </select>
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="dateOfBirth"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Date of Birth</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} type="date" className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="idNumber"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">ID Number</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+
+                                      {/* Address Information */}
+                                      <div className="col-span-2 mt-4">
+                                        <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Address Information</h3>
+                                      </div>
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="address"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Address</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="city"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">City</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="postalCode"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Postal Code</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+
+                                      {/* Employment Information */}
+                                      <div className="col-span-2 mt-4">
+                                        <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Employment Information</h3>
+                                      </div>
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="industry"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Industry</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="occupation"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Occupation</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+
+                                      {/* Banking Information */}
+                                      <div className="col-span-2 mt-4">
+                                        <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Banking Information</h3>
+                                      </div>
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="bankName"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Bank Name</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="accountType"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Account Type</FormLabel>
+                                            <FormControl>
+                                              <select {...field} className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white">
+                                                <option value="">Select Account Type</option>
+                                                <option value="SAVINGS">SAVINGS</option>
+                                                <option value="CURRENT">CURRENT</option>
+                                                <option value="CHEQUE">CHEQUE</option>
+                                                <option value="CREDIT">CREDIT</option>
+                                              </select>
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="accountNumber"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Account Number</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="accountHolderName"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Account Holder Name</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="branchCode"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Branch Code</FormLabel>
+                                            <FormControl>
+                                              <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+
+                                      {/* Additional Information */}
+                                      <div className="col-span-2 mt-4">
+                                        <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Additional Information</h3>
+                                      </div>
+                                      <FormField
+                                        control={editDetailsForm.control}
+                                        name="selectedPackage"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Selected Package</FormLabel>
+                                            <FormControl>
+                                              <select {...field} className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white">
+                                                <option value="">Select Package</option>
+                                                <option value="BEGINNER">BEGINNER</option>
+                                                <option value="NOVICE">NOVICE</option>
+                                                <option value="INTERMEDIATE">INTERMEDIATE</option>
+                                                <option value="ACTIVE">ACTIVE</option>
+                                                <option value="PROFESSIONAL">PROFESSIONAL</option>
+                                                <option value="EXPERT">EXPERT</option>
+                                              </select>
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <div className="space-y-4">
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="hasCreditCard"
+                                          render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                              <FormControl>
+                                                <Checkbox
+                                                  checked={field.value}
+                                                  onCheckedChange={field.onChange}
+                                                />
+                                              </FormControl>
+                                              <FormLabel className="text-white">Has Credit Card</FormLabel>
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={editDetailsForm.control}
+                                          name="isSouthAfrican"
+                                          render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                              <FormControl>
+                                                <Checkbox
+                                                  checked={field.value}
+                                                  onCheckedChange={field.onChange}
+                                                />
+                                              </FormControl>
+                                              <FormLabel className="text-white">Is South African</FormLabel>
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </div>
+                                    </div>
+                                    <DialogFooter>
+                                      <Button type="submit" disabled={updateUserDetailsMutation.isPending}>
+                                        {updateUserDetailsMutation.isPending ? (
+                                          <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Updating...
+                                          </>
+                                        ) : (
+                                          'Update Details'
+                                        )}
+                                      </Button>
+                                    </DialogFooter>
+                                  </form>
                               </Form>
                             </DialogContent>
                           </Dialog>
