@@ -260,7 +260,7 @@ export function setupAuth(app: Express) {
               gender, occupation, industry, address,
               city, postal_code, has_credit_card,
               bank_name, account_type, account_number,
-              account_holder_name, branch_code, signature, accept_mandate
+              account_holder_name, branch_code, signature
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               email,
@@ -290,8 +290,7 @@ export function setupAuth(app: Express) {
               accountNumber || null,
               accountHolderName || null,
               branchCode || null,
-              signature || null,
-              acceptMandate || false
+              signature || null
             ]
           );
 
