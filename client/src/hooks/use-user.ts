@@ -47,9 +47,7 @@ export function useUser() {
   const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(() => {
     try {
-      const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
-      console.log('Initial token load:', savedToken ? `${savedToken.slice(0, 10)}...` : 'missing');
-      return savedToken;
+      return localStorage.getItem(TOKEN_STORAGE_KEY);
     } catch (error) {
       console.error('Error reading token from storage:', error);
       return null;
@@ -131,17 +129,24 @@ export function useUser() {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: any) => {
-      console.log('Registration data received:', { ...userData, password: '[REDACTED]' });
-
-      // Map the form field names to the expected backend field names
-      const mappedData = {
+      // Convert camelCase to snake_case for backend
+      const apiData = {
         ...userData,
-        firstName: userData.firstName || userData.first_name,
-        lastName: userData.lastName || userData.last_name,
-        phoneNumber: userData.phoneNumber || userData.mobileNumber,
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        phone_number: userData.mobileNumber || userData.phoneNumber,
+        is_south_african: userData.isSouthAfrican,
+        id_number: userData.idNumber,
+        date_of_birth: userData.dateOfBirth,
+        postal_code: userData.postalCode,
+        has_credit_card: userData.hasCreditCard,
+        bank_name: userData.bankName,
+        account_type: userData.accountType,
+        account_number: userData.accountNumber,
+        account_holder_name: userData.accountHolderName,
+        branch_code: userData.branchCode,
+        selected_package: userData.selectedPackage,
       };
-
-      console.log('Mapped registration data:', { ...mappedData, password: '[REDACTED]' });
 
       const response = await fetch('/api/register', {
         method: 'POST',
@@ -149,7 +154,7 @@ export function useUser() {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify(mappedData),
+        body: JSON.stringify(apiData),
         credentials: 'include',
       });
 
