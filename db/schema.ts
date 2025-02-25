@@ -1,16 +1,32 @@
-import { mysqlTable, text, int, boolean, timestamp, mysqlEnum } from "drizzle-orm/mysql-core";
+import { pgTable, text, serial, integer, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
-// Define enums first
-export const activityTypes = mysqlEnum('activity_type', ['SYSTEM_ACTIVATION', 'PRODUCT_ACTIVATION', 'PREMIUM_PAYMENT', 'CARD_BALANCE', 'UPGRADE', 'RENEWAL']);
+export const activityTypes = pgEnum("activity_type", [
+  "SYSTEM_ACTIVATION",
+  "PRODUCT_ACTIVATION",
+  "PREMIUM_PAYMENT",
+  "CARD_BALANCE",
+  "UPGRADE",
+  "RENEWAL"
+]);
 
-export const packageTypes = mysqlEnum('package_type', ['BEGINNER', 'NOVICE', 'ACTIVE', 'PROFESSIONAL', 'EXPERT']);
+export const packageTypes = pgEnum("package_type", [
+  "BEGINNER",
+  "NOVICE",
+  "ACTIVE",
+  "PROFESSIONAL",
+  "EXPERT"
+]);
 
-export const accountTypes = mysqlEnum('account_type', ['CHEQUE', 'SAVINGS', 'CURRENT']);
+export const accountTypes = pgEnum("account_type", [
+  "CHEQUE",
+  "SAVINGS",
+  "CURRENT"
+]);
 
-export const products = mysqlTable("products", {
-  id: int("id").primaryKey().autoincrement(),
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
   isEnabled: boolean("is_enabled").default(true).notNull(),
@@ -18,43 +34,49 @@ export const products = mysqlTable("products", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const product_activities = mysqlTable("product_activities", {
-  id: int("id").primaryKey().autoincrement(),
-  productId: int("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
-  type: text("type").notNull(),
-  pointsValue: int("points_value").default(0).notNull(),
+export const product_activities = pgTable("product_activities", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
+  type: activityTypes("type").notNull(),
+  pointsValue: integer("points_value").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const users = mysqlTable("users", {
-  id: int("id").primaryKey().autoincrement(),
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
   email: text("email").unique().notNull(),
   password: text("password").notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   phoneNumber: text("phone_number").notNull(),
+  // Personal Information
   isSouthAfrican: boolean("is_south_african").default(false),
   idNumber: text("id_number"),
   dateOfBirth: text("date_of_birth"),
   gender: text("gender"),
   occupation: text("occupation"),
   industry: text("industry"),
+  // Address Information
   address: text("address"),
   city: text("city"),
   postalCode: text("postal_code"),
-  selectedPackage: text("selected_package"),
+  // Package Selection
+  selectedPackage: packageTypes("selected_package"),
+  // Banking Information
   bankName: text("bank_name"),
-  accountType: text("account_type"),
+  accountType: accountTypes("account_type"),
   accountNumber: text("account_number"),
   accountHolderName: text("account_holder_name"),
   branchCode: text("branch_code"),
   hasCreditCard: boolean("has_credit_card").default(false),
+  // Digital signature
   signature: text("signature"),
+  // System fields
   isAdmin: boolean("is_admin").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
   isEnabled: boolean("is_enabled").default(true).notNull(),
-  points: int("points").default(0).notNull(),
+  points: integer("points").default(0).notNull(),
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),
   resetToken: text("reset_token"),
@@ -62,128 +84,127 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const productAssignments = mysqlTable("product_assignments", {
-  id: int("id").primaryKey().autoincrement(),
-  userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  productId: int("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
+export const productAssignments = pgTable("product_assignments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  productId: integer("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const rewards = mysqlTable("rewards", {
-  id: int("id").primaryKey().autoincrement(),
+export const rewards = pgTable("rewards", {
+  id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
-  pointsCost: int("points_cost").notNull(),
+  pointsCost: integer("points_cost").notNull(),
   imageUrl: text("image_url").notNull(),
   available: boolean("available").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const transactionTypes = mysqlEnum('transaction_type', [
-  'EARNED',
-  'REDEEMED',
-  'ADMIN_ADJUSTMENT',
-  'CASH_REDEMPTION',
-  'WELCOME_BONUS',
-  'REFERRAL_BONUS',
-  'QUOTE_REQUEST'
+export const transactionTypes = pgEnum("transaction_type", [
+  "EARNED",
+  "REDEEMED",
+  "ADMIN_ADJUSTMENT",
+  "CASH_REDEMPTION",
+  "WELCOME_BONUS",
+  "REFERRAL_BONUS",
+  "QUOTE_REQUEST"
 ]);
 
-export const transactionStatus = mysqlEnum('transaction_status', ['PENDING', 'PROCESSED']);
+export const transactionStatus = pgEnum("transaction_status", ["PENDING", "PROCESSED"]);
 
-export const transactions = mysqlTable("transactions", {
-  id: int("id").primaryKey().autoincrement(),
-  userId: int("user_id").references(() => users.id).notNull(),
-  points: int("points").notNull(),
-  type: text("type").notNull(),
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  points: integer("points").notNull(),
+  type: transactionTypes("type").notNull(),
   description: text("description").notNull(),
-  rewardId: int("reward_id").references(() => rewards.id),
-  status: text("status").default("PENDING"),
+  rewardId: integer("reward_id").references(() => rewards.id),
+  status: transactionStatus("status").default("PENDING"),
   processedAt: timestamp("processed_at"),
-  processedBy: int("processed_by").references(() => users.id),
+  processedBy: integer("processed_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const adminActionTypes = mysqlEnum('admin_action_type', [
-  'POINT_ADJUSTMENT',
-  'ADMIN_CREATED',
-  'ADMIN_REMOVED',
-  'ADMIN_ENABLED',
-  'ADMIN_DISABLED',
-  'USER_ENABLED',
-  'USER_DISABLED',
-  'USER_UPDATED',
-  'REWARD_CREATED',
-  'REWARD_UPDATED',
-  'REWARD_DELETED',
-  'PRODUCT_CREATED',
-  'PRODUCT_UPDATED',
-  'PRODUCT_DELETED',
-  'PRODUCT_ASSIGNED',
-  'PRODUCT_UNASSIGNED',
-  'QUOTE_REQUEST_UPDATED',
-  'QUOTE_REQUEST_COMPLETED',
-  'QUOTE_REQUEST_REJECTED'
+export const adminActionTypes = pgEnum("admin_action_type", [
+  "POINT_ADJUSTMENT",
+  "ADMIN_CREATED",
+  "ADMIN_REMOVED",
+  "ADMIN_ENABLED",
+  "ADMIN_DISABLED",
+  "USER_ENABLED",
+  "USER_DISABLED",
+  "USER_UPDATED",
+  "REWARD_CREATED",
+  "REWARD_UPDATED",
+  "REWARD_DELETED",
+  "PRODUCT_CREATED",
+  "PRODUCT_UPDATED",
+  "PRODUCT_DELETED",
+  "PRODUCT_ASSIGNED",
+  "PRODUCT_UNASSIGNED",
+  "QUOTE_REQUEST_UPDATED",
+  "QUOTE_REQUEST_COMPLETED",
+  "QUOTE_REQUEST_REJECTED"
 ]);
 
-export const adminLogs = mysqlTable("admin_logs", {
-  id: int("id").primaryKey().autoincrement(),
-  adminId: int("admin_id").references(() => users.id).notNull(),
-  targetUserId: int("target_user_id").references(() => users.id),
-  actionType: text("action_type").notNull(),
+export const adminLogs = pgTable("admin_logs", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id").references(() => users.id).notNull(),
+  targetUserId: integer("target_user_id").references(() => users.id),
+  actionType: adminActionTypes("action_type").notNull(),
   details: text("details").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const quoteRequestStatus = mysqlEnum('quote_request_status', ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'REJECTED']);
+export const quoteRequestStatus = pgEnum("quote_request_status", ["PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED"]);
 
-export const quoteRequests = mysqlTable("quote_requests", {
-  id: int("id").primaryKey().autoincrement(),
-  userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  productId: int("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
-  status: text("status").default("PENDING").notNull(),
+export const quoteRequests = pgTable("quote_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  productId: integer("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
+  status: quoteRequestStatus("status").default("PENDING").notNull(),
   notes: text("notes"),
   completedAt: timestamp("completed_at"),
-  completedBy: int("completed_by").references(() => users.id),
+  completedBy: integer("completed_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const notificationTypes = mysqlEnum('notification_type', [
-  'QUOTE_STATUS_CHANGE',
-  'POINTS_AWARDED',
-  'ADMIN_MESSAGE',
-  'SYSTEM_UPDATE'
+export const notificationTypes = pgEnum("notification_type", [
+  "QUOTE_STATUS_CHANGE",
+  "POINTS_AWARDED",
+  "ADMIN_MESSAGE",
+  "SYSTEM_UPDATE"
 ]);
 
-export const notifications = mysqlTable("notifications", {
-  id: int("id").primaryKey().autoincrement(),
-  userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  type: text("type").notNull(),
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  type: notificationTypes("type").notNull(),
   title: text("title").notNull(),
   message: text("message").notNull(),
   isRead: boolean("is_read").default(false).notNull(),
-  relatedId: int("related_id"),
+  relatedId: integer("related_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const packagePremiums = mysqlEnum('package_premium', [
-  'BEGINNER_PREMIUM',
-  'NOVICE_PREMIUM',
-  'ACTIVE_PREMIUM',
-  'PROFESSIONAL_PREMIUM',
-  'EXPERT_PREMIUM'
+export const packagePremiums = pgEnum("package_premium", [
+  "BEGINNER_PREMIUM",
+  "NOVICE_PREMIUM", 
+  "ACTIVE_PREMIUM",
+  "PROFESSIONAL_PREMIUM",
+  "EXPERT_PREMIUM"
 ]);
 
-export const packagePremiumAmounts = mysqlTable("package_premium_amounts", {
-  id: int("id").primaryKey().autoincrement(),
-  packageType: text("package_type").notNull(),
-  premiumAmount: int("premium_amount").notNull(),
+export const packagePremiumAmounts = pgTable("package_premium_amounts", {
+  id: serial("id").primaryKey(),
+  packageType: packageTypes("package_type").notNull(),
+  premiumAmount: integer("premium_amount").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Relations
 export const productRelations = relations(products, ({ many }) => ({
   activities: many(product_activities),
   assignments: many(productAssignments),
@@ -196,14 +217,24 @@ export const productActivityRelations = relations(product_activities, ({ one }) 
   }),
 }));
 
-export const userRelations = relations(users, ({ many }) => ({
+export const userRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
   adminLogsCreated: many(adminLogs, { relationName: "adminLogsCreated" }),
   adminLogsTarget: many(adminLogs, { relationName: "adminLogsTarget" }),
   productAssignments: many(productAssignments),
   quoteRequests: many(quoteRequests, { relationName: "userQuoteRequests" }),
   completedQuoteRequests: many(quoteRequests, { relationName: "adminCompletedQuotes" }),
-  notifications: many(notifications),
+  referredUsers: many(users, {
+    relationName: "referralRelation",
+    fields: [users.referralCode],
+    references: [users.referredBy],
+  }),
+  referrer: one(users, {
+    relationName: "referralRelation",
+    fields: [users.referredBy],
+    references: [users.referralCode],
+  }),
+  notifications: many(notifications)
 }));
 
 export const productAssignmentRelations = relations(productAssignments, ({ one }) => ({
@@ -232,10 +263,12 @@ export const adminLogRelations = relations(adminLogs, ({ one }) => ({
   admin: one(users, {
     fields: [adminLogs.adminId],
     references: [users.id],
+    relationName: "adminLogsCreated"
   }),
   targetUser: one(users, {
     fields: [adminLogs.targetUserId],
     references: [users.id],
+    relationName: "adminLogsTarget"
   }),
 }));
 
@@ -261,7 +294,6 @@ export const notificationRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
-// Schema validations
 export const insertProductSchema = createInsertSchema(products);
 export const selectProductSchema = createSelectSchema(products);
 export const insertProductActivitySchema = createInsertSchema(product_activities);
@@ -283,7 +315,6 @@ export const selectNotificationSchema = createSelectSchema(notifications);
 export const insertPackagePremiumAmountSchema = createInsertSchema(packagePremiumAmounts);
 export const selectPackagePremiumAmountSchema = createSelectSchema(packagePremiumAmounts);
 
-// Types
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
 export type ProductActivity = typeof product_activities.$inferSelect;
