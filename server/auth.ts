@@ -58,8 +58,8 @@ export const crypto = {
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
   selectedPackage: z.string().min(1, "Package selection is required"),
   referralCode: z.string().optional(),
@@ -190,8 +190,8 @@ export function setupAuth(app: Express) {
       const {
         email,
         password,
-        firstName,
-        lastName,
+        first_name: firstName,
+        last_name: lastName,
         phoneNumber,
         referralCode,
         selectedPackage,
