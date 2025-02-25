@@ -43,35 +43,6 @@ export type AccountType = typeof accountTypes[number];
 
 const TOKEN_STORAGE_KEY = 'auth_token';
 
-const registrationSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
-  confirmPassword: z.string().optional(),
-  firstName: z.string(),
-  lastName: z.string(),
-  mobileNumber: z.string(),
-  selectedPackage: z.string(),
-  points: z.number().optional(),
-  referralCode: z.string().optional(),
-  isSouthAfrican: z.boolean().optional(),
-  idNumber: z.string().optional(),
-  dateOfBirth: z.string().optional(),
-  gender: z.string().optional(),
-  occupation: z.string().optional(),
-  industry: z.string().optional(),
-  addressLine1: z.string().optional(),
-  suburb: z.string().optional(),
-  postalCode: z.string().optional(),
-  hasCreditCard: z.boolean().optional(),
-  bankName: z.string().optional(),
-  accountType: z.string().optional(),
-  accountNumber: z.string().optional(),
-  accountHolderName: z.string().optional(),
-  branchCode: z.string().optional(),
-  signature: z.string().optional(),
-  acceptMandate: z.boolean().optional(),
-}).passthrough();
-
 export function useUser() {
   const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(() => {
@@ -89,10 +60,8 @@ export function useUser() {
     try {
       if (token) {
         localStorage.setItem(TOKEN_STORAGE_KEY, token);
-        console.log('Token saved to storage:', `${token.slice(0, 10)}...`);
       } else {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
-        console.log('Token removed from storage');
       }
     } catch (error) {
       console.error('Error managing token in storage:', error);
@@ -103,7 +72,6 @@ export function useUser() {
     queryKey: ['/api/user'],
     queryFn: async () => {
       try {
-        console.log('Fetching user data with token:', token ? 'present' : 'missing');
         const response = await fetch('/api/user', {
           credentials: 'include',
           headers: {
@@ -114,7 +82,6 @@ export function useUser() {
         });
 
         if (response.status === 401) {
-          console.log('User not authenticated, clearing token');
           setToken(null);
           return null;
         }
@@ -155,7 +122,6 @@ export function useUser() {
       if (data.token) {
         setToken(data.token);
       }
-
       return userSchema.parse(data.user || data);
     },
     onSuccess: (user) => {
@@ -165,10 +131,17 @@ export function useUser() {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: any) => {
-      console.log('Starting registration with data:', { ...userData, password: '[REDACTED]' });
+      console.log('Registration data received:', { ...userData, password: '[REDACTED]' });
 
-      // Validate registration data
-      const validatedData = registrationSchema.parse(userData);
+      // Map the form field names to the expected backend field names
+      const mappedData = {
+        ...userData,
+        firstName: userData.firstName || userData.first_name,
+        lastName: userData.lastName || userData.last_name,
+        phoneNumber: userData.phoneNumber || userData.mobileNumber,
+      };
+
+      console.log('Mapped registration data:', { ...mappedData, password: '[REDACTED]' });
 
       const response = await fetch('/api/register', {
         method: 'POST',
@@ -176,7 +149,7 @@ export function useUser() {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify(validatedData),
+        body: JSON.stringify(mappedData),
         credentials: 'include',
       });
 
@@ -186,11 +159,6 @@ export function useUser() {
       }
 
       const data = await response.json();
-      console.log('Registration response:', {
-        hasToken: !!data.token,
-        hasUser: !!data.user
-      });
-
       if (data.token) {
         setToken(data.token);
       }
@@ -220,7 +188,6 @@ export function useUser() {
         throw new Error('Logout failed');
       }
 
-      console.log('Clearing token on logout');
       setToken(null);
       queryClient.removeQueries({ queryKey: ['/api/user'] });
       queryClient.setQueryData(['/api/user'], null);
