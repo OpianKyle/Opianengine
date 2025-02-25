@@ -4,7 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import fileUpload from 'express-fileupload';
 import { setupAuth } from "./auth";
-import { db } from "@db";
+import { getDb } from "@db";
 import { users } from "@db/schema";
 
 // Check required environment variables
@@ -55,12 +55,16 @@ app.use((req, res, next) => {
   try {
     log('Starting server initialization...');
 
-    // Test database connection
+    // Initialize database connection
+    log('Initializing database connection...');
+    const db = await getDb();
+
+    // Test database connection with a simple query
     try {
       await db.select().from(users).limit(1);
       log('Database connection successful');
     } catch (dbError) {
-      console.error('Database connection failed:', dbError);
+      console.error('Database connection test failed:', dbError);
       process.exit(1);
     }
 
@@ -97,6 +101,12 @@ app.use((req, res, next) => {
     });
   } catch (error) {
     console.error('Server startup error:', error);
+    // Log additional details about the error
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Stack trace:', error.stack);
+    }
     process.exit(1);
   }
 })();

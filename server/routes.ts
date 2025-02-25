@@ -4,7 +4,7 @@ import { setupAuth } from "./auth";
 import { setupWebSocketServer } from "./websocket";
 import { db } from "@db";
 import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, quoteRequests, notifications } from "@db/schema";
-import { eq, desc, sql, inArray, and } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { logAdminAction } from "./admin-logger";
@@ -58,51 +58,53 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('Fetching referral info for user:', req.user.id);
 
-      // Get the user's referral data
-      const [referralInfo] = await db
-        .select({
-          referralCode: users.referralCode,
-          firstName: users.firstName,
-          lastName: users.lastName
-        })
-        .from(users)
-        .where(eq(users.id, req.user.id))
-        .limit(1);
+      // Get the user's referral data using MySQL syntax
+      const referralInfo = await db.select({
+        referralCode: users.referralCode,
+        firstName: users.firstName,
+        lastName: users.lastName
+      })
+      .from(users)
+      .where(eq(users.id, req.user.id))
+      .limit(1)
+      .execute();
 
-      if (!referralInfo) {
+      if (!referralInfo || referralInfo.length === 0) {
         console.error('User not found:', req.user.id);
         return res.status(404).json({ error: "User not found" });
       }
 
-      if (!referralInfo.referralCode) {
+      const userInfo = referralInfo[0];
+
+      if (!userInfo.referralCode) {
         // Generate a new referral code if one doesn't exist
         const newReferralCode = `REF${req.user.id}${Date.now().toString(36)}`;
-        await db
-          .update(users)
+        await db.update(users)
           .set({ referralCode: newReferralCode })
-          .where(eq(users.id, req.user.id));
+          .where(eq(users.id, req.user.id))
+          .execute();
 
-        referralInfo.referralCode = newReferralCode;
+        userInfo.referralCode = newReferralCode;
       }
 
-      console.log('Found referral code:', referralInfo.referralCode);
+      console.log('Found referral code:', userInfo.referralCode);
 
       // Get users who were referred by this user
-      const referrals = await db
-        .select({
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          createdAt: users.createdAt,
-        })
-        .from(users)
-        .where(eq(users.referredBy, referralInfo.referralCode))
-        .orderBy(desc(users.createdAt));
+      const referrals = await db.select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(eq(users.referredBy, userInfo.referralCode))
+      .orderBy(desc(users.createdAt))
+      .execute();
 
       console.log('Found referrals count:', referrals.length);
 
       res.json({
-        referralCode: referralInfo.referralCode,
+        referralCode: userInfo.referralCode,
         referralCount: referrals.length,
         referrals: referrals
       });
@@ -183,7 +185,8 @@ export function registerRoutes(app: Express): Server {
           })
           .from(users)
           .where(eq(users.id, userId))
-          .limit(1);
+          .limit(1)
+          .execute();
 
         if (!targetUser) {
           throw new Error("User not found");
@@ -198,14 +201,15 @@ export function registerRoutes(app: Express): Server {
           })
           .from(users)
           .where(eq(users.id, req.user.id))
-          .limit(1);
+          .limit(1)
+          .execute();
 
         await tx.insert(transactions).values({
           userId,
           points,
           type: "ADMIN_ADJUSTMENT",
           description,
-        });
+        }).execute();
 
         const [updatedUser] = await tx
           .update(users)
@@ -213,7 +217,8 @@ export function registerRoutes(app: Express): Server {
             points: sql`${users.points} + ${points}`,
           })
           .where(eq(users.id, userId))
-          .returning();
+          .returning()
+          .execute();
 
         const tierPoints = updatedUser.points;
         let currentTier = "Bronze";
@@ -276,7 +281,8 @@ export function registerRoutes(app: Express): Server {
       .select()
       .from(users)
       .where(eq(users.email, email))
-      .limit(1);
+      .limit(1)
+      .execute();
 
     if (existingUser) {
       return res.status(400).json({ error: "Email already exists" });
@@ -297,7 +303,8 @@ export function registerRoutes(app: Express): Server {
           isEnabled: true,
           points: 0,
         })
-        .returning();
+        .returning()
+        .execute();
 
       await logAdminAction({
         adminId: req.user.id,
@@ -334,7 +341,8 @@ export function registerRoutes(app: Express): Server {
         .update(users)
         .set(updates)
         .where(eq(users.id, parseInt(id)))
-        .returning();
+        .returning()
+        .execute();
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -369,7 +377,8 @@ export function registerRoutes(app: Express): Server {
         .update(users)
         .set(updateData)
         .where(eq(users.id, parseInt(id)))
-        .returning();
+        .returning()
+        .execute();
 
       if (!result || result.length === 0) {
         return res.status(404).json({ error: "User not found" });
@@ -409,7 +418,8 @@ export function registerRoutes(app: Express): Server {
         .update(users)
         .set({ isEnabled: enabled })
         .where(eq(users.id, parseInt(id)))
-        .returning();
+        .returning()
+        .execute();
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -441,7 +451,8 @@ export function registerRoutes(app: Express): Server {
       .select()
       .from(users)
       .where(eq(users.id, userId))
-      .limit(1);
+      .limit(1)
+      .execute();
 
     if (targetUser?.isSuperAdmin) {
       return res.status(400).json({ error: "Cannot modify super admin status" });
@@ -456,7 +467,8 @@ export function registerRoutes(app: Express): Server {
             isEnabled: false
           })
           .where(eq(users.id, userId))
-          .returning();
+          .returning()
+          .execute();
 
         await logAdminAction({
           adminId: req.user.id,
@@ -471,7 +483,8 @@ export function registerRoutes(app: Express): Server {
           .update(users)
           .set({ isAdmin })
           .where(eq(users.id, userId))
-          .returning();
+          .returning()
+          .execute();
 
         await logAdminAction({
           adminId: req.user.id,
@@ -570,7 +583,8 @@ export function registerRoutes(app: Express): Server {
         })
         .from(users)
         .where(eq(users.id, userId))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!customer) {
         return res.status(404).json({ error: "Customer not found" });
@@ -583,24 +597,29 @@ export function registerRoutes(app: Express): Server {
       await db.transaction(async (tx) => {
         await tx
           .delete(adminLogs)
-          .where(eq(adminLogs.targetUserId, userId));
+          .where(eq(adminLogs.targetUserId, userId))
+          .execute();
 
         await tx
           .delete(productAssignments)
-          .where(eq(productAssignments.userId, userId));
+          .where(eq(productAssignments.userId, userId))
+          .execute();
 
         await tx
           .delete(transactions)
-          .where(eq(transactions.userId, userId));
+          .where(eq(transactions.userId, userId))
+          .execute();
 
         await tx
           .update(users)
           .set({ referred_by: null })
-          .where(eq(users.referred_by, customer.referral_code));
+          .where(eq(users.referred_by, customer.referral_code))
+          .execute();
 
         await tx
           .delete(users)
-          .where(eq(users.id, userId));
+          .where(eq(users.id, userId))
+          .execute();
 
         await logAdminAction({
           adminId: req.user.id, 
@@ -708,7 +727,8 @@ export function registerRoutes(app: Express): Server {
             .select()
             .from(users)
             .where(eq(users.email, record.email))
-            .limit(1);
+            .limit(1)
+            .execute();
 
           if (existingUser) {
             results.failed++;
@@ -726,7 +746,7 @@ export function registerRoutes(app: Express): Server {
             isSuperAdmin: false,
             isEnabled: true,
             points: parseInt(record.points) || 0,
-          });
+          }).execute();
 
           results.success++;
         } catch (error) {
@@ -804,7 +824,8 @@ export function registerRoutes(app: Express): Server {
             description,
             isEnabled: true,
           })
-          .returning();
+          .returning()
+          .execute();
 
         if (activities && Array.isArray(activities)) {
           await Promise.all(
@@ -813,7 +834,7 @@ export function registerRoutes(app: Express): Server {
                 productId: product.id,
                 type: activity.type,
                 pointsValue: activity.pointsValue,
-              })
+              }).execute()
             )
           );
         }
@@ -862,18 +883,20 @@ export function registerRoutes(app: Express): Server {
             description,
           })
           .where(eq(products.id, parseInt(id)))
-          .returning();
+          .returning()
+          .execute();
 
         await tx
           .delete(product_activities)
-          .where(eq(product_activities.productId, parseInt(id)));
+          .where(eq(product_activities.productId, parseInt(id)))
+          .execute();
 
         const activityPromises = activities.map(async (activity: any) => {
           return tx.insert(product_activities).values({
             productId: parseInt(id),
             type: activity.type,
             pointsValue: activity.pointsValue,
-          });
+          }).execute();
         });
 
         await Promise.all(activityPromises);
@@ -911,7 +934,8 @@ export function registerRoutes(app: Express): Server {
         .update(products)
         .set({ isEnabled: enabled })
         .where(eq(products.id, parseInt(id)))
-        .returning();
+        .returning()
+        .execute();
 
       if (!product) {
         return res.status(404).json({ error: "Product not found" });
@@ -938,7 +962,8 @@ export function registerRoutes(app: Express): Server {
       const [product] = await db
         .delete(products)
         .where(eq(products.id, parseInt(id)))
-        .returning();
+        .returning()
+        .execute();
 
       if (!product) {
         return res.status(404).json({ error: "Product not found" });
@@ -976,8 +1001,8 @@ export function registerRoutes(app: Express): Server {
         .values({
           userId,
           productId: parseInt(id),
-        })
-        .returning();
+        })        .returning()
+        .execute();
 
       await logAdminAction({
         adminId: req.user.id,
@@ -1007,7 +1032,8 @@ export function registerRoutes(app: Express): Server {
             eq(productAssignments.productId, parseInt(id))
           )
         )
-        .returning();
+        .returning()
+        .execute();
 
       if (!deletedAssignment) {
         return res.status(404).json({ error: "Assignment not found" });
@@ -1091,7 +1117,8 @@ export function registerRoutes(app: Express): Server {
         .where(
           sql`${products.id} = ${productId} AND ${products.isEnabled} = true`
         )
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!product) {
         return res.status(404).json({ error: "Product not found or not available" });
@@ -1104,7 +1131,8 @@ export function registerRoutes(app: Express): Server {
           productId,
           status: "PENDING",
         })
-        .returning();
+        .returning()
+        .execute();
 
       const customerEmailContent = formatQuoteRequestEmail(
         req.user.firstName || 'Customer',
@@ -1120,7 +1148,8 @@ export function registerRoutes(app: Express): Server {
       const adminUsers = await db
         .select()
         .from(users)
-        .where(eq(users.isAdmin, true));
+        .where(eq(users.isAdmin, true))
+        .execute();
 
       for(const admin of adminUsers) {
         const adminEmailContent = formatAdminQuoteRequestEmail(
@@ -1194,7 +1223,8 @@ export function registerRoutes(app: Express): Server {
         .select()
         .from(quoteRequests)
         .where(eq(quoteRequests.id, parseInt(id)))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!quoteRequest) {
         return res.status(404).json({ error: "Quote request not found" });
@@ -1215,7 +1245,8 @@ export function registerRoutes(app: Express): Server {
         .update(quoteRequests)
         .set(updates)
         .where(eq(quoteRequests.id, parseInt(id)))
-        .returning();
+        .returning()
+        .execute();
 
       await db.insert(notifications).values({
         userId: quoteRequest.userId,
@@ -1223,7 +1254,7 @@ export function registerRoutes(app: Express): Server {
         title: "Quote Request Update",
         message: `Your quote request has been ${status.toLowerCase()}${notes ? `: ${notes}` : ''}`,
         relatedId: quoteRequest.id
-      });
+      }).execute();
 
       await logAdminAction({
         adminId: req.user.id,
@@ -1294,7 +1325,8 @@ export function registerRoutes(app: Express): Server {
         .select()
         .from(users)
         .where(eq(users.id, req.user.id))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -1306,7 +1338,8 @@ export function registerRoutes(app: Express): Server {
         await db
           .update(users)
           .set({ referral_code: currentReferralCode })
-          .where(eq(users.id, req.user.id));
+          .where(eq(users.id, req.user.id))
+          .execute();
       }
 
       const referrals = await db
@@ -1318,7 +1351,8 @@ export function registerRoutes(app: Express): Server {
         })
         .from(users)
         .where(eq(users.referred_by, currentReferralCode))
-        .orderBy(desc(users.createdAt));
+        .orderBy(desc(users.createdAt))
+        .execute();
 
       res.json({
         referralCode: currentReferralCode,
@@ -1341,7 +1375,8 @@ export function registerRoutes(app: Express): Server {
         .select()
         .from(users)
         .where(eq(users.id, req.user.id))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!currentUser) {
         return res.status(404).json({ error: "User not found" });
@@ -1357,7 +1392,8 @@ export function registerRoutes(app: Express): Server {
           referral_code: users.referral_code
         })
         .from(users)
-        .where(eq(users.referred_by, currentUser.referral_code));
+        .where(eq(users.referred_by, currentUser.referral_code))
+        .execute();
 
       const level2Count = await db
         .select({ count: sql<number>`count(*)` })
@@ -1367,7 +1403,8 @@ export function registerRoutes(app: Express): Server {
             users.referred_by,
             level1Referrals.map(r => r.referral_code)
           )
-        );
+        )
+        .execute();
 
       const level2Referrals = await db
         .select({ referral_code: users.referral_code })
@@ -1377,7 +1414,8 @@ export function registerRoutes(app: Express): Server {
             users.referred_by,
             level1Referrals.map(r => r.referral_code)
           )
-        );
+        )
+        .execute();
 
       const level3Count = await db
         .select({ count: sql<number>`count(*)` })
@@ -1387,14 +1425,16 @@ export function registerRoutes(app: Express): Server {
             users.referred_by,
             level2Referrals.map(r => r.referral_code)
           )
-        );
+        )
+        .execute();
 
       const referralsWithCounts = await Promise.all(
         level1Referrals.map(async (referral) => {
           const referralCount = await db
             .select({ count: sql<number>`count(*)` })
             .from(users)
-            .where(eq(users.referred_by, referral.referral_code));
+            .where(eq(users.referred_by, referral.referral_code))
+            .execute();
 
           return {
             ...referral,
@@ -1436,7 +1476,7 @@ export function registerRoutes(app: Express): Server {
       const [reward] = await db.insert(rewards).values({
         ...req.body,
         available: true,
-      }).returning();
+      }).returning().execute();
 
       await logAdminAction({
         adminId: req.user.id,
@@ -1467,7 +1507,8 @@ export function registerRoutes(app: Express): Server {
           available,
         })
         .where(eq(rewards.id, parseInt(id)))
-        .returning();
+        .returning()
+        .execute();
 
       if (!reward) {
         return res.status(404).json({ error: "Reward not found" });
@@ -1495,7 +1536,8 @@ export function registerRoutes(app: Express): Server {
         .select()
         .from(rewards)
         .where(eq(rewards.id, parseInt(id)))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!reward) {
         return res.status(404).json({ error: "Reward not found" });
@@ -1504,7 +1546,8 @@ export function registerRoutes(app: Express): Server {
       await db
         .update(rewards)
         .set({ available: false })
-        .where(eq(rewards.id, parseInt(id)));
+        .where(eq(rewards.id, parseInt(id)))
+        .execute();
 
       await logAdminAction({
         adminId: req.user.id,
@@ -1547,12 +1590,13 @@ export function registerRoutes(app: Express): Server {
             ? `Redeemed points for R${(reward.pointsCost * 0.015).toFixed(2)}`
             : `Redeemed ${reward.name}`,
           rewardId,
-        });
+        }).execute();
 
         await tx
           .update(users)
           .set({ points: user.points - reward.pointsCost })
-          .where(eq(users.id, user.id));
+          .where(eq(users.id, user.id))
+          .execute();
 
         await logAdminAction({
           adminId: user.id,
@@ -1601,14 +1645,15 @@ export function registerRoutes(app: Express): Server {
           description: `Redeemed points for R${(points * 0.015).toFixed(2)}`,
           status: "PENDING",
           createdAt: new Date(),
-        }).returning();
+        }).returning().execute();
 
         await tx
           .update(users)
           .set({
             points: sql`${users.points} - ${points}`
           })
-          .where(eq(users.id, user.id));
+          .where(eq(users.id, user.id))
+          .execute();
 
 
       });
@@ -1661,7 +1706,8 @@ export function registerRoutes(app: Express): Server {
           processedBy: req.user.id
         })
         .where(eq(transactions.id, parseInt(id)))
-        .returning();
+        .returning()
+        .execute();
 
       if (!transaction) {
         return res.status(404).json({ error: "Transaction not found" });
@@ -1717,7 +1763,8 @@ export function registerRoutes(app: Express): Server {
               eq(notifications.userId, req.user.id)
             )
           )
-          .returning();
+          .returning()
+          .execute();
 
         if (!deletedNotification) {
           return res.status(404).json({ error: "Notification not found" });
@@ -1725,7 +1772,8 @@ export function registerRoutes(app: Express): Server {
       } else {
         await db
           .delete(notifications)
-          .where(eq(notifications.userId, req.user.id));
+          .where(eq(notifications.userId, req.user.id))
+          .execute();
       }
 
       res.json({ success: true });
@@ -1743,7 +1791,8 @@ export function registerRoutes(app: Express): Server {
         .select()
         .from(users)
         .where(eq(users.email, email))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (user) {
         const resetToken = randomBytes(32).toString("hex");
@@ -1755,7 +1804,8 @@ export function registerRoutes(app: Express): Server {
             resetToken,
             resetTokenExpiry: tokenExpiry,
           })
-          .where(eq(users.id, user.id));
+          .where(eq(users.id, user.id))
+          .execute();
 
         console.log('\n');
         console.log('🔑 PASSWORD RESET REQUEST 🔑');
@@ -1810,7 +1860,8 @@ export function registerRoutes(app: Express): Server {
         .where(
           sql`${users.resetToken} = ${token} AND ${users.resetTokenExpiry} > NOW()`
         )
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!user) {
         return res.status(400).json({ error: "Invalid or expired reset token" });
@@ -1825,7 +1876,8 @@ export function registerRoutes(app: Express): Server {
           resetToken: null,
           resetTokenExpiry: null
         })
-        .where(eq(users.id, user.id));
+        .where(eq(users.id, user.id))
+        .execute();
 
       res.json({ message: "Password has been reset successfully" });
     } catch (error) {
@@ -1888,7 +1940,8 @@ export function registerRoutes(app: Express): Server {
         .update(users)
         .set(updates)
         .where(eq(users.id, req.user.id))
-        .returning();
+        .returning()
+        .execute();
 
       if (!updatedUser) {
         return res.status(404).json({ error: "User not found" });
