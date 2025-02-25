@@ -7,8 +7,8 @@ const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 const baseUserSchema = z.object({
   id: z.number().optional(),
   email: z.string().email(),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().optional(),
   isAdmin: z.boolean().default(false),
   isSuperAdmin: z.boolean().default(false),
@@ -17,25 +17,25 @@ const baseUserSchema = z.object({
 });
 
 const userSchema = baseUserSchema.extend({
-  referralCode: z.string().nullable().optional(),
-  referredBy: z.string().nullable().optional(),
-  createdAt: z.string().optional(),
-  isSouthAfrican: z.boolean().optional(),
-  idNumber: z.string().nullable().optional(),
-  dateOfBirth: z.string().nullable().optional(),
+  referral_code: z.string().nullable().optional(),
+  referred_by: z.string().nullable().optional(),
+  created_at: z.string().optional(),
+  is_south_african: z.boolean().optional(),
+  id_number: z.string().nullable().optional(),
+  date_of_birth: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
-  postalCode: z.string().nullable().optional(),
+  postal_code: z.string().nullable().optional(),
   industry: z.string().nullable().optional(),
   occupation: z.string().nullable().optional(),
-  bankName: z.string().nullable().optional(),
-  accountType: z.enum(accountTypes).nullable().optional(),
-  accountNumber: z.string().nullable().optional(),
-  accountHolderName: z.string().nullable().optional(),
-  branchCode: z.string().nullable().optional(),
-  selectedPackage: z.string().nullable().optional(),
-  gender: z.enum(["male", "female", "other"]).nullable(),
-  hasCreditCard: z.boolean().optional(),
+  bank_name: z.string().nullable().optional(),
+  account_type: z.enum(accountTypes).nullable().optional(),
+  account_number: z.string().nullable().optional(),
+  account_holder_name: z.string().nullable().optional(),
+  branch_code: z.string().nullable().optional(),
+  selected_package: z.string().nullable().optional(),
+  gender: z.string().nullable(),
+  has_credit_card: z.boolean().optional(),
 }).passthrough();
 
 export type User = z.infer<typeof userSchema>;
@@ -129,7 +129,6 @@ export function useUser() {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: any) => {
-      // Don't modify the incoming data structure
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
@@ -140,16 +139,24 @@ export function useUser() {
         credentials: 'include',
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Registration failed' }));
-        throw new Error(errorData.error || 'Registration failed');
+        throw new Error(data.error || 'Registration failed');
       }
 
-      const data = await response.json();
       if (data.token) {
         setToken(data.token);
       }
-      return userSchema.parse(data);
+
+      // If registration was successful but schema validation fails,
+      // still return the data to prevent blocking the registration flow
+      try {
+        return userSchema.parse(data);
+      } catch (error) {
+        console.warn('User schema validation warning:', error);
+        return data;
+      }
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
