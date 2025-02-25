@@ -179,8 +179,9 @@ export default function AdminCustomers() {
       branchCode: customer.branchCode || "",
       selectedPackage: customer.selectedPackage || "",
       gender: customer.gender || "",
-      hasCreditCard: customer.hasCreditCard || false,
-      isSouthAfrican: customer.isSouthAfrican || false,
+      // Convert to boolean explicitly
+      hasCreditCard: Boolean(customer.hasCreditCard),
+      isSouthAfrican: Boolean(customer.isSouthAfrican),
       signature: customer.signature || "",
     });
   };
@@ -841,8 +842,7 @@ export default function AdminCustomers() {
                                               <FormControl>
                                                 <Checkbox
                                                   checked={field.value}
-                                                  onCheckedChange={field.onChange}
-                                                />
+                                                  onCheckedChange={field.onChange}                                                />
                                               </FormControl>
                                               <FormLabel className="text-white">Has Credit Card</FormLabel>
                                             </FormItem>
