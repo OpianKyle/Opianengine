@@ -58,9 +58,10 @@ export const crypto = {
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  first_name: z.string().min(1, "First name is required"),
-  last_name: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
+  confirmPassword: z.string().optional(),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  mobileNumber: z.string().min(1, "Mobile number is required"),
   selectedPackage: z.string().min(1, "Package selection is required"),
   referralCode: z.string().optional(),
   points: z.number().int().min(0).optional(),
@@ -70,8 +71,8 @@ const registerSchema = z.object({
   gender: z.string().optional().nullable(),
   occupation: z.string().optional().nullable(),
   industry: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
-  city: z.string().optional().nullable(),
+  addressLine1: z.string().optional().nullable(),
+  suburb: z.string().optional().nullable(),
   postalCode: z.string().optional().nullable(),
   hasCreditCard: z.boolean().optional().default(false),
   bankName: z.string().optional().nullable(),
@@ -79,7 +80,8 @@ const registerSchema = z.object({
   accountNumber: z.string().optional().nullable(),
   accountHolderName: z.string().optional().nullable(),
   branchCode: z.string().optional().nullable(),
-  signature: z.string().optional().nullable()
+  signature: z.string().optional().nullable(),
+  acceptMandate: z.boolean().optional()
 });
 
 export function setupAuth(app: Express) {
@@ -190,9 +192,9 @@ export function setupAuth(app: Express) {
       const {
         email,
         password,
-        first_name: firstName,
-        last_name: lastName,
-        phoneNumber,
+        firstName,
+        lastName,
+        mobileNumber: phoneNumber,
         referralCode,
         selectedPackage,
         points,
@@ -202,8 +204,8 @@ export function setupAuth(app: Express) {
         gender,
         occupation,
         industry,
-        address,
-        city,
+        addressLine1: address,
+        suburb: city,
         postalCode,
         hasCreditCard,
         bankName,
@@ -211,7 +213,8 @@ export function setupAuth(app: Express) {
         accountNumber,
         accountHolderName,
         branchCode,
-        signature
+        signature,
+        acceptMandate
       } = result.data;
 
       // Check for existing user
@@ -257,7 +260,7 @@ export function setupAuth(app: Express) {
               gender, occupation, industry, address,
               city, postal_code, has_credit_card,
               bank_name, account_type, account_number,
-              account_holder_name, branch_code, signature
+              account_holder_name, branch_code, signature, accept_mandate
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               email,
@@ -265,9 +268,9 @@ export function setupAuth(app: Express) {
               firstName,
               lastName,
               phoneNumber,
-              false, // is_admin
-              false, // is_super_admin
-              true,  // is_enabled
+              false, 
+              false, 
+              true,  
               points || 0,
               newReferralCode,
               referralCode || null,
@@ -287,7 +290,8 @@ export function setupAuth(app: Express) {
               accountNumber || null,
               accountHolderName || null,
               branchCode || null,
-              signature || null
+              signature || null,
+              acceptMandate || false
             ]
           );
 
@@ -533,12 +537,12 @@ export async function verifySession(req: Request): Promise<any> {
       session({
         secret: process.env.SESSION_SECRET || 'development-secret',
         cookie: {
-          maxAge: 86400000, // 24 hours
+          maxAge: 86400000, 
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax'
         },
         store: new MemoryStore({
-          checkPeriod: 86400000 // prune expired entries every 24h
+          checkPeriod: 86400000 
         }),
         resave: false,
         saveUninitialized: false
