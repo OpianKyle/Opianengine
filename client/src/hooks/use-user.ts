@@ -100,7 +100,7 @@ export function useUser() {
       }
     },
     retry: false,
-    staleTime: 5 * 60 * 1000, 
+    staleTime: 5 * 60 * 1000,
   });
 
   const loginMutation = useMutation({
@@ -126,11 +126,11 @@ export function useUser() {
         hasUser: !!data.user
       });
 
-      if (!data.token) {
-        throw new Error('No token received from server');
+      // Set token if available but don't require it
+      if (data.token) {
+        setToken(data.token);
       }
 
-      setToken(data.token);
       return userSchema.parse(data.user || data);
     },
     onSuccess: (user) => {
@@ -162,11 +162,12 @@ export function useUser() {
         hasUser: !!data.user
       });
 
-      if (!data.token) {
-        throw new Error('No token received from server');
+      // Set token if available but don't require it
+      if (data.token) {
+        setToken(data.token);
       }
 
-      setToken(data.token);
+      // Parse and return the user data regardless of token
       return userSchema.parse(data.user || data);
     },
     onSuccess: (user) => {
