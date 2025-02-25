@@ -129,9 +129,10 @@ export function useUser() {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: any) => {
-      // Convert camelCase to snake_case for backend
+      // Convert to backend format
       const apiData = {
-        ...userData,
+        email: userData.email,
+        password: userData.password,
         first_name: userData.firstName,
         last_name: userData.lastName,
         phone_number: userData.mobileNumber || userData.phoneNumber,
@@ -146,6 +147,13 @@ export function useUser() {
         account_holder_name: userData.accountHolderName,
         branch_code: userData.branchCode,
         selected_package: userData.selectedPackage,
+        gender: userData.gender,
+        occupation: userData.occupation,
+        industry: userData.industry,
+        address: userData.addressLine1,
+        city: userData.suburb,
+        signature: userData.signature,
+        referral_code: userData.referralCode
       };
 
       const response = await fetch('/api/register', {
@@ -167,14 +175,10 @@ export function useUser() {
       if (data.token) {
         setToken(data.token);
       }
-
-      return userSchema.parse(data.user || data);
+      return userSchema.parse(data);
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
-    },
-    onError: (error: Error) => {
-      console.error('Registration error:', error);
     },
   });
 
@@ -206,9 +210,6 @@ export function useUser() {
     error,
     loginMutation,
     logoutMutation,
-    registerMutation: {
-      ...registerMutation,
-      isPending: registerMutation.isPending || false,
-    },
+    registerMutation,
   };
 }
