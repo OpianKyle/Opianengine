@@ -34,7 +34,7 @@ const userSchema = baseUserSchema.extend({
   accountHolderName: z.string().nullable().optional(),
   branchCode: z.string().nullable().optional(),
   selectedPackage: z.string().nullable().optional(),
-  gender: z.enum(["male", "female", "other"]).nullable().optional(),
+  gender: z.enum(["male", "female", "other"]).nullable(),
   hasCreditCard: z.boolean().optional(),
 }).passthrough();
 
@@ -128,7 +128,6 @@ export function useUser() {
         hasUser: !!data.user
       });
 
-      // Set token if available but don't require it
       if (data.token) {
         setToken(data.token);
       }
@@ -164,12 +163,10 @@ export function useUser() {
         hasUser: !!data.user
       });
 
-      // Set token if available but don't require it
       if (data.token) {
         setToken(data.token);
       }
 
-      // Parse and return the user data regardless of token
       return userSchema.parse(data.user || data);
     },
     onSuccess: (user) => {
