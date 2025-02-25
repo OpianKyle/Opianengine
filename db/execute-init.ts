@@ -1,19 +1,9 @@
-import { readFile } from 'fs/promises';
 import mysql from 'mysql2/promise';
-import path from 'path';
 
 async function executeInitScript() {
   try {
     console.log('Starting database initialization...');
-    
-    // Read the SQL file
-    const sqlFile = await readFile(path.join(__dirname, 'init.sql'), 'utf8');
-    
-    // Split into individual queries (split on semicolon followed by newline)
-    const queries = sqlFile
-      .split(';\n')
-      .filter(query => query.trim().length > 0);
-    
+
     // Create connection
     const connection = await mysql.createConnection({
       host: 'dedi1350.jnb1.host-h.net',
@@ -28,11 +18,158 @@ async function executeInitScript() {
 
     console.log('Connected to database. Executing queries...');
 
-    // Execute each query sequentially
+    // Execute queries sequentially
+    const queries = [
+      // Create base tables first
+      `CREATE TABLE IF NOT EXISTS products (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        is_enabled BOOLEAN DEFAULT TRUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+      ) ENGINE=InnoDB;`,
+
+      `CREATE TABLE IF NOT EXISTS users (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        first_name VARCHAR(255) NOT NULL,
+        last_name VARCHAR(255) NOT NULL,
+        phone_number VARCHAR(50) NOT NULL,
+        is_south_african BOOLEAN DEFAULT FALSE,
+        id_number VARCHAR(50),
+        date_of_birth VARCHAR(50),
+        gender VARCHAR(50),
+        occupation VARCHAR(255),
+        industry VARCHAR(255),
+        address TEXT,
+        city VARCHAR(255),
+        postal_code VARCHAR(50),
+        selected_package ENUM('BEGINNER', 'NOVICE', 'ACTIVE', 'PROFESSIONAL', 'EXPERT'),
+        bank_name VARCHAR(255),
+        account_type ENUM('CHEQUE', 'SAVINGS', 'CURRENT'),
+        account_number VARCHAR(50),
+        account_holder_name VARCHAR(255),
+        branch_code VARCHAR(50),
+        has_credit_card BOOLEAN DEFAULT FALSE,
+        signature TEXT,
+        is_admin BOOLEAN DEFAULT FALSE NOT NULL,
+        is_super_admin BOOLEAN DEFAULT FALSE NOT NULL,
+        is_enabled BOOLEAN DEFAULT TRUE NOT NULL,
+        points INT DEFAULT 0 NOT NULL,
+        referral_code VARCHAR(50),
+        referred_by VARCHAR(50),
+        reset_token VARCHAR(255),
+        reset_token_expiry TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      ) ENGINE=InnoDB;`,
+      // Create dependent tables that reference the base tables
+      `CREATE TABLE IF NOT EXISTS product_activities (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        product_id INT NOT NULL,
+        type ENUM('SYSTEM_ACTIVATION', 'PRODUCT_ACTIVATION', 'PREMIUM_PAYMENT', 'CARD_BALANCE', 'UPGRADE', 'RENEWAL') NOT NULL,
+        points_value INT DEFAULT 0 NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB;`,
+
+      `CREATE TABLE IF NOT EXISTS rewards (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        points_cost INT NOT NULL,
+        image_url TEXT NOT NULL,
+        available BOOLEAN DEFAULT TRUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      ) ENGINE=InnoDB;`,
+
+      `CREATE TABLE IF NOT EXISTS transactions (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        user_id INT NOT NULL,
+        points INT NOT NULL,
+        type ENUM('EARNED', 'REDEEMED', 'ADMIN_ADJUSTMENT', 'CASH_REDEMPTION', 'WELCOME_BONUS', 'REFERRAL_BONUS', 'QUOTE_REQUEST') NOT NULL,
+        description TEXT NOT NULL,
+        reward_id INT,
+        status ENUM('PENDING', 'PROCESSED') DEFAULT 'PENDING',
+        processed_at TIMESTAMP NULL,
+        processed_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (reward_id) REFERENCES rewards(id),
+        FOREIGN KEY (processed_by) REFERENCES users(id)
+      ) ENGINE=InnoDB;`,
+
+      `CREATE TABLE IF NOT EXISTS admin_logs (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        admin_id INT NOT NULL,
+        target_user_id INT,
+        action_type ENUM(
+          'POINT_ADJUSTMENT', 'ADMIN_CREATED', 'ADMIN_REMOVED',
+          'ADMIN_ENABLED', 'ADMIN_DISABLED', 'USER_ENABLED',
+          'USER_DISABLED', 'USER_UPDATED', 'REWARD_CREATED',
+          'REWARD_UPDATED', 'REWARD_DELETED', 'PRODUCT_CREATED',
+          'PRODUCT_UPDATED', 'PRODUCT_DELETED', 'PRODUCT_ASSIGNED',
+          'PRODUCT_UNASSIGNED', 'QUOTE_REQUEST_UPDATED',
+          'QUOTE_REQUEST_COMPLETED', 'QUOTE_REQUEST_REJECTED'
+        ) NOT NULL,
+        details TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (admin_id) REFERENCES users(id),
+        FOREIGN KEY (target_user_id) REFERENCES users(id)
+      ) ENGINE=InnoDB;`,
+
+      `CREATE TABLE IF NOT EXISTS product_assignments (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        user_id INT NOT NULL,
+        product_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB;`,
+
+      `CREATE TABLE IF NOT EXISTS quote_requests (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        user_id INT NOT NULL,
+        product_id INT NOT NULL,
+        status ENUM('PENDING', 'IN_PROGRESS', 'COMPLETED', 'REJECTED') DEFAULT 'PENDING' NOT NULL,
+        notes TEXT,
+        completed_at TIMESTAMP NULL,
+        completed_by INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (completed_by) REFERENCES users(id)
+      ) ENGINE=InnoDB;`,
+
+      `CREATE TABLE IF NOT EXISTS notifications (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        user_id INT NOT NULL,
+        type ENUM('QUOTE_STATUS_CHANGE', 'POINTS_AWARDED', 'ADMIN_MESSAGE', 'SYSTEM_UPDATE') NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE NOT NULL,
+        related_id INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB;`,
+
+      `CREATE TABLE IF NOT EXISTS package_premium_amounts (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        package_type ENUM('BEGINNER', 'NOVICE', 'ACTIVE', 'PROFESSIONAL', 'EXPERT') NOT NULL,
+        premium_amount INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+      ) ENGINE=InnoDB;`
+    ];
+
+    // Execute each query
     for (const query of queries) {
       try {
         await connection.query(query);
-        console.log('Successfully executed query:', query.substring(0, 50) + '...');
+        console.log('Successfully executed query:', query.substring(0, 100) + '...');
       } catch (error) {
         console.error('Error executing query:', query.substring(0, 100));
         console.error('Error details:', error);
@@ -40,7 +177,7 @@ async function executeInitScript() {
       }
     }
 
-    console.log('All queries executed successfully');
+    console.log('All tables created successfully');
     await connection.end();
     process.exit(0);
   } catch (error) {
