@@ -34,6 +34,8 @@ const userSchema = baseUserSchema.extend({
   accountHolderName: z.string().nullable().optional(),
   branchCode: z.string().nullable().optional(),
   selectedPackage: z.string().nullable().optional(),
+  gender: z.enum(["male", "female", "other"]).nullable().optional(),
+  hasCreditCard: z.boolean().optional(),
 }).passthrough();
 
 export type User = z.infer<typeof userSchema>;

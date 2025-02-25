@@ -37,7 +37,7 @@ const userSchema = z.object({
   accountHolderName: z.string().optional(),
   branchCode: z.string().optional(),
   selectedPackage: z.string().optional(),
-  gender: z.string().optional(),
+  gender: z.enum(["male", "female", "other"]).nullable().optional(),
   hasCreditCard: z.boolean().optional(),
   isSouthAfrican: z.boolean().optional(),
   signature: z.string().optional(),
