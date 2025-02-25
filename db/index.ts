@@ -10,7 +10,10 @@ const poolConnection = mysql.createPool({
   port: 3306,
   ssl: {
     rejectUnauthorized: false
-  }
+  },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
 export const db = drizzle(poolConnection, { schema, mode: 'default' });
