@@ -9,10 +9,10 @@ const baseUserSchema = z.object({
   email: z.string().email(),
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().optional(),
-  isAdmin: z.boolean().default(false),
-  isSuperAdmin: z.boolean().default(false),
-  isEnabled: z.boolean().default(true),
+  phone_number: z.string().optional(),
+  is_admin: z.boolean().default(false),
+  is_super_admin: z.boolean().default(false),
+  is_enabled: z.boolean().default(true),
   points: z.number().default(0),
 });
 
@@ -89,7 +89,12 @@ export function useUser() {
         }
 
         const data = await response.json();
-        return userSchema.parse(data);
+        try {
+          return userSchema.parse(data);
+        } catch (error) {
+          console.warn('User schema validation warning:', error);
+          return data;
+        }
       } catch (error) {
         console.error('Error fetching user:', error);
         throw error;
@@ -111,16 +116,22 @@ export function useUser() {
         credentials: 'include',
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Login failed' }));
-        throw new Error(errorData.error || 'Login failed');
+        throw new Error(data.error || 'Login failed');
       }
 
-      const data = await response.json();
       if (data.token) {
         setToken(data.token);
       }
-      return userSchema.parse(data.user || data);
+
+      try {
+        return userSchema.parse(data.user || data);
+      } catch (error) {
+        console.warn('User schema validation warning:', error);
+        return data.user || data;
+      }
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
@@ -149,8 +160,6 @@ export function useUser() {
         setToken(data.token);
       }
 
-      // If registration was successful but schema validation fails,
-      // still return the data to prevent blocking the registration flow
       try {
         return userSchema.parse(data);
       } catch (error) {
