@@ -82,7 +82,7 @@ const registerSchema = z.object({
   branchCode: z.string().optional().nullable(),
   signature: z.string().optional().nullable(),
   acceptMandate: z.boolean().optional()
-});
+}).passthrough();
 
 export function setupAuth(app: Express) {
   if (!process.env.SESSION_SECRET) {
