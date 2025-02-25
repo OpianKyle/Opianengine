@@ -141,6 +141,41 @@ export function useUser() {
     },
   });
 
+  const registerMutation = useMutation({
+    mutationFn: async (userData: Omit<User, 'id'>) => {
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(userData),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Registration failed' }));
+        throw new Error(errorData.error || 'Registration failed');
+      }
+
+      const data = await response.json();
+      console.log('Registration response:', {
+        hasToken: !!data.token,
+        hasUser: !!data.user
+      });
+
+      if (!data.token) {
+        throw new Error('No token received from server');
+      }
+
+      setToken(data.token);
+      return userSchema.parse(data.user || data);
+    },
+    onSuccess: (user) => {
+      queryClient.setQueryData(['/api/user'], user);
+    },
+  });
+
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch('/api/logout', {
@@ -170,5 +205,6 @@ export function useUser() {
     error,
     loginMutation,
     logoutMutation,
+    registerMutation,
   };
 }
