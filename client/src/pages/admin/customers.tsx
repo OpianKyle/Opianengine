@@ -17,6 +17,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import cn from 'classnames';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "@/components/ui/accordion";
 
 const genderEnum = ["male", "female", "other"] as const;
 
@@ -839,7 +845,7 @@ export default function AdminCustomers() {
                                         </FormItem>
                                       )}
                                     />
-                                    <div className="space-y-4">
+                                    <div className="space-y4">
                                       <FormField
                                         control={editDetailsForm.control}
                                         name="hasCreditCard"
