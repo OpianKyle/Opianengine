@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2, Check, X } from "lucide-react"; 
+import { Loader2 } from "lucide-react"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -186,7 +186,7 @@ export default function RegisterPage() {
     isSouthAfrican: false,
     idNumber: "",
     dateOfBirth: "",
-    gender: "",
+    gender: "" as "male" | "female" | "other" | "",
     mobileNumber: "",
     occupation: "",
     industry: "",
@@ -324,6 +324,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!formData.gender) {
+      setError("Please select a gender");
+      return;
+    }
+
     if (!formData.acceptMandate) {
       setError("Please accept the mandate agreement");
       return;
@@ -348,10 +353,10 @@ export default function RegisterPage() {
         selectedPackage: formData.selectedPackage,
         points: selectedPackageData.activationPoints,
         referralCode: formData.referralCode,
-        gender: formData.gender // Ensure gender is included in registration data
+        gender: formData.gender // Explicitly include gender in registration data
       };
 
-      console.log('Submitting registration with referral code:', formData.referralCode);
+      console.log('Submitting registration data:', { ...registrationData, password: '[REDACTED]' });
       const user = await registerMutation.mutateAsync(registrationData);
 
       toast({
@@ -479,7 +484,7 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                           onChange={handleInputChange}
                         />
                       </div>
-                      <Select name="gender" onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+                      <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value as "male" | "female" | "other" }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select Gender" />
                         </SelectTrigger>
