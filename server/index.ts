@@ -8,7 +8,7 @@ import { db } from "@db";
 import { users } from "@db/schema";
 
 // Check required environment variables
-const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
+const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET', 'JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missingEnvVars.length > 0) {
   console.error('Missing required environment variables:', missingEnvVars.join(', '));
@@ -51,6 +51,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add global error handlers
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 (async () => {
   try {
     log('Starting server initialization...');
@@ -65,10 +75,10 @@ app.use((req, res, next) => {
     }
 
     // Setup authentication (before routes)
-    setupAuth(app);
+    const sessionMiddleware = setupAuth(app);
     log('Authentication setup complete');
 
-    const server = registerRoutes(app);
+    const server = registerRoutes(app, sessionMiddleware);
     log('Routes registered');
 
     // Global error handler

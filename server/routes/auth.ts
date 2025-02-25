@@ -1,229 +1,12 @@
-declare global {
-  namespace Express {
-    interface User {
-      id: number;
-      email: string;
-      firstName: string | null;
-      lastName: string | null;
-      isAdmin: boolean;
-      isSuperAdmin: boolean;
-      isEnabled: boolean;
-      points: number;
-      selectedPackage: string | null;
-    }
-  }
-}
-
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-import { type Express } from "express";
-import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
-import { users } from "@db/schema";
+import express from 'express';
+import passport from 'passport';
+import { z } from 'zod';
+import { users, transactions } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
-import jwt from 'jsonwebtoken';
-import memorystore from 'memorystore';
-import { JWT_SECRET } from './config';
+import { hashPassword, generateToken } from '../auth';
 
-const scryptAsync = promisify(scrypt);
-const MemoryStore = memorystore(session);
-
-export function setupAuth(app: Express) {
-  if (!process.env.SESSION_SECRET) {
-    console.error('Missing SESSION_SECRET environment variable');
-    process.exit(1);
-  }
-
-  const store = new MemoryStore({
-    checkPeriod: 86400000 // prune expired entries every 24h
-  });
-
-  const sessionMiddleware = session({
-    secret: process.env.SESSION_SECRET,
-    cookie: {
-      maxAge: 86400000, // 24 hours
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      httpOnly: true
-    },
-    store,
-    resave: false,
-    saveUninitialized: false,
-    name: 'session'
-  });
-
-  app.use(sessionMiddleware);
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  passport.serializeUser((user: Express.User, done) => {
-    console.log('Serializing user:', {
-      userId: user.id,
-      isAdmin: user.isAdmin,
-      email: user.email
-    });
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      console.log('Deserializing user:', id);
-      const [user] = await db
-        .select({
-          id: users.id,
-          email: users.email,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          isAdmin: users.isAdmin,
-          isSuperAdmin: users.isSuperAdmin,
-          points: users.points,
-          selectedPackage: users.selectedPackage,
-          isEnabled: users.isEnabled
-        })
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-
-      if (!user) {
-        console.log('User not found during deserialization:', id);
-        return done(null, false);
-      }
-
-      console.log('User deserialized successfully:', {
-        userId: user.id,
-        isAdmin: user.isAdmin,
-        email: user.email
-      });
-      done(null, user);
-    } catch (error) {
-      console.error('Deserialization error:', error);
-      done(error);
-    }
-  });
-
-  passport.use(new LocalStrategy(
-    { usernameField: 'email' },
-    async (email, password, done) => {
-      try {
-        console.log('Login attempt for:', email);
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
-
-        if (!user) {
-          console.log('User not found:', email);
-          return done(null, false, { message: 'Invalid email or password' });
-        }
-
-        if (!user.isEnabled) {
-          console.log('Account is disabled:', email);
-          return done(null, false, { message: 'Account is disabled' });
-        }
-
-        const isValid = await verifyPassword(password, user.password);
-        console.log('Password verification result:', {
-          email,
-          isValid,
-          isAdmin: user.isAdmin,
-          userId: user.id
-        });
-
-        if (!isValid) {
-          return done(null, false, { message: 'Invalid email or password' });
-        }
-
-        const { password: _, ...safeUser } = user;
-        return done(null, safeUser);
-      } catch (error) {
-        console.error('Authentication error:', error);
-        return done(error);
-      }
-    }
-  ));
-
-  return sessionMiddleware;
-}
-
-export async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString('hex');
-  const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${salt}.${hash.toString('hex')}`;
-}
-
-export async function verifyPassword(password: string, storedHash: string) {
-  try {
-    const [salt, hash] = storedHash.split('.');
-    if (!salt || !hash) return false;
-
-    const hashBuffer = Buffer.from(hash, 'hex');
-    const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
-
-    return timingSafeEqual(hashBuffer, suppliedBuffer);
-  } catch (error) {
-    console.error('Password verification error:', error);
-    return false;
-  }
-}
-
-export function generateToken(user: Express.User): string {
-  console.log('Generating token for user:', {
-    userId: user.id,
-    isAdmin: user.isAdmin,
-    isSuperAdmin: user.isSuperAdmin
-  });
-
-  const token = jwt.sign(
-    {
-      id: user.id,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin
-    },
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-
-  console.log('Token generated successfully');
-  return token;
-}
-
-export function verifyToken(token: string) {
-  try {
-    console.log('Verifying token:', {
-      tokenLength: token.length,
-      firstChars: token.substring(0, 10) + '...',
-    });
-
-    const decoded = jwt.verify(token, JWT_SECRET) as { 
-      id: number, 
-      isAdmin: boolean, 
-      isSuperAdmin: boolean,
-      exp?: number 
-    };
-
-    console.log('Token verified successfully:', {
-      userId: decoded.id,
-      isAdmin: decoded.isAdmin,
-      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
-    });
-
-    return {
-      id: decoded.id,
-      isAdmin: decoded.isAdmin,
-      isSuperAdmin: decoded.isSuperAdmin
-    };
-  } catch (error) {
-    console.error('Token verification failed:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      name: error instanceof Error ? error.name : 'Unknown error type'
-    });
-    return null;
-  }
-}
+const router = express.Router();
 
 //Login Schema
 const loginSchema = z.object({
@@ -260,7 +43,7 @@ const registerSchema = z.object({
 });
 
 //Login Route
-app.post("/api/login", (req, res, next) => {
+router.post("/api/login", (req, res, next) => {
   console.log('Login request received:', { email: req.body.email });
 
   const result = loginSchema.safeParse(req.body);
@@ -290,10 +73,9 @@ app.post("/api/login", (req, res, next) => {
       }
 
       // Generate token for WebSocket authentication
-      const token = generateToken(user); // Using the updated generateToken function
+      const token = generateToken(user);
       console.log('Login successful, token generated for user:', user.id);
 
-      // Return both user data and token
       return res.json({
         user,
         token
@@ -303,7 +85,7 @@ app.post("/api/login", (req, res, next) => {
 });
 
 //Register Route
-app.post("/api/register", async (req, res) => {
+router.post("/api/register", async (req, res) => {
   try {
     console.log('Registration attempt with data:', {
       ...req.body,
@@ -374,7 +156,6 @@ app.post("/api/register", async (req, res) => {
           throw new Error("Failed to create user record");
         }
 
-        // Create welcome bonus points transaction
         await tx
           .insert(transactions)
           .values({
@@ -416,7 +197,7 @@ app.post("/api/register", async (req, res) => {
 });
 
 //Logout Route
-app.post("/api/logout", (req, res) => {
+router.post("/api/logout", (req, res) => {
   if (req.user) {
     console.log('Logging out user:', req.user.id);
     req.logout((err) => {
@@ -439,7 +220,7 @@ app.post("/api/logout", (req, res) => {
 });
 
 //Get Current User Route
-app.get("/api/user", (req, res) => {
+router.get("/api/user", (req, res) => {
   console.log('User request:', {
     isAuthenticated: req.isAuthenticated(),
     user: req.user ? req.user.id : undefined,
@@ -452,12 +233,4 @@ app.get("/api/user", (req, res) => {
   res.json(req.user);
 });
 
-const packageMap = {
-  1: "BEGINNER",
-  2: "NOVICE",
-  3: "ACTIVE",
-  4: "PROFESSIONAL",
-  5: "EXPERT"
-};
-import {transactions} from "@db/schema";
-import {z} from "zod";
+export default router;

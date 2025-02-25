@@ -1,33 +1,18 @@
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
 import { setupWebSocketServer } from "./websocket";
 import { db } from "@db";
 import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, quoteRequests, notifications } from "@db/schema";
-import { eq, desc, sql, inArray, and } from "drizzle-orm";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
-import { logAdminAction } from "./admin-logger";
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail } from "./utils/emailService";
-import { parse } from 'csv-parse';
-import { stringify } from 'csv-stringify';
-import { Readable } from 'stream';
+import { eq, desc, and } from "drizzle-orm";
 import session from 'express-session';
 import MemoryStore from 'memorystore';
-import referralRouter from './routes/referral';  // Import referral routes
+import referralRouter from './routes/referral';
+import authRouter from './routes/auth';
+import { logAdminAction } from "./admin-logger";
 
-const scryptAsync = promisify(scrypt);
-const crypto = {
-  hash: async (password: string) => {
-    const salt = randomBytes(16).toString("hex");
-    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
-  }
-};
-
-export function registerRoutes(app: Express): Server {
+export function registerRoutes(app: Express, sessionMiddleware: RequestHandler): Server {
   const MemoryStoreSession = MemoryStore(session);
-  const sessionMiddleware = session({
+  const sessionMiddleware2 = session({
     cookie: { 
       maxAge: 86400000, // 24 hours
       secure: false, // Set to true in production
@@ -41,15 +26,98 @@ export function registerRoutes(app: Express): Server {
     secret: process.env.SESSION_SECRET || 'development-secret'
   });
 
-  app.use(sessionMiddleware);
-  setupAuth(app);
+  app.use(sessionMiddleware2);
 
-  // Mount referral routes
+  // Mount routers
+  app.use(authRouter);
   app.use(referralRouter);
 
   const httpServer = createServer(app);
-  const wsServer = setupWebSocketServer(httpServer, sessionMiddleware);
+  const wsServer = setupWebSocketServer(httpServer);
 
+  app.post("/api/admin/points", async (req, res) => {
+    try {
+      // Enhanced logging for debugging auth issues
+      console.log('Points adjustment request:', { 
+        hasUser: !!req.user,
+        isAdmin: req.user?.isAdmin,
+        userId: req.user?.id,
+        session: req.session?.id,
+        cookies: req.headers.cookie
+      });
+
+      if (!req.user) {
+        console.log('Points adjustment failed: No user in session');
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      if (!req.user.isAdmin) {
+        console.log('Points adjustment failed: User not admin', { 
+          userId: req.user.id,
+          isAdmin: req.user.isAdmin 
+        });
+        return res.status(403).json({ error: "Admin privileges required" });
+      }
+
+      const { userId, points, description } = req.body;
+
+      const result = await db.transaction(async (tx) => {
+        const [targetUser] = await tx
+          .select({
+            id: users.id,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            points: users.points
+          })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+
+        if (!targetUser) {
+          throw new Error("User not found");
+        }
+
+        await tx.insert(transactions).values({
+          userId,
+          points,
+          type: "ADMIN_ADJUSTMENT",
+          description,
+        });
+
+        const [updatedUser] = await tx
+          .update(users)
+          .set({
+            points: sql`${users.points} + ${points}`,
+          })
+          .where(eq(users.id, userId))
+          .returning();
+
+        // Update WebSocket notification using the correct method
+        await wsServer.notifyPointsUpdate(userId, points, description);
+
+        await logAdminAction({
+          adminId: req.user.id,
+          actionType: "POINT_ADJUSTMENT",
+          targetUserId: userId,
+          details: `Adjusted points by ${points}. Reason: ${description}`,
+        });
+
+        return updatedUser;
+      });
+
+      console.log('Points adjusted successfully:', {
+        userId,
+        points,
+        adminId: req.user.id
+      });
+
+      res.json({ message: "Points adjusted successfully" });
+    } catch (error) {
+      console.error('Error adjusting points:', error);
+      res.status(500).json({ error: 'Failed to adjust points' });
+    }
+  });
   app.get("/api/customer/referral", async (req, res) => {
     if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -112,162 +180,34 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add test endpoint for session verification
+  app.get("/api/auth/session-test", (req, res) => {
+    console.log('Session test endpoint hit:', {
+      hasSession: !!req.session,
+      sessionId: req.session?.id,
+      hasUser: !!req.user,
+      userId: req.user?.id,
+      isAdmin: req.user?.isAdmin,
+      cookies: req.headers.cookie
+    });
 
-  app.get("/api/products/assignments/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-
-    try {
-      const assignment = await db.query.productAssignments.findFirst({
-        where: eq(productAssignments.id, parseInt(id)),
-        with: {
-          product: true
-        }
+    if (!req.user) {
+      return res.status(401).json({
+        error: "Not authenticated",
+        session: !!req.session,
+        sessionId: req.session?.id
       });
+    }
 
-      if (!assignment) {
-        return res.status(404).json({ error: "Assignment not found" });
+    res.json({
+      authenticated: true,
+      user: {
+        id: req.user.id,
+        isAdmin: req.user.isAdmin,
+        email: req.user.email
       }
-      res.json(assignment);
-    } catch (error) {
-      console.error('Error fetching assignment:', error);
-      res.status(500).json({ error: 'Failed to fetch assignment' });
-    }
+    });
   });
-
-  app.get("/api/admin/logs", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    try {
-      const logs = await db.query.adminLogs.findMany({
-        orderBy: desc(adminLogs.createdAt),
-        with: {
-          admin: {
-            columns: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          targetUser: {
-            columns: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      });
-
-      res.json(logs);
-    } catch (error) {
-      console.error('Error fetching admin logs:', error);
-      res.status(500).json({ error: 'Failed to fetch admin logs' });
-    }
-  });
-
-  app.post("/api/admin/points", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { userId, points, description } = req.body;
-
-    try {
-      const result = await db.transaction(async (tx) => {
-        const [targetUser] = await tx
-          .select({
-            id: users.id,
-            email: users.email,
-            firstName: users.firstName,
-            lastName: users.lastName,
-            points: users.points
-          })
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1);
-
-        if (!targetUser) {
-          throw new Error("User not found");
-        }
-
-        const [admin] = await tx
-          .select({
-            id: users.id,
-            email: users.email,
-            firstName: users.firstName,
-            lastName: users.lastName
-          })
-          .from(users)
-          .where(eq(users.id, req.user.id))
-          .limit(1);
-
-        await tx.insert(transactions).values({
-          userId,
-          points,
-          type: "ADMIN_ADJUSTMENT",
-          description,
-        });
-
-        const [updatedUser] = await tx
-          .update(users)
-          .set({
-            points: sql`${users.points} + ${points}`,
-          })
-          .where(eq(users.id, userId))
-          .returning();
-
-        const tierPoints = updatedUser.points;
-        let currentTier = "Bronze";
-        if (tierPoints >= 150000) currentTier = "Platinum";
-        else if (tierPoints >= 100000) currentTier = "Gold";
-        else if (tierPoints >= 50000) currentTier = "Purple";
-        else if (tierPoints >= 10000) currentTier = "Silver";
-
-        // Update WebSocket notification using the correct method
-        await wsServer.notifyPointsUpdate(userId, points, description);
-
-        const customerEmail = formatPointsAssignmentEmail(
-          targetUser.firstName || "Valued Customer",
-          points,
-          description,
-          currentTier
-        );
-        await sendEmail({
-          to: targetUser.email,
-          subject: "Points Added to Your Account",
-          text: customerEmail.text,
-          html: customerEmail.html
-        });
-
-        const adminEmail = formatAdminNotificationEmail(
-          `${targetUser.firstName} ${targetUser.lastName}`,
-          points,
-          description,
-          admin.firstName || "Admin"
-        );
-        await sendEmail({
-          to: admin.email,
-          subject: `Points Assignment Confirmation: ${targetUser.firstName} ${targetUser.lastName}`,
-          text: adminEmail.text,
-          html: adminEmail.html
-        });
-
-        await logAdminAction({
-          adminId: req.user.id,
-          actionType: "POINT_ADJUSTMENT",
-          targetUserId: userId,
-          details: `Adjusted points by ${points}. Reason: ${description}`,
-        });
-
-        return updatedUser;
-      });
-
-      res.json({ message: "Points adjusted successfully" });
-    } catch (error) {
-      console.error('Error adjusting points:', error);
-      res.status(500).json({ error: 'Failed to adjust points' });
-    }
-  });
-
   app.post("/api/admin/users/create", async (req, res) => {
     if (!req.user?.isSuperAdmin) return res.status(403).json({error: "Only super admins can create new admins"});
     const { email, password, firstName, lastName, phoneNumber } = req.body;
@@ -993,8 +933,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/products/:id/unassign", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+  app.post("/api/products/:id/unassign", async (req, res) => {if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
     const { userId } = req.body;
 
@@ -1609,7 +1548,6 @@ export function registerRoutes(app: Express): Server {
             points: sql`${users.points} - ${points}`
           })
           .where(eq(users.id, user.id));
-
 
       });
 
