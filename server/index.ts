@@ -4,7 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import fileUpload from 'express-fileupload';
 import { setupAuth } from "./auth";
-import { getDb } from "@db";
+import { db } from "@db";
 import { users } from "@db/schema";
 
 // Check required environment variables
@@ -57,7 +57,6 @@ app.use((req, res, next) => {
 
     // Initialize database connection
     log('Initializing database connection...');
-    const db = await getDb();
 
     // Test database connection with a simple query
     try {
