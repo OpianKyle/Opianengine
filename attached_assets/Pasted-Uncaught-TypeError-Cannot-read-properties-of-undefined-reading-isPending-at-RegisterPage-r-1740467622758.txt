@@ -1,0 +1,39 @@
+Uncaught TypeError: Cannot read properties of undefined (reading 'isPending')
+    at RegisterPage (register.tsx:709:48)
+    at renderWithHooks (chunk-276SZO74.js?v=48812ffb:11548:26)
+    at updateFunctionComponent (chunk-276SZO74.js?v=48812ffb:14582:28)
+    at beginWork (chunk-276SZO74.js?v=48812ffb:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-276SZO74.js?v=48812ffb:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-276SZO74.js?v=48812ffb:3699:24)
+    at invokeGuardedCallback (chunk-276SZO74.js?v=48812ffb:3733:39)
+    at beginWork$1 (chunk-276SZO74.js?v=48812ffb:19765:15)
+    at performUnitOfWork (chunk-276SZO74.js?v=48812ffb:19198:20)
+    at workLoopSync (chunk-276SZO74.js?v=48812ffb:19137:13)Understand this errorAI
+chunk-276SZO74.js?v=48812ffb:14032 The above error occurred in the <RegisterPage> component:
+
+    at RegisterPage (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/register.tsx:248:35)
+    at Route (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=48812ffb:323:16)
+    at Switch (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=48812ffb:379:17)
+    at div
+    at Provider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-VDBQGIEN.js?v=48812ffb:48:15)
+    at TooltipProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=48812ffb:61:5)
+    at https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/sidebar.tsx:54:7
+    at Router
+    at div
+    at QueryClientProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=48812ffb:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-276SZO74.js?v=48812ffb:14032Understand this errorAI
+chunk-276SZO74.js?v=48812ffb:9129 Uncaught TypeError: Cannot read properties of undefined (reading 'isPending')
+    at RegisterPage (register.tsx:709:48)
+    at renderWithHooks (chunk-276SZO74.js?v=48812ffb:11548:26)
+    at updateFunctionComponent (chunk-276SZO74.js?v=48812ffb:14582:28)
+    at beginWork (chunk-276SZO74.js?v=48812ffb:15924:22)
+    at beginWork$1 (chunk-276SZO74.js?v=48812ffb:19753:22)
+    at performUnitOfWork (chunk-276SZO74.js?v=48812ffb:19198:20)
+    at workLoopSync (chunk-276SZO74.js?v=48812ffb:19137:13)
+    at renderRootSync (chunk-276SZO74.js?v=48812ffb:19116:15)
+    at recoverFromConcurrentError (chunk-276SZO74.js?v=48812ffb:18736:28)
+    at performSyncWorkOnRoot (chunk-276SZO74.js?v=48812ffb:18879:28)
