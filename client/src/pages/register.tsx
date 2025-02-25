@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2 } from "lucide-react"; 
+import { Loader2, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -148,7 +148,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
       <CardTitle className="flex justify-between items-center text-lg">
         {pkg.display}
         {isSelected && (
-          <Check className="h-5 w-5 text-[#43EB3E]" />
+          <CheckIcon className="h-5 w-5 text-[#43EB3E]" />
         )}
       </CardTitle>
       <CardDescription className="text-base">R{pkg.price}/month</CardDescription>
@@ -166,7 +166,7 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
       </div>
     </CardContent>
     <div className="absolute bottom-6 left-6 right-6">
-      <Button 
+      <Button
         className={`w-full ${isSelected ? 'bg-[#43EB3E] hover:bg-[#43EB3E]' : ''}`}
         variant={isSelected ? "default" : "outline"}
       >
@@ -312,7 +312,7 @@ export default function RegisterPage() {
       branchCode: "Branch Code",
       accountNumber: "Account Number",
       accountType: "Account Type",
-      gender: "Gender"  // Added gender as required field
+      gender: "Gender"
     };
 
     const missingFields = Object.entries(requiredFields)
@@ -353,7 +353,7 @@ export default function RegisterPage() {
         selectedPackage: formData.selectedPackage,
         points: selectedPackageData.activationPoints,
         referralCode: formData.referralCode,
-        gender: formData.gender // Explicitly include gender in registration data
+        gender: formData.gender
       };
 
       console.log('Submitting registration data:', { ...registrationData, password: '[REDACTED]' });
