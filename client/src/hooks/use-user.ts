@@ -143,6 +143,7 @@ export function useUser() {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: Omit<User, 'id'>) => {
+      console.log('Starting registration with data:', { ...userData, password: '[REDACTED]' });
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
