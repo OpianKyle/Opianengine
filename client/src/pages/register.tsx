@@ -311,7 +311,8 @@ export default function RegisterPage() {
       bankName: "Bank Name",
       branchCode: "Branch Code",
       accountNumber: "Account Number",
-      accountType: "Account Type"
+      accountType: "Account Type",
+      gender: "Gender"  // Added gender as required field
     };
 
     const missingFields = Object.entries(requiredFields)
@@ -345,8 +346,9 @@ export default function RegisterPage() {
         jobTitle: formData.occupation,
         signature: signatureData,
         selectedPackage: formData.selectedPackage,
-        points: selectedPackageData.activationPoints, // Include activation points
-        referralCode: formData.referralCode
+        points: selectedPackageData.activationPoints,
+        referralCode: formData.referralCode,
+        gender: formData.gender // Ensure gender is included in registration data
       };
 
       console.log('Submitting registration with referral code:', formData.referralCode);
