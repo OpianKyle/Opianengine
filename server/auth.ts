@@ -323,6 +323,33 @@ export function setupAuth(app: Express) {
       const hashedPassword = await crypto.hashPassword(req.body.password);
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
+      // Calculate initial points based on selected package
+      let initialPoints = 0;
+      switch (req.body.selectedPackage?.toUpperCase()) {
+        case 'BEGINNER':
+          initialPoints = 10000;
+          break;
+        case 'NOVICE':
+          initialPoints = 50000;
+          break;
+        case 'ACTIVE':
+          initialPoints = 100000;
+          break;
+        case 'PROFESSIONAL':
+          initialPoints = 150000;
+          break;
+        case 'EXPERT':
+          initialPoints = 200000;
+          break;
+        default:
+          initialPoints = 0;
+      }
+
+      console.log('Package selection:', {
+        package: req.body.selectedPackage,
+        points: initialPoints
+      });
+
       // Start transaction
       await connection.beginTransaction();
 
@@ -341,15 +368,30 @@ export function setupAuth(app: Express) {
             req.body.lastName,
             req.body.mobileNumber,
             1, // is_enabled
-            0, // points
+            initialPoints, // Initial points based on package
             newReferralCode,
             req.body.referralCode || null,
-            req.body.selectedPackage || null
+            req.body.selectedPackage ? req.body.selectedPackage.toUpperCase() : null
           ]
         );
 
         const userId = (userResult as any).insertId;
         console.log('User created successfully, ID:', userId);
+
+        // Record the points transaction
+        if (initialPoints > 0) {
+          await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description
+            ) VALUES (?, ?, ?, ?)`,
+            [
+              userId,
+              initialPoints,
+              'WELCOME_BONUS',
+              `Welcome bonus points for ${req.body.selectedPackage} package`
+            ]
+          );
+        }
 
         // Update additional user details
         await connection.execute(
@@ -426,6 +468,8 @@ export function setupAuth(app: Express) {
           console.log('Registration complete. User details:', {
             id: transformedUser.id,
             email: transformedUser.email,
+            points: transformedUser.points,
+            selected_package: transformedUser.selected_package,
             is_admin: transformedUser.is_admin,
             is_super_admin: transformedUser.is_super_admin
           });
