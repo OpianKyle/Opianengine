@@ -184,7 +184,7 @@ export function setupAuth(app: Express) {
             return done(null, false, { message: 'Invalid email or password' });
           }
 
-          console.log('User login data:', {
+          console.log('Raw user data:', {
             id: user.id,
             email: user.email,
             is_admin: user.is_admin,
@@ -207,7 +207,9 @@ export function setupAuth(app: Express) {
             id: transformedUser.id,
             email: transformedUser.email,
             is_admin: transformedUser.is_admin,
-            is_super_admin: transformedUser.is_super_admin
+            is_super_admin: transformedUser.is_super_admin,
+            admin_type: typeof transformedUser.is_admin,
+            super_admin_type: typeof transformedUser.is_super_admin
           });
 
           return done(null, transformedUser);
