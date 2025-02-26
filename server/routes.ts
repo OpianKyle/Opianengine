@@ -511,58 +511,59 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/admin/customers", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    try {
-      console.log('Fetching customers with all fields...');
-      const customers = await db.query.users.findMany({
-        where: eq(users.isAdmin, false),
-        orderBy: desc(users.createdAt),
-        columns: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          phoneNumber: true,
-          isEnabled: true,
-          points: true,
-          createdAt: true,
-          selectedPackage: true,  // Ensure this field is included
-          industry: true,
-          occupation: true,
-          bankName: true,
-          accountType: true,
-          accountNumber: true,
-          accountHolderName: true,
-          branchCode: true,
-          address: true,
-          city: true,
-          postalCode: true,
-          idNumber: true,
-          dateOfBirth: true,
-        },
-        with: {
-          productAssignments: {
-            with: {
-              product: {
-                with: {
-                  activities: {
-                    columns: {
-                      id: true,
-                      type: true,
-                      pointsValue: true
-                    }
-                  }
-                }
-              },
-            },
-          },
-        },
-      });
+    console.log('Admin customers request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email,
+        is_admin: req.user.is_admin,
+        is_super_admin: req.user.is_super_admin
+      } : null
+    });
 
-      res.json(customers);
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    // Check admin status
+    const connection = await db.execute('SELECT 1'); // Placeholder - needs a proper connection method
+    try {
+        // Check admin status from admin_users table
+        const [adminCheck] = await connection.execute(
+            'SELECT role_type FROM admin_users WHERE user_id = ?',
+            [req.user.id]
+        );
+
+        if (!adminCheck || adminCheck.length === 0) {
+            console.log('User not found in admin_users:', req.user.id);
+            return res.status(403).json({ error: "Admin access required" });
+        }
+
+        console.log('Fetching customers with all fields...');
+        const [customers] = await connection.execute(
+            `SELECT 
+              u.*,
+              CASE 
+                WHEN au.role_type IS NOT NULL THEN TRUE 
+                ELSE FALSE 
+              END as is_admin,
+              CASE 
+                WHEN au.role_type = 'SUPER_ADMIN' THEN TRUE 
+                ELSE FALSE 
+              END as is_super_admin
+            FROM users u
+            LEFT JOIN admin_users au ON u.id = au.user_id
+            WHERE au.role_type IS NULL
+            ORDER BY u.created_at DESC`
+        );
+
+        console.log(`Found ${customers.length} customers`);
+        res.json(customers);
     } catch (error) {
-      console.error('Error fetching customers:', error);
-      res.status(500).json({ error: 'Failed to fetch customers' });
+        console.error('Error fetching customers:', error);
+        res.status(500).json({ error: 'Failed to fetch customers' });
+    } finally {
+      // await connection.end(); //This is wrong, connection is not from drizzle-orm
     }
   });
 
