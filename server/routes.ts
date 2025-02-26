@@ -574,79 +574,70 @@ export function registerRoutes(app: Express): Server {
 
     const connection = await createConnection();
     try {
-        // Check admin status from admin_users table
-        const [adminCheck] = await connection.execute(
-            'SELECT role_type FROM admin_users WHERE user_id = ?',
-            [req.user.id]
-        );
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-        if (!adminCheck || adminCheck.length === 0) {
-            console.log('User not found in admin_users:', req.user.id);
-            return res.status(403).json({ error: "Admin access required" });
-        }
+      if (!adminCheck || adminCheck.length === 0) {
+        console.log('User not found in admin_users:', req.user.id);
+        return res.status(403).json({ error: "Admin access required" });
+      }
 
-        console.log('Fetching customers with all fields...');
-        const [customers] = await connection.execute(
-            `SELECT 
-              u.*,
-              GROUP_CONCAT(DISTINCT p.name) as assigned_products,
-              COUNT(DISTINCT r.id) as referral_count,
-              GROUP_CONCAT(DISTINCT JSON_OBJECT(
-                'id', pa.id,
-                'productId', p.id,
-                'productName', p.name,
-                'type', pa.type,
-                'pointsValue', pa.points_value
-              )) as product_assignments
-            FROM users u
-            LEFT JOIN admin_users au ON u.id = au.user_id
-            LEFT JOIN product_assignments pa ON u.id = pa.user_id
-            LEFT JOIN products p ON pa.product_id = p.id
-            LEFT JOIN users r ON u.referral_code = r.referred_by
-            WHERE au.role_type IS NULL
-            GROUP BY u.id
-            ORDER BY u.created_at DESC`
-        );
+      // Fetch customers with a simpler query first
+      const [customers] = await connection.execute(
+        `SELECT 
+          u.*,
+          GROUP_CONCAT(DISTINCT p.name) as assigned_products,
+          COUNT(DISTINCT r.id) as referral_count
+        FROM users u
+        LEFT JOIN admin_users au ON u.id = au.user_id
+        LEFT JOIN product_assignments pa ON u.id = pa.user_id
+        LEFT JOIN products p ON pa.product_id = p.id
+        LEFT JOIN users r ON u.referral_code = r.referred_by
+        WHERE au.role_type IS NULL
+        GROUP BY u.id
+        ORDER BY u.created_at DESC`
+      );
 
-        console.log(`Found ${customers.length} customers`);
+      console.log(`Found ${customers.length} customers`);
 
-        // Transform boolean fields and parse JSON data
-        const transformedCustomers = customers.map(customer => ({
-            id: customer.id,
-            email: customer.email,
-            firstName: customer.first_name,
-            lastName: customer.last_name,
-            phoneNumber: customer.phone_number,
-            isEnabled: Boolean(customer.is_enabled),
-            isSouthAfrican: Boolean(customer.is_south_african),
-            hasCreditCard: Boolean(customer.has_credit_card),
-            points: Number(customer.points),
-            createdAt: customer.created_at,
-            selectedPackage: customer.selected_package,
-            industry: customer.industry,
-            occupation: customer.occupation,
-            address: customer.address,
-            city: customer.city,
-            postalCode: customer.postal_code,
-            bankName: customer.bank_name,
-            accountType: customer.account_type,
-            accountNumber: customer.account_number,
-            accountHolderName: customer.account_holder_name,
-            branchCode: customer.branch_code,
-            referralCode: customer.referral_code,
-            referredBy: customer.referred_by,
-            assignedProducts: customer.assigned_products ? customer.assigned_products.split(',') : [],
-            productAssignments: customer.product_assignments ? 
-                customer.product_assignments.split(',').map(assignment => JSON.parse(assignment)) : [],
-            referralCount: Number(customer.referral_count)
-        }));
+      // Transform the customer data
+      const transformedCustomers = customers.map(customer => ({
+        id: customer.id,
+        email: customer.email,
+        firstName: customer.first_name,
+        lastName: customer.last_name,
+        phoneNumber: customer.phone_number,
+        isEnabled: Boolean(customer.is_enabled),
+        isSouthAfrican: Boolean(customer.is_south_african),
+        hasCreditCard: Boolean(customer.has_credit_card),
+        points: Number(customer.points),
+        createdAt: customer.created_at,
+        selectedPackage: customer.selected_package,
+        industry: customer.industry,
+        occupation: customer.occupation,
+        address: customer.address,
+        city: customer.city,
+        postalCode: customer.postal_code,
+        bankName: customer.bank_name,
+        accountType: customer.account_type,
+        accountNumber: customer.account_number,
+        accountHolderName: customer.account_holder_name,
+        branchCode: customer.branch_code,
+        referralCode: customer.referral_code,
+        referredBy: customer.referred_by,
+        assignedProducts: customer.assigned_products ? customer.assigned_products.split(',') : [],
+        referralCount: Number(customer.referral_count)
+      }));
 
-        res.json(transformedCustomers);
+      res.json(transformedCustomers);
     } catch (error) {
-        console.error('Error fetching customers:', error);
-        res.status(500).json({ error: 'Failed to fetch customers' });
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
     } finally {
-        await connection.end();
+      await connection.end();
     }
   });
 
@@ -994,7 +985,7 @@ export function registerRoutes(app: Express): Server {
         const activityPromises = activities.map(async (activity: any) => {
           return tx.insert(product_activities).values({
             productId: parseInt(id),
-            type: activity.type,
+                        type: activity.type,
             pointsValue: activity.pointsValue,
           }).execute();
         });
