@@ -41,13 +41,12 @@ const userSchema = z.object({
   signature: z.string().nullable().default(null)
 }).transform(data => ({
   ...data,
-  // Ensure core fields have defaults even if transformation fails
-  first_name: data.first_name || "",
-  last_name: data.last_name || "",
-  points: typeof data.points === 'number' ? data.points : 0,
+  // Transform all boolean fields from MariaDB 0/1 to actual booleans
   is_admin: !!data.is_admin,
   is_super_admin: !!data.is_super_admin,
-  is_enabled: data.is_enabled !== false,
+  is_enabled: !!data.is_enabled,
+  is_south_african: data.is_south_african === null ? null : !!data.is_south_african,
+  has_credit_card: data.has_credit_card === null ? null : !!data.has_credit_card,
 }));
 
 export type User = z.infer<typeof userSchema>;
@@ -134,8 +133,10 @@ export function useUser() {
         setToken(data.token);
       }
 
+      // Transform the response data
+      const userData = data.user || data;
       try {
-        return userSchema.parse(data.user || data);
+        return userSchema.parse(userData);
       } catch (error) {
         console.error('Login response validation error:', error);
         throw new Error('Invalid user data received');
@@ -180,10 +181,7 @@ export function useUser() {
       }
 
       try {
-        return userSchema.parse(data);
-      } catch (error) {
-        console.error('Registration response validation error:', error);
-        // Transform the data to match expected schema
+        // Pre-transform boolean fields before validation
         const transformedData = {
           ...data,
           is_admin: !!data.is_admin,
@@ -193,6 +191,9 @@ export function useUser() {
           has_credit_card: data.has_credit_card === 1
         };
         return userSchema.parse(transformedData);
+      } catch (error) {
+        console.error('Registration response validation error:', error);
+        throw new Error('Invalid user data received');
       }
     },
     onSuccess: (user) => {

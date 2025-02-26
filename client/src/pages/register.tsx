@@ -250,7 +250,12 @@ export default function RegisterPage() {
   }
 
   if (user) {
-    navigate(user.isAdmin ? '/admin' : '/dashboard');
+    // Update redirection logic to handle both admin and super admin
+    if (user.is_admin || user.is_super_admin) {
+      navigate('/admin/dashboard');
+      return null;
+    }
+    navigate('/dashboard');
     return null;
   }
 
