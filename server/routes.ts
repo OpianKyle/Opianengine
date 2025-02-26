@@ -15,6 +15,7 @@ import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';  // Import referral routes
+import { createConnection } from './db'; // Added import statement
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -1133,7 +1134,8 @@ export function registerRoutes(app: Express): Server {
         .values({
           userId,
           productId: parseInt(id),
-        })        .returning()
+        })
+        .returning()
         .execute();
 
       await logAdminAction({
@@ -1960,7 +1962,8 @@ export function registerRoutes(app: Express): Server {
               eq(notifications.userId, req.user.id)
             )
           )
-          .returning()          .execute();
+          .returning()
+          .execute();
 
         if (!deletedNotification) {
           return res.status(404).json({ error:"Notification not found" });
@@ -2366,13 +2369,13 @@ export function registerRoutes(app: Express): Server {
          FROM transactions t
          JOIN users u ON t.user_id = u.id
          ORDER BY t.created_at DESC
-         LIMIT 100`
+         LIMIT 50`
       );
 
-      // Transform transaction data for charts
-      const transformedTransactions = transactions.map(t => ({
+      // Transform transaction data for frontend
+      const transformedTransactions = transactions.map((t: any) => ({
         date: new Date(t.created_at).toLocaleDateString(),
-        points: Math.abs(t.points),
+        points: Math.abs(Number(t.points)),
         type: t.type,
         user: {
           firstName: t.first_name,
@@ -2381,13 +2384,17 @@ export function registerRoutes(app: Express): Server {
         }
       }));
 
-      res.json({
-        totalCustomers: customerCount[0].count,
-        totalPoints: pointsTotal[0].total,
-        activeRewards: rewardsCount[0].count,
-        totalRedemptions: redemptionsCount[0].count,
+      const response = {
+        totalCustomers: Number(customerCount[0].count),
+        totalPoints: Number(pointsTotal[0].total),
+        activeRewards: Number(rewardsCount[0].count),
+        totalRedemptions: Number(redemptionsCount[0].count),
         recentTransactions: transformedTransactions
-      });
+      };
+
+      console.log('Sending dashboard stats:', response);
+      res.json(response);
+
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
       res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
