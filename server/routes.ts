@@ -983,8 +983,7 @@ export function registerRoutes(app: Express): Server {
             description,
           })
           .where(eq(products.id, parseInt(id)))
-          .returning()
-          .execute();
+          .returning()          .execute();
 
         await tx
           .delete(product_activities)
@@ -1964,7 +1963,7 @@ export function registerRoutes(app: Express): Server {
           .returning()          .execute();
 
         if (!deletedNotification) {
-          return res.status(404).json({ error: "Notification not found" });
+          return res.status(404).json({ error:"Notification not found" });
         }
       } else {
         await db
@@ -2300,6 +2299,100 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error assigning product:', error);
       res.status(500).json({ error: 'Failed to assign product' });
+    }
+  });
+
+  // Add new route for admin dashboard stats
+  app.get("/api/admin/dashboard/stats", async (req, res) => {
+    console.log('Admin dashboard stats request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email,
+        is_admin: req.user.is_admin,
+        is_super_admin: req.user.is_super_admin
+      } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        console.log('User not found in admin_users:', req.user.id);
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get total customers (non-admin users)
+      const [customerCount] = await connection.execute(
+        `SELECT COUNT(*) as count 
+         FROM users u 
+         LEFT JOIN admin_users au ON u.id = au.user_id 
+         WHERE au.user_id IS NULL`
+      );
+
+      // Get total points in circulation
+      const [pointsTotal] = await connection.execute(
+        'SELECT COALESCE(SUM(points), 0) as total FROM users'
+      );
+
+      // Get active rewards count
+      const [rewardsCount] = await connection.execute(
+        'SELECT COUNT(*) as count FROM rewards WHERE available = 1'
+      );
+
+      // Get total redemptions
+      const [redemptionsCount] = await connection.execute(
+        `SELECT COUNT(*) as count 
+         FROM transactions 
+         WHERE type = 'REDEEMED'`
+      );
+
+      // Get recent transactions for charts
+      const [transactions] = await connection.execute(
+        `SELECT 
+          t.*,
+          u.first_name,
+          u.last_name,
+          u.email
+         FROM transactions t
+         JOIN users u ON t.user_id = u.id
+         ORDER BY t.created_at DESC
+         LIMIT 100`
+      );
+
+      // Transform transaction data for charts
+      const transformedTransactions = transactions.map(t => ({
+        date: new Date(t.created_at).toLocaleDateString(),
+        points: Math.abs(t.points),
+        type: t.type,
+        user: {
+          firstName: t.first_name,
+          lastName: t.last_name,
+          email: t.email
+        }
+      }));
+
+      res.json({
+        totalCustomers: customerCount[0].count,
+        totalPoints: pointsTotal[0].total,
+        activeRewards: rewardsCount[0].count,
+        totalRedemptions: redemptionsCount[0].count,
+        recentTransactions: transformedTransactions
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
+    } finally {
+      await connection.end();
     }
   });
 
