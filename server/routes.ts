@@ -118,24 +118,71 @@ export function registerRoutes(app: Express): Server {
 
 
   app.get("/api/products/assignments/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
+    const connection = await createConnection();
     try {
-      const assignment = await db.query.productAssignments.findFirst({
-        where: eq(productAssignments.id, parseInt(id)),
-        with: {
-          product: true
-        }
-      });
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-      if (!assignment) {
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id } = req.params;
+
+      // Fetch assignment with related data
+      const [assignments] = await connection.execute(
+        `SELECT 
+          pa.*,
+          p.name as product_name,
+          p.description as product_description,
+          p.is_enabled as product_is_enabled,
+          u.email as user_email,
+          u.first_name as user_first_name,
+          u.last_name as user_last_name
+         FROM product_assignments pa
+         JOIN products p ON pa.product_id = p.id
+         JOIN users u ON pa.user_id = u.id
+         WHERE pa.id = ?`,
+        [id]
+      );
+
+      if (!assignments || assignments.length === 0) {
         return res.status(404).json({ error: "Assignment not found" });
       }
-      res.json(assignment);
+
+      const assignment = assignments[0];
+      const transformedAssignment = {
+        id: assignment.id,
+        productId: assignment.product_id,
+        userId: assignment.user_id,
+        createdAt: assignment.created_at,
+        product: {
+          id: assignment.product_id,
+          name: assignment.product_name,
+          description: assignment.product_description,
+          isEnabled: Boolean(assignment.product_is_enabled)
+        },
+        user: {
+          id: assignment.user_id,
+          email: assignment.user_email,
+          firstName: assignment.user_first_name,
+          lastName: assignment.user_last_name
+        }
+      };
+
+      res.json(transformedAssignment);
     } catch (error) {
       console.error('Error fetching assignment:', error);
       res.status(500).json({ error: 'Failed to fetch assignment' });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -986,7 +1033,7 @@ export function registerRoutes(app: Express): Server {
       } catch (error) {
         await connection.rollback();
         throw error;
-      } finally {
+      } finally{
         await connection.end();
       }
     } catch (error) {
@@ -1015,6 +1062,26 @@ export function registerRoutes(app: Express): Server {
       const { id } = req.params;
       const { userId } = req.body;
 
+      // Check if product exists and is enabled
+      const [products] = await connection.execute(
+        'SELECT * FROM products WHERE id = ? AND is_enabled = 1',
+        [id]
+      );
+
+      if (products.length === 0) {
+        return res.status(404).json({ error: "Product not found or is disabled" });
+      }
+
+      // Check if user exists
+      const [users] = await connection.execute(
+        'SELECT * FROM users WHERE id = ? AND is_enabled = 1',
+        [userId]
+      );
+
+      if (users.length === 0) {
+        return res.status(404).json({ error: "User not found or is disabled" });
+      }
+
       // Check if assignment already exists
       const [existingAssignment] = await connection.execute(
         'SELECT id FROM product_assignments WHERE product_id = ? AND user_id = ?',
@@ -1031,16 +1098,44 @@ export function registerRoutes(app: Express): Server {
         [id, userId]
       );
 
-      // Fetch the created assignment with product details
       const [assignment] = await connection.execute(
-        `SELECT pa.*, p.name as product_name
+        `SELECT 
+          pa.*,
+          p.name as product_name,
+          p.description as product_description,
+          u.email as user_email,
+          u.first_name as user_first_name,
+          u.last_name as user_last_name
          FROM product_assignments pa
          JOIN products p ON pa.product_id = p.id
+         JOIN users u ON pa.user_id = u.id
          WHERE pa.id = ?`,
         [result.insertId]
       );
 
-      res.json(assignment[0]);
+      if (!assignment || assignment.length === 0) {
+        throw new Error('Failed to retrieve created assignment');
+      }
+
+      const transformedAssignment = {
+        id: assignment[0].id,
+        productId: assignment[0].product_id,
+        userId: assignment[0].user_id,
+        createdAt: assignment[0].created_at,
+        product: {
+          id: assignment[0].product_id,
+          name: assignment[0].product_name,
+          description: assignment[0].product_description
+        },
+        user: {
+          id: assignment[0].user_id,
+          email: assignment[0].user_email,
+          firstName: assignment[0].user_first_name,
+          lastName: assignment[0].user_last_name
+        }
+      };
+
+      res.json(transformedAssignment);
     } catch (error) {
       console.error('Error assigning product:', error);
       res.status(500).json({ error: 'Failed to assign product' });
@@ -1069,6 +1164,23 @@ export function registerRoutes(app: Express): Server {
       const { id } = req.params;
       const { userId } = req.body;
 
+      // Check if assignment exists first
+      const [assignment] = await connection.execute(
+        `SELECT 
+          pa.*,
+          p.name as product_name,
+          u.email as user_email
+         FROM product_assignments pa
+         JOIN products p ON pa.product_id = p.id
+         JOIN users u ON pa.user_id = u.id
+         WHERE pa.product_id = ? AND pa.user_id = ?`,
+        [id, userId]
+      );
+
+      if (assignment.length === 0) {
+        return res.status(404).json({ error: "Assignment not found" });
+      }
+
       // Delete the assignment
       const [result] = await connection.execute(
         'DELETE FROM product_assignments WHERE product_id = ? AND user_id = ?',
@@ -1076,10 +1188,13 @@ export function registerRoutes(app: Express): Server {
       );
 
       if (result.affectedRows === 0) {
-        return res.status(404).json({ error: "Assignment not found" });
+        throw new Error('Failed to delete assignment');
       }
 
-      res.json({ message: "Product unassigned successfully" });
+      res.json({
+        message: "Product unassigned successfully",
+        details: `Unassigned ${assignment[0].product_name} from user ${assignment[0].user_email}`
+      });
     } catch (error) {
       console.error('Error unassigning product:', error);
       res.status(500).json({ error: 'Failed to unassign product' });
@@ -1089,25 +1204,71 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/products/assignments/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
+    const connection = await createConnection();
     try {
-      const assignment = await db.query.productAssignments.findFirst({
-        where: eq(productAssignments.id, parseInt(id)),
-        with: {
-          product: true,
-          user: true,
-        }
-      });
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-      if (!assignment) {
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id } = req.params;
+
+      // Fetch assignment with related data
+      const [assignments] = await connection.execute(
+        `SELECT 
+          pa.*,
+          p.name as product_name,
+          p.description as product_description,
+          p.is_enabled as product_is_enabled,
+          u.email as user_email,
+          u.first_name as user_first_name,
+          u.last_name as user_last_name
+         FROM product_assignments pa
+         JOIN products p ON pa.product_id = p.id
+         JOIN users u ON pa.user_id = u.id
+         WHERE pa.id = ?`,
+        [id]
+      );
+
+      if (!assignments || assignments.length === 0) {
         return res.status(404).json({ error: "Assignment not found" });
       }
-      res.json(assignment);
+
+      const assignment = assignments[0];
+      const transformedAssignment = {
+        id: assignment.id,
+        productId: assignment.product_id,
+        userId: assignment.user_id,
+        createdAt: assignment.created_at,
+        product: {
+          id: assignment.product_id,
+          name: assignment.product_name,
+          description: assignment.product_description,
+          isEnabled: Boolean(assignment.product_is_enabled)
+        },
+        user: {
+          id: assignment.user_id,
+          email: assignment.user_email,
+          firstName: assignment.user_first_name,
+          lastName: assignment.user_last_name
+        }
+      };
+
+      res.json(transformedAssignment);
     } catch (error) {
       console.error('Error fetching assignment:', error);
       res.status(500).json({ error: 'Failed to fetch assignment' });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -1826,8 +1987,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/notifications", async (req, res) => {
-    if (!req.user) {
+  app.get("/api/notifications", async (req, res) => {    if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
