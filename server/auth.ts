@@ -349,7 +349,7 @@ export function setupAuth(app: Express) {
         accountHolderName,
         branchCode,
         signature,
-        acceptMandate //this line was missing in edited code. Added from original
+        acceptMandate
       } = result.data;
 
       // Check for existing user
@@ -383,6 +383,7 @@ export function setupAuth(app: Express) {
       try {
         await connection.beginTransaction();
 
+        // Fix the column count mismatch by ensuring all columns are listed
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, 
@@ -393,8 +394,9 @@ export function setupAuth(app: Express) {
             gender, occupation, industry, address,
             city, postal_code, has_credit_card,
             bank_name, account_type, account_number,
-            account_holder_name, branch_code, signature, accept_mandate
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,//Added accept_mandate to the query.
+            account_holder_name, branch_code, signature, 
+            accept_mandate
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             email,
             hashedPassword,
@@ -403,7 +405,7 @@ export function setupAuth(app: Express) {
             phoneNumber,
             shouldBeSuperAdmin ? 1 : 0,
             shouldBeSuperAdmin ? 1 : 0,
-            1,
+            1, // is_enabled
             points || 0,
             newReferralCode,
             referralCode || null,
@@ -424,7 +426,7 @@ export function setupAuth(app: Express) {
             accountHolderName || null,
             branchCode || null,
             signature || null,
-            acceptMandate ? 1: 0 // Added acceptMandate to the values array.
+            acceptMandate ? 1 : 0
           ]
         );
 
