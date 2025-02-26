@@ -44,10 +44,10 @@ function ProtectedRoute({ component: Component, admin = false, ...rest }: any) {
   }
 
   if (!user) {
+    console.log('No user found, redirecting to home');
     return <Redirect to="/" />;
   }
 
-  // Update admin check to use correct property names
   if (admin && !(user.is_admin || user.is_super_admin)) {
     console.log('User lacks admin privileges:', {
       id: user.id,

@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { type Express, Request } from "express";
+import { type Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -9,12 +9,6 @@ import jwt from 'jsonwebtoken';
 import memorystore from 'memorystore';
 import { JWT_SECRET } from './config';
 import mysql from 'mysql2/promise';
-
-// Add global error handler
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  console.error('Stack trace:', err.stack);
-});
 
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
@@ -35,17 +29,19 @@ async function createConnection() {
 async function checkUserAdminStatus(userId: number) {
   const connection = await createConnection();
   try {
+    console.log('Checking admin status for user:', userId);
     const [rows] = await connection.execute(
       'SELECT role_type FROM admin_users WHERE user_id = ?',
       [userId]
     );
 
     if (!Array.isArray(rows) || rows.length === 0) {
+      console.log('No admin entry found for user:', userId);
       return { isAdmin: false, isSuperAdmin: false };
     }
 
     const roleType = rows[0].role_type;
-    console.log('Admin check result:', { userId, roleType });
+    console.log('Admin role found:', { userId, roleType });
 
     return {
       isAdmin: true,
@@ -59,46 +55,7 @@ async function checkUserAdminStatus(userId: number) {
   }
 }
 
-// Helper function to create admin user
-async function createAdminUser(userId: number, isSuperAdmin: boolean = false) {
-  const connection = await createConnection();
-  try {
-    await connection.execute(
-      'INSERT INTO admin_users (user_id, role_type) VALUES (?, ?)',
-      [userId, isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN']
-    );
-    console.log(`Created ${isSuperAdmin ? 'super admin' : 'admin'} entry for user:`, userId);
-    return true;
-  } catch (error) {
-    console.error('Error creating admin user:', error);
-    return false;
-  } finally {
-    await connection.end();
-  }
-}
-
-// Check for existing super admin
-async function checkForSuperAdmin() {
-  const connection = await createConnection();
-  try {
-    console.log('Checking for existing super admin...');
-    const [rows] = await connection.execute(
-      'SELECT COUNT(*) as count FROM admin_users WHERE role_type = ?',
-      ['SUPER_ADMIN']
-    );
-
-    const count = (rows as any)[0].count;
-    console.log('Super admin check result:', { count });
-    return count > 0;
-  } catch (error) {
-    console.error('Error checking for super admin:', error);
-    return false;
-  } finally {
-    await connection.end();
-  }
-}
-
-// Utility functions for password handling
+// Password utility functions
 const crypto = {
   async hashPassword(password: string) {
     const salt = randomBytes(16).toString('hex');
@@ -120,116 +77,139 @@ const crypto = {
   }
 };
 
+// Authentication middleware
+export function checkAdmin(req: Request, res: Response, next: NextFunction) {
+  console.log('Checking admin status for request:', {
+    path: req.path,
+    authenticated: req.isAuthenticated(),
+    user: req.user ? {
+      id: req.user.id,
+      email: req.user.email,
+      is_admin: req.user.is_admin,
+      is_super_admin: req.user.is_super_admin
+    } : null
+  });
+
+  if (!req.isAuthenticated()) {
+    console.log('User not authenticated');
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  if (!req.user.is_admin && !req.user.is_super_admin) {
+    console.log('User lacks admin privileges:', {
+      id: req.user.id,
+      email: req.user.email,
+      is_admin: req.user.is_admin,
+      is_super_admin: req.user.is_super_admin
+    });
+    return res.status(403).json({ error: "Admin access required" });
+  }
+
+  next();
+}
+
 // Main setup function
 export function setupAuth(app: Express) {
-  console.log('Starting auth setup...');
-
   if (!process.env.SESSION_SECRET) {
     console.error('Missing SESSION_SECRET environment variable');
     process.exit(1);
   }
 
-  const store = new MemoryStore({
-    checkPeriod: 86400000
-  });
-
-  app.set('trust proxy', 1);
-
-  const sessionMiddleware = session({
+  app.use(session({
     secret: process.env.SESSION_SECRET,
     cookie: {
       maxAge: 86400000,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      httpOnly: true
+      sameSite: 'lax'
     },
-    store,
+    store: new MemoryStore({
+      checkPeriod: 86400000
+    }),
     resave: false,
     saveUninitialized: false,
     name: 'session'
-  });
+  }));
 
-  app.use(sessionMiddleware);
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Configure passport
-  passport.use(
-    new LocalStrategy(
-      { usernameField: 'email' },
-      async (email, password, done) => {
-        const connection = await createConnection();
-        try {
-          console.log('Authentication attempt:', { email });
+  passport.use(new LocalStrategy(
+    { usernameField: 'email' },
+    async (email, password, done) => {
+      const connection = await createConnection();
+      try {
+        console.log('Authentication attempt:', { email });
 
-          const [rows] = await connection.execute(
-            'SELECT * FROM users WHERE email = ?',
-            [email]
-          );
+        // Get user
+        const [rows] = await connection.execute(
+          'SELECT * FROM users WHERE email = ?',
+          [email]
+        );
 
-          const user = rows[0];
-          if (!user) {
-            console.log('User not found:', { email });
-            return done(null, false, { message: 'Invalid email or password' });
-          }
-
-          console.log('Found user:', { 
-            id: user.id, 
-            email: user.email,
-            enabled: user.is_enabled 
-          });
-
-          if (!user.is_enabled) {
-            console.log('Account disabled:', { id: user.id, email });
-            return done(null, false, { message: 'Account is disabled' });
-          }
-
-          const isValid = await crypto.verifyPassword(password, user.password);
-          console.log('Password verification:', { 
-            id: user.id, 
-            email,
-            isValid 
-          });
-
-          if (!isValid) {
-            return done(null, false, { message: 'Invalid email or password' });
-          }
-
-          const adminStatus = await checkUserAdminStatus(user.id);
-          console.log('Admin status check:', {
-            id: user.id,
-            email,
-            ...adminStatus
-          });
-
-          const { password: _, ...safeUser } = user;
-          const transformedUser = {
-            ...safeUser,
-            is_admin: adminStatus.isAdmin,
-            is_super_admin: adminStatus.isSuperAdmin,
-            is_enabled: Boolean(safeUser.is_enabled),
-            is_south_african: Boolean(safeUser.is_south_african),
-            has_credit_card: Boolean(safeUser.has_credit_card)
-          };
-
-          console.log('Authentication successful:', {
-            id: transformedUser.id,
-            email: transformedUser.email,
-            is_admin: transformedUser.is_admin,
-            is_super_admin: transformedUser.is_super_admin
-          });
-
-          return done(null, transformedUser);
-        } catch (error) {
-          console.error('Authentication error:', error);
-          return done(error);
-        } finally {
-          await connection.end();
+        const user = rows[0];
+        if (!user) {
+          console.log('User not found:', { email });
+          return done(null, false, { message: 'Invalid email or password' });
         }
+
+        console.log('Found user:', {
+          id: user.id,
+          email: user.email,
+          enabled: user.is_enabled
+        });
+
+        if (!user.is_enabled) {
+          console.log('Account disabled:', { id: user.id, email });
+          return done(null, false, { message: 'Account is disabled' });
+        }
+
+        // Verify password
+        const isValid = await crypto.verifyPassword(password, user.password);
+        console.log('Password verification:', {
+          id: user.id,
+          email,
+          isValid
+        });
+
+        if (!isValid) {
+          return done(null, false, { message: 'Invalid email or password' });
+        }
+
+        // Check admin status
+        const adminStatus = await checkUserAdminStatus(user.id);
+        console.log('Admin status check:', {
+          id: user.id,
+          email,
+          ...adminStatus
+        });
+
+        // Transform user object
+        const { password: _, ...safeUser } = user;
+        const transformedUser = {
+          ...safeUser,
+          is_admin: adminStatus.isAdmin,
+          is_super_admin: adminStatus.isSuperAdmin,
+          is_enabled: Boolean(safeUser.is_enabled),
+          is_south_african: Boolean(safeUser.is_south_african),
+          has_credit_card: Boolean(safeUser.has_credit_card)
+        };
+
+        console.log('Authentication successful:', {
+          id: transformedUser.id,
+          email: transformedUser.email,
+          is_admin: transformedUser.is_admin,
+          is_super_admin: transformedUser.is_super_admin
+        });
+
+        return done(null, transformedUser);
+      } catch (error) {
+        console.error('Authentication error:', error);
+        return done(error);
+      } finally {
+        await connection.end();
       }
-    )
-  );
+    }
+  ));
 
   passport.serializeUser((user: Express.User, done) => {
     console.log('Serializing user:', user.id);
@@ -241,6 +221,7 @@ export function setupAuth(app: Express) {
     try {
       console.log('Deserializing user:', id);
 
+      // Get user
       const [rows] = await connection.execute(
         'SELECT * FROM users WHERE id = ?',
         [id]
@@ -252,7 +233,14 @@ export function setupAuth(app: Express) {
         return done(null, false);
       }
 
+      // Check admin status
       const adminStatus = await checkUserAdminStatus(user.id);
+      console.log('Admin status check during deserialization:', {
+        id: user.id,
+        ...adminStatus
+      });
+
+      // Transform user object
       const { password: _, ...safeUser } = user;
       const transformedUser = {
         ...safeUser,
@@ -263,13 +251,6 @@ export function setupAuth(app: Express) {
         has_credit_card: Boolean(safeUser.has_credit_card)
       };
 
-      console.log('Deserialized user:', {
-        id: transformedUser.id,
-        email: transformedUser.email,
-        is_admin: transformedUser.is_admin,
-        is_super_admin: transformedUser.is_super_admin
-      });
-
       done(null, transformedUser);
     } catch (error) {
       console.error('Deserialization error:', error);
@@ -279,7 +260,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Route handlers
+  // Handle login
   app.post("/api/login", (req, res, next) => {
     console.log('Login request received:', { email: req.body.email });
 
@@ -300,7 +281,7 @@ export function setupAuth(app: Express) {
           return res.status(500).json({ error: "Login failed" });
         }
 
-        console.log('Login successful for user:', {
+        console.log('Login successful:', {
           id: user.id,
           email: user.email,
           is_admin: user.is_admin,
@@ -312,6 +293,49 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
+  // Handle logout
+  app.post("/api/logout", (req, res) => {
+    if (req.user) {
+      console.log('Logging out user:', req.user.id);
+      req.logout((err) => {
+        if (err) {
+          console.error('Logout error:', err);
+          return res.status(500).json({ error: "Logout failed" });
+        }
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Session destruction error:', err);
+            return res.status(500).json({ error: "Logout failed" });
+          }
+          res.clearCookie("session");
+          res.json({ message: "Logged out successfully" });
+        });
+      });
+    } else {
+      res.status(401).json({ message: "Not logged in" });
+    }
+  });
+
+  // Get current user
+  app.get("/api/user", (req, res) => {
+    console.log('User request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email,
+        is_admin: req.user.is_admin,
+        is_super_admin: req.user.is_super_admin
+      } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    res.json(req.user);
+  });
+
+  //Register route remains unchanged
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
@@ -443,7 +467,7 @@ export function setupAuth(app: Express) {
     } catch (error) {
       console.error('Registration error:', error);
       if (!res.headersSent) {
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: "Registration failed. Please try again.",
           details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
@@ -453,47 +477,71 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/logout", (req, res) => {
-    if (req.user) {
-      console.log('Logging out user:', req.user.id);
-      req.logout((err) => {
-        if (err) {
-          console.error('Logout error:', err);
-          return res.status(500).json({ error: "Logout failed" });
-        }
-        req.session.destroy((err) => {
-          if (err) {
-            console.error('Session destruction error:', err);
-            return res.status(500).json({ error: "Logout failed" });
-          }
-          res.clearCookie("session");
-          res.json({ message: "Logged out successfully" });
-        });
-      });
-    } else {
-      res.status(401).json({ message: "Not logged in" });
-    }
-  });
-
-  app.get("/api/user", (req, res) => {
-    console.log('User request:', {
+  // Add new route to check auth status
+  app.get("/api/auth/status", (req, res) => {
+    console.log('Auth status check:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.user ? {
         id: req.user.id,
         email: req.user.email,
         is_admin: req.user.is_admin,
         is_super_admin: req.user.is_super_admin
-      } : undefined
+      } : null
     });
 
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    res.json(req.user);
+
+    res.json({
+      authenticated: true,
+      user: req.user,
+      isAdmin: req.user.is_admin || req.user.is_super_admin
+    });
   });
 
-  return sessionMiddleware;
+  return app;
 }
+
+// Helper function to create admin user
+async function createAdminUser(userId: number, isSuperAdmin: boolean = false) {
+  const connection = await createConnection();
+  try {
+    await connection.execute(
+      'INSERT INTO admin_users (user_id, role_type) VALUES (?, ?)',
+      [userId, isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN']
+    );
+    console.log(`Created ${isSuperAdmin ? 'super admin' : 'admin'} entry for user:`, userId);
+    return true;
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+    return false;
+  } finally {
+    await connection.end();
+  }
+}
+
+// Check for existing super admin
+async function checkForSuperAdmin() {
+  const connection = await createConnection();
+  try {
+    console.log('Checking for existing super admin...');
+    const [rows] = await connection.execute(
+      'SELECT COUNT(*) as count FROM admin_users WHERE role_type = ?',
+      ['SUPER_ADMIN']
+    );
+
+    const count = (rows as any)[0].count;
+    console.log('Super admin check result:', { count });
+    return count > 0;
+  } catch (error) {
+    console.error('Error checking for super admin:', error);
+    return false;
+  } finally {
+    await connection.end();
+  }
+}
+
 
 export function generateToken(user: Express.User): string {
   console.log('Generating token for user:', {
@@ -634,7 +682,7 @@ export async function verifySession(req: Request): Promise<any> {
 
           const { password: _, ...safeUser } = user[0];
           console.log('Session verified for user:', safeUser.id);
-          resolve({...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin});
+          resolve({ ...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin });
         } catch (error) {
           console.error('Error verifying session:', error);
           resolve(null);
@@ -646,3 +694,9 @@ export async function verifySession(req: Request): Promise<any> {
     return null;
   }
 }
+
+// Add global error handler
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  console.error('Stack trace:', err.stack);
+});
