@@ -275,49 +275,78 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/admin/users/create", async (req, res) => {
-    if (!req.user?.isSuperAdmin) return res.status(403).json({error: "Only super admins can create new admins"});
-    const { email, password, firstName, lastName, phoneNumber } = req.body;
-
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1)
-      .execute();
-
-    if (existingUser) {
-      return res.status(400).json({ error: "Email already exists" });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
+    const connection = await createConnection();
     try {
-      const hashedPassword = await authCrypto.hashPassword(password);
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          email,
-          password: hashedPassword,
-          firstName,
-          lastName,
-          phoneNumber,
-          isAdmin: true,
-          isSuperAdmin: false,
-          isEnabled: true,
-          points: 0,
-        })
-        .returning()
-        .execute();
+      // Check super admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "ADMIN_CREATED",
-        targetUserId: newUser.id,
-        details: `Created new admin user: ${email}`,
-      });
+      if (!adminCheck || adminCheck.length === 0 || adminCheck[0].role_type !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: "Only super admins can create new admins" });
+      }
 
-      res.json(newUser);
+      const { email, password, firstName, lastName, phoneNumber } = req.body;
+
+      // Check for existing user
+      const [existingUser] = await connection.execute(
+        'SELECT id FROM users WHERE email = ?',
+        [email]
+      );
+
+      if (existingUser.length > 0) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+
+      const hashedPassword = await crypto.hash(password);
+
+      await connection.beginTransaction();
+
+      try {
+        // Create user
+        const [userResult] = await connection.execute(
+          `INSERT INTO users (email, password, first_name, last_name, phone_number, is_enabled, points)
+           VALUES (?, ?, ?, ?, ?, 1, 0)`,
+          [email, hashedPassword, firstName, lastName, phoneNumber]
+        );
+
+        const userId = userResult.insertId;
+
+        // Create admin role
+        await connection.execute(
+          `INSERT INTO admin_users (user_id, role_type)
+           VALUES (?, ?)`,
+          [userId, 'ADMIN']
+        );
+
+        await connection.commit();
+
+        const [newUser] = await connection.execute(
+          'SELECT * FROM users WHERE id = ?',
+          [userId]
+        );
+
+        const { password: _, ...safeUser } = newUser[0];
+
+        res.json({
+          ...safeUser,
+          is_admin: true,
+          is_super_admin: false
+        });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
     } catch (error) {
       console.error('Error creating admin user:', error);
       res.status(500).json({ error: 'Failed to create admin user' });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -364,155 +393,136 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.put("/api/admin/users/:id/details", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
+    console.log('Update user details request:', {
+      isAuthenticated: req.isAuthenticated(),
+      userId: req.params.id,
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email
+      } : null
+    });
 
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
     try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        console.log('User not found in admin_users:', req.user.id);
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
       // Convert selectedPackage to uppercase before update
       const updateData = {
         ...req.body,
-        selectedPackage: req.body.selectedPackage ? String(req.body.selectedPackage).toUpperCase() : null
+        selected_package: req.body.selectedPackage ? String(req.body.selectedPackage).toUpperCase() : null
       };
 
-      const result = await db
-        .update(users)
-        .set(updateData)
-        .where(eq(users.id, parseInt(id)))
-        .returning()
-        .execute();
+      // Update user details
+      const [result] = await connection.execute(
+        `UPDATE users SET
+          first_name = ?,
+          last_name = ?,
+          email = ?,
+          phone_number = ?,
+          selected_package = ?,
+          industry = ?,
+          occupation = ?,
+          address = ?,
+          city = ?,
+          postal_code = ?
+        WHERE id = ?`,
+        [
+          updateData.firstName,
+          updateData.lastName,
+          updateData.email,
+          updateData.phoneNumber,
+          updateData.selected_package,
+          updateData.industry,
+          updateData.occupation,
+          updateData.address,
+          updateData.city,
+          updateData.postalCode,
+          req.params.id
+        ]
+      );
 
-      if (!result || result.length === 0) {
+      if (result.affectedRows === 0) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "ADMIN_CREATED", // Changed to match enum
-        targetUserId: parseInt(id),
-        details: `Updated user details for ID ${id}`,
-      });
+      // Fetch updated user data
+      const [updatedUser] = await connection.execute(
+        'SELECT * FROM users WHERE id = ?',
+        [req.params.id]
+      );
 
-      res.json(result[0]);
+      const user = updatedUser[0];
+      const { password: _, ...safeUser } = user;
+
+      res.json(safeUser);
     } catch (error) {
       console.error('Error updating user details:', error);
-
-      // Better error handling with specific messages
-      let errorMessage = 'Failed to update user details';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      res.status(500).json({ 
-        error: 'Failed to update user details',
-        message: errorMessage
-      });
+      res.status(500).json({ error: 'Failed to update user details' });
+    } finally {
+      await connection.end();
     }
   });
 
   app.post("/api/admin/users/:id/toggle-status", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { enabled } = req.body;
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
+    const connection = await createConnection();
     try {
-      const [user] = await db
-        .update(users)
-        .set({ isEnabled: enabled })
-        .where(eq(users.id, parseInt(id)))
-        .returning()
-        .execute();
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-      if (!user) {
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id } = req.params;
+      const { enabled } = req.body;
+
+      const [result] = await connection.execute(
+        'UPDATE users SET is_enabled = ? WHERE id = ?',
+        [enabled ? 1 : 0, id]
+      );
+
+      if (result.affectedRows === 0) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "ADMIN_REMOVED", 
-        targetUserId: user.id,
-        details: `${enabled ? 'Enabled' : 'Disabled'} admin user: ${user.email}`,
-      });
+      const [updatedUser] = await connection.execute(
+        'SELECT * FROM users WHERE id = ?',
+        [id]
+      );
 
-      res.json(user);
+      const user = updatedUser[0];
+      const { password: _, ...safeUser } = user;
+
+      res.json(safeUser);
     } catch (error) {
       console.error('Error toggling user status:', error);
       res.status(500).json({ error: 'Failed to toggle user status' });
+    } finally {
+      await connection.end();
     }
   });
 
-  app.post("/api/admin/users/toggle-admin", async (req, res) => {
-    if (!req.user?.isSuperAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { userId, isAdmin } = req.body;
-
-    if (userId === req.user.id) {
-      return res.status(400).json({ error: "Cannot change your own admin status" });
-    }
-
-    const [targetUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1)
-      .execute();
-
-    if (targetUser?.isSuperAdmin) {
-      return res.status(400).json({ error: "Cannot modify super admin status" });
-    }
-
-    try {
-      if (!isAdmin) {
-        const [updatedUser] = await db
-          .update(users)
-          .set({
-            isAdmin: false,
-            isEnabled: false
-          })
-          .where(eq(users.id, userId))
-          .returning()
-          .execute();
-
-        await logAdminAction({
-          adminId: req.user.id,
-          actionType: "ADMIN_REMOVED",
-          targetUserId: userId,
-          details: `Removed admin user: ${targetUser.email}`,
-        });
-
-        res.json({ message: "Admin user removed successfully" });
-      } else {
-        const [updatedUser] = await db
-          .update(users)
-          .set({ isAdmin })
-          .where(eq(users.id, userId))
-          .returning()
-          .execute();
-
-        await logAdminAction({
-          adminId: req.user.id,
-          actionType: "ADMIN_ENABLED",
-          targetUserId: userId,
-          details: `${isAdmin ? 'Enabled' : 'Disabled'} admin user: ${targetUser.email}`,
-        });
-
-        res.json(updatedUser);
-      }
-    } catch (error) {
-      console.error('Error modifying admin status:', error);
-      res.status(500).json({ error: 'Failed to modify admin status' });
-    }
-  });
-
-  app.get("/api/admin/users", async (req, res) => {
-    console.log('Admin users request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? {
-        id: req.user.id,
-        email: req.user.email,
-        is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin
-      } : null
-    });
-
+  app.get("/api/quote-requests", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -526,48 +536,29 @@ export function registerRoutes(app: Express): Server {
       );
 
       if (!adminCheck || adminCheck.length === 0) {
-        console.log('User not found in admin_users:', req.user.id);
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Fetch all admin users
-      const [admins] = await connection.execute(
-        `SELECT u.*, au.role_type
-         FROM users u 
-         INNER JOIN admin_users au ON u.id = au.user_id
-         ORDER BY u.created_at DESC`
+      const [requests] = await connection.execute(
+        `SELECT qr.*, 
+          u.email as user_email,
+          u.first_name as user_first_name,
+          u.last_name as user_last_name
+         FROM quote_requests qr
+         JOIN users u ON qr.user_id = u.id
+         ORDER BY qr.created_at DESC`
       );
 
-      console.log(`Found ${admins.length} admin users`);
-
-      // Transform boolean fields
-      const transformedAdmins = admins.map(admin => ({
-        ...admin,
-        is_enabled: Boolean(admin.is_enabled),
-        is_admin: true,
-        is_super_admin: admin.role_type === 'SUPER_ADMIN'
-      }));
-
-      res.json(transformedAdmins);
+      res.json(requests);
     } catch (error) {
-      console.error('Error fetching admin users:', error);
-      res.status(500).json({ error: 'Failed to fetch admin users' });
+      console.error('Error fetching quote requests:', error);
+      res.status(500).json({ error: 'Failed to fetch quote requests' });
     } finally {
       await connection.end();
     }
   });
 
-  app.get("/api/admin/customers", async (req, res) => {
-    console.log('Admin customers request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? {
-        id: req.user.id,
-        email: req.user.email,
-        is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin
-      } : null
-    });
-
+  app.post("/api/products", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -581,268 +572,70 @@ export function registerRoutes(app: Express): Server {
       );
 
       if (!adminCheck || adminCheck.length === 0) {
-        console.log('User not found in admin_users:', req.user.id);
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Fetch customers with a simpler query first
-      const [customers] = await connection.execute(
-        `SELECT 
-          u.*,
-          GROUP_CONCAT(DISTINCT p.name) as assigned_products,
-          COUNT(DISTINCT r.id) as referral_count
-        FROM users u
-        LEFT JOIN admin_users au ON u.id = au.user_id
-        LEFT JOIN product_assignments pa ON u.id = pa.user_id
-        LEFT JOIN products p ON pa.product_id = p.id
-        LEFT JOIN users r ON u.referral_code = r.referred_by
-        WHERE au.role_type IS NULL
-        GROUP BY u.id
-        ORDER BY u.created_at DESC`
-      );
+      const { name, description, activities } = req.body;
 
-      console.log(`Found ${customers.length} customers`);
+      await connection.beginTransaction();
 
-      // Transform the customer data
-      const transformedCustomers = customers.map(customer => ({
-        id: customer.id,
-        email: customer.email,
-        firstName: customer.first_name,
-        lastName: customer.last_name,
-        phoneNumber: customer.phone_number,
-        isEnabled: Boolean(customer.is_enabled),
-        isSouthAfrican: Boolean(customer.is_south_african),
-        hasCreditCard: Boolean(customer.has_credit_card),
-        points: Number(customer.points),
-        createdAt: customer.created_at,
-        selectedPackage: customer.selected_package,
-        industry: customer.industry,
-        occupation: customer.occupation,
-        address: customer.address,
-        city: customer.city,
-        postalCode: customer.postal_code,
-        bankName: customer.bank_name,
-        accountType: customer.account_type,
-        accountNumber: customer.account_number,
-        accountHolderName: customer.account_holder_name,
-        branchCode: customer.branch_code,
-        referralCode: customer.referral_code,
-        referredBy: customer.referred_by,
-        assignedProducts: customer.assigned_products ? customer.assigned_products.split(',') : [],
-        referralCount: Number(customer.referral_count)
-      }));
+      try {
+        // Create product
+        const [productResult] = await connection.execute(
+          `INSERT INTO products (name, description, is_enabled)
+           VALUES (?, ?, 1)`,
+          [name, description]
+        );
 
-      res.json(transformedCustomers);
+        const productId = productResult.insertId;
+
+        // Create product activities
+        if (activities && Array.isArray(activities)) {
+          for (const activity of activities) {
+            await connection.execute(
+              `INSERT INTO product_activities (product_id, type, points_value)
+               VALUES (?, ?, ?)`,
+              [productId, activity.type, activity.pointsValue]
+            );
+          }
+        }
+
+        await connection.commit();
+
+        // Fetch complete product data
+        const [product] = await connection.execute(
+          `SELECT p.*, 
+            GROUP_CONCAT(
+              JSON_OBJECT(
+                'id', pa.id,
+                'type', pa.type,
+                'pointsValue', pa.points_value
+              )
+            ) as activities
+           FROM products p
+           LEFT JOIN product_activities pa ON p.id = pa.product_id
+           WHERE p.id = ?
+           GROUP BY p.id`,
+          [productId]
+        );
+
+        const transformedProduct = {
+          ...product[0],
+          activities: product[0].activities ? 
+            product[0].activities.split(',').map(activity => JSON.parse(activity)) :
+            []
+        };
+
+        res.json(transformedProduct);
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
     } catch (error) {
-      console.error('Error fetching customers:', error);
-      res.status(500).json({ error: 'Failed to fetch customers' });
+      console.error('Error creating product:', error);
+      res.status(500).json({ error: 'Failed to create product' });
     } finally {
       await connection.end();
-    }
-  });
-
-  app.delete("/api/admin/customers/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const userId = parseInt(id);
-
-    try {
-      const [customer] = await db
-        .select({
-          id: users.id,
-          email: users.email,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          isAdmin: users.isAdmin,
-          referral_code: users.referral_code
-        })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1)
-        .execute();
-
-      if (!customer) {
-        return res.status(404).json({ error: "Customer not found" });
-      }
-
-      if (customer.isAdmin) {
-        return res.status(403).json({ error: "Cannot delete admin users through this endpoint" });
-      }
-
-      await db.transaction(async (tx) => {
-        await tx
-          .delete(adminLogs)
-          .where(eq(adminLogs.targetUserId, userId))
-          .execute();
-
-        await tx
-          .delete(productAssignments)
-          .where(eq(productAssignments.userId, userId))
-          .execute();
-
-        await tx
-          .delete(transactions)
-          .where(eq(transactions.userId, userId))
-          .execute();
-
-        await tx
-          .update(users)
-          .set({ referred_by: null })
-          .where(eq(users.referred_by, customer.referral_code))
-          .execute();
-
-        await tx
-          .delete(users)
-          .where(eq(users.id, userId))
-          .execute();
-
-        await logAdminAction({
-          adminId: req.user.id, 
-          actionType: "ADMIN_REMOVED", 
-          targetUserId: userId,
-          details: `Deleted customer: ${customer.email} (${customer.firstName} ${customer.lastName})`,
-        });
-      });
-
-      res.json({ message: "Customer deleted successfully" });
-    } catch (error) {
-      console.error('Error deleting customer:', error);
-      res.status(500).json({ error: 'Failed to delete customer' });
-    }
-  });
-
-
-  app.get("/api/admin/customers/export", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-
-    try {
-      const customers = await db.query.users.findMany({
-        where: eq(users.isAdmin, false),
-        orderBy: desc(users.createdAt),
-        with: {
-          productAssignments: {
-            with: {
-              product: true
-            }
-          }
-        }
-      });
-
-      const csvData = customers.map(customer => ({
-        email: customer.email,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        phoneNumber: customer.phoneNumber,
-        points: customer.points,
-        isEnabled: customer.isEnabled,
-        createdAt: customer.createdAt,
-        assignedProducts: customer.productAssignments
-          ?.map(assignment => assignment.product.name)
-          .join(", ") || "None"
-      }));
-
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename=customers.csv');
-
-      stringify(csvData, {
-        header: true,
-        columns: [
-          'email',
-          'firstName',
-          'lastName',
-          'phoneNumber',
-          'points',
-          'isEnabled',
-          'createdAt',
-          'assignedProducts'
-        ]
-      }, (err, output) => {
-        if (err) throw err;
-        res.send(output);
-      });
-    } catch (error) {
-      console.error('Error exporting customers:', error);
-      res.status(500).json({ error: 'Failed to export customers' });
-    }
-  });
-
-  app.post("/api/admin/customers/import", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-
-    if (!req.files || !req.files.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    try {
-      const file = req.files.file;
-      const csvData = file.data.toString();
-
-      const records = await new Promise((resolve, reject) => {
-        parse(csvData, {
-          columns: true,
-          skip_empty_lines: true,
-          trim: true,
-        }, (err, records) => {
-          if (err) reject(err);
-          else resolve(records);
-        });
-      });
-
-      const results = {
-        success: 0,
-        failed: 0,
-        errors: []
-      };
-
-      for (const record of records) {
-        try {
-          const hashedPassword = await authCrypto.hashPassword('ChangeMe123!'); 
-
-          const [existingUser] = await db
-            .select()
-            .from(users)
-            .where(eq(users.email, record.email))
-            .limit(1)
-            .execute();
-
-          if (existingUser) {
-            results.failed++;
-            results.errors.push(`User with email ${record.email} already exists`);
-            continue;
-          }
-
-          await db.insert(users).values({
-            email: record.email,
-            password: hashedPassword,
-            firstName: record.firstName,
-            lastName: record.lastName,
-            phoneNumber: record.phoneNumber || '',
-            isAdmin: false,
-            isSuperAdmin: false,
-            isEnabled: true,
-            points: parseInt(record.points) || 0,
-          }).execute();
-
-          results.success++;
-        } catch (error) {
-          results.failed++;
-          results.errors.push(`Failed to import user ${record.email}: ${error.message}`);
-        }
-      }
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "ADMIN_CREATED",
-        details: `Imported ${results.success} customers (${results.failed} failed)`,
-      });
-
-      res.json(results);
-    } catch (error) {
-      console.error('Error importing customers:', error);
-      res.status(500).json({
-        error: 'Failed to import customers',
-        details: error.message
-      });
     }
   });
 
@@ -902,65 +695,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/products", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-
-    try {
-      const { name, description, activities } = req.body;
-
-      const result = await db.transaction(async (tx) => {
-        const [product] = await tx
-          .insert(products)
-          .values({
-            name,
-            description,
-            isEnabled: true,
-          })
-          .returning()
-          .execute();
-
-        if (activities && Array.isArray(activities)) {
-          await Promise.all(
-            activities.map((activity) =>
-              tx.insert(product_activities).values({
-                productId: product.id,
-                type: activity.type,
-                pointsValue: activity.pointsValue,
-              }).execute()
-            )
-          );
-        }
-
-        return product;
-      });
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "PRODUCT_CREATED",
-        details: `Created new product: ${result.name}`,
-      });
-
-      const completeProduct = await db.query.products.findFirst({
-        where: eq(products.id, result.id),
-        with: {
-          activities: {
-            columns: {
-              id: true,
-              productId: true,
-              type: true,
-              pointsValue: true
-            }
-          }
-        },
-      });
-
-      res.json(completeProduct);
-    } catch (error) {
-      console.error('Error creating product:', error);
-      res.status(500).json({ error: 'Failed to create product' });
-    }
-  });
-
   app.put("/api/products/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { id } = req.params;
@@ -985,7 +719,7 @@ export function registerRoutes(app: Express): Server {
         const activityPromises = activities.map(async (activity: any) => {
           return tx.insert(product_activities).values({
             productId: parseInt(id),
-                        type: activity.type,
+            type: activity.type,
             pointsValue: activity.pointsValue,
           }).execute();
         });
@@ -1299,40 +1033,38 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/quote-requests", async (req, res) => {
-    if (!req.user?.isAdmin) {
-      return res.status(403).json({ error: "Unauthorized" });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
+    const connection = await createConnection();
     try {
-      const allQuoteRequests = await db.query.quoteRequests.findMany({
-        orderBy: desc(quoteRequests.createdAt),
-        with: {
-          user: {
-            columns: {
-              firstName: true,
-              lastName: true,
-              email: true,
-            }
-          },
-          product: {
-            columns: {
-              name: true,
-              description: true,
-            }
-          },
-          completedByUser: {
-            columns: {
-              firstName: true,
-              lastName: true,
-            }
-          }
-        }
-      });
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-      res.json(allQuoteRequests);
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const [requests] = await connection.execute(
+        `SELECT qr.*, 
+          u.email as user_email,
+          u.first_name as user_first_name,
+          u.last_name as user_last_name
+         FROM quote_requests qr
+         JOIN users u ON qr.user_id = u.id
+         ORDER BY qr.created_at DESC`
+      );
+
+      res.json(requests);
     } catch (error) {
       console.error('Error fetching quote requests:', error);
       res.status(500).json({ error: 'Failed to fetch quote requests' });
+    } finally {
+      await connection.end();
     }
   });
 
