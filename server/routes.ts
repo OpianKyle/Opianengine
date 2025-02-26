@@ -502,12 +502,58 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/admin/users", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const allUsers = await db.query.users.findMany({
-      where: eq(users.isAdmin, true),
-      orderBy: desc(users.createdAt),
+    console.log('Admin users request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email,
+        is_admin: req.user.is_admin,
+        is_super_admin: req.user.is_super_admin
+      } : null
     });
-    res.json(allUsers);
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        console.log('User not found in admin_users:', req.user.id);
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Fetch all admin users
+      const [admins] = await connection.execute(
+        `SELECT u.*, au.role_type
+         FROM users u 
+         INNER JOIN admin_users au ON u.id = au.user_id
+         ORDER BY u.created_at DESC`
+      );
+
+      console.log(`Found ${admins.length} admin users`);
+
+      // Transform boolean fields
+      const transformedAdmins = admins.map(admin => ({
+        ...admin,
+        is_enabled: Boolean(admin.is_enabled),
+        is_admin: true,
+        is_super_admin: admin.role_type === 'SUPER_ADMIN'
+      }));
+
+      res.json(transformedAdmins);
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+      res.status(500).json({ error: 'Failed to fetch admin users' });
+    } finally {
+      await connection.end();
+    }
   });
 
   app.get("/api/admin/customers", async (req, res) => {
@@ -1750,27 +1796,70 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/admin/cash-redemptions", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+    console.log('Cash redemptions request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email,
+        is_admin: req.user.is_admin,
+        is_super_admin: req.user.is_super_admin
+      } : null
+    });
 
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
     try {
-      const cashRedemptions = await db.query.transactions.findMany({
-        where: eq(transactions.type, "CASH_REDEMPTION"),
-        orderBy: [desc(transactions.createdAt)],
-        with: {
-          user: {
-            columns: {
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      });
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-      res.json(cashRedemptions);
+      if (!adminCheck || adminCheck.length === 0) {
+        console.log('User not found in admin_users:', req.user.id);
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Fetch cash redemptions with user details
+      const [redemptions] = await connection.execute(
+        `SELECT 
+          t.*,
+          u.email as user_email,
+          u.first_name as user_first_name,
+          u.last_name as user_last_name,
+          CASE WHEN t.processed_by IS NOT NULL THEN
+            JSON_OBJECT(
+              'id', p.id,
+              'email', p.email,
+              'firstName', p.first_name,
+              'lastName', p.last_name
+            )
+          ELSE NULL END as processor
+        FROM transactions t
+        INNER JOIN users u ON t.user_id = u.id
+        LEFT JOIN users p ON t.processed_by = p.id
+        WHERE t.type = 'CASH_REDEMPTION'
+        ORDER BY t.created_at DESC`
+      );
+
+      console.log(`Found ${redemptions.length} cash redemptions`);
+
+      // Transform the redemptions data
+      const transformedRedemptions = redemptions.map(redemption => ({
+        ...redemption,
+        processor: redemption.processor ? JSON.parse(redemption.processor) : null,
+        status: redemption.status || 'PENDING'
+      }));
+
+      res.json(transformedRedemptions);
     } catch (error) {
       console.error('Error fetching cash redemptions:', error);
       res.status(500).json({ error: 'Failed to fetch cash redemptions' });
+    } finally {
+      await connection.end();
     }
   });
 
