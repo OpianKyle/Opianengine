@@ -525,8 +525,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    // Check admin status
-    const connection = await db.execute('SELECT 1'); // Placeholder - needs a proper connection method
+    const connection = await createConnection();
     try {
         // Check admin status from admin_users table
         const [adminCheck] = await connection.execute(
@@ -543,27 +542,36 @@ export function registerRoutes(app: Express): Server {
         const [customers] = await connection.execute(
             `SELECT 
               u.*,
-              CASE 
-                WHEN au.role_type IS NOT NULL THEN TRUE 
-                ELSE FALSE 
-              END as is_admin,
-              CASE 
-                WHEN au.role_type = 'SUPER_ADMIN' THEN TRUE 
-                ELSE FALSE 
-              END as is_super_admin
+              GROUP_CONCAT(p.name) as assigned_products,
+              COUNT(DISTINCT r.id) as referral_count
             FROM users u
             LEFT JOIN admin_users au ON u.id = au.user_id
+            LEFT JOIN product_assignments pa ON u.id = pa.user_id
+            LEFT JOIN products p ON pa.product_id = p.id
+            LEFT JOIN users r ON u.referral_code = r.referred_by
             WHERE au.role_type IS NULL
+            GROUP BY u.id
             ORDER BY u.created_at DESC`
         );
 
         console.log(`Found ${customers.length} customers`);
-        res.json(customers);
+
+        // Transform boolean fields
+        const transformedCustomers = customers.map(customer => ({
+            ...customer,
+            is_enabled: Boolean(customer.is_enabled),
+            is_south_african: Boolean(customer.is_south_african),
+            has_credit_card: Boolean(customer.has_credit_card),
+            assigned_products: customer.assigned_products ? customer.assigned_products.split(',') : [],
+            referral_count: Number(customer.referral_count)
+        }));
+
+        res.json(transformedCustomers);
     } catch (error) {
         console.error('Error fetching customers:', error);
         res.status(500).json({ error: 'Failed to fetch customers' });
     } finally {
-      // await connection.end(); //This is wrong, connection is not from drizzle-orm
+        await connection.end();
     }
   });
 
@@ -773,24 +781,41 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/products", async (req, res) => {
+    const connection = await createConnection();
     try {
-      const allProducts = await db.query.products.findMany({
-        with: {
-          activities: {
-            columns: {
-              id: true,
-              productId: true,
-              type: true,
-              pointsValue: true
-            }
-          }
-        },
-        orderBy: desc(products.createdAt),
-      });
-      res.json(allProducts);
+      console.log('Fetching products...');
+      const [products] = await connection.execute(
+        `SELECT 
+          p.*,
+          GROUP_CONCAT(
+            JSON_OBJECT(
+              'id', pa.id,
+              'type', pa.type,
+              'pointsValue', pa.points_value
+            )
+          ) as activities
+        FROM products p
+        LEFT JOIN product_activities pa ON p.id = pa.product_id
+        GROUP BY p.id
+        ORDER BY p.created_at DESC`
+      );
+
+      // Transform the products data
+      const transformedProducts = products.map(product => ({
+        ...product,
+        is_enabled: Boolean(product.is_enabled),
+        activities: product.activities 
+          ? product.activities.split(',').map(activity => JSON.parse(activity))
+          : []
+      }));
+
+      console.log(`Found ${transformedProducts.length} products`);
+      res.json(transformedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
       res.status(500).json({ error: 'Failed to fetch products' });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -960,23 +985,56 @@ export function registerRoutes(app: Express): Server {
     const { id } = req.params;
 
     try {
-      const [product] = await db
-        .delete(products)
-        .where(eq(products.id, parseInt(id)))
-        .returning()
-        .execute();
+      const connection = await createConnection();
+      try {
+        // First check if product exists
+        const [products] = await connection.execute(
+          'SELECT name FROM products WHERE id = ?',
+          [id]
+        );
 
-      if (!product) {
-        return res.status(404).json({ error: "Product not found" });
+        if(!products || products.length === 0) {
+          return res.status(404).json({ error: "Product not found" });
+        }
+
+        const product = products[0];
+
+        // Begin transaction
+        await connection.beginTransaction();
+
+        // Delete product activities first (due to foreign key constraint)
+        await connection.execute(
+          'DELETE FROM product_activities WHERE product_id = ?',
+          [id]
+        );
+
+        // Delete product assignments (due to foreign key constraint)
+        await connection.execute(
+          'DELETE FROM product_assignments WHERE product_id = ?',
+          [id]
+        );
+
+        // Finally delete the product
+        await connection.execute(
+          'DELETE FROM products WHERE id = ?',
+          [id]
+        );
+
+        await connection.commit();
+
+        await logAdminAction({
+          adminId: req.user.id,
+          actionType: "PRODUCT_DELETED",
+          details: `Deleted product: ${product.name}`,
+        });
+
+        res.json({ message: "Product deleted successfully" });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        await connection.end();
       }
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "PRODUCT_DELETED",
-        details: `Deleted product: ${product.name}`,
-      });
-
-      res.json({ message: "Product deleted successfully" });
     } catch (error) {
       console.error('Error deleting product:', error);
       res.status(500).json({ error: 'Failed to delete product' });
