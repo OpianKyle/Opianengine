@@ -1,41 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from "zod";
 import { useState, useEffect } from 'react';
+import { useToast } from "@/hooks/use-toast";
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
-// Define strict schema for type safety but make fields optional
+// Define a more flexible schema
 const userSchema = z.object({
   id: z.number(),
-  email: z.string().email(),
+  email: z.string(),
   first_name: z.string(),
   last_name: z.string(),
-  phone_number: z.string().nullable(),
+  points: z.number().default(0),
   is_admin: z.boolean().default(false),
   is_super_admin: z.boolean().default(false),
   is_enabled: z.boolean().default(true),
-  points: z.number().default(0),
-  referral_code: z.string().nullable(),
-  referred_by: z.string().nullable(),
-  created_at: z.string().nullable(),
-  is_south_african: z.boolean().nullable(),
-  id_number: z.string().nullable(),
-  date_of_birth: z.string().nullable(),
-  address: z.string().nullable(),
-  city: z.string().nullable(),
-  postal_code: z.string().nullable(),
-  industry: z.string().nullable(),
-  occupation: z.string().nullable(),
-  bank_name: z.string().nullable(),
-  account_type: z.enum(accountTypes).nullable(),
-  account_number: z.string().nullable(),
-  account_holder_name: z.string().nullable(),
-  branch_code: z.string().nullable(),
-  selected_package: z.string().nullable(),
-  gender: z.string().nullable(),
-  has_credit_card: z.boolean().nullable(),
-  signature: z.string().nullable(),
-}).partial();
+}).passthrough();
 
 export type User = z.infer<typeof userSchema>;
 export type AccountType = typeof accountTypes[number];
@@ -44,6 +24,7 @@ const TOKEN_STORAGE_KEY = 'auth_token';
 
 export function useUser() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [token, setToken] = useState<string | null>(() => {
     try {
       return localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -88,7 +69,7 @@ export function useUser() {
         }
 
         const data = await response.json();
-        return userSchema.parse(data);
+        return data;
       } catch (error) {
         console.error('Error fetching user:', error);
         throw error;
@@ -121,10 +102,25 @@ export function useUser() {
       }
 
       const userData = data.user || data;
-      return userSchema.parse(userData);
+      if (!userData || !userData.id) {
+        throw new Error('Invalid user data received');
+      }
+
+      return userData;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
+      toast({
+        title: "Success",
+        description: "Logged in successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to login",
+      });
     },
   });
 
@@ -150,7 +146,7 @@ export function useUser() {
         setToken(data.token);
       }
 
-      return userSchema.parse(data);
+      return data;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
