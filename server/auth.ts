@@ -184,7 +184,7 @@ export function setupAuth(app: Express) {
             return done(null, false, { message: 'Invalid email or password' });
           }
 
-          console.log('Raw user data:', {
+          console.log('Raw user data from DB:', {
             id: user.id,
             email: user.email,
             is_admin: user.is_admin,
@@ -196,11 +196,11 @@ export function setupAuth(app: Express) {
           const { password: _, ...safeUser } = user;
           const transformedUser = {
             ...safeUser,
-            is_admin: !!safeUser.is_admin,
-            is_super_admin: !!safeUser.is_super_admin,
-            is_enabled: !!safeUser.is_enabled,
-            is_south_african: !!safeUser.is_south_african,
-            has_credit_card: !!safeUser.has_credit_card
+            is_admin: Boolean(safeUser.is_admin),
+            is_super_admin: Boolean(safeUser.is_super_admin),
+            is_enabled: Boolean(safeUser.is_enabled),
+            is_south_african: Boolean(safeUser.is_south_african),
+            has_credit_card: Boolean(safeUser.has_credit_card)
           };
 
           console.log('Transformed user data:', {
@@ -324,33 +324,6 @@ export function setupAuth(app: Express) {
         });
       }
 
-      const {
-        email,
-        password,
-        firstName,
-        lastName,
-        mobileNumber: phoneNumber,
-        referralCode,
-        selectedPackage,
-        points,
-        isSouthAfrican,
-        idNumber,
-        dateOfBirth,
-        gender,
-        occupation,
-        industry,
-        addressLine1: address,
-        suburb: city,
-        postalCode,
-        hasCreditCard,
-        bankName,
-        accountType,
-        accountNumber,
-        accountHolderName,
-        branchCode,
-        signature
-      } = result.data;
-
       try {
         console.log('Attempting database connection...');
         const connection = await mysql.createConnection({
@@ -365,7 +338,7 @@ export function setupAuth(app: Express) {
         // Check for existing user
         const [existingUsers] = await connection.execute(
           'SELECT id FROM users WHERE email = ?',
-          [email]
+          [req.body.email]
         );
 
         if ((existingUsers as any[]).length > 0) {
@@ -375,7 +348,7 @@ export function setupAuth(app: Express) {
           });
         }
 
-        const hashedPassword = await crypto.hashPassword(password);
+        const hashedPassword = await crypto.hashPassword(req.body.password);
         const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
         const shouldBeSuperAdmin = !(await checkForSuperAdmin());
 
@@ -383,7 +356,16 @@ export function setupAuth(app: Express) {
         await connection.beginTransaction();
 
         try {
-          console.log('Executing user insert...');
+          // Set admin flags explicitly
+          const isAdmin = shouldBeSuperAdmin ? 1 : 0;
+          const isSuperAdmin = shouldBeSuperAdmin ? 1 : 0;
+
+          console.log('Admin status for new user:', {
+            shouldBeSuperAdmin,
+            isAdmin,
+            isSuperAdmin
+          });
+
           const [userResult] = await connection.execute(
             `INSERT INTO users (
               email, password, first_name, last_name, 
@@ -397,62 +379,55 @@ export function setupAuth(app: Express) {
               account_holder_name, branch_code, signature
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-              email,
+              req.body.email,
               hashedPassword,
-              firstName,
-              lastName,
-              phoneNumber,
-              shouldBeSuperAdmin ? 1 : 0,
-              shouldBeSuperAdmin ? 1 : 0,
+              req.body.firstName,
+              req.body.lastName,
+              req.body.mobileNumber,
+              isAdmin,
+              isSuperAdmin,
               1, // is_enabled
-              points || 0,
+              req.body.points || 0,
               newReferralCode,
-              referralCode || null,
-              selectedPackage,
-              isSouthAfrican ? 1 : 0,
-              idNumber || null,
-              dateOfBirth || null,
-              gender || null,
-              occupation || null,
-              industry || null,
-              address || null,
-              city || null,
-              postalCode || null,
-              hasCreditCard ? 1 : 0,
-              bankName || null,
-              accountType || null,
-              accountNumber || null,
-              accountHolderName || null,
-              branchCode || null,
-              signature || null
+              req.body.referralCode || null,
+              req.body.selectedPackage,
+              req.body.isSouthAfrican ? 1 : 0,
+              req.body.idNumber || null,
+              req.body.dateOfBirth || null,
+              req.body.gender || null,
+              req.body.occupation || null,
+              req.body.industry || null,
+              req.body.addressLine1 || null,
+              req.body.suburb || null,
+              req.body.postalCode || null,
+              req.body.hasCreditCard ? 1 : 0,
+              req.body.bankName || null,
+              req.body.accountType || null,
+              req.body.accountNumber || null,
+              req.body.accountHolderName || null,
+              req.body.branchCode || null,
+              req.body.signature || null
             ]
           );
 
           const userId = (userResult as any).insertId;
           console.log('User created successfully, ID:', userId);
 
-          console.log('Creating welcome bonus transaction...');
-          await connection.execute(
-            `INSERT INTO transactions (
-              user_id, points, type, description
-            ) VALUES (?, ?, ?, ?)`,
-            [
-              userId,
-              points || 0,
-              "WELCOME_BONUS",
-              `Welcome bonus points for ${selectedPackage} package registration`
-            ]
-          );
-
-          const [users] = await connection.execute(
+          // Verify the user was created with correct admin status
+          const [newUserCheck] = await connection.execute(
             'SELECT * FROM users WHERE id = ?',
             [userId]
           );
+          console.log('New user verification:', {
+            userId,
+            is_admin: (newUserCheck[0] as any).is_admin,
+            is_super_admin: (newUserCheck[0] as any).is_super_admin
+          });
 
           await connection.commit();
           console.log('Transaction committed successfully');
 
-          const newUser = users[0];
+          const newUser = newUserCheck[0];
           if (!newUser) {
             throw new Error("Failed to retrieve created user");
           }
@@ -460,11 +435,11 @@ export function setupAuth(app: Express) {
           const { password: _, ...safeUser } = newUser;
           const transformedUser = {
             ...safeUser,
-            is_admin: !!safeUser.is_admin,
-            is_super_admin: !!safeUser.is_super_admin,
-            is_enabled: !!safeUser.is_enabled,
-            is_south_african: !!safeUser.is_south_african,
-            has_credit_card: !!safeUser.has_credit_card
+            is_admin: Boolean(safeUser.is_admin),
+            is_super_admin: Boolean(safeUser.is_super_admin),
+            is_enabled: Boolean(safeUser.is_enabled),
+            is_south_african: Boolean(safeUser.is_south_african),
+            has_credit_card: Boolean(safeUser.has_credit_card)
           };
 
           req.login(transformedUser, (err) => {
@@ -473,10 +448,13 @@ export function setupAuth(app: Express) {
               return res.status(500).json({ error: "Registration successful but login failed" });
             }
 
-            console.log('Registration and login successful for:', transformedUser.email);
-            if (shouldBeSuperAdmin) {
-              console.log('Created super admin account:', transformedUser.email);
-            }
+            console.log('Registration complete. User details:', {
+              id: transformedUser.id,
+              email: transformedUser.email,
+              is_admin: transformedUser.is_admin,
+              is_super_admin: transformedUser.is_super_admin
+            });
+
             res.status(201).json(transformedUser);
           });
 
