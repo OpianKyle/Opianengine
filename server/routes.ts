@@ -1031,8 +1031,7 @@ export function registerRoutes(app: Express): Server {
 
         res.json({ message: "Product deleted successfully" });
       } catch (error) {
-        await connection.rollback();
-        throw error;
+        await connection.rollback();        throw error;
       } finally{
         await connection.end();
       }
@@ -1062,9 +1061,20 @@ export function registerRoutes(app: Express): Server {
       const { id } = req.params;
       const { userId } = req.body;
 
-      // Check if product exists and is enabled
+      // Check if product exists and get its details
       const [products] = await connection.execute(
-        'SELECT * FROM products WHERE id = ? AND is_enabled = 1',
+        `SELECT p.*, 
+          GROUP_CONCAT(
+            JSON_OBJECT(
+              'id', pa.id,
+              'type', pa.type,
+              'pointsValue', pa.points_value
+            )
+          ) as activities
+         FROM products p
+         LEFT JOIN product_activities pa ON p.id = pa.product_id
+         WHERE p.id = ? AND p.is_enabled = 1
+         GROUP BY p.id`,
         [id]
       );
 
@@ -1098,40 +1108,35 @@ export function registerRoutes(app: Express): Server {
         [id, userId]
       );
 
-      const [assignment] = await connection.execute(
-        `SELECT 
-          pa.*,
-          p.name as product_name,
-          p.description as product_description,
-          u.email as user_email,
-          u.first_name as user_first_name,
-          u.last_name as user_last_name
-         FROM product_assignments pa
-         JOIN products p ON pa.product_id = p.id
-         JOIN users u ON pa.user_id = u.id
-         WHERE pa.id = ?`,
-        [result.insertId]
-      );
+      const product = products[0];
+      const user = users[0];
 
-      if (!assignment || assignment.length === 0) {
-        throw new Error('Failed to retrieve created assignment');
+      // Parse activities
+      let activities = [];
+      try {
+        activities = product.activities ? 
+          product.activities.split(',').map(activity => JSON.parse(activity)).filter(Boolean) : [];
+      } catch (e) {
+        console.error('Error parsing activities:', e);
       }
 
       const transformedAssignment = {
-        id: assignment[0].id,
-        productId: assignment[0].product_id,
-        userId: assignment[0].user_id,
-        createdAt: assignment[0].created_at,
+        id: result.insertId,
+        productId: product.id,
+        userId: user.id,
+        createdAt: new Date(),
         product: {
-          id: assignment[0].product_id,
-          name: assignment[0].product_name,
-          description: assignment[0].product_description
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          isEnabled: Boolean(product.is_enabled),
+          activities: activities
         },
         user: {
-          id: assignment[0].user_id,
-          email: assignment[0].user_email,
-          firstName: assignment[0].user_first_name,
-          lastName: assignment[0].user_last_name
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name
         }
       };
 
@@ -2537,53 +2542,96 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Fetch customers with necessary joins
+      // First, get all customers (non-admin users)
       const [customers] = await connection.execute(
-        `SELECT 
-          u.*,
-          GROUP_CONCAT(DISTINCT p.name) as assigned_products,
-          COUNT(DISTINCT r.id) as referral_count
-        FROM users u
-        LEFT JOIN admin_users au ON u.id = au.user_id
-        LEFT JOIN product_assignments pa ON u.id = pa.user_id
-        LEFT JOIN products p ON pa.product_id = p.id
-        LEFT JOIN users r ON u.referral_code = r.referred_by
-        WHERE au.user_id IS NULL
-        GROUP BY u.id
-        ORDER BY u.created_at DESC`
+        `SELECT DISTINCT u.*
+         FROM users u
+         LEFT JOIN admin_users au ON u.id = au.user_id
+         WHERE au.user_id IS NULL
+         ORDER BY u.created_at DESC`
       );
 
-      console.log(`Found ${customers.length} customers`);
+      // Then, for each customer, get their assigned products and activities
+      const transformedCustomers = await Promise.all(customers.map(async (customer) => {
+        // Get assigned products with their activities
+        const [assignments] = await connection.execute(
+          `SELECT 
+            p.id as product_id,
+            p.name as product_name,
+            p.description as product_description,
+            p.is_enabled as product_is_enabled,
+            pa.id as assignment_id,
+            GROUP_CONCAT(
+              JSON_OBJECT(
+                'id', pact.id,
+                'type', pact.type,
+                'pointsValue', pact.points_value
+              )
+            ) as activities
+           FROM product_assignments pa
+           JOIN products p ON pa.product_id = p.id
+           LEFT JOIN product_activities pact ON p.id = pact.product_id
+           WHERE pa.user_id = ?
+           GROUP BY p.id, pa.id`,
+          [customer.id]
+        );
 
-      // Transform the customer data
-      const transformedCustomers = customers.map(customer => ({
-        id: customer.id,
-        email: customer.email,
-        firstName: customer.first_name,
-        lastName: customer.last_name,
-        phoneNumber: customer.phone_number,
-        isEnabled: Boolean(customer.is_enabled),
-        isSouthAfrican: Boolean(customer.is_south_african),
-        hasCreditCard: Boolean(customer.has_credit_card),
-        points: Number(customer.points || 0),
-        createdAt: customer.created_at,
-        selectedPackage: customer.selected_package,
-        industry: customer.industry,
-        occupation: customer.occupation,
-        address: customer.address,
-        city: customer.city,
-        postalCode: customer.postal_code,
-        bankName: customer.bank_name,
-        accountType: customer.account_type,
-        accountNumber: customer.account_number,
-        accountHolderName: customer.account_holder_name,
-        branchCode: customer.branch_code,
-        referralCode: customer.referral_code,
-        referredBy: customer.referred_by,
-        assignedProducts: customer.assigned_products ? customer.assigned_products.split(',').filter(Boolean) : [],
-        referralCount: Number(customer.referral_count || 0)
+        // Get referral count
+        const [referrals] = await connection.execute(
+          'SELECT COUNT(*) as count FROM users WHERE referred_by = ?',
+          [customer.referral_code]
+        );
+
+        // Transform assignments into the expected format
+        const productAssignments = assignments.map(assignment => ({
+          id: assignment.assignment_id,
+          product: {
+            id: assignment.product_id,
+            name: assignment.product_name,
+            description: assignment.product_description,
+            isEnabled: Boolean(assignment.product_is_enabled),
+            activities: assignment.activities ? 
+              assignment.activities.split(',').map(activity => {
+                try {
+                  return JSON.parse(activity);
+                } catch (e) {
+                  console.error('Error parsing activity:', e);
+                  return null;
+                }
+              }).filter(Boolean) : []
+          }
+        }));
+
+        return {
+          id: customer.id,
+          email: customer.email,
+          firstName: customer.first_name,
+          lastName: customer.last_name,
+          phoneNumber: customer.phone_number,
+          isEnabled: Boolean(customer.is_enabled),
+          isSouthAfrican: Boolean(customer.is_south_african),
+          hasCreditCard: Boolean(customer.has_credit_card),
+          points: Number(customer.points || 0),
+          createdAt: customer.created_at,
+          selectedPackage: customer.selected_package,
+          industry: customer.industry,
+          occupation: customer.occupation,
+          address: customer.address,
+          city: customer.city,
+          postalCode: customer.postal_code,
+          bankName: customer.bank_name,
+          accountType: customer.account_type,
+          accountNumber: customer.account_number,
+          accountHolderName: customer.account_holder_name,
+          branchCode: customer.branch_code,
+          referralCode: customer.referral_code,
+          referredBy: customer.referred_by,
+          productAssignments: productAssignments,
+          referralCount: Number(referrals[0].count || 0)
+        };
       }));
 
+      console.log(`Found ${transformedCustomers.length} customers`);
       res.json(transformedCustomers);
     } catch (error) {
       console.error('Error fetching customers:', error);
