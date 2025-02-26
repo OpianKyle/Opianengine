@@ -15,7 +15,6 @@ import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';  // Import referral routes
-import { Pool } from 'mysql2/promise'; // Added import for mysql2 pool
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -26,11 +25,7 @@ const crypto = {
   }
 };
 
-// Assuming pool is initialized elsewhere, perhaps in a separate file and imported
-let pool: Pool;
-
-export function registerRoutes(app: Express, givenPool: Pool): Server { //Added parameter to pass pool
-  pool = givenPool; // assign the pool
+export function registerRoutes(app: Express): Server {
   const MemoryStoreSession = MemoryStore(session);
   const sessionMiddleware = session({
     cookie: { 
@@ -118,7 +113,6 @@ export function registerRoutes(app: Express, givenPool: Pool): Server { //Added 
       res.status(500).json({ error: 'Failed to fetch referral data' });
     }
   });
-
 
 
   app.get("/api/products/assignments/:id", async (req, res) => {
@@ -1018,994 +1012,973 @@ export function registerRoutes(app: Express, givenPool: Pool): Server { //Added 
       });
 
       res.json(assignment);
-    } catch (error) {
-      console.error('Error assigning product:', error);
-      res.status(500).json({ error: 'Failed to assign product' });
-    }
-  });
-
-  app.post("/api/products/:id/unassign", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { userId } = req.body;
-
-    try {
-      const [deletedAssignment] = await db
-        .delete(productAssignments)
-        .where(
-          and(
-            eq(productAssignments.userId, userId),
-            eq(productAssignments.productId, parseInt(id))
-          )
-        )
-        .returning()
-        .execute();
-
-      if (!deletedAssignment) {
-        return res.status(404).json({ error: "Assignment not found" });
+} catch (error) {
+        console.error('Error assigning product:', error);
+        res.status(500).json({ error: 'Failed to assign product' });
       }
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "PRODUCT_REMOVED",
-        targetUserId: userId,
-        details: `Unassigned product ID ${id} from user ID ${userId}`,
-      });
-
-      res.json({ message: "Product unassigned successfully" });
-    } catch (error) {
-      console.error('Error unassigning product:', error);
-      res.status(500).json({ error: 'Failed to unassign product' });
-    }
-  });
-
-  app.get("/api/products/assignments/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-
-    try {
-      const assignment = await db.query.productAssignments.findFirst({
-        where: eq(productAssignments.id, parseInt(id)),
-        with: {
-          product: true,
-          user: true,
-        }
-      });
-
-      if (!assignment) {
-        return res.status(404).json({ error: "Assignment not found" });
-      }
-      res.json(assignment);
-    } catch (error) {
-      console.error('Error fetching assignment:', error);
-      res.status(500).json({ error: 'Failed to fetch assignment' });
-    }
-  });
-
-  app.get("/api/products/customer", async (req, res) => {
-    try {      const allProducts = await db.query.products.findMany({
-        where: eq(products.isEnabled, true),
-        columns: {          id: true,
-          name: true,
-          description: true,
-        },
-        orderBy: desc(products.createdAt),
-      });
-      res.json(allProducts);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      res.status(500).json({ error: 'Failed to fetch products' });
-    }
-  });
-
-  app.post("/api/quote-requests", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const { productId } = req.body;
-
-    try {
-      const existingRequest = await db.query.quoteRequests.findFirst({
-        where: sql`${quoteRequests.userId} = ${req.user.id} AND 
-                  ${quoteRequests.status} IN ('PENDING', 'IN_PROGRESS')`,
-      });
-
-      if (existingRequest) {
-        return res.status(400).json({ 
-          error: "You already have an active quote request. Please wait for it to be processed." 
-        });
-      }
-
-      const [product] = await db
-        .select()
-        .from(products)
-        .where(
-          sql`${products.id} = ${productId} AND ${products.isEnabled} = true`
-        )
-        .limit(1)
-        .execute();
-
-      if (!product) {
-        return res.status(404).json({ error: "Product not found or not available" });
-      }
-
-      const [quoteRequest] = await db
-        .insert(quoteRequests)
-        .values({
-          userId: req.user.id,
-          productId,
-          status: "PENDING",
-        })
-        .returning()
-        .execute();
-
-      const customerEmailContent = formatQuoteRequestEmail(
-        req.user.firstName || 'Customer',
-        product.name
-      );
-      await sendEmail({
-        to: req.user.email,
-        subject: "Quote Request Confirmation",
-        text: customerEmailContent.text,
-        html: customerEmailContent.html
-      });
-
-      const adminUsers = await db
-        .select()
-        .from(users)
-        .where(eq(users.isAdmin, true))
-        .execute();
-
-      for(const admin of adminUsers) {
-        const adminEmailContent = formatAdminQuoteRequestEmail(
-          `${req.user.firstName || 'Customer'} ${req.user.lastName || ''}`,
-          req.user.email,
-          product.name,
-          admin.firstName || 'Admin'
-        );
-
-        await sendEmail({
-          to: admin.email,
-          subject: `New Quote Request - ${product.name}`,
-          text: adminEmailContent.text,
-          html: adminEmailContent.html
-        });
-      }
-
-      res.json(quoteRequest);
-    } catch (error) {
-      console.error('Error creating quote request:', error);
-      res.status(500).json({ error: 'Failed to create quote request' });
-    }
-  });
-
-  app.get("/api/quote-requests", async (req, res) => {
-    if (!req.user?.isAdmin) {
-      return res.status(403).json({ error: "Unauthorized" });
-    }
-
-    try {
-      const allQuoteRequests = await db.query.quoteRequests.findMany({
-        orderBy: desc(quoteRequests.createdAt),
-        with: {
-          user: {
-            columns: {
-              firstName: true,
-              lastName: true,
-              email: true,
-            }
-          },
-          product: {
-            columns: {
-              name: true,
-              description: true,
-            }
-          },
-          completedByUser: {
-            columns: {
-              firstName: true,
-              lastName: true,
-            }
-          }
-        }
-      });
-
-      res.json(allQuoteRequests);
-    } catch (error) {
-      console.error('Error fetching quote requests:', error);
-      res.status(500).json({ error: 'Failed to fetch quote requests' });
-    }
-  });
-
-  app.put("/api/quote-requests/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-
-    const { id } = req.params;
-    const { status, notes } = req.body;
-
-    try {
-      const [quoteRequest] = await db
-        .select()
-        .from(quoteRequests)
-        .where(eq(quoteRequests.id, parseInt(id)))
-        .limit(1)
-        .execute();
-
-      if (!quoteRequest) {
-        return res.status(404).json({ error: "Quote request not found" });
-      }
-
-      const updates: any = {
-        status,
-        notes,
-        updatedAt: new Date(),
-      };
-
-      if (status === "COMPLETED" || status === "REJECTED") {
-        updates.completedAt = new Date();
-        updates.completedBy = req.user.id;
-      }
-
-      const [updatedRequest] = await db
-        .update(quoteRequests)
-        .set(updates)
-        .where(eq(quoteRequests.id, parseInt(id)))
-        .returning()
-        .execute();
-
-      await db.insert(notifications).values({
-        userId: quoteRequest.userId,
-        type: "QUOTE_STATUS_CHANGE",
-        title: "Quote Request Update",
-        message: `Your quote request has been ${status.toLowerCase()}${notes ? `: ${notes}` : ''}`,
-        relatedId: quoteRequest.id
-      }).execute();
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: status === "COMPLETED" ? "QUOTE_REQUEST_COMPLETED" : 
-                   status === "REJECTED" ? "QUOTE_REQUEST_REJECTED" : 
-                   "QUOTE_REQUEST_UPDATED",
-        targetUserId: quoteRequest.userId,
-        details: `Updated quote request status to ${status}`,
-      });
-
-      const completeRequest = await db.query.quoteRequests.findFirst({
-        where: eq(quoteRequests.id, parseInt(id)),
-        with: {
-          user: {
-            columns: {
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          product: {
-            columns: {
-              name: true,
-              description: true
-            }
-          },
-          completedByUser: {
-            columns: {
-              firstName: true,
-              lastName: true,
-            }
-          }
-        }
-      });
-
-      res.json(completeRequest);
-    } catch (error) {
-      console.error('Error updating quote request:', error);
-      res.status(500).json({ error: 'Failed to update quote request' });
-    }
-  });
-
-  app.get("/api/customer/points", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, req.user.id),
-    });
-    res.json(user);
-  });
-
-  // Add this to the GET /api/customer/transactions endpoint
-  app.get("/api/customer/transactions", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    try {
-      console.log('Fetching transactions for user:', req.user.id);
-
-      const [rows] = await pool.execute(
-        `SELECT 
-          t.id,
-          t.user_id,
-          t.points,
-          t.type,
-          t.description,
-          t.status,
-          DATE_FORMAT(t.created_at, '%Y-%m-%dT%H:%i:%s.000Z') as created_at,
-          r.name as reward_name,
-          r.id as reward_id
-        FROM transactions t
-        LEFT JOIN rewards r ON t.reward_id = r.id
-        WHERE t.user_id = ?
-        ORDER BY t.created_at DESC`,
-        [req.user.id]
-      );
-
-      if (!Array.isArray(rows)) {
-        throw new Error('Invalid response from database');
-      }
-
-      const formattedTransactions = rows.map((t: any) => ({
-        id: t.id,
-        userId: t.user_id,
-        points: t.points,
-        description: t.description,
-        type: t.type,
-        status: t.status,
-        createdAt: t.created_at,
-        reward: t.reward_id ? {
-          id: t.reward_id,
-          name: t.reward_name
-        } : null
-      }));
-
-      console.log('Transactions fetched successfully:', formattedTransactions.length);
-      res.json(formattedTransactions);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch transactions',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
-
-  app.get("/api/customer/referral", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, req.user.id))
-        .limit(1)
-        .execute();
-
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      let currentReferralCode = user.referral_code;
-      if (!currentReferralCode) {
-        currentReferralCode = randomBytes(8).toString("hex");
-        await db
-          .update(users)
-          .set({ referral_code: currentReferralCode })
-          .where(eq(users.id, req.user.id))
-          .execute();
-      }
-
-      const referrals = await db
-        .select({
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          createdAt: users.createdAt,
-        })
-        .from(users)
-        .where(eq(users.referred_by, currentReferralCode))
-        .orderBy(desc(users.createdAt))
-        .execute();
-
-      res.json({
-        referralCode: currentReferralCode,
-        referralCount: referrals.length,
-        referrals,
-      });
-    } catch (error) {
-      console.error('Error fetching referral info:', error);
-      res.status(500).json({ error: 'Failed to fetch referral information' });
-    }
-  });
-
-  app.get("/api/customer/referrals", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-
-    try {
-      console.log("Fetching referral stats for user:", req.user.id);
-
-      const [currentUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, req.user.id))
-        .limit(1)
-        .execute();
-
-      if (!currentUser) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      const level1Referrals = await db
-        .select({
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          email: users.email,
-          createdAt: users.createdAt,
-          referral_code: users.referral_code
-        })
-        .from(users)
-        .where(eq(users.referred_by, currentUser.referral_code))
-        .execute();
-
-      const level2Count = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(
-          inArray(
-            users.referred_by,
-            level1Referrals.map(r => r.referral_code)
-          )
-        )
-        .execute();
-
-      const level2Referrals = await db
-        .select({ referral_code: users.referral_code })
-        .from(users)
-        .where(
-          inArray(
-            users.referred_by,
-            level1Referrals.map(r => r.referral_code)
-          )
-        )
-        .execute();
-
-      const level3Count = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(
-          inArray(
-            users.referred_by,
-            level2Referrals.map(r => r.referral_code)
-          )
-        )
-        .execute();
-
-      const referralsWithCounts = await Promise.all(
-        level1Referrals.map(async (referral) => {
-          const referralCount = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(users)
-            .where(eq(users.referred_by, referral.referral_code))
-            .execute();
-
-          return {
-            ...referral,
-            referralCount: Number(referralCount[0]?.count || 0),
-          };
-        })
-      );
-
-      console.log("Sending referral stats:", {
-        referralCode: currentUser.referral_code,
-        level1Count: level1Referrals.length,
-        level2Count: Number(level2Count[0]?.count || 0),
-        level3Count: Number(level3Count[0]?.count || 0),
-      });
-
-      res.json({
-        referralCode: currentUser.referral_code,
-        level1Count: level1Referrals.length,
-        level2Count: Number(level2Count[0]?.count || 0),
-        level3Count: Number(level3Count[0]?.count || 0),
-        referrals: referralsWithCounts,
-      });
-    } catch (error) {
-      console.error("Error fetching referral stats:", error);
-      res.status(500).json({ error: "Failed to fetch referral stats" });
-    }
-  });
-
-  app.get("/api/rewards", async (req, res) => {
-    const allRewards = await db.query.rewards.findMany({
-      where: eq(rewards.available, true),
-    });
-    res.json(allRewards);
-  });
-
-  app.post("/api/rewards", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    try {
-      const [reward] = await db.insert(rewards).values({
-        ...req.body,
-        available: true,
-      }).returning().execute();
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "REWARD_CREATED",
-        details: `Created new ${req.body.type === 'CASH' ? 'cash redemption' : ''} reward: ${reward.name} (Cost: ${reward.pointsCost} points${req.body.type === 'CASH' ? `, R${(reward.pointsCost * 0.015).toFixed(2)}` : ''})`,
-      });
-
-      res.json(reward);
-    } catch (error) {
-      console.error('Error creating reward:', error);
-      res.status(500).json({ error: 'Failed to create reward' });
-    }
-  });
-
-  app.put("/api/rewards/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { name, description, pointsCost, imageUrl, available } = req.body;
-
-    try {
-      const [reward] = await db
-        .update(rewards)
-        .set({
-          name,
-          description,
-          pointsCost,
-          imageUrl,
-          available,
-        })
-        .where(eq(rewards.id, parseInt(id)))
-        .returning()
-        .execute();
-
-      if (!reward) {
-        return res.status(404).json({ error: "Reward not found" });
-      }
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "REWARD_UPDATED",
-        details: `Updated reward: ${reward.name} (New Cost: ${reward.pointsCost} points)`,
-      });
-
-      res.json(reward);
-    } catch (error) {
-      console.error('Error updating reward:', error);
-      res.status(500).json({ error: 'Failed to update reward' });
-    }
-  });
-
-  app.delete("/api/rewards/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-
-    try {
-      const [reward] = await db
-        .select()
-        .from(rewards)
-        .where(eq(rewards.id, parseInt(id)))
-        .limit(1)
-        .execute();
-
-      if (!reward) {
-        return res.status(404).json({ error: "Reward not found" });
-      }
-
-      await db
-        .update(rewards)
-        .set({ available: false })
-        .where(eq(rewards.id, parseInt(id)))
-        .execute();
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "REWARD_DELETED",
-        details: `Deleted reward: ${reward.name}`,
-      });
-
-      res.json({ message: "Reward deleted successfully" });
-    } catch (error) {
-      console.error('Error deleting reward:', error);
-      res.status(500).json({ error: 'Failed to delete reward' });
-    }
-  });
-
-  app.post("/api/rewards/redeem", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-    const { rewardId } = req.body;
-
-    const reward = await db.query.rewards.findFirst({
-      where: eq(rewards.id, rewardId),
     });
 
-    if (!reward) return res.status(404).json({ error: "Reward not found" });
+    app.post("/api/products/:id/unassign", async (req, res) => {
+      if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+      const { id } = req.params;
+      const { userId } = req.body;
 
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, req.user.id),
-    });
-
-    if (!user || user.points < reward.pointsCost) {
-      return res.status(400).json({ error: "Insufficient points" });
-    }
-
-    try {
-      await db.transaction(async (tx) => {
-        await tx.insert(transactions).values({
-          userId: user.id,
-          points: -reward.pointsCost,
-          type: reward.type === "CASH" ? "CASH_REDEMPTION" : "REDEEMED",
-          description: reward.type === "CASH"
-            ? `Redeemed points for R${(reward.pointsCost * 0.015).toFixed(2)}`
-            : `Redeemed ${reward.name}`,
-          rewardId,
-        }).execute();
-
-        await tx
-          .update(users)
-          .set({ points: user.points - reward.pointsCost })
-          .where(eq(users.id, user.id))
-          .execute();
-
-        await logAdminAction({
-          adminId: user.id,
-          actionType: "POINT_ADJUSTMENT",
-          targetUserId: user.id,
-          details: reward.type === "CASH"
-            ? `Points deducted (-${reward.pointsCost}) for cash redemption of R${(reward.pointsCost * 0.015).toFixed(2)}`
-            : `Points deducted (-${reward.pointsCost}) for redeeming reward: ${reward.name}`,
-        });
-      });
-
-      res.json({
-        success: true,
-        message: reward.type === "CASH"
-          ? `Successfully redeemed R${(reward.pointsCost * 0.015).toFixed(2)}`
-          : `Successfully redeemed ${reward.name}`
-      });
-    } catch (error) {
-      console.error('Error processing reward redemption:', error);
-      res.status(500).json({ error: 'Failed to process reward redemption' });
-    }
-  });
-
-  app.post("/api/rewards/redeem-cash", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-    const { points } = req.body;
-
-    if (!points || points <= 0) {
-      return res.status(400).json({ error: "Invalid points amount" });
-    }
-
-    try {
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, req.user.id),
-      });
-
-      if (!user || user.points < points) {
-        return res.status(400).json({ error: "Insufficient points" });
-      }
-
-      await db.transaction(async (tx) => {
-        const [transaction] = await tx.insert(transactions).values({
-          userId: user.id,
-          points: -points,
-          type: "CASH_REDEMPTION",
-          description: `Redeemed points for R${(points * 0.015).toFixed(2)}`,
-          status: "PENDING",
-          createdAt: new Date(),
-        }).returning().execute();
-
-        await tx
-          .update(users)
-          .set({
-            points: sql`${users.points} - ${points}`
-          })
-          .where(eq(users.id, user.id))
-          .execute();
-
-
-      });
-
-      res.json({
-        success: true,
-        message: `Successfully redeemed R${(points * 0.015).toFixed(2)}`
-      });
-    } catch (error) {
-      console.error('Error processing cash redemption:', error);
-      res.status(500).json({ error: 'Failed to process cash redemption' });
-    }
-  });
-
-  app.get("/api/admin/cash-redemptions", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-
-    try {
-      const cashRedemptions = await db.query.transactions.findMany({
-        where: eq(transactions.type, "CASH_REDEMPTION"),
-        orderBy: [desc(transactions.createdAt)],
-        with: {
-          user: {
-            columns: {
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      });
-
-      res.json(cashRedemptions);
-    } catch (error) {
-      console.error('Error fetching cash redemptions:', error);
-      res.status(500).json({ error: 'Failed to fetch cash redemptions' });
-    }
-  });
-
-  app.post("/api/admin/cash-redemptions/:id/process", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-
-    try {
-      const [transaction] = await db
-        .update(transactions)
-        .set({
-          status: 'PROCESSED',
-          processedAt: new Date(),
-          processedBy: req.user.id
-        })
-        .where(eq(transactions.id, parseInt(id)))
-        .returning()
-        .execute();
-
-      if (!transaction) {
-        return res.status(404).json({ error: "Transaction not found" });
-      }
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "POINT_ADJUSTMENT",
-        targetUserId: transaction.userId,
-        details: `Processed cash redemption of R${(Math.abs(transaction.points) * 0.015).toFixed(2)} (${Math.abs(transaction.points)} points)`,
-      });
-
-      res.json(transaction);
-    } catch (error) {
-      console.error('Error processing cash redemption:', error);
-      res.status(500).json({ error: 'Failed to process cash redemption' });
-    }
-  });
-
-  app.get("/api/notifications", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    try {
-      const userNotifications = await db.query.notifications.findMany({
-        where: eq(notifications.userId, req.user.id),
-        orderBy: desc(notifications.createdAt),
-        limit: 50 
-      });
-
-      res.json(userNotifications);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      res.status(500).json({ error: 'Failed to fetch notifications' });
-    }
-  });
-
-  app.post("/api/notifications/mark-read", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const { notificationId } = req.body;
-
-    try {
-      if (notificationId) {
-        const [deletedNotification] = await db
-          .delete(notifications)
+      try {
+        const [deletedAssignment] = await db
+          .delete(productAssignments)
           .where(
             and(
-              eq(notifications.id, parseInt(notificationId)),
-              eq(notifications.userId, req.user.id)
+              eq(productAssignments.userId, userId),
+              eq(productAssignments.productId, parseInt(id))
             )
           )
           .returning()
           .execute();
 
-        if (!deletedNotification) {
-          return res.status(404).json({ error: "Notification not found" });
+        if (!deletedAssignment) {
+          return res.status(404).json({ error: "Assignment not found" });
         }
-      } else {
-        await db
-          .delete(notifications)
-          .where(eq(notifications.userId, req.user.id))
-          .execute();
+
+        await logAdminAction({
+          adminId: req.user.id,
+          actionType: "PRODUCT_REMOVED",
+          targetUserId: userId,
+          details: `Unassigned product ID ${id} from user ID ${userId}`,
+        });
+
+        res.json({ message: "Product unassigned successfully" });
+      } catch (error) {
+        console.error('Error unassigning product:', error);
+        res.status(500).json({ error: 'Failed to unassign product' });
+      }
+    });
+
+    app.get("/api/products/assignments/:id", async (req, res) => {
+      if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+      const { id } = req.params;
+
+      try {
+        const assignment = await db.query.productAssignments.findFirst({
+          where: eq(productAssignments.id, parseInt(id)),
+          with: {
+            product: true,
+            user: true,
+          }
+        });
+
+        if (!assignment) {
+          return res.status(404).json({ error: "Assignment not found" });
+        }
+        res.json(assignment);
+      } catch (error) {
+        console.error('Error fetching assignment:', error);
+        res.status(500).json({ error: 'Failed to fetch assignment' });
+      }
+    });
+
+    app.get("/api/products/customer", async (req, res) => {
+      try {      const allProducts = await db.query.products.findMany({
+          where: eq(products.isEnabled, true),
+          columns: {          id: true,
+            name: true,
+            description: true,
+          },
+          orderBy: desc(products.createdAt),
+        });
+        res.json(allProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        res.status(500).json({ error: 'Failed to fetch products' });
+      }
+    });
+
+    app.post("/api/quote-requests", async (req, res) => {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
       }
 
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      res.status(500).json({ error: 'Failed to mark notification as read' });
-    }
-  });
+      const { productId } = req.body;
 
-  app.post("/api/reset-password", async (req, res) => {
-    const { email } = req.body;
+      try {
+        const existingRequest = await db.query.quoteRequests.findFirst({
+          where: sql`${quoteRequests.userId} = ${req.user.id} AND 
+                    ${quoteRequests.status} IN ('PENDING', 'IN_PROGRESS')`,
+        });
 
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1)
-        .execute();
+        if (existingRequest) {
+          return res.status(400).json({ 
+            error: "You already have an active quote request. Please wait for it to be processed." 
+          });
+        }
 
-      if (user) {
-        const resetToken = randomBytes(32).toString("hex");
-        const tokenExpiry = new Date(Date.now() + 3600000); 
+        const [product] = await db
+          .select()
+          .from(products)
+          .where(
+            sql`${products.id} = ${productId} AND ${products.isEnabled} = true`
+          )
+          .limit(1)
+          .execute();
+
+        if (!product) {
+          return res.status(404).json({ error: "Product not found or not available" });
+        }
+
+        const [quoteRequest] = await db
+          .insert(quoteRequests)
+          .values({
+            userId: req.user.id,
+            productId,
+            status: "PENDING",
+          })
+          .returning()
+          .execute();
+
+        const customerEmailContent = formatQuoteRequestEmail(
+          req.user.firstName || 'Customer',
+          product.name
+        );
+        await sendEmail({
+          to: req.user.email,
+          subject: "Quote Request Confirmation",
+          text: customerEmailContent.text,
+          html: customerEmailContent.html
+        });
+
+        const adminUsers = await db
+          .select()
+          .from(users)
+          .where(eq(users.isAdmin, true))
+          .execute();
+
+        for(const admin of adminUsers) {
+          const adminEmailContent = formatAdminQuoteRequestEmail(
+            `${req.user.firstName || 'Customer'} ${req.user.lastName || ''}`,
+            req.user.email,
+            product.name,
+            admin.firstName || 'Admin'
+          );
+
+          await sendEmail({
+            to: admin.email,
+            subject: `New Quote Request - ${product.name}`,
+            text: adminEmailContent.text,
+            html: adminEmailContent.html
+          });
+        }
+
+        res.json(quoteRequest);
+      } catch (error) {
+        console.error('Error creating quote request:', error);
+        res.status(500).json({ error: 'Failed to create quote request' });
+      }
+    });
+
+    app.get("/api/quote-requests", async (req, res) => {
+      if (!req.user?.isAdmin) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      try {
+        const allQuoteRequests = await db.query.quoteRequests.findMany({
+          orderBy: desc(quoteRequests.createdAt),
+          with: {
+            user: {
+              columns: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            },
+            product: {
+              columns: {
+                name: true,
+                description: true,
+              }
+            },
+            completedByUser: {
+              columns: {
+                firstName: true,
+                lastName: true,
+              }
+            }
+          }
+        });
+
+        res.json(allQuoteRequests);
+      } catch (error) {
+        console.error('Error fetching quote requests:', error);
+        res.status(500).json({ error: 'Failed to fetch quote requests' });
+      }
+    });
+
+    app.put("/api/quote-requests/:id", async (req, res) => {
+      if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+
+      const { id } = req.params;
+      const { status, notes } = req.body;
+
+      try {
+        const [quoteRequest] = await db
+          .select()
+          .from(quoteRequests)
+          .where(eq(quoteRequests.id, parseInt(id)))
+          .limit(1)
+          .execute();
+
+        if (!quoteRequest) {
+          return res.status(404).json({ error: "Quote request not found" });
+        }
+
+        const updates: any = {
+          status,
+          notes,
+          updatedAt: new Date(),
+        };
+
+        if (status === "COMPLETED" || status === "REJECTED") {
+          updates.completedAt = new Date();
+          updates.completedBy = req.user.id;
+        }
+
+        const [updatedRequest] = await db
+          .update(quoteRequests)
+          .set(updates)
+          .where(eq(quoteRequests.id, parseInt(id)))
+          .returning()
+          .execute();
+
+        await db.insert(notifications).values({
+          userId: quoteRequest.userId,
+          type: "QUOTE_STATUS_CHANGE",
+          title: "Quote Request Update",
+          message: `Your quote request has been ${status.toLowerCase()}${notes ? `: ${notes}` : ''}`,
+          relatedId: quoteRequest.id
+        }).execute();
+
+        await logAdminAction({
+          adminId: req.user.id,
+          actionType: status === "COMPLETED" ? "QUOTE_REQUEST_COMPLETED" : 
+                     status === "REJECTED" ? "QUOTE_REQUEST_REJECTED" : 
+                     "QUOTE_REQUEST_UPDATED",
+          targetUserId: quoteRequest.userId,
+          details: `Updated quote request status to ${status}`,
+        });
+
+        const completeRequest = await db.query.quoteRequests.findFirst({
+          where: eq(quoteRequests.id, parseInt(id)),
+          with: {
+            user: {
+              columns: {
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            },
+            product: {
+              columns: {
+                name: true,
+                description: true
+              }
+            },
+            completedByUser: {
+              columns: {
+                firstName: true,
+                lastName: true,
+              }
+            }
+          }
+        });
+
+        res.json(completeRequest);
+      } catch (error) {
+        console.error('Error updating quote request:', error);
+        res.status(500).json({ error: 'Failed to update quote request' });
+      }
+    });
+
+    app.get("/api/customer/points", async (req, res) => {
+      if (!req.user) return res.status(401).json({error: "Unauthorized"});
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, req.user.id),
+      });
+      res.json(user);
+    });
+
+    // Add the customer transactions endpoint
+    app.get("/api/customer/transactions", async (req, res) => {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      try {
+        console.log('Fetching transactions for user:', req.user.id);
+
+        const transactions = await db.execute(
+          `SELECT 
+            t.*,
+            DATE_FORMAT(t.created_at, '%Y-%m-%dT%H:%i:%s.000Z') as created_at
+          FROM transactions t
+          WHERE t.user_id = ?
+          ORDER BY t.created_at DESC`,
+          [req.user.id]
+        );
+
+        // Transform the data to match the expected format
+        const formattedTransactions = transactions[0].map((t: any) => ({
+          id: t.id,
+          points: t.points,
+          description: t.description,
+          type: t.type,
+          createdAt: t.created_at
+        }));
+
+        res.json(formattedTransactions);
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+        res.status(500).json({ error: 'Failed to fetch transactions' });
+      }
+    });
+
+    app.get("/api/customer/referral", async (req, res) => {
+      if (!req.user) return res.status(401).json({error: "Unauthorized"});
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, req.user.id))
+          .limit(1)
+          .execute();
+
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        let currentReferralCode = user.referral_code;
+        if (!currentReferralCode) {
+          currentReferralCode = randomBytes(8).toString("hex");
+          await db
+            .update(users)
+            .set({ referral_code: currentReferralCode })
+            .where(eq(users.id, req.user.id))
+            .execute();
+        }
+
+        const referrals = await db
+          .select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            createdAt: users.createdAt,
+          })
+          .from(users)
+          .where(eq(users.referred_by, currentReferralCode))
+          .orderBy(desc(users.createdAt))
+          .execute();
+
+        res.json({
+          referralCode: currentReferralCode,
+          referralCount: referrals.length,
+          referrals,
+        });
+      } catch (error) {
+        console.error('Error fetching referral info:', error);
+        res.status(500).json({ error: 'Failed to fetch referral information' });
+      }
+    });
+
+    app.get("/api/customer/referrals", async (req, res) => {
+      if (!req.user) return res.status(401).json({error: "Unauthorized"});
+
+      try {
+        console.log("Fetching referral stats for user:", req.user.id);
+
+        const [currentUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, req.user.id))
+          .limit(1)
+          .execute();
+
+        if (!currentUser) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        const level1Referrals = await db
+          .select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            email: users.email,
+            createdAt: users.createdAt,
+            referral_code: users.referral_code
+          })
+          .from(users)
+          .where(eq(users.referred_by, currentUser.referral_code))
+          .execute();
+
+        const level2Count = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(users)
+          .where(
+            inArray(
+              users.referred_by,
+              level1Referrals.map(r => r.referral_code)
+            )
+          )
+          .execute();
+
+        const level2Referrals = await db
+          .select({ referral_code: users.referral_code })
+          .from(users)
+          .where(
+            inArray(
+              users.referred_by,
+              level1Referrals.map(r => r.referral_code)
+            )
+          )
+          .execute();
+
+        const level3Count = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(users)
+          .where(
+            inArray(
+              users.referred_by,
+              level2Referrals.map(r => r.referral_code)
+            )
+          )
+          .execute();
+
+        const referralsWithCounts = await Promise.all(
+          level1Referrals.map(async (referral) => {
+            const referralCount = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(users)
+              .where(eq(users.referred_by, referral.referral_code))
+              .execute();
+
+            return {
+              ...referral,
+              referralCount: Number(referralCount[0]?.count || 0),
+            };
+          })
+        );
+
+        console.log("Sending referral stats:", {
+          referralCode: currentUser.referral_code,
+          level1Count: level1Referrals.length,
+          level2Count: Number(level2Count[0]?.count || 0),
+          level3Count: Number(level3Count[0]?.count || 0),
+        });
+
+        res.json({
+          referralCode: currentUser.referral_code,
+          level1Count: level1Referrals.length,
+          level2Count: Number(level2Count[0]?.count || 0),
+          level3Count: Number(level3Count[0]?.count || 0),
+          referrals: referralsWithCounts,
+        });
+      } catch (error) {
+        console.error("Error fetching referral stats:", error);
+        res.status(500).json({ error: "Failed to fetch referral stats" });
+      }
+    });
+
+    app.get("/api/rewards", async (req, res) => {
+      const allRewards = await db.query.rewards.findMany({
+        where: eq(rewards.available, true),
+      });
+      res.json(allRewards);
+    });
+
+    app.post("/api/rewards", async (req, res) => {
+      if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+      try {
+        const [reward] = await db.insert(rewards).values({
+          ...req.body,
+          available: true,
+        }).returning().execute();
+
+        await logAdminAction({
+          adminId: req.user.id,
+          actionType: "REWARD_CREATED",
+          details: `Created new ${req.body.type === 'CASH' ? 'cash redemption' : ''} reward: ${reward.name} (Cost: ${reward.pointsCost} points${req.body.type === 'CASH' ? `, R${(reward.pointsCost * 0.015).toFixed(2)}` : ''})`,
+        });
+
+        res.json(reward);
+      } catch (error) {
+        console.error('Error creating reward:', error);
+        res.status(500).json({ error: 'Failed to create reward' });
+      }
+    });
+
+    app.put("/api/rewards/:id", async (req, res) => {
+      if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+      const { id } = req.params;
+      const { name, description, pointsCost, imageUrl, available } = req.body;
+
+      try {
+        const [reward] = await db
+          .update(rewards)
+          .set({
+            name,
+            description,
+            pointsCost,
+            imageUrl,
+            available,
+          })
+          .where(eq(rewards.id, parseInt(id)))
+          .returning()
+          .execute();
+
+        if (!reward) {
+          return res.status(404).json({ error: "Reward not found" });
+        }
+
+        await logAdminAction({
+          adminId: req.user.id,
+          actionType: "REWARD_UPDATED",
+          details: `Updated reward: ${reward.name} (New Cost: ${reward.pointsCost} points)`,
+        });
+
+        res.json(reward);
+      } catch (error) {
+        console.error('Error updating reward:', error);
+        res.status(500).json({ error: 'Failed to update reward' });
+      }
+    });
+
+    app.delete("/api/rewards/:id", async (req, res) => {
+      if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+      const { id } = req.params;
+
+      try {
+        const [reward] = await db
+          .select()
+          .from(rewards)
+          .where(eq(rewards.id, parseInt(id)))
+          .limit(1)
+          .execute();
+
+        if (!reward) {
+          return res.status(404).json({ error: "Reward not found" });
+        }
+
+        await db
+          .update(rewards)
+          .set({ available: false })
+          .where(eq(rewards.id, parseInt(id)))
+          .execute();
+
+        await logAdminAction({
+          adminId: req.user.id,
+          actionType: "REWARD_DELETED",
+          details: `Deleted reward: ${reward.name}`,
+        });
+
+        res.json({ message: "Reward deleted successfully" });
+      } catch (error) {
+        console.error('Error deleting reward:', error);
+        res.status(500).json({ error: 'Failed to delete reward' });
+      }
+    });
+
+    app.post("/api/rewards/redeem", async (req, res) => {
+      if (!req.user) return res.status(401).json({error: "Unauthorized"});
+      const { rewardId } = req.body;
+
+      const reward = await db.query.rewards.findFirst({
+        where: eq(rewards.id, rewardId),
+      });
+
+      if (!reward) return res.status(404).json({ error: "Reward not found" });
+
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, req.user.id),
+      });
+
+      if (!user || user.points < reward.pointsCost) {
+        return res.status(400).json({ error: "Insufficient points" });
+      }
+
+      try {
+        await db.transaction(async (tx) => {
+          await tx.insert(transactions).values({
+            userId: user.id,
+            points: -reward.pointsCost,
+            type: reward.type === "CASH" ? "CASH_REDEMPTION" : "REDEEMED",
+            description: reward.type === "CASH"
+              ? `Redeemed points for R${(reward.pointsCost * 0.015).toFixed(2)}`
+              : `Redeemed ${reward.name}`,
+            rewardId,
+          }).execute();
+
+          await tx
+            .update(users)
+            .set({ points: user.points - reward.pointsCost })
+            .where(eq(users.id, user.id))
+            .execute();
+
+          await logAdminAction({
+            adminId: user.id,
+            actionType: "POINT_ADJUSTMENT",
+            targetUserId: user.id,
+            details: reward.type === "CASH"
+              ? `Points deducted (-${reward.pointsCost}) for cash redemption of R${(reward.pointsCost * 0.015).toFixed(2)}`
+              : `Points deducted (-${reward.pointsCost}) for redeeming reward: ${reward.name}`,
+          });
+        });
+
+        res.json({
+          success: true,
+          message: reward.type === "CASH"
+            ? `Successfully redeemed R${(reward.pointsCost * 0.015).toFixed(2)}`
+            : `Successfully redeemed ${reward.name}`
+        });
+      } catch (error) {
+        console.error('Error processing reward redemption:', error);
+        res.status(500).json({ error: 'Failed to process reward redemption' });
+      }
+    });
+
+    app.post("/api/rewards/redeem-cash", async (req, res) => {
+      if (!req.user) return res.status(401).json({error: "Unauthorized"});
+      const { points } = req.body;
+
+      if (!points || points <= 0) {
+        return res.status(400).json({ error: "Invalid points amount" });
+      }
+
+      try {
+        const user = await db.query.users.findFirst({
+          where: eq(users.id, req.user.id),
+        });
+
+        if (!user || user.points < points) {
+          return res.status(400).json({ error: "Insufficient points" });
+        }
+
+        await db.transaction(async (tx) => {
+          const [transaction] = await tx.insert(transactions).values({
+            userId: user.id,
+            points: -points,
+            type: "CASH_REDEMPTION",
+            description: `Redeemed points for R${(points * 0.015).toFixed(2)}`,
+            status: "PENDING",
+            createdAt: new Date(),
+          }).returning().execute();
+
+          await tx
+            .update(users)
+            .set({
+              points: sql`${users.points} - ${points}`
+            })
+            .where(eq(users.id, user.id))
+            .execute();
+
+
+        });
+
+        res.json({
+          success: true,
+          message: `Successfully redeemed R${(points * 0.015).toFixed(2)}`
+        });
+      } catch (error) {
+        console.error('Error processing cash redemption:', error);
+        res.status(500).json({ error: 'Failed to process cash redemption' });
+      }
+    });
+
+    app.get("/api/admin/cash-redemptions", async (req, res) => {
+      if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+
+      try {
+        const cashRedemptions = await db.query.transactions.findMany({
+          where: eq(transactions.type, "CASH_REDEMPTION"),
+          orderBy: [desc(transactions.createdAt)],
+          with: {
+            user: {
+              columns: {
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            }
+          }
+        });
+
+        res.json(cashRedemptions);
+      } catch (error) {
+        console.error('Error fetching cash redemptions:', error);
+        res.status(500).json({ error: 'Failed to fetch cash redemptions' });
+      }
+    });
+
+    app.post("/api/admin/cash-redemptions/:id/process", async (req, res) => {
+      if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+      const { id } = req.params;
+
+      try {
+        const [transaction] = await db
+          .update(transactions)
+          .set({
+            status: 'PROCESSED',
+            processedAt: new Date(),
+            processedBy: req.user.id
+          })
+          .where(eq(transactions.id, parseInt(id)))
+          .returning()
+          .execute();
+
+        if (!transaction) {
+          return res.status(404).json({ error: "Transaction not found" });
+        }
+
+        await logAdminAction({
+          adminId: req.user.id,
+          actionType: "POINT_ADJUSTMENT",
+          targetUserId: transaction.userId,
+          details: `Processed cash redemption of R${(Math.abs(transaction.points) * 0.015).toFixed(2)} (${Math.abs(transaction.points)} points)`,
+        });
+
+        res.json(transaction);
+      } catch (error) {
+        console.error('Error processing cash redemption:', error);
+        res.status(500).json({ error: 'Failed to process cash redemption' });
+      }
+    });
+
+    app.get("/api/notifications", async (req, res) => {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      try {
+        const userNotifications = await db.query.notifications.findMany({
+          where: eq(notifications.userId, req.user.id),
+          orderBy: desc(notifications.createdAt),
+          limit: 50 
+        });
+
+        res.json(userNotifications);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({ error: 'Failed to fetch notifications' });
+      }
+    });
+
+    app.post("/api/notifications/mark-read", async (req, res) => {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { notificationId } = req.body;
+
+      try {
+        if (notificationId) {
+          const [deletedNotification] = await db
+            .delete(notifications)
+            .where(
+              and(
+                eq(notifications.id, parseInt(notificationId)),
+                eq(notifications.userId, req.user.id)
+              )
+            )
+            .returning()
+            .execute();
+
+          if (!deletedNotification) {
+            return res.status(404).json({ error: "Notification not found" });
+          }
+        } else {
+          await db
+            .delete(notifications)
+            .where(eq(notifications.userId, req.user.id))
+            .execute();
+        }
+
+        res.json({ success: true });
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+        res.status(500).json({ error: 'Failed to mark notification as read' });
+      }
+    });
+
+    app.post("/api/reset-password", async (req, res) => {
+      const { email } = req.body;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1)
+          .execute();
+
+        if (user) {
+          const resetToken = randomBytes(32).toString("hex");
+          const tokenExpiry = new Date(Date.now() + 3600000); 
+
+          await db
+            .update(users)
+            .set({
+              resetToken,
+              resetTokenExpiry: tokenExpiry,
+            })
+            .where(eq(users.id, user.id))
+            .execute();
+
+          console.log('\n');
+          console.log('🔑 PASSWORD RESET REQUEST 🔑');
+          console.log('=============================');
+          console.log('Email:', email);
+          console.log('Reset Token:', resetToken);
+          console.log('Token Expiry:', tokenExpiry);
+          console.log('=============================');
+
+          const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
+          console.log('📧 RESET PASSWORD LINK:');
+          console.log('=============================');
+          console.log(resetLink);
+          console.log('=============================\n');
+
+          await sendEmail({
+            to: email,
+            subject: "Password Reset Request",
+            text: `
+              You requested a password reset. Click the following link to reset your password:
+              ${resetLink}
+
+              This link will expire in 1 hour.
+
+              If you didn't request this, please ignore this email.
+            `,
+            html: `
+              <h1>Password Reset Request</h1>
+              <p>You requested a password reset. Click the following link to reset your password:</p>
+              <p><a href="${resetLink}">${resetLink}</a></p>
+              <p>This link will expire in 1 hour.</p>
+              <p>If you didn't request this, please ignore this email.</p>
+            `
+          });
+        }
+
+        res.json({ message: "If an account exists with that email, you will receive password reset instructions." });
+      } catch (error) {
+        console.error('Error in password reset:', error);
+        res.status(500).json({ message: "Failed to process password reset request" });
+      }
+    });
+
+    app.post("/api/reset-password/:token", async (req, res) => {
+      const { token } = req.params;
+      const { newPassword } = req.body;
+
+      try {
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(
+            sql`${users.resetToken} = ${token} AND ${users.resetTokenExpiry} > NOW()`
+          )
+          .limit(1)
+          .execute();
+
+        if (!user) {
+          return res.status(400).json({ error: "Invalid or expired reset token" });
+        }
+
+        const hashedPassword = await authCrypto.hashPassword(newPassword);
 
         await db
           .update(users)
           .set({
-            resetToken,
-            resetTokenExpiry: tokenExpiry,
+            password: hashedPassword,
+            resetToken: null,
+            resetTokenExpiry: null
           })
           .where(eq(users.id, user.id))
           .execute();
 
-        console.log('\n');
-        console.log('🔑 PASSWORD RESET REQUEST 🔑');
-        console.log('=============================');
-        console.log('Email:', email);
-        console.log('Reset Token:', resetToken);
-        console.log('Token Expiry:', tokenExpiry);
-        console.log('=============================');
+        res.json({ message: "Password has been reset successfully" });
+      } catch (error) {
+        console.error('Error in password reset:', error);
+        res.status(500).json({ error: "Failed to reset password" });
+      }
+    });
 
-        const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${resetToken}`;
-        console.log('📧 RESET PASSWORD LINK:');
-        console.log('=============================');
-        console.log(resetLink);
-        console.log('=============================\n');
+    app.put("/api/user", async (req, res) => {
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
 
-        await sendEmail({
-          to: email,
-          subject: "Password Reset Request",
-          text: `
-            You requested a password reset. Click the following link to reset your password:
-            ${resetLink}
+      try {
+        const {
+          firstName,
+          lastName,
+          phoneNumber,
+          address,
+          city,
+          postalCode,
+          idNumber,
+          dateOfBirth,
+          industry,
+          occupation,
+          isSouthAfrican,
+          selectedPackage,
+          bankName,
+          accountType,
+          accountNumber,
+          hasCreditCard
+          
+        } = req.body;
 
-            This link will expire in 1 hour.
+        const updates: any = {
+          firstName,
+          lastName,
+          phoneNumber,
+          address,
+          city,
+          postalCode,
+          idNumber,
+          dateOfBirth,
+          industry,
+          occupation,
+          isSouthAfrican,
+          selectedPackage,
+          bankName,
+          accountType,
+          accountNumber,
+          hasCreditCard
+        };
 
-            If you didn't request this, please ignore this email.
-          `,
-          html: `
-            <h1>Password Reset Request</h1>
-            <p>You requested a password reset. Click the following link to reset your password:</p>
-            <p><a href="${resetLink}">${resetLink}</a></p>
-            <p>This link will expire in 1 hour.</p>
-            <p>If you didn't request this, please ignore this email.</p>
-          `
+        if (password) {
+          const hashedPassword = await crypto.hash(password);
+          updates.password = hashedPassword;
+        }
+
+        const [updatedUser] = await db
+          .update(users)
+          .set(updates)
+          .where(eq(users.id, req.user.id))
+          .returning()
+          .execute();
+
+        if (!updatedUser) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        res.json(updatedUser);
+      } catch (error) {
+        console.error('Error updating user profile:', error);
+        res.status(500).json({ 
+          error: 'Failed to update profile',
+          message: error instanceof Error ? error.message : 'An unexpected error occurred'
         });
       }
+    });
 
-      res.json({ message: "If an account exists with that email, you will receive password reset instructions." });
-    } catch (error) {
-      console.error('Error in password reset:', error);
-      res.status(500).json({ message: "Failed to process password reset request" });
-    }
-  });
-
-  app.post("/api/reset-password/:token", async (req, res) => {
-    const { token } = req.params;
-    const { newPassword } = req.body;
-
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(
-          sql`${users.resetToken} = ${token} AND ${users.resetTokenExpiry} > NOW()`
-        )
-        .limit(1)
-        .execute();
-
-      if (!user) {
-        return res.status(400).json({ error: "Invalid or expired reset token" });
-      }
-
-      const hashedPassword = await authCrypto.hashPassword(newPassword);
-
-      await db
-        .update(users)
-        .set({
-          password: hashedPassword,
-          resetToken: null,
-          resetTokenExpiry: null
-        })
-        .where(eq(users.id, user.id))
-        .execute();
-
-      res.json({ message: "Password has been reset successfully" });
-    } catch (error) {
-      console.error('Error in password reset:', error);
-      res.status(500).json({ error: "Failed to reset password" });
-    }
-  });
-
-  app.put("/api/user", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    try {
-      const {
-        firstName,
-        lastName,
-        phoneNumber,
-        address,
-        city,
-        postalCode,
-        idNumber,
-        dateOfBirth,
-        industry,
-        occupation,
-        isSouthAfrican,
-        selectedPackage,
-        bankName,
-        accountType,
-        accountNumber,
-        hasCreditCard
-        
-      } = req.body;
-
-      const updates: any = {
-        firstName,
-        lastName,
-        phoneNumber,
-        address,
-        city,
-        postalCode,
-        idNumber,
-        dateOfBirth,
-        industry,
-        occupation,
-        isSouthAfrican,
-        selectedPackage,
-        bankName,
-        accountType,
-        accountNumber,
-        hasCreditCard
-      };
-
-      if (password) {
-        const hashedPassword = await crypto.hash(password);
-        updates.password = hashedPassword;
-      }
-
-      const [updatedUser] = await db
-        .update(users)
-        .set(updates)
-        .where(eq(users.id, req.user.id))
-        .returning()
-        .execute();
-
-      if (!updatedUser) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      res.json(updatedUser);
-    } catch (error) {
-      console.error('Error updating user profile:', error);
-      res.status(500).json({ 
-        error: 'Failed to update profile',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred'
-      });
-    }
-  });
-
-  return httpServer;
-}
+    return httpServer;
+  }
