@@ -22,70 +22,45 @@ process.on('uncaughtException', (err) => {
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
 
-// Define all schemas at the top
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
+// Helper function to check admin status
+async function checkUserAdminStatus(connection: any, userId: number) {
+  try {
+    const [rows] = await connection.execute(
+      'SELECT role_type FROM admin_users WHERE user_id = ?',
+      [userId]
+    );
 
-const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  mobileNumber: z.string().min(1, "Mobile number is required"),
-  selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]),
-  referralCode: z.string().optional(),
-  points: z.number().int().min(0).optional(),
-  isSouthAfrican: z.boolean().optional().default(false),
-  idNumber: z.string().optional().nullable(),
-  dateOfBirth: z.string().optional().nullable(),
-  gender: z.string().optional().nullable(),
-  occupation: z.string().optional().nullable(),
-  industry: z.string().optional().nullable(),
-  addressLine1: z.string().optional().nullable(),
-  suburb: z.string().optional().nullable(),
-  postalCode: z.string().optional().nullable(),
-  hasCreditCard: z.boolean().optional().default(false),
-  bankName: z.string().optional().nullable(),
-  accountType: z.enum(["CHEQUE", "SAVINGS", "CURRENT"]).optional().nullable(),
-  accountNumber: z.string().optional().nullable(),
-  accountHolderName: z.string().optional().nullable(),
-  branchCode: z.string().optional().nullable(),
-  signature: z.string().optional().nullable()
-}).passthrough();
-
-const packageMap = {
-  1: "BEGINNER",
-  2: "NOVICE",
-  3: "ACTIVE",
-  4: "PROFESSIONAL",
-  5: "EXPERT"
-};
-
-// Utility functions
-export const crypto = {
-  async hashPassword(password: string) {
-    const salt = randomBytes(16).toString('hex');
-    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${salt}.${hash.toString('hex')}`;
-  },
-
-  async verifyPassword(password: string, storedHash: string) {
-    try {
-      const [salt, hash] = storedHash.split('.');
-      if (!salt || !hash) return false;
-      const hashBuffer = Buffer.from(hash, 'hex');
-      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
-      return timingSafeEqual(hashBuffer, suppliedBuffer);
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
+    if (rows.length === 0) {
+      return { isAdmin: false, isSuperAdmin: false };
     }
-  }
-};
 
-// Helper functions
+    const roleType = rows[0].role_type;
+    return {
+      isAdmin: true,
+      isSuperAdmin: roleType === 'SUPER_ADMIN'
+    };
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return { isAdmin: false, isSuperAdmin: false };
+  }
+}
+
+// Helper function to create super admin
+async function createAdminUser(connection: any, userId: number, isSuperAdmin: boolean = false) {
+  try {
+    await connection.execute(
+      'INSERT INTO admin_users (user_id, role_type) VALUES (?, ?)',
+      [userId, isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN']
+    );
+    console.log(`Created ${isSuperAdmin ? 'super admin' : 'admin'} entry for user:`, userId);
+    return true;
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+    return false;
+  }
+}
+
+// Check for existing super admin
 async function checkForSuperAdmin() {
   try {
     console.log('Checking for existing super admin...');
@@ -99,7 +74,8 @@ async function checkForSuperAdmin() {
     });
 
     const [rows] = await connection.execute(
-      'SELECT COUNT(*) as count FROM users WHERE is_super_admin = 1'
+      'SELECT COUNT(*) as count FROM admin_users WHERE role_type = ?',
+      ['SUPER_ADMIN']
     );
     await connection.end();
 
@@ -162,42 +138,38 @@ export function setupAuth(app: Express) {
             ssl: { rejectUnauthorized: false }
           });
 
+          // Get user
           const [rows] = await connection.execute(
             'SELECT * FROM users WHERE email = ?',
             [email]
           );
 
-          await connection.end();
-
           const user = rows[0];
-
           if (!user) {
+            await connection.end();
             return done(null, false, { message: 'Invalid email or password' });
           }
 
           if (!user.is_enabled) {
+            await connection.end();
             return done(null, false, { message: 'Account is disabled' });
           }
 
           const isValid = await crypto.verifyPassword(password, user.password);
           if (!isValid) {
+            await connection.end();
             return done(null, false, { message: 'Invalid email or password' });
           }
 
-          console.log('Raw user data from DB:', {
-            id: user.id,
-            email: user.email,
-            is_admin: user.is_admin,
-            is_super_admin: user.is_super_admin,
-            admin_type: typeof user.is_admin,
-            super_admin_type: typeof user.is_super_admin
-          });
+          // Check admin status
+          const adminStatus = await checkUserAdminStatus(connection, user.id);
+          await connection.end();
 
           const { password: _, ...safeUser } = user;
           const transformedUser = {
             ...safeUser,
-            is_admin: Boolean(safeUser.is_admin),
-            is_super_admin: Boolean(safeUser.is_super_admin),
+            is_admin: adminStatus.isAdmin,
+            is_super_admin: adminStatus.isSuperAdmin,
             is_enabled: Boolean(safeUser.is_enabled),
             is_south_african: Boolean(safeUser.is_south_african),
             has_credit_card: Boolean(safeUser.has_credit_card)
@@ -207,9 +179,7 @@ export function setupAuth(app: Express) {
             id: transformedUser.id,
             email: transformedUser.email,
             is_admin: transformedUser.is_admin,
-            is_super_admin: transformedUser.is_super_admin,
-            admin_type: typeof transformedUser.is_admin,
-            super_admin_type: typeof transformedUser.is_super_admin
+            is_super_admin: transformedUser.is_super_admin
           });
 
           return done(null, transformedUser);
@@ -251,11 +221,12 @@ export function setupAuth(app: Express) {
         return done(null, false);
       }
 
+      const adminStatus = await checkUserAdminStatus(connection, user.id);
       const { password: _, ...safeUser } = user;
       const transformedUser = {
         ...safeUser,
-        is_admin: !!safeUser.is_admin,
-        is_super_admin: !!safeUser.is_super_admin,
+        is_admin: adminStatus.isAdmin,
+        is_super_admin: adminStatus.isSuperAdmin,
         is_enabled: !!safeUser.is_enabled,
         is_south_african: !!safeUser.is_south_african,
         has_credit_card: !!safeUser.has_credit_card
@@ -356,36 +327,23 @@ export function setupAuth(app: Express) {
         await connection.beginTransaction();
 
         try {
-          // Set admin flags explicitly
-          const isAdmin = shouldBeSuperAdmin ? 1 : 0;
-          const isSuperAdmin = shouldBeSuperAdmin ? 1 : 0;
-
-          console.log('Admin status for new user:', {
-            shouldBeSuperAdmin,
-            isAdmin,
-            isSuperAdmin
-          });
-
           const [userResult] = await connection.execute(
             `INSERT INTO users (
               email, password, first_name, last_name, 
-              phone_number, is_admin, is_super_admin, 
-              is_enabled, points, referral_code, 
+              phone_number, is_enabled, points, referral_code, 
               referred_by, selected_package,
               is_south_african, id_number, date_of_birth,
               gender, occupation, industry, address,
               city, postal_code, has_credit_card,
               bank_name, account_type, account_number,
               account_holder_name, branch_code, signature
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               req.body.email,
               hashedPassword,
               req.body.firstName,
               req.body.lastName,
               req.body.mobileNumber,
-              isAdmin,
-              isSuperAdmin,
               1, // is_enabled
               req.body.points || 0,
               newReferralCode,
@@ -413,30 +371,30 @@ export function setupAuth(app: Express) {
           const userId = (userResult as any).insertId;
           console.log('User created successfully, ID:', userId);
 
-          // Verify the user was created with correct admin status
-          const [newUserCheck] = await connection.execute(
-            'SELECT * FROM users WHERE id = ?',
-            [userId]
-          );
-          console.log('New user verification:', {
-            userId,
-            is_admin: (newUserCheck[0] as any).is_admin,
-            is_super_admin: (newUserCheck[0] as any).is_super_admin
-          });
+          // Create admin user entry
+          const success = await createAdminUser(connection, userId, shouldBeSuperAdmin);
+          if (!success) {
+            throw new Error("Failed to create admin user entry");
+          }
 
           await connection.commit();
           console.log('Transaction committed successfully');
 
+          const [newUserCheck] = await connection.execute(
+            'SELECT * FROM users WHERE id = ?',
+            [userId]
+          );
           const newUser = newUserCheck[0];
           if (!newUser) {
             throw new Error("Failed to retrieve created user");
           }
 
+          const adminStatus = await checkUserAdminStatus(connection, userId); // Added admin status check here.
           const { password: _, ...safeUser } = newUser;
           const transformedUser = {
             ...safeUser,
-            is_admin: Boolean(safeUser.is_admin),
-            is_super_admin: Boolean(safeUser.is_super_admin),
+            is_admin: adminStatus.isAdmin,
+            is_super_admin: adminStatus.isSuperAdmin,
             is_enabled: Boolean(safeUser.is_enabled),
             is_south_african: Boolean(safeUser.is_south_african),
             has_credit_card: Boolean(safeUser.has_credit_card)
@@ -659,9 +617,11 @@ export async function verifySession(req: Request): Promise<any> {
             return;
           }
 
+          const adminStatus = await checkUserAdminStatus(connection, userId); // Added admin status check here.
+
           const { password: _, ...safeUser } = user;
           console.log('Session verified for user:', safeUser.id);
-          resolve(safeUser);
+          resolve({...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin});
         } catch (error) {
           console.error('Error verifying session:', error);
           resolve(null);
