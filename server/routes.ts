@@ -753,86 +753,184 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.put("/api/products/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { name, description, activities } = req.body;
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
+    const connection = await createConnection();
     try {
-      const result = await db.transaction(async (tx) => {
-        const [product] = await tx
-          .update(products)
-          .set({
-            name,
-            description,
-          })
-          .where(eq(products.id, parseInt(id)))
-          .returning()          .execute();
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-        await tx
-          .delete(product_activities)
-          .where(eq(product_activities.productId, parseInt(id)))
-          .execute();
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
 
-        const activityPromises = activities.map(async (activity: any) => {
-          return tx.insert(product_activities).values({
-            productId: parseInt(id),
-            type: activity.type,
-            pointsValue: activity.pointsValue,
-          }).execute();
+      const { id } = req.params;
+      const { name, description, activities } = req.body;
+
+      console.log('Updating product:', {
+        id,
+        name,
+        description,
+        activitiesCount: activities?.length
+      });
+
+      await connection.beginTransaction();
+
+      try {
+        // Update product
+        await connection.execute(
+          `UPDATE products 
+           SET name = ?, description = ?
+           WHERE id = ?`,
+          [name, description, id]
+        );
+
+        // Delete existing activities
+        await connection.execute(
+          'DELETE FROM product_activities WHERE product_id = ?',
+          [id]
+        );
+
+        // Insert new activities
+        if (activities && Array.isArray(activities)) {
+          for (const activity of activities) {
+            await connection.execute(
+              `INSERT INTO product_activities (product_id, type, points_value)
+               VALUES (?, ?, ?)`,
+              [id, activity.type, activity.pointsValue]
+            );
+          }
+        }
+
+        await connection.commit();
+
+        // Fetch updated product with activities
+        const [products] = await connection.execute(
+          `SELECT 
+            p.*,
+            COALESCE(
+              JSON_ARRAYAGG(
+                JSON_OBJECT(
+                  'id', pa.id,
+                  'type', pa.type,
+                  'pointsValue', pa.points_value
+                )
+              ),
+              '[]'
+            ) as activities
+           FROM products p
+           LEFT JOIN product_activities pa ON p.id = pa.product_id
+           WHERE p.id = ?
+           GROUP BY p.id`,
+          [id]
+        );
+
+        if (!products || products.length === 0) {
+          return res.status(404).json({ error: "Product not found" });
+        }
+
+        const product = products[0];
+
+        // Parse the activities JSON string
+        let parsedActivities = [];
+        try {
+          parsedActivities = JSON.parse(product.activities);
+          // Remove null entries if any
+          parsedActivities = parsedActivities.filter(activity => activity != null);
+        } catch (e) {
+          console.error('Error parsing activities:', e);
+          parsedActivities = [];
+        }
+
+        const transformedProduct = {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          isEnabled: Boolean(product.is_enabled),
+          createdAt: product.created_at,
+          activities: parsedActivities
+        };
+
+        console.log('Product updated successfully:', {
+          id: transformedProduct.id,
+          name: transformedProduct.name,
+          activitiesCount: transformedProduct.activities.length
         });
 
-        await Promise.all(activityPromises);
-
-        return product;
-      });
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "PRODUCT_UPDATED",
-        details: `Updated product: ${result.name}`,
-      });
-
-      const completeProduct = await db.query.products.findFirst({
-        where: eq(products.id, parseInt(id)),
-        with: {
-          activities: true,
-        },
-      });
-
-      res.json(completeProduct);
+        res.json(transformedProduct);
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
     } catch (error) {
       console.error('Error updating product:', error);
-      res.status(500).json({ error: 'Failed to update product' });
+      res.status(500).json({ 
+        error: 'Failed to update product',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } finally {
+      await connection.end();
     }
   });
 
   app.post("/api/products/:id/toggle-status", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { enabled } = req.body;
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
+    const connection = await createConnection();
     try {
-      const [product] = await db
-        .update(products)
-        .set({ isEnabled: enabled })
-        .where(eq(products.id, parseInt(id)))
-        .returning()
-        .execute();
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-      if (!product) {
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id } = req.params;
+      const { enabled } = req.body;
+
+      // Update product status
+      const [result] = await connection.execute(
+        'UPDATE products SET is_enabled = ? WHERE id = ?',
+        [enabled ? 1 : 0, id]
+      );
+
+      if (result.affectedRows === 0) {
         return res.status(404).json({ error: "Product not found" });
       }
 
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: enabled ? "PRODUCT_CREATED" : "PRODUCT_DELETED",
-        details: `${enabled ? 'Enabled' : 'Disabled'} product: ${product.name}`,
-      });
+      // Fetch updated product
+      const [products] = await connection.execute(
+        'SELECT * FROM products WHERE id = ?',
+        [id]
+      );
 
-      res.json(product);
+      const product = products[0];
+
+      // Transform the response
+      const transformedProduct = {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        isEnabled: Boolean(product.is_enabled),
+        createdAt: product.created_at
+      };
+
+      res.json(transformedProduct);
     } catch (error) {
       console.error('Error toggling product status:', error);
       res.status(500).json({ error: 'Failed to toggle product status' });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -898,328 +996,95 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/products/:id/assign", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { userId } = req.body;
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
+    const connection = await createConnection();
     try {
-      const existingAssignment = await db.query.productAssignments.findFirst({
-        where: sql`${productAssignments.userId} = ${userId} AND ${productAssignments.productId} = ${parseInt(id)}`,
-      });
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-      if (existingAssignment) {
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { id } = req.params;
+      const { userId } = req.body;
+
+      // Check if assignment already exists
+      const [existingAssignment] = await connection.execute(
+        'SELECT id FROM product_assignments WHERE product_id = ? AND user_id = ?',
+        [id, userId]
+      );
+
+      if (existingAssignment.length > 0) {
         return res.status(400).json({ error: "Customer is already assigned to this product" });
       }
 
-      const [assignment] = await db
-        .insert(productAssignments)
-        .values({
-          userId,
-          productId: parseInt(id),
-        })
-        .returning()
-        .execute();
+      // Create the assignment
+      const [result] = await connection.execute(
+        'INSERT INTO product_assignments (product_id, user_id) VALUES (?, ?)',
+        [id, userId]
+      );
 
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "PRODUCT_ASSIGNED",
-        targetUserId: userId,
-        details: `Assigned product ID ${id} to user ID ${userId}`,
-      });
+      // Fetch the created assignment with product details
+      const [assignment] = await connection.execute(
+        `SELECT pa.*, p.name as product_name
+         FROM product_assignments pa
+         JOIN products p ON pa.product_id = p.id
+         WHERE pa.id = ?`,
+        [result.insertId]
+      );
 
-      res.json(assignment);
+      res.json(assignment[0]);
     } catch (error) {
       console.error('Error assigning product:', error);
       res.status(500).json({ error: 'Failed to assign product' });
+    } finally {
+      await connection.end();
     }
   });
+
   app.post("/api/products/:id/unassign", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { userId } = req.body;
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
+    const connection = await createConnection();
     try {
-      const [deletedAssignment] = await db
-        .delete(productAssignments)
-        .where(
-          and(
-            eq(productAssignments.userId, userId),
-            eq(productAssignments.productId, parseInt(id))
-          )
-        )
-        .returning()
-        .execute();
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-      if (!deletedAssignment) {
-        return res.status(404).json({ error: "Assignment not found" });
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
       }
 
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "PRODUCT_REMOVED",
-        targetUserId: userId,
-        details: `Unassigned product ID ${id} from user ID ${userId}`,
-      });
+      const { id } = req.params;
+      const { userId } = req.body;
+
+      // Delete the assignment
+      const [result] = await connection.execute(
+        'DELETE FROM product_assignments WHERE product_id = ? AND user_id = ?',
+        [id, userId]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Assignment not found" });
+      }
 
       res.json({ message: "Product unassigned successfully" });
     } catch (error) {
       console.error('Error unassigning product:', error);
       res.status(500).json({ error: 'Failed to unassign product' });
-    }
-  });
-
-  app.get("/api/products/assignments/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-
-    try {
-      const assignment = await db.query.productAssignments.findFirst({
-        where: eq(productAssignments.id, parseInt(id)),
-        with: {
-          product: true,
-          user: true,
-        }
-      });
-
-      if (!assignment) {
-        return res.status(404).json({ error: "Assignment not found" });
-      }
-      res.json(assignment);
-    } catch (error) {
-      console.error('Error fetching assignment:', error);
-      res.status(500).json({ error: 'Failed to fetch assignment' });
-    }
-  });
-
-  app.get("/api/products/customer", async (req, res) => {
-    try {      const allProducts = await db.query.products.findMany({
-        where: eq(products.isEnabled, true),
-        columns: {          id: true,
-          name: true,
-          description: true,
-        },
-        orderBy: desc(products.createdAt),
-      });
-      res.json(allProducts);
-    } catch(error) {
-      console.error('Error fetching products:', error);
-      res.status(500).json({ error: 'Failed to fetch products' });
-    }
-  });
-
-  app.put("/api/products/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { name, description, activities } = req.body;
-
-    try {
-      const result = await db.transaction(async (tx) => {
-        const [product] = await tx
-          .update(products)
-          .set({
-            name,
-            description,
-          })
-          .where(eq(products.id, parseInt(id)))
-          .returning()          .execute();
-
-        await tx
-          .delete(product_activities)
-          .where(eq(product_activities.productId, parseInt(id)))
-          .execute();
-
-        const activityPromises = activities.map(async (activity: any) => {
-          return tx.insert(product_activities).values({
-            productId: parseInt(id),
-            type: activity.type,
-            pointsValue: activity.pointsValue,
-          }).execute();
-        });
-
-        await Promise.all(activityPromises);
-
-        return product;
-      });
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "PRODUCT_UPDATED",
-        details: `Updated product: ${result.name}`,
-      });
-
-      const completeProduct = await db.query.products.findFirst({
-        where: eq(products.id, parseInt(id)),
-        with: {
-          activities: true,
-        },
-      });
-
-      res.json(completeProduct);
-    } catch (error) {
-      console.error('Error updating product:', error);
-      res.status(500).json({ error: 'Failed to update product' });
-    }
-  });
-
-  app.post("/api/products/:id/toggle-status", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { enabled } = req.body;
-
-    try {
-      const [product] = await db
-        .update(products)
-        .set({ isEnabled: enabled })
-        .where(eq(products.id, parseInt(id)))
-        .returning()
-        .execute();
-
-      if (!product) {
-        return res.status(404).json({ error: "Product not found" });
-      }
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: enabled ? "PRODUCT_CREATED" : "PRODUCT_DELETED",
-        details: `${enabled ? 'Enabled' : 'Disabled'} product: ${product.name}`,
-      });
-
-      res.json(product);
-    } catch (error) {
-      console.error('Error toggling product status:', error);
-      res.status(500).json({ error: 'Failed to toggle product status' });
-    }
-  });
-
-  app.delete("/api/products/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-
-    try {
-      const connection = await createConnection();
-      try {
-        // First check if product exists
-        const [products] = await connection.execute(
-          'SELECT name FROM products WHERE id = ?',
-          [id]
-        );
-
-        if(!products || products.length === 0) {
-          return res.status(404).json({ error: "Product not found" });
-        }
-
-        const product = products[0];
-
-        // Begin transaction
-        await connection.beginTransaction();
-
-        // Delete product activities first (due to foreign key constraint)
-        await connection.execute(
-          'DELETE FROM product_activities WHERE product_id = ?',
-          [id]
-        );
-
-        // Delete product assignments (due to foreign key constraint)
-        await connection.execute(
-          'DELETE FROM product_assignments WHERE product_id = ?',
-          [id]
-        );
-
-        // Finally delete the product
-        await connection.execute(
-          'DELETE FROM products WHERE id = ?',
-          [id]
-        );
-
-        await connection.commit();
-
-        await logAdminAction({
-          adminId: req.user.id,
-          actionType: "PRODUCT_DELETED",
-          details: `Deleted product: ${product.name}`,
-        });
-
-        res.json({ message: "Product deleted successfully" });
-      } catch (error) {
-        await connection.rollback();
-        throw error;
-      } finally {
-        await connection.end();
-      }
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      res.status(500).json({ error: 'Failed to delete product' });
-    }
-  });
-
-  app.post("/api/products/:id/assign", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { userId } = req.body;
-
-    try {
-      const existingAssignment = await db.query.productAssignments.findFirst({
-        where: sql`${productAssignments.userId} = ${userId} AND ${productAssignments.productId} = ${parseInt(id)}`,
-      });
-
-      if (existingAssignment) {
-        return res.status(400).json({ error: "Customer is already assigned to this product" });
-      }
-
-      const [assignment] = await db
-        .insert(productAssignments)
-        .values({
-          userId,
-          productId: parseInt(id),
-        })
-        .returning()
-        .execute();
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "PRODUCT_ASSIGNED",
-        targetUserId: userId,
-        details: `Assigned product ID ${id} to user ID ${userId}`,
-      });
-
-      res.json(assignment);
-    } catch (error) {
-      console.error('Error assigning product:', error);
-      res.status(500).json({ error: 'Failed to assign product' });
-    }
-  });
-  app.post("/api/products/:id/unassign", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { id } = req.params;
-    const { userId } = req.body;
-
-    try {
-      const [deletedAssignment] = await db
-        .delete(productAssignments)
-        .where(
-          and(
-            eq(productAssignments.userId, userId),
-            eq(productAssignments.productId, parseInt(id))
-          )
-        )
-        .returning()
-        .execute();
-
-      if (!deletedAssignment) {
-        return res.status(404).json({ error: "Assignment not found" });
-      }
-
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "PRODUCT_REMOVED",
-        targetUserId: userId,
-        details: `Unassigned product ID ${id} from user ID ${userId}`,
-      });
-
-      res.json({ message: "Product unassigned successfully" });
-    } catch (error) {
-      console.error('Error unassigning product:', error);
-      res.status(500).json({ error: 'Failed to unassign product' });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -2125,7 +1990,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    try {
+    try{
       const {
         firstName,
         lastName,
