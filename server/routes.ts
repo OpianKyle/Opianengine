@@ -476,7 +476,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/admin/users/:id/toggle-status", async (req, res) => {
+  app.put("/api/admin/users/:id/toggle-status", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -577,6 +577,12 @@ export function registerRoutes(app: Express): Server {
 
       const { name, description, activities } = req.body;
 
+      console.log('Creating product:', {
+        name,
+        description,
+        activitiesCount: activities?.length
+      });
+
       await connection.beginTransaction();
 
       try {
@@ -603,14 +609,18 @@ export function registerRoutes(app: Express): Server {
         await connection.commit();
 
         // Fetch complete product data
-        const [product] = await connection.execute(
-          `SELECT p.*, 
-            GROUP_CONCAT(
-              JSON_OBJECT(
-                'id', pa.id,
-                'type', pa.type,
-                'pointsValue', pa.points_value
-              )
+        const [products] = await connection.execute(
+          `SELECT 
+            p.*,
+            COALESCE(
+              JSON_ARRAYAGG(
+                JSON_OBJECT(
+                  'id', pa.id,
+                  'type', pa.type,
+                  'pointsValue', pa.points_value
+                )
+              ),
+              '[]'
             ) as activities
            FROM products p
            LEFT JOIN product_activities pa ON p.id = pa.product_id
@@ -619,12 +629,37 @@ export function registerRoutes(app: Express): Server {
           [productId]
         );
 
+        if (!products || products.length === 0) {
+          throw new Error('Product not found after creation');
+        }
+
+        const product = products[0];
+
+        // Parse the activities JSON string
+        let parsedActivities = [];
+        try {
+          parsedActivities = JSON.parse(product.activities);
+          // Remove null entries if any
+          parsedActivities = parsedActivities.filter(activity => activity != null);
+        } catch (e) {
+          console.error('Error parsing activities:', e);
+          parsedActivities = [];
+        }
+
         const transformedProduct = {
-          ...product[0],
-          activities: product[0].activities ? 
-            product[0].activities.split(',').map(activity => JSON.parse(activity)) :
-            []
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          isEnabled: Boolean(product.is_enabled),
+          createdAt: product.created_at,
+          activities: parsedActivities
         };
+
+        console.log('Product created successfully:', {
+          id: transformedProduct.id,
+          name: transformedProduct.name,
+          activitiesCount: transformedProduct.activities.length
+        });
 
         res.json(transformedProduct);
       } catch (error) {
@@ -633,7 +668,10 @@ export function registerRoutes(app: Express): Server {
       }
     } catch (error) {
       console.error('Error creating product:', error);
-      res.status(500).json({ error: 'Failed to create product' });
+      res.status(500).json({ 
+        error: 'Failed to create product',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     } finally {
       await connection.end();
     }
@@ -1948,7 +1986,6 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/admin/products/assign", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-
     try {
       const connection = await createConnection();
       try {
