@@ -17,6 +17,19 @@ import mysql from 'mysql2/promise';
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
 
+// Add function to check for existing super admin
+async function checkForSuperAdmin() {
+  try {
+    const [superAdmin] = await db.execute(
+      'SELECT COUNT(*) as count FROM users WHERE is_super_admin = 1'
+    );
+    return (superAdmin[0] as any).count > 0;
+  } catch (error) {
+    console.error('Error checking for super admin:', error);
+    return false;
+  }
+}
+
 export const crypto = {
   async hashPassword(password: string) {
     const salt = randomBytes(16).toString('hex');
@@ -215,6 +228,10 @@ export function setupAuth(app: Express) {
       const hashedPassword = await crypto.hashPassword(password);
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
+      // Check if this should be a super admin
+      const shouldBeSuperAdmin = !(await checkForSuperAdmin());
+      console.log('Should be super admin:', shouldBeSuperAdmin);
+
       try {
         const connection = await mysql.createConnection({
           host: 'dedi1350.jnb1.host-h.net',
@@ -248,14 +265,14 @@ export function setupAuth(app: Express) {
               firstName,
               lastName,
               phoneNumber,
-              false, 
-              false, 
-              true,  
+              shouldBeSuperAdmin ? 1 : 0, // Make admin if super admin
+              shouldBeSuperAdmin ? 1 : 0, // Set super admin status
+              1,  
               points || 0,
               newReferralCode,
               referralCode || null,
               selectedPackage,
-              isSouthAfrican || false,
+              isSouthAfrican ? 1 : 0,
               idNumber || null,
               dateOfBirth || null,
               gender || null,
@@ -264,7 +281,7 @@ export function setupAuth(app: Express) {
               address || null,
               city || null,
               postalCode || null,
-              hasCreditCard || false,
+              hasCreditCard ? 1 : 0,
               bankName || null,
               accountType || null,
               accountNumber || null,
@@ -274,7 +291,7 @@ export function setupAuth(app: Express) {
             ]
           );
 
-          const userId = userResult.insertId;
+          const userId = (userResult as any).insertId;
 
           await connection.execute(
             `INSERT INTO transactions (
@@ -302,14 +319,27 @@ export function setupAuth(app: Express) {
 
           const { password: _, ...safeUser } = newUser;
 
-          req.login(safeUser, (err) => {
+          // Convert numeric booleans to actual booleans for the response
+          const transformedUser = {
+            ...safeUser,
+            is_admin: !!safeUser.is_admin,
+            is_super_admin: !!safeUser.is_super_admin,
+            is_enabled: !!safeUser.is_enabled,
+            is_south_african: !!safeUser.is_south_african,
+            has_credit_card: !!safeUser.has_credit_card
+          };
+
+          req.login(transformedUser, (err) => {
             if (err) {
               console.error('Login error after registration:', err);
               return res.status(500).json({ error: "Registration successful but login failed" });
             }
 
-            console.log('Registration and login successful for:', safeUser.email);
-            res.status(201).json(safeUser);
+            console.log('Registration and login successful for:', transformedUser.email);
+            if (shouldBeSuperAdmin) {
+              console.log('Created super admin account:', transformedUser.email);
+            }
+            res.status(201).json(transformedUser);
           });
 
         } catch (error) {
