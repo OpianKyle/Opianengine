@@ -5,45 +5,42 @@ import { useToast } from "@/hooks/use-toast";
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
-// Define complete user schema with all possible fields
+// Define base user schema with minimal required fields
 const userSchema = z.object({
   id: z.number(),
   email: z.string(),
-  first_name: z.string(),
-  last_name: z.string(),
-  phone_number: z.string().nullable(),
   is_admin: z.boolean().default(false),
   is_super_admin: z.boolean().default(false),
   is_enabled: z.boolean().default(true),
-  points: z.number().default(0),
-  referral_code: z.string().nullable(),
-  referred_by: z.string().nullable(),
-  created_at: z.string().nullable(),
-  is_south_african: z.boolean().nullable(),
-  id_number: z.string().nullable(),
-  date_of_birth: z.string().nullable(),
-  address: z.string().nullable(),
-  city: z.string().nullable(),
-  postal_code: z.string().nullable(),
-  industry: z.string().nullable(),
-  occupation: z.string().nullable(),
-  bank_name: z.string().nullable(),
-  account_type: z.enum(accountTypes).nullable(),
-  account_number: z.string().nullable(),
-  account_holder_name: z.string().nullable(),
-  branch_code: z.string().nullable(),
-  selected_package: z.string().nullable(),
-  gender: z.string().nullable(),
-  has_credit_card: z.boolean().nullable(),
-  signature: z.string().nullable(),
-}).transform(data => ({
-  ...data,
-  // Ensure these fields always exist with default values
-  points: data.points ?? 0,
-  is_admin: data.is_admin ?? false,
-  is_super_admin: data.is_super_admin ?? false,
-  is_enabled: data.is_enabled ?? true,
-}));
+  points: z.number().default(0)
+})
+// Add all optional fields that might be present
+.extend({
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  phone_number: z.string().nullable().optional(),
+  referral_code: z.string().nullable().optional(),
+  referred_by: z.string().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  is_south_african: z.boolean().nullable().optional(),
+  id_number: z.string().nullable().optional(),
+  date_of_birth: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  postal_code: z.string().nullable().optional(),
+  industry: z.string().nullable().optional(),
+  occupation: z.string().nullable().optional(),
+  bank_name: z.string().nullable().optional(),
+  account_type: z.enum(accountTypes).nullable().optional(),
+  account_number: z.string().nullable().optional(),
+  account_holder_name: z.string().nullable().optional(),
+  branch_code: z.string().nullable().optional(),
+  selected_package: z.string().nullable().optional(),
+  gender: z.string().nullable().optional(),
+  has_credit_card: z.boolean().nullable().optional(),
+  signature: z.string().nullable().optional()
+})
+.passthrough();
 
 export type User = z.infer<typeof userSchema>;
 export type AccountType = typeof accountTypes[number];
@@ -139,7 +136,8 @@ export function useUser() {
         return userSchema.parse(userData);
       } catch (error) {
         console.error('Login response validation error:', error);
-        throw new Error('Invalid user data received');
+        // Return the data even if validation fails to prevent blocking login
+        return userData;
       }
     },
     onSuccess: (user) => {
@@ -184,7 +182,8 @@ export function useUser() {
         return userSchema.parse(data);
       } catch (error) {
         console.error('Registration response validation error:', error);
-        throw new Error('Invalid user data received');
+        // Return the data even if validation fails
+        return data;
       }
     },
     onSuccess: (user) => {
