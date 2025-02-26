@@ -330,10 +330,10 @@ export function setupAuth(app: Express) {
 
       switch (selectedPackage) {
         case 'BEGINNER':
-          initialPoints = 10000;
+          initialPoints = 5000; // Updated from 10000 to 5000
           break;
         case 'NOVICE':
-          initialPoints = 50000;
+          initialPoints = 10000; // Updated from 50000 to 10000
           break;
         case 'ACTIVE':
           initialPoints = 100000;
