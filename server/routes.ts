@@ -2302,5 +2302,136 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get("/api/admin/users", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Fetch all admin users
+      const [admins] = await connection.execute(
+        `SELECT u.*, au.role_type
+         FROM users u 
+         INNER JOIN admin_users au ON u.id = au.user_id
+         ORDER BY u.created_at DESC`
+      );
+
+      console.log(`Found ${admins.length} admin users`);
+
+      // Transform boolean fields
+      const transformedAdmins = admins.map(admin => ({
+        id: admin.id,
+        email: admin.email,
+        firstName: admin.first_name,
+        lastName: admin.last_name,
+        phoneNumber: admin.phone_number,
+        isEnabled: Boolean(admin.is_enabled),
+        createdAt: admin.created_at,
+        is_admin: true,
+        is_super_admin: admin.role_type === 'SUPER_ADMIN'
+      }));
+
+      res.json(transformedAdmins);
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+      res.status(500).json({ error: 'Failed to fetch admin users' });
+    } finally {
+      await connection.end();
+    }
+  });
+
+  app.get("/api/admin/customers", async (req, res) => {
+    console.log('Admin customers request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email
+      } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        console.log('User not found in admin_users:', req.user.id);
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Fetch customers with necessary joins
+      const [customers] = await connection.execute(
+        `SELECT 
+          u.*,
+          GROUP_CONCAT(DISTINCT p.name) as assigned_products,
+          COUNT(DISTINCT r.id) as referral_count
+        FROM users u
+        LEFT JOIN admin_users au ON u.id = au.user_id
+        LEFT JOIN product_assignments pa ON u.id = pa.user_id
+        LEFT JOIN products p ON pa.product_id = p.id
+        LEFT JOIN users r ON u.referral_code = r.referred_by
+        WHERE au.user_id IS NULL
+        GROUP BY u.id
+        ORDER BY u.created_at DESC`
+      );
+
+      console.log(`Found ${customers.length} customers`);
+
+      // Transform the customer data
+      const transformedCustomers = customers.map(customer => ({
+        id: customer.id,
+        email: customer.email,
+        firstName: customer.first_name,
+        lastName: customer.last_name,
+        phoneNumber: customer.phone_number,
+        isEnabled: Boolean(customer.is_enabled),
+        isSouthAfrican: Boolean(customer.is_south_african),
+        hasCreditCard: Boolean(customer.has_credit_card),
+        points: Number(customer.points || 0),
+        createdAt: customer.created_at,
+        selectedPackage: customer.selected_package,
+        industry: customer.industry,
+        occupation: customer.occupation,
+        address: customer.address,
+        city: customer.city,
+        postalCode: customer.postal_code,
+        bankName: customer.bank_name,
+        accountType: customer.account_type,
+        accountNumber: customer.account_number,
+        accountHolderName: customer.account_holder_name,
+        branchCode: customer.branch_code,
+        referralCode: customer.referral_code,
+        referredBy: customer.referred_by,
+        assignedProducts: customer.assigned_products ? customer.assigned_products.split(',').filter(Boolean) : [],
+        referralCount: Number(customer.referral_count || 0)
+      }));
+
+      res.json(transformedCustomers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   return httpServer;
 }
