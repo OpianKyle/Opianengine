@@ -43,19 +43,30 @@ function ProtectedRoute({ component: Component, admin = false, ...rest }: any) {
     );
   }
 
+  // Redirect to home if not logged in
   if (!user) {
     console.log('No user found, redirecting to home');
     return <Redirect to="/" />;
   }
 
-  if (admin && !(user.is_admin || user.is_super_admin)) {
-    console.log('User lacks admin privileges:', {
-      id: user.id,
+  // Handle admin access
+  if (admin) {
+    // Log the admin check details
+    console.log('Checking admin access:', {
+      userId: user.id,
       email: user.email,
       is_admin: user.is_admin,
       is_super_admin: user.is_super_admin
     });
-    return <Redirect to="/dashboard" />;
+
+    if (!(user.is_admin || user.is_super_admin)) {
+      console.log('User lacks admin privileges, redirecting to dashboard');
+      return <Redirect to="/dashboard" />;
+    }
+  } else if (user.is_admin || user.is_super_admin) {
+    // If admin user tries to access customer routes, redirect to admin dashboard
+    console.log('Admin user accessing customer route, redirecting to admin dashboard');
+    return <Redirect to="/admin" />;
   }
 
   return <Component {...rest} />;

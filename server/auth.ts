@@ -55,27 +55,23 @@ async function checkUserAdminStatus(userId: number) {
   }
 }
 
-// Password utility functions
-const crypto = {
-  async hashPassword(password: string) {
-    const salt = randomBytes(16).toString('hex');
-    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${salt}.${hash.toString('hex')}`;
-  },
-
-  async verifyPassword(password: string, storedHash: string) {
-    try {
-      const [salt, hash] = storedHash.split('.');
-      if (!salt || !hash) return false;
-      const hashBuffer = Buffer.from(hash, 'hex');
-      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
-      return timingSafeEqual(hashBuffer, suppliedBuffer);
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
-    }
+// Helper function to create admin user
+async function createAdminUser(userId: number, isSuperAdmin: boolean = false) {
+  const connection = await createConnection();
+  try {
+    await connection.execute(
+      'INSERT INTO admin_users (user_id, role_type) VALUES (?, ?)',
+      [userId, isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN']
+    );
+    console.log(`Created ${isSuperAdmin ? 'super admin' : 'admin'} entry for user:`, userId);
+    return true;
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+    return false;
+  } finally {
+    await connection.end();
   }
-};
+}
 
 // Authentication middleware
 export function checkAdmin(req: Request, res: Response, next: NextFunction) {
@@ -110,13 +106,8 @@ export function checkAdmin(req: Request, res: Response, next: NextFunction) {
 
 // Main setup function
 export function setupAuth(app: Express) {
-  if (!process.env.SESSION_SECRET) {
-    console.error('Missing SESSION_SECRET environment variable');
-    process.exit(1);
-  }
-
   app.use(session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET!,
     cookie: {
       maxAge: 86400000,
       secure: process.env.NODE_ENV === 'production',
@@ -189,9 +180,7 @@ export function setupAuth(app: Express) {
           ...safeUser,
           is_admin: adminStatus.isAdmin,
           is_super_admin: adminStatus.isSuperAdmin,
-          is_enabled: Boolean(safeUser.is_enabled),
-          is_south_african: Boolean(safeUser.is_south_african),
-          has_credit_card: Boolean(safeUser.has_credit_card)
+          is_enabled: Boolean(safeUser.is_enabled)
         };
 
         console.log('Login successful:', {
@@ -246,9 +235,7 @@ export function setupAuth(app: Express) {
         ...safeUser,
         is_admin: adminStatus.isAdmin,
         is_super_admin: adminStatus.isSuperAdmin,
-        is_enabled: Boolean(safeUser.is_enabled),
-        is_south_african: Boolean(safeUser.is_south_african),
-        has_credit_card: Boolean(safeUser.has_credit_card)
+        is_enabled: Boolean(safeUser.is_enabled)
       };
 
       done(null, transformedUser);
@@ -293,29 +280,6 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // Handle logout
-  app.post("/api/logout", (req, res) => {
-    if (req.user) {
-      console.log('Logging out user:', req.user.id);
-      req.logout((err) => {
-        if (err) {
-          console.error('Logout error:', err);
-          return res.status(500).json({ error: "Logout failed" });
-        }
-        req.session.destroy((err) => {
-          if (err) {
-            console.error('Session destruction error:', err);
-            return res.status(500).json({ error: "Logout failed" });
-          }
-          res.clearCookie("session");
-          res.json({ message: "Logged out successfully" });
-        });
-      });
-    } else {
-      res.status(401).json({ message: "Not logged in" });
-    }
-  });
-
   // Get current user
   app.get("/api/user", (req, res) => {
     console.log('User request:', {
@@ -335,190 +299,7 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
 
-  //Register route
-  app.post("/api/register", async (req, res) => {
-    const connection = await createConnection();
-    try {
-      console.log('Registration attempt with data:', {
-        ...req.body,
-        password: '[REDACTED]'
-      });
-
-      // Check for existing user
-      const [existingUsers] = await connection.execute(
-        'SELECT id FROM users WHERE email = ?',
-        [req.body.email]
-      );
-
-      if ((existingUsers as any[]).length > 0) {
-        return res.status(400).json({
-          error: "This email address is already registered"
-        });
-      }
-
-      const hashedPassword = await crypto.hashPassword(req.body.password);
-      const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
-      const shouldBeSuperAdmin = !(await checkForSuperAdmin());
-
-      console.log('Starting registration transaction...');
-      await connection.beginTransaction();
-
-      try {
-        // Create user
-        const [userResult] = await connection.execute(
-          `INSERT INTO users (
-            email, password, first_name, last_name, 
-            phone_number, is_enabled, points, referral_code, 
-            referred_by, selected_package,
-            is_south_african, id_number, date_of_birth,
-            gender, occupation, industry, address,
-            city, postal_code, has_credit_card,
-            bank_name, account_type, account_number,
-            account_holder_name, branch_code, signature
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            req.body.email,
-            hashedPassword,
-            req.body.firstName,
-            req.body.lastName,
-            req.body.mobileNumber,
-            1, // is_enabled
-            req.body.points || 0,
-            newReferralCode,
-            req.body.referralCode || null,
-            req.body.selectedPackage,
-            req.body.isSouthAfrican ? 1 : 0,
-            req.body.idNumber || null,
-            req.body.dateOfBirth || null,
-            req.body.gender || null,
-            req.body.occupation || null,
-            req.body.industry || null,
-            req.body.addressLine1 || null,
-            req.body.suburb || null,
-            req.body.postalCode || null,
-            req.body.hasCreditCard ? 1 : 0,
-            req.body.bankName || null,
-            req.body.accountType || null,
-            req.body.accountNumber || null,
-            req.body.accountHolderName || null,
-            req.body.branchCode || null,
-            req.body.signature || null
-          ]
-        );
-
-        const userId = (userResult as any).insertId;
-        console.log('User created successfully, ID:', userId);
-
-        // Create admin entry if needed
-        if (shouldBeSuperAdmin) {
-          const success = await createAdminUser(userId, true);
-          if (!success) {
-            throw new Error("Failed to create admin user entry");
-          }
-        }
-
-        await connection.commit();
-        console.log('Transaction committed successfully');
-
-        // Fetch complete user data
-        const [newUserCheck] = await connection.execute(
-          'SELECT * FROM users WHERE id = ?',
-          [userId]
-        );
-
-        const newUser = newUserCheck[0];
-        if (!newUser) {
-          throw new Error("Failed to retrieve created user");
-        }
-
-        const adminStatus = await checkUserAdminStatus(userId);
-        const { password: _, ...safeUser } = newUser;
-        const transformedUser = {
-          ...safeUser,
-          is_admin: adminStatus.isAdmin,
-          is_super_admin: adminStatus.isSuperAdmin,
-          is_enabled: Boolean(safeUser.is_enabled),
-          is_south_african: Boolean(safeUser.is_south_african),
-          has_credit_card: Boolean(safeUser.has_credit_card)
-        };
-
-        req.login(transformedUser, (err) => {
-          if (err) {
-            console.error('Login error after registration:', err);
-            return res.status(500).json({ error: "Registration successful but login failed" });
-          }
-
-          console.log('Registration complete. User details:', {
-            id: transformedUser.id,
-            email: transformedUser.email,
-            is_admin: transformedUser.is_admin,
-            is_super_admin: transformedUser.is_super_admin
-          });
-
-          res.status(201).json(transformedUser);
-        });
-
-      } catch (error) {
-        console.error('Error during registration transaction:', error);
-        await connection.rollback();
-        throw error;
-      }
-
-    } catch (error) {
-      console.error('Registration error:', error);
-      if (!res.headersSent) {
-        return res.status(500).json({
-          error: "Registration failed. Please try again.",
-          details: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-      }
-    } finally {
-      await connection.end();
-    }
-  });
-
-  // Add new route to check auth status
-  app.get("/api/auth/status", (req, res) => {
-    console.log('Auth status check:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? {
-        id: req.user.id,
-        email: req.user.email,
-        is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin
-      } : null
-    });
-
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    res.json({
-      authenticated: true,
-      user: req.user,
-      isAdmin: req.user.is_admin || req.user.is_super_admin
-    });
-  });
-
   return app;
-}
-
-// Helper function to create admin user
-async function createAdminUser(userId: number, isSuperAdmin: boolean = false) {
-  const connection = await createConnection();
-  try {
-    await connection.execute(
-      'INSERT INTO admin_users (user_id, role_type) VALUES (?, ?)',
-      [userId, isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN']
-    );
-    console.log(`Created ${isSuperAdmin ? 'super admin' : 'admin'} entry for user:`, userId);
-    return true;
-  } catch (error) {
-    console.error('Error creating admin user:', error);
-    return false;
-  } finally {
-    await connection.end();
-  }
 }
 
 // Check for existing super admin
@@ -700,3 +481,24 @@ process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
   console.error('Stack trace:', err.stack);
 });
+
+const crypto = {
+  async hashPassword(password: string) {
+    const salt = randomBytes(16).toString('hex');
+    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${salt}.${hash.toString('hex')}`;
+  },
+
+  async verifyPassword(password: string, storedHash: string) {
+    try {
+      const [salt, hash] = storedHash.split('.');
+      if (!salt || !hash) return false;
+      const hashBuffer = Buffer.from(hash, 'hex');
+      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
+      return timingSafeEqual(hashBuffer, suppliedBuffer);
+    } catch (error) {
+      console.error('Password verification error:', error);
+      return false;
+    }
+  }
+};
