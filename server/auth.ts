@@ -161,7 +161,7 @@ export function setupAuth(app: Express) {
       async (email, password, done) => {
         const connection = await createConnection();
         try {
-          console.log('Attempting authentication for:', email);
+          console.log('Authentication attempt:', { email });
 
           const [rows] = await connection.execute(
             'SELECT * FROM users WHERE email = ?',
@@ -170,21 +170,36 @@ export function setupAuth(app: Express) {
 
           const user = rows[0];
           if (!user) {
+            console.log('User not found:', { email });
             return done(null, false, { message: 'Invalid email or password' });
           }
 
+          console.log('Found user:', { 
+            id: user.id, 
+            email: user.email,
+            enabled: user.is_enabled 
+          });
+
           if (!user.is_enabled) {
+            console.log('Account disabled:', { id: user.id, email });
             return done(null, false, { message: 'Account is disabled' });
           }
 
           const isValid = await crypto.verifyPassword(password, user.password);
+          console.log('Password verification:', { 
+            id: user.id, 
+            email,
+            isValid 
+          });
+
           if (!isValid) {
             return done(null, false, { message: 'Invalid email or password' });
           }
 
           const adminStatus = await checkUserAdminStatus(user.id);
-          console.log('Admin status check result:', {
-            userId: user.id,
+          console.log('Admin status check:', {
+            id: user.id,
+            email,
             ...adminStatus
           });
 
@@ -197,6 +212,13 @@ export function setupAuth(app: Express) {
             is_south_african: Boolean(safeUser.is_south_african),
             has_credit_card: Boolean(safeUser.has_credit_card)
           };
+
+          console.log('Authentication successful:', {
+            id: transformedUser.id,
+            email: transformedUser.email,
+            is_admin: transformedUser.is_admin,
+            is_super_admin: transformedUser.is_super_admin
+          });
 
           return done(null, transformedUser);
         } catch (error) {
@@ -329,7 +351,7 @@ export function setupAuth(app: Express) {
             city, postal_code, has_credit_card,
             bank_name, account_type, account_number,
             account_holder_name, branch_code, signature
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             req.body.email,
             hashedPassword,
