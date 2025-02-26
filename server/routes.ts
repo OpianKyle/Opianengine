@@ -588,8 +588,15 @@ export function registerRoutes(app: Express): Server {
         const [customers] = await connection.execute(
             `SELECT 
               u.*,
-              GROUP_CONCAT(p.name) as assigned_products,
-              COUNT(DISTINCT r.id) as referral_count
+              GROUP_CONCAT(DISTINCT p.name) as assigned_products,
+              COUNT(DISTINCT r.id) as referral_count,
+              GROUP_CONCAT(DISTINCT JSON_OBJECT(
+                'id', pa.id,
+                'productId', p.id,
+                'productName', p.name,
+                'type', pa.type,
+                'pointsValue', pa.points_value
+              )) as product_assignments
             FROM users u
             LEFT JOIN admin_users au ON u.id = au.user_id
             LEFT JOIN product_assignments pa ON u.id = pa.user_id
@@ -602,14 +609,35 @@ export function registerRoutes(app: Express): Server {
 
         console.log(`Found ${customers.length} customers`);
 
-        // Transform boolean fields
+        // Transform boolean fields and parse JSON data
         const transformedCustomers = customers.map(customer => ({
-            ...customer,
-            is_enabled: Boolean(customer.is_enabled),
-            is_south_african: Boolean(customer.is_south_african),
-            has_credit_card: Boolean(customer.has_credit_card),
-            assigned_products: customer.assigned_products ? customer.assigned_products.split(',') : [],
-            referral_count: Number(customer.referral_count)
+            id: customer.id,
+            email: customer.email,
+            firstName: customer.first_name,
+            lastName: customer.last_name,
+            phoneNumber: customer.phone_number,
+            isEnabled: Boolean(customer.is_enabled),
+            isSouthAfrican: Boolean(customer.is_south_african),
+            hasCreditCard: Boolean(customer.has_credit_card),
+            points: Number(customer.points),
+            createdAt: customer.created_at,
+            selectedPackage: customer.selected_package,
+            industry: customer.industry,
+            occupation: customer.occupation,
+            address: customer.address,
+            city: customer.city,
+            postalCode: customer.postal_code,
+            bankName: customer.bank_name,
+            accountType: customer.account_type,
+            accountNumber: customer.account_number,
+            accountHolderName: customer.account_holder_name,
+            branchCode: customer.branch_code,
+            referralCode: customer.referral_code,
+            referredBy: customer.referred_by,
+            assignedProducts: customer.assigned_products ? customer.assigned_products.split(',') : [],
+            productAssignments: customer.product_assignments ? 
+                customer.product_assignments.split(',').map(assignment => JSON.parse(assignment)) : [],
+            referralCount: Number(customer.referral_count)
         }));
 
         res.json(transformedCustomers);
