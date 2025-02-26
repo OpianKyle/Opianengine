@@ -34,7 +34,7 @@ const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   mobileNumber: z.string().min(1, "Mobile number is required"),
-  selectedPackage: z.string().min(1, "Package selection is required"),
+  selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]),
   referralCode: z.string().optional(),
   points: z.number().int().min(0).optional(),
   isSouthAfrican: z.boolean().optional().default(false),
@@ -48,12 +48,11 @@ const registerSchema = z.object({
   postalCode: z.string().optional().nullable(),
   hasCreditCard: z.boolean().optional().default(false),
   bankName: z.string().optional().nullable(),
-  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"]).optional().nullable(),
+  accountType: z.enum(["CHEQUE", "SAVINGS", "CURRENT"]).optional().nullable(),
   accountNumber: z.string().optional().nullable(),
   accountHolderName: z.string().optional().nullable(),
   branchCode: z.string().optional().nullable(),
-  signature: z.string().optional().nullable(),
-  acceptMandate: z.boolean().optional()
+  signature: z.string().optional().nullable()
 }).passthrough();
 
 const packageMap = {
@@ -323,7 +322,6 @@ export function setupAuth(app: Express) {
         });
       }
 
-      // Extract registration data
       const {
         email,
         password,
@@ -348,142 +346,152 @@ export function setupAuth(app: Express) {
         accountNumber,
         accountHolderName,
         branchCode,
-        signature,
-        acceptMandate
+        signature
       } = result.data;
 
-      // Check for existing user
-      const connection = await mysql.createConnection({
-        host: 'dedi1350.jnb1.host-h.net',
-        user: 'admin',
-        password: '8E33U976qa800F',
-        database: 'opianrewards',
-        port: 3306,
-        ssl: { rejectUnauthorized: false }
-      });
-
-      const [existingUsers] = await connection.execute(
-        'SELECT id FROM users WHERE email = ?',
-        [email]
-      );
-
-      if ((existingUsers as any[]).length > 0) {
-        await connection.end();
-        return res.status(400).json({
-          error: "This email address is already registered"
-        });
-      }
-
-      const hashedPassword = await crypto.hashPassword(password);
-      const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
-
-      const shouldBeSuperAdmin = !(await checkForSuperAdmin());
-      console.log('Should be super admin:', shouldBeSuperAdmin);
-
       try {
-        await connection.beginTransaction();
+        console.log('Attempting database connection...');
+        const connection = await mysql.createConnection({
+          host: 'dedi1350.jnb1.host-h.net',
+          user: 'admin',
+          password: '8E33U976qa800F',
+          database: 'opianrewards',
+          port: 3306,
+          ssl: { rejectUnauthorized: false }
+        });
 
-        // Fix the column count mismatch by ensuring all columns are listed
-        const [userResult] = await connection.execute(
-          `INSERT INTO users (
-            email, password, first_name, last_name, 
-            phone_number, is_admin, is_super_admin, 
-            is_enabled, points, referral_code, 
-            referred_by, selected_package,
-            is_south_african, id_number, date_of_birth,
-            gender, occupation, industry, address,
-            city, postal_code, has_credit_card,
-            bank_name, account_type, account_number,
-            account_holder_name, branch_code, signature, 
-            accept_mandate
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            email,
-            hashedPassword,
-            firstName,
-            lastName,
-            phoneNumber,
-            shouldBeSuperAdmin ? 1 : 0,
-            shouldBeSuperAdmin ? 1 : 0,
-            1, // is_enabled
-            points || 0,
-            newReferralCode,
-            referralCode || null,
-            selectedPackage,
-            isSouthAfrican ? 1 : 0,
-            idNumber || null,
-            dateOfBirth || null,
-            gender || null,
-            occupation || null,
-            industry || null,
-            address || null,
-            city || null,
-            postalCode || null,
-            hasCreditCard ? 1 : 0,
-            bankName || null,
-            accountType || null,
-            accountNumber || null,
-            accountHolderName || null,
-            branchCode || null,
-            signature || null,
-            acceptMandate ? 1 : 0
-          ]
+        // Check for existing user
+        const [existingUsers] = await connection.execute(
+          'SELECT id FROM users WHERE email = ?',
+          [email]
         );
 
-        const userId = (userResult as any).insertId;
-
-        await connection.execute(
-          `INSERT INTO transactions (
-            user_id, points, type, description
-          ) VALUES (?, ?, ?, ?)`,
-          [
-            userId,
-            points || 0,
-            "WELCOME_BONUS",
-            `Welcome bonus points for ${selectedPackage} package registration`
-          ]
-        );
-
-        const [users] = await connection.execute(
-          'SELECT * FROM users WHERE id = ?',
-          [userId]
-        );
-
-        await connection.commit();
-
-        const newUser = users[0];
-        if (!newUser) {
-          throw new Error("Failed to retrieve created user");
+        if ((existingUsers as any[]).length > 0) {
+          await connection.end();
+          return res.status(400).json({
+            error: "This email address is already registered"
+          });
         }
 
-        const { password: _, ...safeUser } = newUser;
-        const transformedUser = {
-          ...safeUser,
-          is_admin: !!safeUser.is_admin,
-          is_super_admin: !!safeUser.is_super_admin,
-          is_enabled: !!safeUser.is_enabled,
-          is_south_african: !!safeUser.is_south_african,
-          has_credit_card: !!safeUser.has_credit_card
-        };
+        const hashedPassword = await crypto.hashPassword(password);
+        const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
+        const shouldBeSuperAdmin = !(await checkForSuperAdmin());
 
-        req.login(transformedUser, (err) => {
-          if (err) {
-            console.error('Login error after registration:', err);
-            return res.status(500).json({ error: "Registration successful but login failed" });
+        console.log('Starting registration transaction...');
+        await connection.beginTransaction();
+
+        try {
+          console.log('Executing user insert...');
+          const [userResult] = await connection.execute(
+            `INSERT INTO users (
+              email, password, first_name, last_name, 
+              phone_number, is_admin, is_super_admin, 
+              is_enabled, points, referral_code, 
+              referred_by, selected_package,
+              is_south_african, id_number, date_of_birth,
+              gender, occupation, industry, address,
+              city, postal_code, has_credit_card,
+              bank_name, account_type, account_number,
+              account_holder_name, branch_code, signature
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              email,
+              hashedPassword,
+              firstName,
+              lastName,
+              phoneNumber,
+              shouldBeSuperAdmin ? 1 : 0,
+              shouldBeSuperAdmin ? 1 : 0,
+              1, // is_enabled
+              points || 0,
+              newReferralCode,
+              referralCode || null,
+              selectedPackage,
+              isSouthAfrican ? 1 : 0,
+              idNumber || null,
+              dateOfBirth || null,
+              gender || null,
+              occupation || null,
+              industry || null,
+              address || null,
+              city || null,
+              postalCode || null,
+              hasCreditCard ? 1 : 0,
+              bankName || null,
+              accountType || null,
+              accountNumber || null,
+              accountHolderName || null,
+              branchCode || null,
+              signature || null
+            ]
+          );
+
+          const userId = (userResult as any).insertId;
+          console.log('User created successfully, ID:', userId);
+
+          console.log('Creating welcome bonus transaction...');
+          await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description
+            ) VALUES (?, ?, ?, ?)`,
+            [
+              userId,
+              points || 0,
+              "WELCOME_BONUS",
+              `Welcome bonus points for ${selectedPackage} package registration`
+            ]
+          );
+
+          const [users] = await connection.execute(
+            'SELECT * FROM users WHERE id = ?',
+            [userId]
+          );
+
+          await connection.commit();
+          console.log('Transaction committed successfully');
+
+          const newUser = users[0];
+          if (!newUser) {
+            throw new Error("Failed to retrieve created user");
           }
 
-          console.log('Registration and login successful for:', transformedUser.email);
-          if (shouldBeSuperAdmin) {
-            console.log('Created super admin account:', transformedUser.email);
-          }
-          res.status(201).json(transformedUser);
+          const { password: _, ...safeUser } = newUser;
+          const transformedUser = {
+            ...safeUser,
+            is_admin: !!safeUser.is_admin,
+            is_super_admin: !!safeUser.is_super_admin,
+            is_enabled: !!safeUser.is_enabled,
+            is_south_african: !!safeUser.is_south_african,
+            has_credit_card: !!safeUser.has_credit_card
+          };
+
+          req.login(transformedUser, (err) => {
+            if (err) {
+              console.error('Login error after registration:', err);
+              return res.status(500).json({ error: "Registration successful but login failed" });
+            }
+
+            console.log('Registration and login successful for:', transformedUser.email);
+            if (shouldBeSuperAdmin) {
+              console.log('Created super admin account:', transformedUser.email);
+            }
+            res.status(201).json(transformedUser);
+          });
+
+        } catch (error) {
+          console.error('Error during registration transaction:', error);
+          await connection.rollback();
+          throw error;
+        } finally {
+          await connection.end();
+        }
+
+      } catch (dbError) {
+        console.error('Database error during registration:', dbError);
+        return res.status(500).json({
+          error: "Registration failed. Please try again.",
+          details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
         });
-
-      } catch (error) {
-        await connection.rollback();
-        throw error;
-      } finally {
-        await connection.end();
       }
 
     } catch (error) {
