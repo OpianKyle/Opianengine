@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
-// Add more detailed logging to debug boolean transformations
+// Simplify boolean transformation logic
 const booleanSchema = z.union([z.boolean(), z.number()]).transform(val => {
   console.log('Transforming boolean value:', { original: val, transformed: !!val });
   return !!val;
@@ -45,23 +45,27 @@ const userSchema = z.object({
 }).transform(data => {
   const transformed = {
     ...data,
-    // Ensure booleans are properly transformed
-    is_admin: data.is_admin === true || data.is_admin === 1,
-    is_super_admin: data.is_super_admin === true || data.is_super_admin === 1,
-    is_enabled: data.is_enabled === true || data.is_enabled === 1,
-    is_south_african: data.is_south_african === true || data.is_south_african === 1,
-    has_credit_card: data.has_credit_card === true || data.has_credit_card === 1
+    // Simplify boolean transformations to use !! operator
+    is_admin: !!data.is_admin,
+    is_super_admin: !!data.is_super_admin,
+    is_enabled: !!data.is_enabled,
+    is_south_african: data.is_south_african === null ? null : !!data.is_south_african,
+    has_credit_card: data.has_credit_card === null ? null : !!data.has_credit_card
   };
   console.log('User data transformation:', { 
     original: {
       is_admin: data.is_admin,
       is_super_admin: data.is_super_admin,
-      is_enabled: data.is_enabled
+      is_enabled: data.is_enabled,
+      type_is_admin: typeof data.is_admin,
+      type_is_super_admin: typeof data.is_super_admin
     }, 
     transformed: {
       is_admin: transformed.is_admin,
       is_super_admin: transformed.is_super_admin,
-      is_enabled: transformed.is_enabled
+      is_enabled: transformed.is_enabled,
+      type_is_admin: typeof transformed.is_admin,
+      type_is_super_admin: typeof transformed.is_super_admin
     }
   });
   return transformed;
@@ -203,11 +207,11 @@ export function useUser() {
         console.log('Raw registration response:', data);
         const transformedData = {
           ...data,
-          is_admin: data.is_admin === 1 || data.is_admin === true,
-          is_super_admin: data.is_super_admin === 1 || data.is_super_admin === true,
-          is_enabled: data.is_enabled === 1 || data.is_enabled === true,
-          is_south_african: data.is_south_african === 1 || data.is_south_african === true,
-          has_credit_card: data.has_credit_card === 1 || data.has_credit_card === true
+          is_admin: !!data.is_admin,
+          is_super_admin: !!data.is_super_admin,
+          is_enabled: !!data.is_enabled,
+          is_south_african: data.is_south_african === null ? null : !!data.is_south_african,
+          has_credit_card: data.has_credit_card === null ? null : !!data.has_credit_card
         };
         console.log('Transformed registration data:', transformedData);
         return userSchema.parse(transformedData);

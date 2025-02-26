@@ -259,8 +259,8 @@ export default function RegisterPage() {
       super_admin_type: typeof user.is_super_admin
     });
 
-    // Strict comparison to ensure boolean values are handled correctly
-    if (user.is_admin === true || user.is_super_admin === true) {
+    // Simplified check for admin status using truthiness
+    if (user.is_admin || user.is_super_admin) {
       console.log('Redirecting to admin dashboard - user has admin privileges');
       navigate('/admin/dashboard');
       return null;
@@ -270,7 +270,6 @@ export default function RegisterPage() {
       return null;
     }
   }
-
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | string, fieldName?: string) => {

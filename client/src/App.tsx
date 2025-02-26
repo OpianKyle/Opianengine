@@ -47,7 +47,14 @@ function ProtectedRoute({ component: Component, admin = false, ...rest }: any) {
     return <Redirect to="/" />;
   }
 
-  if (admin && !user.isAdmin) {
+  // Update admin check to use correct property names
+  if (admin && !(user.is_admin || user.is_super_admin)) {
+    console.log('User lacks admin privileges:', {
+      id: user.id,
+      email: user.email,
+      is_admin: user.is_admin,
+      is_super_admin: user.is_super_admin
+    });
     return <Redirect to="/dashboard" />;
   }
 
