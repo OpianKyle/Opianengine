@@ -2,9 +2,9 @@ import mysql from 'mysql2/promise';
 
 export async function createConnection() {
   return await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'opian_rewards',
+    user: 'admin',
+    host: 'dedi1350.jnb1.host-h.net',
+    password: '8E33U976qa800F',
+    database: 'opianrewards',
   });
 }
