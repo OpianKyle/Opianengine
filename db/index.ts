@@ -13,7 +13,16 @@ const poolConnection = mysql.createPool({
   },
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
 });
 
-export const db = drizzle(poolConnection, { schema, mode: 'default' });
+export const db = drizzle(poolConnection, { 
+  schema, 
+  mode: 'default',
+  logger: true 
+});
+
+// Export the pool for direct queries if needed
+export const pool = poolConnection;
