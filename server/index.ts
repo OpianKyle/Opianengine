@@ -6,6 +6,7 @@ import fileUpload from 'express-fileupload';
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users } from "@db/schema";
+import mysql from 'mysql2/promise';
 
 // Check required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
@@ -14,6 +15,8 @@ if (missingEnvVars.length > 0) {
   console.error('Missing required environment variables:', missingEnvVars.join(', '));
   process.exit(1);
 }
+
+console.log('Starting server initialization...', new Date().toISOString());
 
 const app = express();
 
@@ -25,6 +28,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['set-cookie']
 }));
+
+console.log('CORS middleware configured');
 
 app.set('trust proxy', 1); // trust first proxy
 
@@ -38,6 +43,8 @@ app.use(fileUpload({
     fileSize: 5 * 1024 * 1024 // 5MB max file size
   },
 }));
+
+console.log('Basic middleware setup complete');
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -53,26 +60,42 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    log('Starting server initialization...');
+    console.log('Starting database initialization...');
 
-    // Initialize database connection
-    log('Initializing database connection...');
+    // Test MariaDB connection
+    try {
+      const connection = await mysql.createConnection({
+        host: 'dedi1350.jnb1.host-h.net',
+        user: 'admin',
+        password: '8E33U976qa800F',
+        database: 'opianrewards',
+        port: 3306,
+        ssl: {
+          rejectUnauthorized: false
+        }
+      });
 
-    // Test database connection with a simple query
+      console.log('MariaDB connection successful');
+      await connection.end();
+    } catch (mariaDbError) {
+      console.error('MariaDB connection test failed:', mariaDbError);
+    }
+
+    // Test PostgreSQL connection
     try {
       await db.select().from(users).limit(1);
-      log('Database connection successful');
+      console.log('PostgreSQL connection successful');
     } catch (dbError) {
-      console.error('Database connection test failed:', dbError);
-      process.exit(1);
+      console.error('PostgreSQL connection test failed:', dbError);
     }
 
     // Setup authentication (before routes)
+    console.log('Setting up authentication...');
     setupAuth(app);
-    log('Authentication setup complete');
+    console.log('Authentication setup complete');
 
     const server = registerRoutes(app);
-    log('Routes registered');
+    console.log('Routes registered');
 
     // Global error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -84,19 +107,19 @@ app.use((req, res, next) => {
 
     // Setup appropriate server based on environment
     if (process.env.NODE_ENV !== "production") {
-      log('Setting up Vite development server...');
+      console.log('Setting up Vite development server...');
       await setupVite(app, server);
-      log('Vite setup complete');
+      console.log('Vite setup complete');
     } else {
-      log('Setting up static file serving...');
+      console.log('Setting up static file serving...');
       serveStatic(app);
-      log('Static serving setup complete');
+      console.log('Static serving setup complete');
     }
 
     // Start the server
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {
-      log(`Server running on port ${PORT}`);
+      console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
     });
   } catch (error) {
     console.error('Server startup error:', error);
