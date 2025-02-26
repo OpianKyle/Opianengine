@@ -250,13 +250,17 @@ export default function RegisterPage() {
   }
 
   if (user) {
-    // Update redirection logic to handle both admin and super admin
-    if (user.is_admin || user.is_super_admin) {
+    console.log('User data:', user); // Add logging to check user data
+    // Check both is_admin and is_super_admin flags
+    if (user.is_admin === true || user.is_super_admin === true) {
+      console.log('Redirecting to admin dashboard');
       navigate('/admin/dashboard');
       return null;
+    } else {
+      console.log('Redirecting to customer dashboard');
+      navigate('/dashboard');
+      return null;
     }
-    navigate('/dashboard');
-    return null;
   }
 
 

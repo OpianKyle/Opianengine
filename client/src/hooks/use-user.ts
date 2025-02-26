@@ -6,7 +6,10 @@ import { useToast } from "@/hooks/use-toast";
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
 // Utility function to coerce MariaDB's 0/1 to boolean
-const booleanSchema = z.union([z.boolean(), z.number()]).transform(val => !!val);
+const booleanSchema = z.union([z.boolean(), z.number()]).transform(val => {
+  console.log('Transforming boolean value:', { original: val, transformed: !!val });
+  return !!val;
+});
 
 // Define schema with required fields and transformations
 const userSchema = z.object({
@@ -39,15 +42,19 @@ const userSchema = z.object({
   gender: z.string().nullable().default(null),
   has_credit_card: booleanSchema.nullable().default(null),
   signature: z.string().nullable().default(null)
-}).transform(data => ({
-  ...data,
-  // Transform all boolean fields from MariaDB 0/1 to actual booleans
-  is_admin: !!data.is_admin,
-  is_super_admin: !!data.is_super_admin,
-  is_enabled: !!data.is_enabled,
-  is_south_african: data.is_south_african === null ? null : !!data.is_south_african,
-  has_credit_card: data.has_credit_card === null ? null : !!data.has_credit_card,
-}));
+}).transform(data => {
+  const transformed = {
+    ...data,
+    // Ensure booleans are properly transformed
+    is_admin: data.is_admin === 1 || data.is_admin === true,
+    is_super_admin: data.is_super_admin === 1 || data.is_super_admin === true,
+    is_enabled: data.is_enabled === 1 || data.is_enabled === true,
+    is_south_african: data.is_south_african === 1 || data.is_south_african === true,
+    has_credit_card: data.has_credit_card === 1 || data.has_credit_card === true
+  };
+  console.log('User data transformation:', { original: data, transformed });
+  return transformed;
+});
 
 export type User = z.infer<typeof userSchema>;
 export type AccountType = typeof accountTypes[number];
@@ -182,14 +189,16 @@ export function useUser() {
 
       try {
         // Pre-transform boolean fields before validation
+        console.log('Raw registration response:', data);
         const transformedData = {
           ...data,
-          is_admin: !!data.is_admin,
-          is_super_admin: !!data.is_super_admin,
-          is_enabled: data.is_enabled !== 0,
-          is_south_african: data.is_south_african === 1,
-          has_credit_card: data.has_credit_card === 1
+          is_admin: data.is_admin === 1 || data.is_admin === true,
+          is_super_admin: data.is_super_admin === 1 || data.is_super_admin === true,
+          is_enabled: data.is_enabled === 1 || data.is_enabled === true,
+          is_south_african: data.is_south_african === 1 || data.is_south_african === true,
+          has_credit_card: data.has_credit_card === 1 || data.has_credit_card === true
         };
+        console.log('Transformed registration data:', transformedData);
         return userSchema.parse(transformedData);
       } catch (error) {
         console.error('Registration response validation error:', error);
