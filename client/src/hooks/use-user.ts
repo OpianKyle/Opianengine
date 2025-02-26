@@ -5,21 +5,24 @@ import { useToast } from "@/hooks/use-toast";
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
+// Utility function to coerce MariaDB's 0/1 to boolean
+const booleanSchema = z.union([z.boolean(), z.number()]).transform(val => !!val);
+
 // Define schema with required fields and transformations
 const userSchema = z.object({
   id: z.number(),
-  email: z.string(),
+  email: z.string().email(),
   first_name: z.string().default(""),
   last_name: z.string().default(""),
   phone_number: z.string().nullable().default(null),
-  is_admin: z.boolean().default(false),
-  is_super_admin: z.boolean().default(false),
-  is_enabled: z.boolean().default(true),
+  is_admin: booleanSchema.default(false),
+  is_super_admin: booleanSchema.default(false),
+  is_enabled: booleanSchema.default(true),
   points: z.number().default(0),
   referral_code: z.string().nullable().default(null),
   referred_by: z.string().nullable().default(null),
   created_at: z.string().nullable().default(null),
-  is_south_african: z.boolean().nullable().default(null),
+  is_south_african: booleanSchema.nullable().default(null),
   id_number: z.string().nullable().default(null),
   date_of_birth: z.string().nullable().default(null),
   address: z.string().nullable().default(null),
@@ -34,7 +37,7 @@ const userSchema = z.object({
   branch_code: z.string().nullable().default(null),
   selected_package: z.string().nullable().default(null),
   gender: z.string().nullable().default(null),
-  has_credit_card: z.boolean().nullable().default(null),
+  has_credit_card: booleanSchema.nullable().default(null),
   signature: z.string().nullable().default(null)
 }).transform(data => ({
   ...data,
@@ -99,17 +102,7 @@ export function useUser() {
         }
 
         const data = await response.json();
-        try {
-          return userSchema.parse(data);
-        } catch (error) {
-          console.error('User data validation error:', error);
-          // Return transformed data even if validation fails
-          return userSchema.parse({
-            id: data.id,
-            email: data.email,
-            ...data
-          });
-        }
+        return userSchema.parse(data);
       } catch (error) {
         console.error('Error fetching user:', error);
         throw error;
@@ -141,17 +134,11 @@ export function useUser() {
         setToken(data.token);
       }
 
-      const userData = data.user || data;
       try {
-        return userSchema.parse(userData);
+        return userSchema.parse(data.user || data);
       } catch (error) {
         console.error('Login response validation error:', error);
-        // Return transformed data even if validation fails
-        return userSchema.parse({
-          id: userData.id,
-          email: userData.email,
-          ...userData
-        });
+        throw new Error('Invalid user data received');
       }
     },
     onSuccess: (user) => {
@@ -196,12 +183,16 @@ export function useUser() {
         return userSchema.parse(data);
       } catch (error) {
         console.error('Registration response validation error:', error);
-        // Return transformed data even if validation fails
-        return userSchema.parse({
-          id: data.id,
-          email: data.email,
-          ...data
-        });
+        // Transform the data to match expected schema
+        const transformedData = {
+          ...data,
+          is_admin: !!data.is_admin,
+          is_super_admin: !!data.is_super_admin,
+          is_enabled: data.is_enabled !== 0,
+          is_south_african: data.is_south_african === 1,
+          has_credit_card: data.has_credit_card === 1
+        };
+        return userSchema.parse(transformedData);
       }
     },
     onSuccess: (user) => {
