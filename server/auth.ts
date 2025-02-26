@@ -79,7 +79,7 @@ const crypto = {
 
 // Authentication middleware
 export function checkAdmin(req: Request, res: Response, next: NextFunction) {
-  console.log('Checking admin status for request:', {
+  console.log('Checking admin access for request:', {
     path: req.path,
     authenticated: req.isAuthenticated(),
     user: req.user ? {
@@ -138,7 +138,7 @@ export function setupAuth(app: Express) {
     async (email, password, done) => {
       const connection = await createConnection();
       try {
-        console.log('Authentication attempt:', { email });
+        console.log('Login attempt:', { email });
 
         // Get user
         const [rows] = await connection.execute(
@@ -194,7 +194,7 @@ export function setupAuth(app: Express) {
           has_credit_card: Boolean(safeUser.has_credit_card)
         };
 
-        console.log('Authentication successful:', {
+        console.log('Login successful:', {
           id: transformedUser.id,
           email: transformedUser.email,
           is_admin: transformedUser.is_admin,
@@ -288,7 +288,7 @@ export function setupAuth(app: Express) {
           is_super_admin: user.is_super_admin
         });
 
-        return res.json(user);
+        res.json(user);
       });
     })(req, res, next);
   });
@@ -335,7 +335,7 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
 
-  //Register route remains unchanged
+  //Register route
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
