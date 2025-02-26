@@ -325,7 +325,10 @@ export function setupAuth(app: Express) {
 
       // Calculate initial points based on selected package
       let initialPoints = 0;
-      switch (req.body.selectedPackage?.toUpperCase()) {
+      const selectedPackage = req.body.selectedPackage?.toUpperCase();
+      console.log('Processing package activation:', { selectedPackage });
+
+      switch (selectedPackage) {
         case 'BEGINNER':
           initialPoints = 10000;
           break;
@@ -345,8 +348,8 @@ export function setupAuth(app: Express) {
           initialPoints = 0;
       }
 
-      console.log('Package selection:', {
-        package: req.body.selectedPackage,
+      console.log('Package points calculation:', {
+        package: selectedPackage,
         points: initialPoints
       });
 
@@ -371,14 +374,18 @@ export function setupAuth(app: Express) {
             initialPoints, // Initial points based on package
             newReferralCode,
             req.body.referralCode || null,
-            req.body.selectedPackage ? req.body.selectedPackage.toUpperCase() : null
+            selectedPackage // Store uppercase package name
           ]
         );
 
         const userId = (userResult as any).insertId;
-        console.log('User created successfully, ID:', userId);
+        console.log('User created successfully:', { 
+          id: userId,
+          package: selectedPackage,
+          points: initialPoints 
+        });
 
-        // Record the points transaction
+        // Record the points transaction if points were allocated
         if (initialPoints > 0) {
           await connection.execute(
             `INSERT INTO transactions (
@@ -388,9 +395,14 @@ export function setupAuth(app: Express) {
               userId,
               initialPoints,
               'WELCOME_BONUS',
-              `Welcome bonus points for ${req.body.selectedPackage} package`
+              `Welcome bonus points for ${selectedPackage} package`
             ]
           );
+          console.log('Welcome bonus transaction recorded:', {
+            userId,
+            points: initialPoints,
+            package: selectedPackage
+          });
         }
 
         // Update additional user details
@@ -496,30 +508,30 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Check for existing super admin
+  async function checkForSuperAdmin() {
+    const connection = await createConnection();
+    try {
+      console.log('Checking for existing super admin...');
+      const [rows] = await connection.execute(
+        'SELECT COUNT(*) as count FROM admin_users WHERE role_type = ?',
+        ['SUPER_ADMIN']
+      );
+
+      const count = (rows as any)[0].count;
+      console.log('Super admin check result:', { count });
+      return count > 0;
+    } catch (error) {
+      console.error('Error checking for super admin:', error);
+      return false;
+    } finally {
+      await connection.end();
+    }
+  }
+
+
   return app;
 }
-
-// Check for existing super admin
-async function checkForSuperAdmin() {
-  const connection = await createConnection();
-  try {
-    console.log('Checking for existing super admin...');
-    const [rows] = await connection.execute(
-      'SELECT COUNT(*) as count FROM admin_users WHERE role_type = ?',
-      ['SUPER_ADMIN']
-    );
-
-    const count = (rows as any)[0].count;
-    console.log('Super admin check result:', { count });
-    return count > 0;
-  } catch (error) {
-    console.error('Error checking for super admin:', error);
-    return false;
-  } finally {
-    await connection.end();
-  }
-}
-
 
 export function generateToken(user: Express.User): string {
   console.log('Generating token for user:', {

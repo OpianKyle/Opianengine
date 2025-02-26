@@ -1961,8 +1961,7 @@ export function registerRoutes(app: Express): Server {
               eq(notifications.userId, req.user.id)
             )
           )
-          .returning()
-          .execute();
+          .returning()          .execute();
 
         if (!deletedNotification) {
           return res.status(404).json({ error: "Notification not found" });
@@ -2220,6 +2219,88 @@ export function registerRoutes(app: Express): Server {
       console.error('Error fetching user details:', error);
       res.status(500).json({ error: 'Failed to fetch user details' });
     });
+  });
+
+  app.post("/api/admin/products/assign", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+
+    try {
+      const connection = await createConnection();
+      try {
+        const { userId, productId, type } = req.body;
+
+        // First get the product activity points value
+        const [activities] = await connection.execute(
+          `SELECT points_value 
+           FROM product_activities 
+           WHERE product_id = ? AND type = ?`,
+          [productId, type]
+        );
+
+        if (!activities || activities.length === 0) {
+          return res.status(404).json({ error: "Product activity not found" });
+        }
+
+        const pointsValue = activities[0].points_value;
+
+        // Begin transaction
+        await connection.beginTransaction();
+
+        // Create product assignment
+        const [result] = await connection.execute(
+          `INSERT INTO product_assignments (user_id, product_id, type, points_value) 
+           VALUES (?, ?, ?, ?)`,
+          [userId, productId, type, pointsValue]
+        );
+
+        // Create points transaction
+        await connection.execute(
+          `INSERT INTO transactions (user_id, points, type, description) 
+           VALUES (?, ?, ?, ?)`,
+          [
+            userId, 
+            pointsValue,
+            'EARNED',
+            `Points earned for product activation`
+          ]
+        );
+
+        // Update user points
+        await connection.execute(
+          `UPDATE users 
+           SET points = points + ? 
+           WHERE id = ?`,
+          [pointsValue, userId]
+        );
+
+        await connection.commit();
+
+        await logAdminAction({
+          adminId: req.user.id,
+          actionType: "PRODUCT_ASSIGNED",
+          details: `Assigned product (ID: ${productId}) to user (ID: ${userId})`
+        });
+
+        // Get updated assignment with product details
+        const [assignment] = await connection.execute(
+          `SELECT pa.*, p.name as product_name
+           FROM product_assignments pa
+           JOIN products p ON pa.product_id = p.id
+           WHERE pa.id = ?`,
+          [result.insertId]
+        );
+
+        res.json(assignment[0]);
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        await connection.end();
+      }
+    } catch (error) {
+      console.error('Error assigning product:', error);
+      res.status(500).json({ error: 'Failed to assign product' });
+    }
   });
 
   return httpServer;
