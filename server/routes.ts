@@ -116,7 +116,6 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-
   app.get("/api/products/assignments/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
@@ -136,7 +135,7 @@ export function registerRoutes(app: Express): Server {
 
       const { id } = req.params;
 
-      // Fetch assignment with related data
+      // Fetch assignment with related data including activities
       const [assignments] = await connection.execute(
         `SELECT 
           pa.*,
@@ -145,11 +144,20 @@ export function registerRoutes(app: Express): Server {
           p.is_enabled as product_is_enabled,
           u.email as user_email,
           u.first_name as user_first_name,
-          u.last_name as user_last_name
+          u.last_name as user_last_name,
+          GROUP_CONCAT(
+            JSON_OBJECT(
+              'id', act.id,
+              'type', act.type,
+              'pointsValue', act.points_value
+            )
+          ) as activities
          FROM product_assignments pa
          JOIN products p ON pa.product_id = p.id
          JOIN users u ON pa.user_id = u.id
-         WHERE pa.id = ?`,
+         LEFT JOIN product_activities act ON p.id = act.product_id
+         WHERE pa.id = ?
+         GROUP BY pa.id`,
         [id]
       );
 
@@ -158,6 +166,23 @@ export function registerRoutes(app: Express): Server {
       }
 
       const assignment = assignments[0];
+
+      // Parse activities
+      let activities = [];
+      try {
+        activities = assignment.activities ? 
+          assignment.activities.split(',').map(activity => {
+            try {
+              return JSON.parse(activity);
+            } catch (e) {
+              console.error('Error parsing activity:', e);
+              return null;
+            }
+          }).filter(Boolean) : [];
+      } catch (e) {
+        console.error('Error parsing activities:', e);
+      }
+
       const transformedAssignment = {
         id: assignment.id,
         productId: assignment.product_id,
@@ -167,7 +192,8 @@ export function registerRoutes(app: Express): Server {
           id: assignment.product_id,
           name: assignment.product_name,
           description: assignment.product_description,
-          isEnabled: Boolean(assignment.product_is_enabled)
+          isEnabled: Boolean(assignment.product_is_enabled),
+          activities: activities
         },
         user: {
           id: assignment.user_id,
@@ -176,6 +202,12 @@ export function registerRoutes(app: Express): Server {
           lastName: assignment.user_last_name
         }
       };
+
+      console.log('Sending assignment with activities:', {
+        assignmentId: transformedAssignment.id,
+        productId: transformedAssignment.productId,
+        activityCount: transformedAssignment.product.activities.length
+      });
 
       res.json(transformedAssignment);
     } catch (error) {
