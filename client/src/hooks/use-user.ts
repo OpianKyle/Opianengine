@@ -5,17 +5,45 @@ import { useToast } from "@/hooks/use-toast";
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
-// Define a more flexible schema
+// Define complete user schema with all possible fields
 const userSchema = z.object({
   id: z.number(),
   email: z.string(),
   first_name: z.string(),
   last_name: z.string(),
-  points: z.number().default(0),
+  phone_number: z.string().nullable(),
   is_admin: z.boolean().default(false),
   is_super_admin: z.boolean().default(false),
   is_enabled: z.boolean().default(true),
-}).passthrough();
+  points: z.number().default(0),
+  referral_code: z.string().nullable(),
+  referred_by: z.string().nullable(),
+  created_at: z.string().nullable(),
+  is_south_african: z.boolean().nullable(),
+  id_number: z.string().nullable(),
+  date_of_birth: z.string().nullable(),
+  address: z.string().nullable(),
+  city: z.string().nullable(),
+  postal_code: z.string().nullable(),
+  industry: z.string().nullable(),
+  occupation: z.string().nullable(),
+  bank_name: z.string().nullable(),
+  account_type: z.enum(accountTypes).nullable(),
+  account_number: z.string().nullable(),
+  account_holder_name: z.string().nullable(),
+  branch_code: z.string().nullable(),
+  selected_package: z.string().nullable(),
+  gender: z.string().nullable(),
+  has_credit_card: z.boolean().nullable(),
+  signature: z.string().nullable(),
+}).transform(data => ({
+  ...data,
+  // Ensure these fields always exist with default values
+  points: data.points ?? 0,
+  is_admin: data.is_admin ?? false,
+  is_super_admin: data.is_super_admin ?? false,
+  is_enabled: data.is_enabled ?? true,
+}));
 
 export type User = z.infer<typeof userSchema>;
 export type AccountType = typeof accountTypes[number];
@@ -69,7 +97,12 @@ export function useUser() {
         }
 
         const data = await response.json();
-        return data;
+        try {
+          return userSchema.parse(data);
+        } catch (error) {
+          console.error('User data validation error:', error);
+          return null;
+        }
       } catch (error) {
         console.error('Error fetching user:', error);
         throw error;
@@ -102,11 +135,12 @@ export function useUser() {
       }
 
       const userData = data.user || data;
-      if (!userData || !userData.id) {
+      try {
+        return userSchema.parse(userData);
+      } catch (error) {
+        console.error('Login response validation error:', error);
         throw new Error('Invalid user data received');
       }
-
-      return userData;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
@@ -146,10 +180,26 @@ export function useUser() {
         setToken(data.token);
       }
 
-      return data;
+      try {
+        return userSchema.parse(data);
+      } catch (error) {
+        console.error('Registration response validation error:', error);
+        throw new Error('Invalid user data received');
+      }
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
+      toast({
+        title: "Success",
+        description: "Registration successful",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Registration failed",
+      });
     },
   });
 
@@ -171,6 +221,19 @@ export function useUser() {
       setToken(null);
       queryClient.removeQueries({ queryKey: ['/api/user'] });
       queryClient.setQueryData(['/api/user'], null);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Logged out successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to logout",
+      });
     },
   });
 
