@@ -250,18 +250,27 @@ export default function RegisterPage() {
   }
 
   if (user) {
-    console.log('User data:', user); // Add logging to check user data
-    // Check both is_admin and is_super_admin flags
+    console.log('User data for redirection:', {
+      id: user.id,
+      email: user.email,
+      is_admin: user.is_admin,
+      is_super_admin: user.is_super_admin,
+      admin_type: typeof user.is_admin,
+      super_admin_type: typeof user.is_super_admin
+    });
+
+    // Strict comparison to ensure boolean values are handled correctly
     if (user.is_admin === true || user.is_super_admin === true) {
-      console.log('Redirecting to admin dashboard');
+      console.log('Redirecting to admin dashboard - user has admin privileges');
       navigate('/admin/dashboard');
       return null;
     } else {
-      console.log('Redirecting to customer dashboard');
+      console.log('Redirecting to customer dashboard - user lacks admin privileges');
       navigate('/dashboard');
       return null;
     }
   }
+
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement> | string, fieldName?: string) => {

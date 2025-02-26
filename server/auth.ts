@@ -135,8 +135,36 @@ export function setupAuth(app: Express) {
             return done(null, false, { message: 'Invalid email or password' });
           }
 
+          // Log user data before transformation
+          console.log('Raw user data from DB:', {
+            id: user.id,
+            email: user.email,
+            is_admin: user.is_admin,
+            is_super_admin: user.is_super_admin,
+            admin_type: typeof user.is_admin,
+            super_admin_type: typeof user.is_super_admin
+          });
+
           const { password: _, ...safeUser } = user;
-          return done(null, safeUser);
+          // Transform boolean fields
+          const transformedUser = {
+            ...safeUser,
+            is_admin: safeUser.is_admin === true || safeUser.is_admin === 1,
+            is_super_admin: safeUser.is_super_admin === true || safeUser.is_super_admin === 1,
+            is_enabled: safeUser.is_enabled === true || safeUser.is_enabled === 1
+          };
+
+          // Log transformed user data
+          console.log('Transformed user data:', {
+            id: transformedUser.id,
+            email: transformedUser.email,
+            is_admin: transformedUser.is_admin,
+            is_super_admin: transformedUser.is_super_admin,
+            admin_type: typeof transformedUser.is_admin,
+            super_admin_type: typeof transformedUser.is_super_admin
+          });
+
+          return done(null, transformedUser);
         } catch (error) {
           console.error('Authentication error:', error);
           return done(error);

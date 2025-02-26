@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
-// Utility function to coerce MariaDB's 0/1 to boolean
+// Add more detailed logging to debug boolean transformations
 const booleanSchema = z.union([z.boolean(), z.number()]).transform(val => {
   console.log('Transforming boolean value:', { original: val, transformed: !!val });
   return !!val;
@@ -46,13 +46,24 @@ const userSchema = z.object({
   const transformed = {
     ...data,
     // Ensure booleans are properly transformed
-    is_admin: data.is_admin === 1 || data.is_admin === true,
-    is_super_admin: data.is_super_admin === 1 || data.is_super_admin === true,
-    is_enabled: data.is_enabled === 1 || data.is_enabled === true,
-    is_south_african: data.is_south_african === 1 || data.is_south_african === true,
-    has_credit_card: data.has_credit_card === 1 || data.has_credit_card === true
+    is_admin: data.is_admin === true || data.is_admin === 1,
+    is_super_admin: data.is_super_admin === true || data.is_super_admin === 1,
+    is_enabled: data.is_enabled === true || data.is_enabled === 1,
+    is_south_african: data.is_south_african === true || data.is_south_african === 1,
+    has_credit_card: data.has_credit_card === true || data.has_credit_card === 1
   };
-  console.log('User data transformation:', { original: data, transformed });
+  console.log('User data transformation:', { 
+    original: {
+      is_admin: data.is_admin,
+      is_super_admin: data.is_super_admin,
+      is_enabled: data.is_enabled
+    }, 
+    transformed: {
+      is_admin: transformed.is_admin,
+      is_super_admin: transformed.is_super_admin,
+      is_enabled: transformed.is_enabled
+    }
+  });
   return transformed;
 });
 
