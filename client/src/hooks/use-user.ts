@@ -5,42 +5,47 @@ import { useToast } from "@/hooks/use-toast";
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
-// Define base user schema with minimal required fields
+// Define schema with required fields and transformations
 const userSchema = z.object({
   id: z.number(),
   email: z.string(),
+  first_name: z.string().default(""),
+  last_name: z.string().default(""),
+  phone_number: z.string().nullable().default(null),
   is_admin: z.boolean().default(false),
   is_super_admin: z.boolean().default(false),
   is_enabled: z.boolean().default(true),
-  points: z.number().default(0)
-})
-// Add all optional fields that might be present
-.extend({
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
-  phone_number: z.string().nullable().optional(),
-  referral_code: z.string().nullable().optional(),
-  referred_by: z.string().nullable().optional(),
-  created_at: z.string().nullable().optional(),
-  is_south_african: z.boolean().nullable().optional(),
-  id_number: z.string().nullable().optional(),
-  date_of_birth: z.string().nullable().optional(),
-  address: z.string().nullable().optional(),
-  city: z.string().nullable().optional(),
-  postal_code: z.string().nullable().optional(),
-  industry: z.string().nullable().optional(),
-  occupation: z.string().nullable().optional(),
-  bank_name: z.string().nullable().optional(),
-  account_type: z.enum(accountTypes).nullable().optional(),
-  account_number: z.string().nullable().optional(),
-  account_holder_name: z.string().nullable().optional(),
-  branch_code: z.string().nullable().optional(),
-  selected_package: z.string().nullable().optional(),
-  gender: z.string().nullable().optional(),
-  has_credit_card: z.boolean().nullable().optional(),
-  signature: z.string().nullable().optional()
-})
-.passthrough();
+  points: z.number().default(0),
+  referral_code: z.string().nullable().default(null),
+  referred_by: z.string().nullable().default(null),
+  created_at: z.string().nullable().default(null),
+  is_south_african: z.boolean().nullable().default(null),
+  id_number: z.string().nullable().default(null),
+  date_of_birth: z.string().nullable().default(null),
+  address: z.string().nullable().default(null),
+  city: z.string().nullable().default(null),
+  postal_code: z.string().nullable().default(null),
+  industry: z.string().nullable().default(null),
+  occupation: z.string().nullable().default(null),
+  bank_name: z.string().nullable().default(null),
+  account_type: z.enum(accountTypes).nullable().default(null),
+  account_number: z.string().nullable().default(null),
+  account_holder_name: z.string().nullable().default(null),
+  branch_code: z.string().nullable().default(null),
+  selected_package: z.string().nullable().default(null),
+  gender: z.string().nullable().default(null),
+  has_credit_card: z.boolean().nullable().default(null),
+  signature: z.string().nullable().default(null)
+}).transform(data => ({
+  ...data,
+  // Ensure core fields have defaults even if transformation fails
+  first_name: data.first_name || "",
+  last_name: data.last_name || "",
+  points: typeof data.points === 'number' ? data.points : 0,
+  is_admin: !!data.is_admin,
+  is_super_admin: !!data.is_super_admin,
+  is_enabled: data.is_enabled !== false,
+}));
 
 export type User = z.infer<typeof userSchema>;
 export type AccountType = typeof accountTypes[number];
@@ -98,7 +103,12 @@ export function useUser() {
           return userSchema.parse(data);
         } catch (error) {
           console.error('User data validation error:', error);
-          return null;
+          // Return transformed data even if validation fails
+          return userSchema.parse({
+            id: data.id,
+            email: data.email,
+            ...data
+          });
         }
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -136,8 +146,12 @@ export function useUser() {
         return userSchema.parse(userData);
       } catch (error) {
         console.error('Login response validation error:', error);
-        // Return the data even if validation fails to prevent blocking login
-        return userData;
+        // Return transformed data even if validation fails
+        return userSchema.parse({
+          id: userData.id,
+          email: userData.email,
+          ...userData
+        });
       }
     },
     onSuccess: (user) => {
@@ -182,8 +196,12 @@ export function useUser() {
         return userSchema.parse(data);
       } catch (error) {
         console.error('Registration response validation error:', error);
-        // Return the data even if validation fails
-        return data;
+        // Return transformed data even if validation fails
+        return userSchema.parse({
+          id: data.id,
+          email: data.email,
+          ...data
+        });
       }
     },
     onSuccess: (user) => {
