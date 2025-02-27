@@ -17,6 +17,8 @@ import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import cn from 'classnames';
 
+// Keep your existing helper functions and schemas
+
 const getPointsMultiplier = (points: number, type: 'premium' | 'card' | 'pos'): number => {
   if (points >= 150000) { // Platinum
     return type === 'pos' ? 2.5 : type === 'premium' ? 2.5 : 0.5;
@@ -336,6 +338,8 @@ export default function AdminCustomers() {
   });
 
   const handleActivitySelect = (e: React.ChangeEvent<HTMLInputElement>, activity: any) => {
+    console.log('Handling activity selection:', { activity, checked: e.target.checked });
+
     const currentSelected = pointsForm.getValues("selectedActivities") || [];
     const currentPoints = pointsForm.getValues("points") || 0;
 
@@ -345,7 +349,9 @@ export default function AdminCustomers() {
 
         const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
         if (!isPremiumOrCard) {
-          pointsForm.setValue("points", currentPoints + (activity.pointsValue || 0));
+          const newPoints = currentPoints + (activity.pointsValue || 0);
+          console.log('Adding points:', { current: currentPoints, adding: activity.pointsValue, new: newPoints });
+          pointsForm.setValue("points", newPoints);
         }
 
         const description = `Points for ${activity.type.toLowerCase().replace('_', ' ')} activity`;
@@ -358,11 +364,16 @@ export default function AdminCustomers() {
           currentSelected.filter(id => id !== activity.id)
         );
 
+        const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
         if (!isPremiumOrCard) {
-          pointsForm.setValue("points", Math.max(0, currentPoints - (activity.pointsValue || 0)));
+          const newPoints = Math.max(0, currentPoints - (activity.pointsValue || 0));
+          console.log('Removing points:', { current: currentPoints, removing: activity.pointsValue, new: newPoints });
+          pointsForm.setValue("points", newPoints);
         } else {
           const oldValue = activity.currentValue || 0;
-          pointsForm.setValue("points", Math.max(0, currentPoints - oldValue));
+          const newPoints = Math.max(0, currentPoints - oldValue);
+          console.log('Removing premium/card points:', { current: currentPoints, removing: oldValue, new: newPoints });
+          pointsForm.setValue("points", newPoints);
           activity.currentValue = 0;
           activity.baseValue = 0;
         }
@@ -376,7 +387,6 @@ export default function AdminCustomers() {
       });
     }
   };
-
 
   return (
     <div className="space-y-6">
@@ -629,6 +639,14 @@ export default function AdminCustomers() {
                                                     const multiplierType = activity.type === "PREMIUM_PAYMENT" ? 'premium' : 'card';
                                                     const pointsMultiplier = getPointsMultiplier(customer.points, multiplierType);
 
+                                                    console.log('Rendering activity:', {
+                                                      id: activity.id,
+                                                      type: activity.type,
+                                                      pointsValue: activity.pointsValue,
+                                                      isPremiumOrCard,
+                                                      multiplier: pointsMultiplier
+                                                    });
+
                                                     return (
                                                       <div
                                                         key={activity.id}
@@ -666,6 +684,15 @@ export default function AdminCustomers() {
                                                                 const multipliedValue = Math.floor(baseValue * pointsMultiplier);
                                                                 const currentPoints = pointsForm.getValues("points") || 0;
                                                                 const oldValue = activity.currentValue || 0;
+
+                                                                console.log('Updating premium/card points:', {
+                                                                  baseValue,
+                                                                  multiplier: pointsMultiplier,
+                                                                  multipliedValue,
+                                                                  currentPoints,
+                                                                  oldValue
+                                                                });
+
                                                                 pointsForm.setValue("points", currentPoints - oldValue + multipliedValue);
                                                                 activity.currentValue = multipliedValue;
                                                                 activity.baseValue = baseValue;
@@ -705,28 +732,35 @@ export default function AdminCustomers() {
                                               </span>
                                             )}
                                           </label>
-                                          <div className="flex items-center space-x-2">
-                                            <Input
-                                              type="number"
-                                              min="0"
-                                              placeholder="Enter POS points"
-                                              onChange={(e) => {
-                                                const baseValue = parseInt(e.target.value) || 0;
-                                                const multiplier = getPointsMultiplier(customer.points, 'pos');
-                                                const multipliedValue = Math.floor(baseValue * multiplier);
-                                                const currentPoints = pointsForm.getValues("points") || 0;
-                                                const oldPosPoints = pointsForm.getValues("posPoints") || 0;
-                                                pointsForm.setValue("points", currentPoints - oldPosPoints + multipliedValue);
-                                                pointsForm.setValue("posPoints", multipliedValue);
-                                                pointsForm.setValue("posBaseValue", baseValue);
-                                              }}
-                                            />
-                                            {getPointsMultiplier(customer.points, 'pos') > 0 && (
-                                              <span className="text-sm text-muted-foreground">
-                                                = {pointsForm.watch("posPoints") || 0} points
-                                              </span>
-                                            )}
-                                          </div>
+                                          <Input
+                                            type="number"
+                                            className="w-full"
+                                            placeholder="Enter POS points"
+                                            value={pointsForm.watch("posPoints") || ""}
+                                            onChange={(e) => {
+                                              const baseValue = parseInt(e.target.value) || 0;
+                                              const multiplier = getPointsMultiplier(customer.points, 'pos');
+                                              const multipliedValue = Math.floor(baseValue * multiplier);
+
+                                              console.log('Updating POS points:', {
+                                                baseValue,
+                                                multiplier,
+                                                multipliedValue
+                                              });
+
+                                              pointsForm.setValue("posPoints", baseValue);
+                                              pointsForm.setValue("points", multipliedValue);
+
+                                              if (!pointsForm.getValues("description")) {
+                                                pointsForm.setValue("description", "Points from POS transaction");
+                                              }
+                                            }}
+                                          />
+                                          {getPointsMultiplier(customer.points, 'pos') > 0 && (
+                                            <p className="text-sm text-muted-foreground">
+                                              = {Math.floor((pointsForm.watch("posPoints") || 0) * getPointsMultiplier(customer.points, 'pos'))} points
+                                            </p>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -734,51 +768,6 @@ export default function AdminCustomers() {
 
                                   <div className="space-y-6">
                                     <div className="space-y-4">
-                                      <h3 className="text-lg font-semibold">Points Summary</h3>
-
-                                      <div className="space-y-4 bg-accent/20 p-4 rounded-lg">
-                                        {customer.productAssignments?.map((assignment: any) => (
-                                          <div key={assignment.id}>
-                                            {assignment.product.activities
-                                              ?.filter((activity: any) => pointsForm.watch("selectedActivities")?.includes(activity.id))
-                                              .map((activity: any) => (
-                                                <div key={activity.id} className="flex justify-between items-center py-2">
-                                                  <span className="text-sm">
-                                                    {assignment.product.name} - {activity.type.replace('_', ' ')}
-                                                    {(activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE") && (
-                                                      <span className="text-xs text-muted-foreground ml-1">
-                                                        (Base: {activity.baseValue || 0})
-                                                      </span>
-                                                    )}
-                                                  </span>
-                                                  <span className="font-medium">
-                                                    {activity.currentValue || activity.pointsValue} points
-                                                  </span>
-                                                </div>
-                                              ))}
-                                          </div>
-                                        ))}
-
-                                        {pointsForm.watch("posPoints") > 0 && (
-                                          <div className="flex justify-between items-center py-2 border-t">
-                                            <span className="text-sm">
-                                              POS Points
-                                              <span className="text-xs text-muted-foreground ml-1">
-                                                (Base: {pointsForm.watch("posBaseValue") || 0})
-                                              </span>
-                                            </span>
-                                            <span className="font-medium">{pointsForm.watch("posPoints")} points</span>
-                                          </div>
-                                        )}
-
-                                        <div className="flex justify-between items-center pt-4 border-t border-t-2">
-                                          <span className="font-semibold">Total Points</span>
-                                          <span className="text-2xl font-bold">
-                                            {pointsForm.watch("points")}
-                                          </span>
-                                        </div>
-                                      </div>
-
                                       <div className="space-y-2">
                                         <label>Description <span className="text-red-500">*</span></label>
                                         <Input
@@ -792,34 +781,30 @@ export default function AdminCustomers() {
                                         )}
                                       </div>
 
+                                      <div className="space-y-2">
+                                        <label className="text-sm font-medium">
+                                          Total Points to Assign
+                                        </label>
+                                        <Input
+                                          type="number"
+                                          value={pointsForm.watch("points") || ""}
+                                          onChange={(e) => pointsForm.setValue("points", parseInt(e.target.value) || 0)}
+                                        />
+                                      </div>
+
                                       <Button
-                                        type="submit"
                                         className="w-full"
-                                        disabled={!pointsForm.watch("points") || !pointsForm.watch("description")}
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          const formData = pointsForm.getValues();
-                                          if (!formData.description) {
-                                            toast({
-                                              variant: "destructive",
-                                              title: "Error",
-                                              description: "Please provide a description for the points adjustment"
-                                            });
-                                            return;
-                                          }
-                                          assignPointsMutation.mutate({
-                                            userId: customer.id,
-                                            data: {
-                                              points: formData.points,
-                                              description: formData.description,
-                                              selectedActivities: formData.selectedActivities
-                                            }
-                                          });
+                                        onClick={() => {
+                                          console.log('Submitting points form:', pointsForm.getValues());
+                                          pointsForm.handleSubmit((data) => {
+                                            assignPointsMutation.mutate({ userId: customer.id, data });
+                                          })();
                                         }}
+                                        disabled={!pointsForm.watch("points") || assignPointsMutation.isPending}
                                       >
                                         Assign {pointsForm.watch("points")} Points
                                       </Button>
-                                                                        </div>
+                                    </div>
                                   </div>
                                 </div>
                               </DialogContent>
@@ -846,27 +831,27 @@ export default function AdminCustomers() {
                                     <Input {...form.register("email")} defaultValue={customer.email} />
                                   </div>
                                   <div className="space-y-2">
-                                    <label>First Name</label>
-                                    <Input {...form.register("firstName")} defaultValue={customer.firstName} />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label>Last Name</label>
-                                    <Input {...form.register("lastName")} defaultValue={customer.lastName} />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label>Phone Number</label>
-                                    <Input {...form.register("phoneNumber")} defaultValue={customer.phoneNumber} />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label>Password</label>
-                                    <Input
-                                      type="password"
-                                      {...form.register("password")}
-                                      placeholder="Leave blank to keep current password"
-                                    />
-                                  </div>
-                                  <Button type="submit">Update Customer</Button>
-                                </form>
+                    <label>First Name</label>
+                    <Input {...form.register("firstName")} defaultValue={customer.firstName} />
+                  </div>
+                  <div className="space-y-2">
+                    <label>Last Name</label>
+                    <Input {...form.register("lastName")} defaultValue={customer.lastName} />
+                  </div>
+                  <div className="space-y-2">
+                    <label>Phone Number</label>
+                    <Input {...form.register("phoneNumber")} defaultValue={customer.phoneNumber} />
+                  </div>
+                  <div className="space-y-2">
+                    <label>Password</label>
+                    <Input
+                      type="password"
+                      {...form.register("password")}
+                      placeholder="Leave blank to keep current password"
+                    />
+                  </div>
+                  <Button type="submit">Update Customer</Button>
+                </form>
                               </DialogContent>
                             </Dialog>
                           </DropdownMenuContent>

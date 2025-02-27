@@ -116,6 +116,7 @@ export function registerRoutes(app: Express): Server {
   });
 
 
+  // Fetch product assignments with activities
   app.get("/api/products/assignments/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
@@ -134,31 +135,21 @@ export function registerRoutes(app: Express): Server {
       }
 
       const { id } = req.params;
+      console.log('Fetching assignment details for ID:', id);
 
-      // Fetch assignment with related data including activities
-      const [products] = await connection.execute(
+      // First get the base assignment data
+      const [assignments] = await connection.execute(
         `SELECT 
-          pa.*,
-          p.name,
-          p.description,
-          p.is_enabled,
+          pa.id,
+          pa.product_id,
+          pa.user_id,
+          pa.created_at,
+          p.name as product_name,
+          p.description as product_description,
+          p.is_enabled as product_is_enabled,
           u.email as user_email,
           u.first_name as user_first_name,
-          u.last_name as user_last_name,
-          (SELECT 
-            COALESCE(
-              JSON_ARRAYAGG(
-                JSON_OBJECT(
-                  'id', act.id,
-                  'type', act.type,
-                  'pointsValue', act.points_value
-                )
-              ),
-              '[]'
-            )
-           FROM product_activities act
-           WHERE act.product_id = p.id
-          ) as activities
+          u.last_name as user_last_name
          FROM product_assignments pa
          JOIN products p ON pa.product_id = p.id
          JOIN users u ON pa.user_id = u.id
@@ -166,24 +157,26 @@ export function registerRoutes(app: Express): Server {
         [id]
       );
 
-      if (!products || products.length === 0) {
+      if (!assignments || assignments.length === 0) {
         return res.status(404).json({ error: "Assignment not found" });
       }
 
-      const assignment = products[0];
-      
-      // Parse activities
-      let activities = [];
-      try {
-        if (assignment.activities) {
-          console.log('Raw activities string:', assignment.activities);
-          activities = JSON.parse(assignment.activities);
-          console.log('Parsed activities:', activities);
-        }
-      } catch (e) {
-        console.error('Error parsing activities:', e);
-        console.log('Failed activities string:', assignment.activities);
-      }
+      const assignment = assignments[0];
+      console.log('Found assignment:', {
+        id: assignment.id,
+        productId: assignment.product_id,
+        userId: assignment.user_id
+      });
+
+      // Then get the activities for this product
+      const [activities] = await connection.execute(
+        `SELECT id, type, points_value
+         FROM product_activities
+         WHERE product_id = ?`,
+        [assignment.product_id]
+      );
+
+      console.log('Found activities:', activities);
 
       const transformedAssignment = {
         id: assignment.id,
@@ -192,10 +185,14 @@ export function registerRoutes(app: Express): Server {
         createdAt: assignment.created_at,
         product: {
           id: assignment.product_id,
-          name: assignment.name,
-          description: assignment.description,
-          isEnabled: Boolean(assignment.is_enabled),
-          activities: activities
+          name: assignment.product_name,
+          description: assignment.product_description,
+          isEnabled: Boolean(assignment.product_is_enabled),
+          activities: activities.map(activity => ({
+            id: activity.id,
+            type: activity.type,
+            pointsValue: activity.points_value
+          }))
         },
         user: {
           id: assignment.user_id,
