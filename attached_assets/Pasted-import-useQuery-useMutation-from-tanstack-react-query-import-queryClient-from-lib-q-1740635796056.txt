@@ -46,8 +46,7 @@ const userSchema = z.object({
 const pointsSchema = z.object({
   points: z.number().min(1, "Points must be greater than 0"),
   description: z.string().min(1, "Description is required"),
-  selectedActivities: z.array(z.number()).optional(),
-  posPoints: z.number().min(0).optional(),
+  selectedActivities: z.array(z.number()).optional()
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -140,7 +139,6 @@ export default function AdminCustomers() {
       points: 0,
       description: "",
       selectedActivities: [],
-      posPoints: 0,
     },
   });
 
@@ -176,7 +174,6 @@ export default function AdminCustomers() {
 
   const assignPointsMutation = useMutation({
     mutationFn: async ({ userId, data }: { userId: number, data: PointsFormData }) => {
-      console.log('Assigning points:', { userId, data });
       const res = await fetch("/api/admin/points", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -185,22 +182,17 @@ export default function AdminCustomers() {
           userId,
           points: data.points,
           description: data.description,
+          selectedActivities: data.selectedActivities
         }),
       });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/logs"] });
-      toast({ 
-        title: "Success", 
-        description: `Points assigned successfully. New total: ${data.newPoints.toLocaleString()} (${data.tier})`
-      });
-      pointsForm.reset();
+      toast({ title: "Success", description: "Points assigned successfully" });
     },
     onError: (error: Error) => {
-      console.error('Error assigning points:', error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -338,8 +330,6 @@ export default function AdminCustomers() {
   });
 
   const handleActivitySelect = (e: React.ChangeEvent<HTMLInputElement>, activity: any) => {
-    console.log('Handling activity selection:', { activity, checked: e.target.checked });
-
     const currentSelected = pointsForm.getValues("selectedActivities") || [];
     const currentPoints = pointsForm.getValues("points") || 0;
 
@@ -350,7 +340,6 @@ export default function AdminCustomers() {
         const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
         if (!isPremiumOrCard) {
           const newPoints = currentPoints + (activity.pointsValue || 0);
-          console.log('Adding points:', { current: currentPoints, adding: activity.pointsValue, new: newPoints });
           pointsForm.setValue("points", newPoints);
         }
 
@@ -367,12 +356,10 @@ export default function AdminCustomers() {
         const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
         if (!isPremiumOrCard) {
           const newPoints = Math.max(0, currentPoints - (activity.pointsValue || 0));
-          console.log('Removing points:', { current: currentPoints, removing: activity.pointsValue, new: newPoints });
           pointsForm.setValue("points", newPoints);
         } else {
           const oldValue = activity.currentValue || 0;
           const newPoints = Math.max(0, currentPoints - oldValue);
-          console.log('Removing premium/card points:', { current: currentPoints, removing: oldValue, new: newPoints });
           pointsForm.setValue("points", newPoints);
           activity.currentValue = 0;
           activity.baseValue = 0;
@@ -580,196 +567,10 @@ export default function AdminCustomers() {
                                 </div>
                               </DialogContent>
                             </Dialog>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <TrendingUp className="mr-2 h-4 w-4" />
-                                  Assign Points
-                                </DropdownMenuItem>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
-                                <DialogHeader>
-                                  <DialogTitle className="text-[#43EB3E]">Assign Points to {customer.firstName}</DialogTitle>
-                                  <DialogDescription className="text-gray-300">
-                                    Select activities from assigned products to allocate points.
-                                  </DialogDescription>
-                                  <div className="flex items-center gap-2 mt-2">
-                                    <span className="text-sm text-muted-foreground">Current Tier:</span>
-                                    <Badge className={`${getTierInfo(customer.points).color}`}>
-                                      {getTierInfo(customer.points).name}
-                                    </Badge>
-                                    {getTierInfo(customer.points).nextTier && (
-                                      <span className="text-xs text-muted-foreground">
-                                        ({getTierInfo(customer.points).nextTier?.pointsNeeded.toLocaleString()} points to {getTierInfo(customer.points).nextTier?.name})
-                                      </span>
-                                    )}
-                                  </div>
-                                </DialogHeader>
-
-                                <ScrollArea className="h-[500px] pr-4">
-                                  <div className="space-y-6">
-                                    {customer.productAssignments?.map((assignment) => (
-                                      <Card key={assignment.id} className="bg-accent/10 border-accent/20">
-                                        <CardHeader>
-                                          <CardTitle>{assignment.product.name}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                          <div className="space-y-4">
-                                            {assignment.product.activities?.map((activity) => {
-                                              const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
-                                              const multiplierType = activity.type === "PREMIUM_PAYMENT" ? 'premium' : 'card';
-                                              const pointsMultiplier = getPointsMultiplier(customer.points, multiplierType);
-
-                                              return (
-                                                <div
-                                                  key={activity.id}
-                                                  className="flex items-center justify-between p-3 rounded-lg border border-accent/20 hover:bg-accent/20 transition-colors"
-                                                >
-                                                  <div className="flex items-center space-x-3">
-                                                    <input
-                                                      type="checkbox"
-                                                      id={`activity-${activity.id}`}
-                                                      className="w-4 h-4 rounded border-gray-300"
-                                                      checked={pointsForm.watch("selectedActivities")?.includes(activity.id)}
-                                                      onChange={(e) => {
-                                                        const currentSelected = pointsForm.getValues("selectedActivities") || [];
-                                                        const currentPoints = pointsForm.getValues("points") || 0;
-
-                                                        if (e.target.checked) {
-                                                          pointsForm.setValue("selectedActivities", [...currentSelected, activity.id]);
-
-                                                          if (!isPremiumOrCard) {
-                                                            pointsForm.setValue("points", currentPoints + activity.pointsValue);
-                                                          }
-                                                        } else {
-                                                          pointsForm.setValue(
-                                                            "selectedActivities",
-                                                            currentSelected.filter(id => id !== activity.id)
-                                                          );
-
-                                                          if (!isPremiumOrCard) {
-                                                            pointsForm.setValue("points", Math.max(0, currentPoints - activity.pointsValue));
-                                                          }
-                                                        }
-                                                      }}
-                                                    />
-                                                    <div>
-                                                      <label
-                                                        htmlFor={`activity-${activity.id}`}
-                                                        className="font-medium cursor-pointer"
-                                                      >
-                                                        {activity.type.replace('_', ' ')}
-                                                      </label>
-                                                      {isPremiumOrCard && pointsMultiplier > 0 && (
-                                                        <p className="text-sm text-muted-foreground">
-                                                          Multiplier: ×{pointsMultiplier}
-                                                        </p>
-                                                      )}
-                                                    </div>
-                                                  </div>
-
-                                                  {isPremiumOrCard ? (
-                                                    <div className="flex items-center space-x-3">
-                                                      <Input
-                                                        type="number"
-                                                        className="w-32"
-                                                        placeholder="Enter value"
-                                                        disabled={!pointsForm.watch("selectedActivities")?.includes(activity.id)}
-                                                        onChange={(e) => {
-                                                          const baseValue = parseInt(e.target.value) || 0;
-                                                          const multipliedValue = Math.floor(baseValue * pointsMultiplier);
-                                                          const currentPoints = pointsForm.getValues("points") || 0;
-
-                                                          pointsForm.setValue("points", multipliedValue);
-                                                        }}
-                                                      />
-                                                      {pointsMultiplier > 0 && (
-                                                        <span className="text-sm text-muted-foreground">
-                                                          = {Math.floor((parseInt(pointsForm.watch(`baseValue.${activity.id}`)) || 0) * pointsMultiplier)} points
-                                                        </span>
-                                                      )}
-                                                    </div>
-                                                  ) : (
-                                                    <Badge variant="secondary">
-                                                      {activity.pointsValue} points
-                                                    </Badge>
-                                                  )}
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        </CardContent>
-                                      </Card>
-                                    ))}
-
-                                    {(!customer.productAssignments || customer.productAssignments.length === 0) && (
-                                      <div className="text-center py-8 text-muted-foreground">
-                                        No products assigned to this customer
-                                      </div>
-                                    )}
-
-                                    <Card className="bg-accent/10 border-accent/20">
-                                      <CardHeader>
-                                        <CardTitle>Points Summary</CardTitle>
-                                      </CardHeader>
-                                      <CardContent>
-                                        <div className="space-y-4">
-                                          <div>
-                                            <label className="block text-sm font-medium mb-2">
-                                              Description <span className="text-red-500">*</span>
-                                            </label>
-                                            <Input
-                                              {...pointsForm.register("description")}
-                                              placeholder="Reason for points adjustment"
-                                            />
-                                            {pointsForm.formState.errors.description && (
-                                              <p className="text-sm text-red-500 mt-1">
-                                                {pointsForm.formState.errors.description.message}
-                                              </p>
-                                            )}
-                                          </div>
-
-                                          <Separator />
-
-                                          <div className="flex justify-between items-center">
-                                            <span className="font-semibold">Total Points to Assign</span>
-                                            <span className="text-2xl font-bold">
-                                              {pointsForm.watch("points") || 0}
-                                            </span>
-                                          </div>
-
-                                          <Button
-                                            className="w-full mt-4"
-                                            onClick={() => {
-                                              const data = pointsForm.getValues();
-                                              if (!data.points || !data.description) {
-                                                toast({
-                                                  variant: "destructive",
-                                                  title: "Error",
-                                                  description: "Please enter points and description"
-                                                });
-                                                return;
-                                              }
-                                              assignPointsMutation.mutate({
-                                                userId: customer.id,
-                                                data: {
-                                                  points: data.points,
-                                                  description: data.description,
-                                                  selectedActivities: data.selectedActivities
-                                                }
-                                              });
-                                            }}
-                                            disabled={!pointsForm.watch("points") || assignPointsMutation.isPending}
-                                          >
-                                            Assign {pointsForm.watch("points") || 0} Points
-                                          </Button>
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  </div>
-                                </ScrollArea>
-                              </DialogContent>
-                            </Dialog>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <TrendingUp className="mr-2 h-4 w-4" />
+                              Assign Points (Under Maintenance)
+                            </DropdownMenuItem>
                             <Dialog>
                               <DialogTrigger asChild>
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
