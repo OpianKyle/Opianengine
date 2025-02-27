@@ -398,7 +398,11 @@ export default function RegisterPage() {
   };
 
   const today = new Date().toISOString().split('T')[0];
-  const MandateText = `I / We hereby authorise you to issue and deliver payment instructions of ${
+  const MandateText = `This signed Authority and Mandate refers to our contract dated
+${today}
+("the Agreement").
+
+I / We hereby authorise you to issue and deliver payment instructions of ${
     packages.find(pkg => pkg.id === formData.selectedPackage)?.price || 0
   } per month for the subscription fee to your Banker for collection against my / our abovementioned account at my / our above-mentioned Bank (or any other bank or branch to which I / we may transfer my / our account) on condition that the sum of such payment instructions will never exceed my / our obligations as as agreed to in the Agreement and commencing on 1st of each month and continuing until this Authority and Mandate is terminated by me / us by giving you notice in writing of not less than 60 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
 
@@ -411,6 +415,7 @@ In the event that the payment day falls on a Sunday, or recognised South African
 Payment Instructions due in December may be debited against my account on a earlier date
 
 I / We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement. A payment reference is added to this form before the issuing of any payment instruction.
+
 Mandate
 I /We acknowledge that all payment instructions issued by you shall be treated by my / our above-mentioned Bank as if the instructions have been issued by me/us personally.
 
