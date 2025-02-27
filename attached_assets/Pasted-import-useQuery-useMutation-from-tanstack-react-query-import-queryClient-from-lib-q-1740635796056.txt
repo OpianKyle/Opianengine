@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
@@ -590,6 +590,9 @@ export default function AdminCustomers() {
                               <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
                                 <DialogHeader>
                                   <DialogTitle className="text-[#43EB3E]">Assign Points to {customer.firstName}</DialogTitle>
+                                  <DialogDescription className="text-gray-300">
+                                    Select activities or enter points manually to assign to this customer.
+                                  </DialogDescription>
                                   <div className="flex items-center gap-2 mt-2">
                                     <span className="text-sm text-muted-foreground">Current Tier:</span>
                                     <Badge className={`${getTierInfo(customer.points).color}`}>
@@ -602,10 +605,10 @@ export default function AdminCustomers() {
                                     )}
                                   </div>
                                 </DialogHeader>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                  <div className="space-y-6">
+                                <div className="grid gap-6 py-4">
+                                  <div className="space-y-4">
                                     <h3 className="text-lg font-semibold">Product Activities</h3>
-                                    <ScrollArea className="h-[400px] pr-4">
+                                    <ScrollArea className="h-[300px] pr-4">
                                       <div className="space-y-4">
                                         {customer.productAssignments?.map((assignment: any) => (
                                           <Accordion type="single" collapsible key={assignment.id}>
@@ -639,14 +642,6 @@ export default function AdminCustomers() {
                                                     const multiplierType = activity.type === "PREMIUM_PAYMENT" ? 'premium' : 'card';
                                                     const pointsMultiplier = getPointsMultiplier(customer.points, multiplierType);
 
-                                                    console.log('Rendering activity:', {
-                                                      id: activity.id,
-                                                      type: activity.type,
-                                                      pointsValue: activity.pointsValue,
-                                                      isPremiumOrCard,
-                                                      multiplier: pointsMultiplier
-                                                    });
-
                                                     return (
                                                       <div
                                                         key={activity.id}
@@ -677,21 +672,13 @@ export default function AdminCustomers() {
                                                             <Input
                                                               type="number"
                                                               className="w-32"
-                                                              placeholder="Enter points"
+                                                              placeholder="Enter value"
                                                               disabled={!pointsForm.watch("selectedActivities")?.includes(activity.id)}
                                                               onChange={(e) => {
                                                                 const baseValue = parseInt(e.target.value) || 0;
                                                                 const multipliedValue = Math.floor(baseValue * pointsMultiplier);
                                                                 const currentPoints = pointsForm.getValues("points") || 0;
                                                                 const oldValue = activity.currentValue || 0;
-
-                                                                console.log('Updating premium/card points:', {
-                                                                  baseValue,
-                                                                  multiplier: pointsMultiplier,
-                                                                  multipliedValue,
-                                                                  currentPoints,
-                                                                  oldValue
-                                                                });
 
                                                                 pointsForm.setValue("points", currentPoints - oldValue + multipliedValue);
                                                                 activity.currentValue = multipliedValue;
@@ -771,7 +758,6 @@ export default function AdminCustomers() {
                                       <Button
                                         className="w-full"
                                         onClick={() => {
-                                          console.log('Submitting points form:', pointsForm.getValues());
                                           pointsForm.handleSubmit((data) => {
                                             assignPointsMutation.mutate({ userId: customer.id, data });
                                           })();
@@ -824,10 +810,10 @@ export default function AdminCustomers() {
                                       type="password"
                                       {...form.register("password")}
                                       placeholder="Leave blank to keep current password"
-                    />
-                  </div>
-                  <Button type="submit">Update Customer</Button>
-                </form>
+                                    />
+                                  </div>
+                                  <Button type="submit">Update Customer</Button>
+                                </form>
                               </DialogContent>
                             </Dialog>
                           </DropdownMenuContent>
