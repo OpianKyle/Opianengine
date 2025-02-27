@@ -145,19 +145,21 @@ export function registerRoutes(app: Express): Server {
           u.email as user_email,
           u.first_name as user_first_name,
           u.last_name as user_last_name,
-          GROUP_CONCAT(
-            JSON_OBJECT(
-              'id', act.id,
-              'type', act.type,
-              'pointsValue', act.points_value
+          (SELECT 
+            JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'id', act.id,
+                'type', act.type,
+                'pointsValue', act.points_value
+              )
             )
+           FROM product_activities act
+           WHERE act.product_id = p.id
           ) as activities
          FROM product_assignments pa
          JOIN products p ON pa.product_id = p.id
          JOIN users u ON pa.user_id = u.id
-         LEFT JOIN product_activities act ON p.id = act.product_id
-         WHERE pa.id = ?
-         GROUP BY pa.id`,
+         WHERE pa.id = ?`,
         [id]
       );
 
@@ -166,19 +168,16 @@ export function registerRoutes(app: Express): Server {
       }
 
       const assignment = assignments[0];
-
+      
       // Parse activities
       let activities = [];
       try {
-        activities = assignment.activities ? 
-          assignment.activities.split(',').map(activity => {
-            try {
-              return JSON.parse(activity);
-            } catch (e) {
-              console.error('Error parsing activity:', e);
-              return null;
-            }
-          }).filter(Boolean) : [];
+        if (assignment.activities) {
+          console.log('Raw activities for assignment:', assignment.activities);
+          activities = JSON.parse(assignment.activities);
+          console.log('Parsed activities:', activities);
+          activities = activities.filter(activity => activity && activity.id && activity.type);
+        }
       } catch (e) {
         console.error('Error parsing activities:', e);
       }
