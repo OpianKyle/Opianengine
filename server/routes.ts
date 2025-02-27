@@ -687,10 +687,10 @@ export function registerRoutes(app: Express): Server {
 
       const { name, description, activities } = req.body;
 
-      console.log('Creating product:', {
+      console.log('Creating product with activities:', {
         name,
         description,
-        activitiesCount: activities?.length
+        activities: activities?.map(a => ({ type: a.type, pointsValue: a.pointsValue }))
       });
 
       await connection.beginTransaction();
@@ -704,33 +704,52 @@ export function registerRoutes(app: Express): Server {
         );
 
         const productId = productResult.insertId;
+        console.log('Created product with ID:', productId);
 
         // Create product activities
         if (activities && Array.isArray(activities)) {
           for (const activity of activities) {
-            await connection.execute(
-              `INSERT INTO product_activities (product_id, type, points_value)
-               VALUES (?, ?, ?)`,
-              [productId, activity.type, activity.pointsValue]
-            );
+            if (!activity.type || activity.pointsValue === undefined) {
+              console.error('Invalid activity data:', activity);
+              continue;
+            }
+
+            console.log('Creating activity:', {
+              productId,
+              type: activity.type,
+              pointsValue: activity.pointsValue
+            });
+
+            try {
+              const [activityResult] = await connection.execute(
+                `INSERT INTO product_activities (product_id, type, points_value)
+                 VALUES (?, ?, ?)`,
+                [productId, activity.type, activity.pointsValue]
+              );
+
+              console.log('Created activity:', activityResult.insertId);
+            } catch (activityError) {
+              console.error('Error creating activity:', activityError);
+              throw activityError;
+            }
           }
         }
 
         await connection.commit();
 
-        // Fetch complete product data
+        // Fetch complete product data with activities
         const [products] = await connection.execute(
           `SELECT 
             p.*,
             COALESCE(
-              JSON_ARRAYAGG(
+              GROUP_CONCAT(
                 JSON_OBJECT(
                   'id', pa.id,
                   'type', pa.type,
                   'pointsValue', pa.points_value
                 )
               ),
-              '[]'
+              NULL
             ) as activities
            FROM products p
            LEFT JOIN product_activities pa ON p.id = pa.product_id
@@ -745,15 +764,22 @@ export function registerRoutes(app: Express): Server {
 
         const product = products[0];
 
-        // Parse the activities JSON string
+        // Parse activities
         let parsedActivities = [];
         try {
-          parsedActivities = JSON.parse(product.activities);
-          // Remove null entries if any
-          parsedActivities = parsedActivities.filter(activity => activity != null);
+          if (product.activities) {
+            parsedActivities = product.activities.split(',').map(activity => {
+              try {
+                return JSON.parse(activity);
+              } catch (e) {
+                console.error('Error parsing activity:', e);
+                return null;
+              }
+            }).filter(activity => activity && activity.id && activity.type);
+          }
         } catch (e) {
           console.error('Error parsing activities:', e);
-          parsedActivities = [];
+          console.log('Raw activities string:', product.activities);
         }
 
         const transformedProduct = {
