@@ -136,22 +136,25 @@ export function registerRoutes(app: Express): Server {
       const { id } = req.params;
 
       // Fetch assignment with related data including activities
-      const [assignments] = await connection.execute(
+      const [products] = await connection.execute(
         `SELECT 
           pa.*,
-          p.name as product_name,
-          p.description as product_description,
-          p.is_enabled as product_is_enabled,
+          p.name,
+          p.description,
+          p.is_enabled,
           u.email as user_email,
           u.first_name as user_first_name,
           u.last_name as user_last_name,
           (SELECT 
-            JSON_ARRAYAGG(
-              JSON_OBJECT(
-                'id', act.id,
-                'type', act.type,
-                'pointsValue', act.points_value
-              )
+            COALESCE(
+              JSON_ARRAYAGG(
+                JSON_OBJECT(
+                  'id', act.id,
+                  'type', act.type,
+                  'pointsValue', act.points_value
+                )
+              ),
+              '[]'
             )
            FROM product_activities act
            WHERE act.product_id = p.id
@@ -163,23 +166,23 @@ export function registerRoutes(app: Express): Server {
         [id]
       );
 
-      if (!assignments || assignments.length === 0) {
+      if (!products || products.length === 0) {
         return res.status(404).json({ error: "Assignment not found" });
       }
 
-      const assignment = assignments[0];
+      const assignment = products[0];
       
       // Parse activities
       let activities = [];
       try {
         if (assignment.activities) {
-          console.log('Raw activities for assignment:', assignment.activities);
+          console.log('Raw activities string:', assignment.activities);
           activities = JSON.parse(assignment.activities);
           console.log('Parsed activities:', activities);
-          activities = activities.filter(activity => activity && activity.id && activity.type);
         }
       } catch (e) {
         console.error('Error parsing activities:', e);
+        console.log('Failed activities string:', assignment.activities);
       }
 
       const transformedAssignment = {
@@ -189,9 +192,9 @@ export function registerRoutes(app: Express): Server {
         createdAt: assignment.created_at,
         product: {
           id: assignment.product_id,
-          name: assignment.product_name,
-          description: assignment.product_description,
-          isEnabled: Boolean(assignment.product_is_enabled),
+          name: assignment.name,
+          description: assignment.description,
+          isEnabled: Boolean(assignment.is_enabled),
           activities: activities
         },
         user: {
