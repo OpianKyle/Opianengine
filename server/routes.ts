@@ -251,106 +251,136 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post("/api/admin/points", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    const { userId, points, description } = req.body;
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
+    const connection = await createConnection();
     try {
-      const result = await db.transaction(async (tx) => {
-        const [targetUser] = await tx
-          .select({
-            id: users.id,
-            email: users.email,
-            firstName: users.firstName,
-            lastName: users.lastName,
-            points: users.points
-          })
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1)
-          .execute();
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-        if (!targetUser) {
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { userId, points, description } = req.body;
+      console.log('Points assignment request:', { userId, points, description });
+
+      await connection.beginTransaction();
+
+      try {
+        // Get target user
+        const [users] = await connection.execute(
+          'SELECT id, email, first_name, last_name, points FROM users WHERE id = ?',
+          [userId]
+        );
+
+        if (!users || users.length === 0) {
           throw new Error("User not found");
         }
 
-        const [admin] = await tx
-          .select({
-            id: users.id,
-            email: users.email,
-            firstName: users.firstName,
-            lastName: users.lastName
-          })
-          .from(users)
-          .where(eq(users.id, req.user.id))
-          .limit(1)
-          .execute();
+        const targetUser = users[0];
 
-        await tx.insert(transactions).values({
-          userId,
-          points,
-          type: "ADMIN_ADJUSTMENT",
-          description,
-        }).execute();
+        // Get admin user
+        const [admins] = await connection.execute(
+          'SELECT id, email, first_name, last_name FROM users WHERE id = ?',
+          [req.user.id]
+        );
 
-        const [updatedUser] = await tx
-          .update(users)
-          .set({
-            points: sql`${users.points} + ${points}`,
-          })
-          .where(eq(users.id, userId))
-          .returning()
-          .execute();
+        const admin = admins[0];
 
-        const tierPoints = updatedUser.points;
+        // Insert transaction
+        const [transactionResult] = await connection.execute(
+          `INSERT INTO transactions (user_id, points, type, description)
+           VALUES (?, ?, 'ADMIN_ADJUSTMENT', ?)`,
+          [userId, points, description]
+        );
+
+        // Update user points
+        await connection.execute(
+          'UPDATE users SET points = points + ? WHERE id = ?',
+          [points, userId]
+        );
+
+        // Get updated user points
+        const [updatedUsers] = await connection.execute(
+          'SELECT points FROM users WHERE id = ?',
+          [userId]
+        );
+
+        const tierPoints = updatedUsers[0].points;
         let currentTier = "Bronze";
         if (tierPoints >= 150000) currentTier = "Platinum";
         else if (tierPoints >= 100000) currentTier = "Gold";
         else if (tierPoints >= 50000) currentTier = "Purple";
         else if (tierPoints >= 10000) currentTier = "Silver";
 
-        // Update WebSocket notification using the correct method
-        await wsServer.notifyPointsUpdate(userId, points, description);
+        // Insert admin log
+        await connection.execute(
+          `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
+           VALUES (?, 'POINT_ADJUSTMENT', ?, ?)`,
+          [req.user.id, userId, `Adjusted points by ${points}. Reason: ${description}`]
+        );
 
-        const customerEmail = formatPointsAssignmentEmail(
-          targetUser.firstName || "Valued Customer",
+        await connection.commit();
+
+        // Send notifications and emails
+        try {
+          const customerEmail = formatPointsAssignmentEmail(
+            targetUser.first_name || "Valued Customer",
+            points,
+            description,
+            currentTier
+          );
+          await sendEmail({
+            to: targetUser.email,
+            subject: "Points Added to Your Account",
+            text: customerEmail.text,
+            html: customerEmail.html
+          });
+
+          const adminEmail = formatAdminNotificationEmail(
+            `${targetUser.first_name} ${targetUser.last_name}`,
+            points,
+            description,
+            admin.first_name || "Admin"
+          );
+          await sendEmail({
+            to: admin.email,
+            subject: `Points Assignment Confirmation: ${targetUser.first_name} ${targetUser.last_name}`,
+            text: adminEmail.text,
+            html: adminEmail.html
+          });
+        } catch (emailError) {
+          console.error('Error sending emails:', emailError);
+          // Don't fail the transaction if emails fail
+        }
+
+        console.log('Points assigned successfully:', {
+          userId,
           points,
-          description,
+          newTotal: tierPoints,
           currentTier
-        );
-        await sendEmail({
-          to: targetUser.email,
-          subject: "Points Added to Your Account",
-          text: customerEmail.text,
-          html: customerEmail.html
         });
 
-        const adminEmail = formatAdminNotificationEmail(
-          `${targetUser.firstName} ${targetUser.lastName}`,
-          points,
-          description,
-          admin.firstName || "Admin"
-        );
-        await sendEmail({
-          to: admin.email,
-          subject: `Points Assignment Confirmation: ${targetUser.firstName} ${targetUser.lastName}`,
-          text: adminEmail.text,
-          html: adminEmail.html
+        res.json({ 
+          message: "Points adjusted successfully",
+          newPoints: tierPoints,
+          tier: currentTier
         });
-
-        await logAdminAction({
-          adminId: req.user.id,
-          actionType: "POINT_ADJUSTMENT",
-          targetUserId: userId,
-          details: `Adjusted points by ${points}. Reason: ${description}`,
-        });
-
-        return updatedUser;
-      });
-
-      res.json({ message: "Points adjusted successfully" });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
     } catch (error) {
       console.error('Error adjusting points:', error);
       res.status(500).json({ error: 'Failed to adjust points' });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -764,15 +794,15 @@ export function registerRoutes(app: Express): Server {
       const [products] = await connection.execute(
         `SELECT 
           p.*,
-          COALESCE(
-            JSON_ARRAYAGG(
+          IF(pa.activities IS NULL, '[]',
+            CONCAT('[', GROUP_CONCAT(
+              DISTINCT
               JSON_OBJECT(
                 'id', pa.id,
                 'type', pa.type,
                 'pointsValue', pa.points_value
               )
-            ),
-            '[]'
+            ), ']')
           ) as activities
         FROM products p
         LEFT JOIN product_activities pa ON p.id = pa.product_id
@@ -784,11 +814,18 @@ export function registerRoutes(app: Express): Server {
       const transformedProducts = products.map(product => {
         let activities = [];
         try {
-          activities = JSON.parse(product.activities);
-          // Remove null entries if any
-          activities = activities.filter(activity => activity != null);
+          // Handle empty activities case
+          if (product.activities === '[]' || !product.activities) {
+            activities = [];
+          } else {
+            // Parse activities and remove null entries
+            activities = JSON.parse(product.activities)
+              .filter(activity => activity && activity.id && activity.type);
+          }
         } catch (e) {
           console.error('Error parsing activities for product:', product.id, e);
+          console.log('Raw activities string:', product.activities);
+          activities = [];
         }
 
         return {

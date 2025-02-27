@@ -174,9 +174,11 @@ export default function AdminCustomers() {
 
   const assignPointsMutation = useMutation({
     mutationFn: async ({ userId, data }: { userId: number, data: PointsFormData }) => {
+      console.log('Assigning points:', { userId, data });
       const res = await fetch("/api/admin/points", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify({
           userId,
           points: data.points,
@@ -186,13 +188,17 @@ export default function AdminCustomers() {
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/logs"] });
-      toast({ title: "Success", description: "Points assigned successfully" });
+      toast({ 
+        title: "Success", 
+        description: `Points assigned successfully. New total: ${data.newPoints.toLocaleString()} (${data.tier})`
+      });
       pointsForm.reset();
     },
     onError: (error: Error) => {
+      console.error('Error assigning points:', error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -328,6 +334,49 @@ export default function AdminCustomers() {
       });
     },
   });
+
+  const handleActivitySelect = (e: React.ChangeEvent<HTMLInputElement>, activity: any) => {
+    const currentSelected = pointsForm.getValues("selectedActivities") || [];
+    const currentPoints = pointsForm.getValues("points") || 0;
+
+    try {
+      if (e.target.checked) {
+        pointsForm.setValue("selectedActivities", [...currentSelected, activity.id]);
+
+        const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
+        if (!isPremiumOrCard) {
+          pointsForm.setValue("points", currentPoints + (activity.pointsValue || 0));
+        }
+
+        const description = `Points for ${activity.type.toLowerCase().replace('_', ' ')} activity`;
+        if (!pointsForm.getValues("description")) {
+          pointsForm.setValue("description", description);
+        }
+      } else {
+        pointsForm.setValue(
+          "selectedActivities",
+          currentSelected.filter(id => id !== activity.id)
+        );
+
+        if (!isPremiumOrCard) {
+          pointsForm.setValue("points", Math.max(0, currentPoints - (activity.pointsValue || 0)));
+        } else {
+          const oldValue = activity.currentValue || 0;
+          pointsForm.setValue("points", Math.max(0, currentPoints - oldValue));
+          activity.currentValue = 0;
+          activity.baseValue = 0;
+        }
+      }
+    } catch (error) {
+      console.error('Error handling activity selection:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update points calculation"
+      });
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -591,34 +640,7 @@ export default function AdminCustomers() {
                                                             id={`activity-${activity.id}`}
                                                             className="w-4 h-4 rounded border-gray-300"
                                                             checked={pointsForm.watch("selectedActivities")?.includes(activity.id)}
-                                                            onChange={(e) => {
-                                                              const currentSelected = pointsForm.getValues("selectedActivities") || [];
-                                                              const currentPoints = pointsForm.getValues("points") || 0;
-
-                                                              if (e.target.checked) {
-                                                                pointsForm.setValue("selectedActivities", [...currentSelected, activity.id]);
-                                                                if (!isPremiumOrCard) {
-                                                                  pointsForm.setValue("points", currentPoints + activity.pointsValue);
-                                                                }
-                                                                const description = `Points for ${activity.type.toLowerCase().replace('_', ' ')} activity`;
-                                                                if (!pointsForm.getValues("description")) {
-                                                                  pointsForm.setValue("description", description);
-                                                                }
-                                                              } else {
-                                                                pointsForm.setValue(
-                                                                  "selectedActivities",
-                                                                  currentSelected.filter(id => id !== activity.id)
-                                                                );
-                                                                if (!isPremiumOrCard) {
-                                                                  pointsForm.setValue("points", currentPoints - activity.pointsValue);
-                                                                } else {
-                                                                  const oldValue = activity.currentValue || 0;
-                                                                  pointsForm.setValue("points", currentPoints - oldValue);
-                                                                  activity.currentValue = 0;
-                                                                  activity.baseValue = 0;
-                                                                }
-                                                              }
-                                                            }}
+                                                            onChange={(e) => handleActivitySelect(e, activity)}
                                                           />
                                                           <label
                                                             htmlFor={`activity-${activity.id}`}
@@ -797,7 +819,7 @@ export default function AdminCustomers() {
                                       >
                                         Assign {pointsForm.watch("points")} Points
                                       </Button>
-                                    </div>
+                                                                        </div>
                                   </div>
                                 </div>
                               </DialogContent>
