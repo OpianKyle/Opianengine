@@ -266,8 +266,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { userId, points, description } = req.body;
-      console.log('Points assignment request:', { userId, points, description });
+      const { userId, points, description, selectedActivities } = req.body;
+      console.log('Points assignment request:', { userId, points, description, selectedActivities });
 
       await connection.beginTransaction();
 
@@ -299,6 +299,44 @@ export function registerRoutes(app: Express): Server {
           [userId, points, description]
         );
 
+        // If there are selected activities, log them
+        if (selectedActivities && selectedActivities.length > 0) {
+          const activities = await Promise.all(
+            selectedActivities.map(async (activityId) => {
+              const [rows] = await connection.execute(
+                `SELECT pa.*, p.name as product_name 
+                 FROM product_activities pa
+                 JOIN products p ON pa.product_id = p.id
+                 WHERE pa.id = ?`,
+                [activityId]
+              );
+              return rows[0];
+            })
+          );
+
+          // Create detailed description with activities
+          const activityDetails = activities
+            .map(act => `${act.product_name} - ${act.type} (${act.points_value} points)`)
+            .join(', ');
+
+          // Log each activity
+          for (const activity of activities) {
+            await connection.execute(
+              `INSERT INTO activity_logs (user_id, activity_id, points_earned, description)
+               VALUES (?, ?, ?, ?)`,
+              [userId, activity.id, activity.points_value, `Points from ${activity.type}`]
+            );
+          }
+
+          // Update description with activity details
+          await connection.execute(
+            `UPDATE transactions 
+             SET description = ? 
+             WHERE id = ?`,
+            [`${description} (Activities: ${activityDetails})`, transactionResult.insertId]
+          );
+        }
+
         // Update user points
         await connection.execute(
           'UPDATE users SET points = points + ? WHERE id = ?',
@@ -327,7 +365,7 @@ export function registerRoutes(app: Express): Server {
 
         await connection.commit();
 
-        // Send notifications and emails
+        // Send notifications
         try {
           const customerEmail = formatPointsAssignmentEmail(
             targetUser.first_name || "Valued Customer",
@@ -356,14 +394,14 @@ export function registerRoutes(app: Express): Server {
           });
         } catch (emailError) {
           console.error('Error sending emails:', emailError);
-          // Don't fail the transaction if emails fail
         }
 
         console.log('Points assigned successfully:', {
           userId,
           points,
           newTotal: tierPoints,
-          currentTier
+          currentTier,
+          selectedActivities: activities?.length || 0
         });
 
         res.json({ 
