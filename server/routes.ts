@@ -249,7 +249,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Points assignment endpoint with proper MariaDB integration
   app.post("/api/admin/points", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
@@ -268,11 +267,12 @@ export function registerRoutes(app: Express): Server {
       }
 
       const { userId, points, description } = req.body;
+      console.log('Points assignment request:', { userId, points, description });
 
       await connection.beginTransaction();
 
       try {
-        // Get user details
+        // Get target user
         const [users] = await connection.execute(
           'SELECT id, email, first_name, last_name, points FROM users WHERE id = ?',
           [userId]
@@ -282,12 +282,20 @@ export function registerRoutes(app: Express): Server {
           throw new Error("User not found");
         }
 
-        const user = users[0];
+        const targetUser = users[0];
+
+        // Get admin user
+        const [admins] = await connection.execute(
+          'SELECT id, email, first_name, last_name FROM users WHERE id = ?',
+          [req.user.id]
+        );
+
+        const admin = admins[0];
 
         // Insert transaction
         const [transactionResult] = await connection.execute(
           `INSERT INTO transactions (user_id, points, type, description)
-           VALUES (?, ?, 'POS_POINTS', ?)`,
+           VALUES (?, ?, 'ADMIN_ADJUSTMENT', ?)`,
           [userId, points, description]
         );
 
@@ -297,78 +305,81 @@ export function registerRoutes(app: Express): Server {
           [points, userId]
         );
 
-        // Get updated points for tier calculation
-        const [updatedUser] = await connection.execute(
+        // Get updated user points
+        const [updatedUsers] = await connection.execute(
           'SELECT points FROM users WHERE id = ?',
           [userId]
         );
 
-        const updatedPoints = updatedUser[0].points;
-        
-        // Calculate tier
-        let tier = "Bronze";
-        if (updatedPoints >= 150000) tier = "Platinum";
-        else if (updatedPoints >= 100000) tier = "Gold";
-        else if (updatedPoints >= 50000) tier = "Purple";
-        else if (updatedPoints >= 10000) tier = "Silver";
+        const tierPoints = updatedUsers[0].points;
+        let currentTier = "Bronze";
+        if (tierPoints >= 150000) currentTier = "Platinum";
+        else if (tierPoints >= 100000) currentTier = "Gold";
+        else if (tierPoints >= 50000) currentTier = "Purple";
+        else if (tierPoints >= 10000) currentTier = "Silver";
 
-        // Log admin action
+        // Insert admin log
         await connection.execute(
           `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
            VALUES (?, 'POINT_ADJUSTMENT', ?, ?)`,
-          [req.user.id, userId, `Added ${points} POS points. Reason: ${description}`]
+          [req.user.id, userId, `Adjusted points by ${points}. Reason: ${description}`]
         );
 
         await connection.commit();
 
-        res.json({
-          success: true,
-          points: updatedPoints,
-          tier,
-          message: "POS points assigned successfully"
+        // Send notifications and emails
+        try {
+          const customerEmail = formatPointsAssignmentEmail(
+            targetUser.first_name || "Valued Customer",
+            points,
+            description,
+            currentTier
+          );
+          await sendEmail({
+            to: targetUser.email,
+            subject: "Points Added to Your Account",
+            text: customerEmail.text,
+            html: customerEmail.html
+          });
+
+          const adminEmail = formatAdminNotificationEmail(
+            `${targetUser.first_name} ${targetUser.last_name}`,
+            points,
+            description,
+            admin.first_name || "Admin"
+          );
+          await sendEmail({
+            to: admin.email,
+            subject: `Points Assignment Confirmation: ${targetUser.first_name} ${targetUser.last_name}`,
+            text: adminEmail.text,
+            html: adminEmail.html
+          });
+        } catch (emailError) {
+          console.error('Error sending emails:', emailError);
+          // Don't fail the transaction if emails fail
+        }
+
+        console.log('Points assigned successfully:', {
+          userId,
+          points,
+          newTotal: tierPoints,
+          currentTier
         });
 
+        res.json({ 
+          message: "Points adjusted successfully",
+          newPoints: tierPoints,
+          tier: currentTier
+        });
       } catch (error) {
         await connection.rollback();
         throw error;
       }
     } catch (error) {
-      console.error('Error assigning points:', error);
-      res.status(500).json({ error: 'Failed to assign points' });
+      console.error('Error adjusting points:', error);
+      res.status(500).json({ error: 'Failed to adjust points' });
     } finally {
       await connection.end();
-    }
-  });
-
-  app.get("/api/admin/logs", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    try {
-      const logs = await db.query.adminLogs.findMany({
-        orderBy: desc(adminLogs.createdAt),
-        with: {
-          admin: {
-            columns: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          targetUser: {
-            columns: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      });
-
-      res.json(logs);
-    } catch (error) {
-      console.error('Error fetching admin logs:', error);
-      res.status(500).json({ error: 'Failed to fetch admin logs' });
     }
   });
 
@@ -865,7 +876,6 @@ export function registerRoutes(app: Express): Server {
         }))
       );
       
-
       res.json(transformedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
