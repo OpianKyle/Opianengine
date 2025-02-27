@@ -794,20 +794,17 @@ export function registerRoutes(app: Express): Server {
       const [products] = await connection.execute(
         `SELECT 
           p.*,
-          IF(pa.activities IS NULL, '[]',
-            CONCAT('[', GROUP_CONCAT(
-              DISTINCT
-              JSON_OBJECT(
-                'id', pa.id,
-                'type', pa.type,
-                'pointsValue', pa.points_value
-              )
-            ), ']')
+          GROUP_CONCAT(
+            JSON_OBJECT(
+              'id', pa.id,
+              'type', pa.type,
+              'pointsValue', pa.points_value
+            )
           ) as activities
-        FROM products p
-        LEFT JOIN product_activities pa ON p.id = pa.product_id
-        GROUP BY p.id
-        ORDER BY p.created_at DESC`
+         FROM products p
+         LEFT JOIN product_activities pa ON p.id = pa.product_id
+         GROUP BY p.id
+         ORDER BY p.created_at DESC`
       );
 
       // Transform the products data
@@ -815,12 +812,18 @@ export function registerRoutes(app: Express): Server {
         let activities = [];
         try {
           // Handle empty activities case
-          if (product.activities === '[]' || !product.activities) {
+          if (!product.activities) {
             activities = [];
           } else {
-            // Parse activities and remove null entries
-            activities = JSON.parse(product.activities)
-              .filter(activity => activity && activity.id && activity.type);
+            // Split the concatenated JSON objects and parse each one
+            activities = product.activities.split(',').map(activity => {
+              try {
+                return JSON.parse(activity);
+              } catch (e) {
+                console.error('Error parsing activity:', e);
+                return null;
+              }
+            }).filter(activity => activity && activity.id && activity.type);
           }
         } catch (e) {
           console.error('Error parsing activities for product:', product.id, e);
@@ -838,7 +841,14 @@ export function registerRoutes(app: Express): Server {
         };
       });
 
-      console.log(`Found ${transformedProducts.length} products`);
+      console.log(`Found ${transformedProducts.length} products with activities:`, 
+        transformedProducts.map(p => ({
+          id: p.id,
+          name: p.name,
+          activityCount: p.activities.length
+        }))
+      );
+      
       res.json(transformedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
