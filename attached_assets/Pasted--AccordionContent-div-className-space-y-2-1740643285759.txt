@@ -1,0 +1,93 @@
+      <AccordionContent>
+                                                  <div className="space-y-2 pt-2">
+                                                    {assignment.product.activities?.map((activity: any) => {
+                                                      const isSystemActivity = activity.type === "SYSTEM_ACTIVATION";
+                                                      if (isSystemActivity) return null;
+
+                                                      const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
+                                                      const multiplierType = activity.type === "PREMIUM_PAYMENT" ? 'premium' : 'card';
+                                                      const pointsMultiplier = getPointsMultiplier(customer.points, multiplierType);
+
+                                                      return (
+                                                        <div
+                                                          key={activity.id}
+                                                          className="flex items-center justify-between p-2 pl-6 border rounded-lg"
+                                                        >
+                                                          <div className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                              id={`activity-${activity.id}`}
+                                                              checked={pointsForm.watch("selectedActivities")?.includes(activity.id)}
+                                                              onCheckedChange={(checked) => {
+                                                                const currentSelected = pointsForm.getValues("selectedActivities") || [];
+                                                                const currentPoints = pointsForm.getValues("points") || 0;
+
+                                                                if (checked) {
+                                                                  pointsForm.setValue("selectedActivities", [...currentSelected, activity.id]);
+                                                                  if (!isPremiumOrCard) {
+                                                                    pointsForm.setValue("points", currentPoints + activity.pointsValue);
+                                                                  }
+                                                                  const description = `Points for ${activity.type.toLowerCase().replace('_', ' ')} activity`;
+                                                                  if (!pointsForm.getValues("description")) {
+                                                                    pointsForm.setValue("description", description);
+                                                                  }
+                                                                } else {
+                                                                  pointsForm.setValue(
+                                                                    "selectedActivities",
+                                                                    currentSelected.filter(id => id !== activity.id)
+                                                                  );
+                                                                  if (!isPremiumOrCard) {
+                                                                    pointsForm.setValue("points", currentPoints - activity.pointsValue);
+                                                                  } else {
+                                                                    const oldValue = activity.currentValue || 0;
+                                                                    pointsForm.setValue("points", currentPoints - oldValue);
+                                                                    activity.currentValue = 0;
+                                                                    activity.baseValue = 0;
+                                                                  }
+                                                                }
+                                                              }}
+                                                            />
+                                                            <label
+                                                              htmlFor={`activity-${activity.id}`}
+                                                              className="text-sm font-medium"
+                                                            >
+                                                              {activity.type.replace('_', ' ')}
+                                                              {isPremiumOrCard && pointsMultiplier > 0 && (
+                                                                <span className="ml-2 text-xs text-muted-foreground">
+                                                                  (×{pointsMultiplier})
+                                                                </span>
+                                                              )}
+                                                            </label>
+                                                          </div>
+                                                          {isPremiumOrCard ? (
+                                                            <div className="flex items-center space-x-2">
+                                                              <Input
+                                                                type="number"
+                                                                className="w-32"
+                                                                placeholder="Enter points"
+                                                                disabled={!pointsForm.watch("selectedActivities")?.includes(activity.id)}
+                                                                onChange={(e) => {
+                                                                  const baseValue = parseInt(e.target.value) || 0;
+                                                                  const multipliedValue = Math.floor(baseValue * pointsMultiplier);
+                                                                  const currentPoints = pointsForm.getValues("points") || 0;
+                                                                  const oldValue = activity.currentValue || 0;
+                                                                  pointsForm.setValue("points", currentPoints - oldValue + multipliedValue);
+                                                                  activity.currentValue = multipliedValue;
+                                                                  activity.baseValue = baseValue;
+                                                                }}
+                                                              />
+                                                              {pointsMultiplier > 0 && (
+                                                                <span className="text-sm text-muted-foreground">
+                                                                  = {activity.currentValue || 0} points
+                                                                </span>
+                                                              )}
+                                                            </div>
+                                                          ) : (
+                                                            <span className="text-sm font-semibold">
+                                                              {activity.pointsValue} points
+                                                            </span>
+                                                          )}
+                                                        </div>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                </AccordionContent>
