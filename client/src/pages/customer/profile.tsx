@@ -308,7 +308,7 @@ export default function ProfilePage() {
   const newPackage = packages.find(pkg => pkg.name === selectedPackage);
 
   return (
-    <div className="space-y-6">
+    <div className="container px-4 sm:px-6 max-w-7xl mx-auto space-y-6">
       <div className="space-y-0.5">
         <h2 className="text-2xl font-bold tracking-tight">Profile Settings</h2>
         <p className="text-muted-foreground">
@@ -326,12 +326,12 @@ export default function ProfilePage() {
               Your current package: {currentPackage ? `${currentPackage.display} (R${currentPackage.price}/month)` : 'No package selected'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="relative px-12 overflow-visible">
-              <Carousel className="w-full">
-                <CarouselContent className="-ml-4">
+          <CardContent className="px-2 sm:px-6">
+            <div className="relative w-full">
+              <Carousel className="w-full max-w-full">
+                <CarouselContent className="-ml-2 sm:-ml-4">
                   {packages.map((pkg) => (
-                    <CarouselItem key={pkg.name} className="pl-4 basis-full lg:basis-1/2 xl:basis-1/3">
+                    <CarouselItem key={pkg.name} className="pl-2 sm:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
                       <PackageCard
                         pkg={pkg}
                         isSelected={pkg.name === user?.selected_package}
@@ -341,22 +341,22 @@ export default function ProfilePage() {
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="absolute -left-12 -translate-y-1/2" />
-                <CarouselNext className="absolute -right-12 -translate-y-1/2" />
+                <CarouselPrevious className="-left-2 sm:-left-12" />
+                <CarouselNext className="-right-2 sm:-right-12" />
               </Carousel>
             </div>
           </CardContent>
         </Card>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(data => updateProfileMutation.mutate(data))} className="space-y-8">
+          <form onSubmit={form.handleSubmit(data => updateProfileMutation.mutate(data))} className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
                 <CardDescription>Update your personal and account information</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="first_name"
@@ -364,7 +364,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>First Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -378,7 +378,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Last Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -392,7 +392,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input {...field} type="email" disabled />
+                          <Input {...field} type="email" disabled className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -406,7 +406,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Mobile Number</FormLabel>
                         <FormControl>
-                          <Input {...field} type="tel" />
+                          <Input {...field} type="tel" className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -416,7 +416,7 @@ export default function ProfilePage() {
 
                 <Separator className="my-6" />
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="id_number"
@@ -424,7 +424,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>ID Number</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -438,7 +438,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Date of Birth</FormLabel>
                         <FormControl>
-                          <Input {...field} type="date" />
+                          <Input {...field} type="date" className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -467,15 +467,15 @@ export default function ProfilePage() {
 
                 <Separator className="my-6" />
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="address"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="col-span-full">
                         <FormLabel>Address Line 1</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -486,10 +486,10 @@ export default function ProfilePage() {
                     control={form.control}
                     name="address_line2"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="col-span-full">
                         <FormLabel>Address Line 2 (Optional)</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -503,7 +503,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>City</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -517,7 +517,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Postal Code</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -527,7 +527,7 @@ export default function ProfilePage() {
 
                 <Separator className="my-6" />
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="industry"
@@ -535,7 +535,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Industry</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -549,7 +549,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Occupation</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -559,7 +559,7 @@ export default function ProfilePage() {
 
                 <Separator className="my-6" />
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="bank_name"
@@ -567,7 +567,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Bank Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -585,7 +585,7 @@ export default function ProfilePage() {
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select account type" />
                             </SelectTrigger>
                           </FormControl>
@@ -609,7 +609,7 @@ export default function ProfilePage() {
                       <FormItem>
                         <FormLabel>Account Number</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} className="w-full" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -649,6 +649,7 @@ export default function ProfilePage() {
                           type="password"
                           {...field}
                           autoComplete="new-password"
+                          className="w-full"
                         />
                       </FormControl>
                       <FormMessage />
@@ -658,7 +659,7 @@ export default function ProfilePage() {
 
                 <Button
                   type="submit"
-                  className="mt-6 w-full"
+                  className="mt-6 w-full sm:w-auto"
                   disabled={updateProfileMutation.isPending}
                 >
                   {updateProfileMutation.isPending ? (
@@ -674,8 +675,9 @@ export default function ProfilePage() {
             </Card>
           </form>
         </Form>
+
         <Dialog open={showPackageDialog} onOpenChange={setShowPackageDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-[95vw] sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Confirm Package Change</DialogTitle>
               <DialogDescription>
@@ -701,9 +703,9 @@ export default function ProfilePage() {
                 )}
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowPackageDialog(false)}>Cancel</Button>
-              <Button onClick={confirmPackageChange} disabled={updateProfileMutation.isPending}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setShowPackageDialog(false)} className="w-full sm:w-auto">Cancel</Button>
+              <Button onClick={confirmPackageChange} disabled={updateProfileMutation.isPending} className="w-full sm:w-auto">
                 {updateProfileMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
