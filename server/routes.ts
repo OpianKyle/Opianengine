@@ -820,16 +820,18 @@ export function registerRoutes(app: Express): Server {
       const [products] = await connection.execute(
         `SELECT 
           p.*,
-          GROUP_CONCAT(
-            JSON_OBJECT(
-              'id', pa.id,
-              'type', pa.type,
-              'pointsValue', pa.points_value
+          (SELECT 
+            JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'id', pa.id,
+                'type', pa.type,
+                'pointsValue', pa.points_value
+              )
             )
+           FROM product_activities pa
+           WHERE pa.product_id = p.id
           ) as activities
          FROM products p
-         LEFT JOIN product_activities pa ON p.id = pa.product_id
-         GROUP BY p.id
          ORDER BY p.created_at DESC`
       );
 
@@ -839,21 +841,21 @@ export function registerRoutes(app: Express): Server {
         try {
           // Handle empty activities case
           if (!product.activities) {
+            console.log('No activities found for product:', product.id);
             activities = [];
           } else {
-            // Split the concatenated JSON objects and parse each one
-            activities = product.activities.split(',').map(activity => {
-              try {
-                return JSON.parse(activity);
-              } catch (e) {
-                console.error('Error parsing activity:', e);
-                return null;
-              }
-            }).filter(activity => activity && activity.id && activity.type);
+            console.log('Raw activities string for product', product.id, ':', product.activities);
+            try {
+              activities = JSON.parse(product.activities);
+              console.log('Parsed activities for product', product.id, ':', activities);
+            } catch (e) {
+              console.error('Error parsing activities JSON for product:', product.id, e);
+              console.log('Failed activities string:', product.activities);
+              activities = [];
+            }
           }
         } catch (e) {
-          console.error('Error parsing activities for product:', product.id, e);
-          console.log('Raw activities string:', product.activities);
+          console.error('Error processing activities for product:', product.id, e);
           activities = [];
         }
 
