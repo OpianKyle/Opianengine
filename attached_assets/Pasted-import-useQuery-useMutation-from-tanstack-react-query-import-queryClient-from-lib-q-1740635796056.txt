@@ -705,7 +705,7 @@ export default function AdminCustomers() {
                                                             )}
                                                           </div>
                                                         ) : (
-                                                          <span className="text-sm font-semibold">
+                                                          <span className="text-sm font-medium">
                                                             {activity.pointsValue} points
                                                           </span>
                                                         )}
@@ -720,59 +720,12 @@ export default function AdminCustomers() {
                                       </div>
                                     </ScrollArea>
 
-                                    <div className="pt-4 border-t">
-                                      <h3 className="text-lg font-semibold mb-4">POS Points Allocation</h3>
-                                      <div className="space-y-4">
-                                        <div className="space-y-2">
-                                          <label className="text-sm font-medium">
-                                            POS Points
-                                            {getPointsMultiplier(customer.points, 'pos') > 0 && (
-                                              <span className="ml-2 text-xs text-muted-foreground">
-                                                (×{getPointsMultiplier(customer.points, 'pos')})
-                                              </span>
-                                            )}
-                                          </label>
-                                          <Input
-                                            type="number"
-                                            className="w-full"
-                                            placeholder="Enter POS points"
-                                            value={pointsForm.watch("posPoints") || ""}
-                                            onChange={(e) => {
-                                              const baseValue = parseInt(e.target.value) || 0;
-                                              const multiplier = getPointsMultiplier(customer.points, 'pos');
-                                              const multipliedValue = Math.floor(baseValue * multiplier);
-
-                                              console.log('Updating POS points:', {
-                                                baseValue,
-                                                multiplier,
-                                                multipliedValue
-                                              });
-
-                                              pointsForm.setValue("posPoints", baseValue);
-                                              pointsForm.setValue("points", multipliedValue);
-
-                                              if (!pointsForm.getValues("description")) {
-                                                pointsForm.setValue("description", "Points from POS transaction");
-                                              }
-                                            }}
-                                          />
-                                          {getPointsMultiplier(customer.points, 'pos') > 0 && (
-                                            <p className="text-sm text-muted-foreground">
-                                              = {Math.floor((pointsForm.watch("posPoints") || 0) * getPointsMultiplier(customer.points, 'pos'))} points
-                                            </p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-6">
                                     <div className="space-y-4">
                                       <div className="space-y-2">
                                         <label>Description <span className="text-red-500">*</span></label>
                                         <Input
                                           {...pointsForm.register("description")}
-                                          placeholder="Enter description for points allocation"
+                                          placeholder="Reason for points adjustment"
                                         />
                                         {pointsForm.formState.errors.description && (
                                           <p className="text-sm text-red-500">
@@ -782,14 +735,37 @@ export default function AdminCustomers() {
                                       </div>
 
                                       <div className="space-y-2">
-                                        <label className="text-sm font-medium">
-                                          Total Points to Assign
-                                        </label>
-                                        <Input
-                                          type="number"
-                                          value={pointsForm.watch("points") || ""}
-                                          onChange={(e) => pointsForm.setValue("points", parseInt(e.target.value) || 0)}
-                                        />
+                                        <label className="text-sm font-medium">Points Summary</label>
+                                        <div className="bg-accent/20 p-4 rounded-lg space-y-2">
+                                          {customer.productAssignments?.map((assignment: any) => (
+                                            <div key={assignment.id}>
+                                              {assignment.product.activities
+                                                ?.filter((activity: any) => pointsForm.watch("selectedActivities")?.includes(activity.id))
+                                                .map((activity: any) => (
+                                                  <div key={activity.id} className="flex justify-between items-center py-1">
+                                                    <span className="text-sm">
+                                                      {assignment.product.name} - {activity.type.replace('_', ' ')}
+                                                      {(activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE") && (
+                                                        <span className="text-xs text-muted-foreground ml-1">
+                                                          (Base: {activity.baseValue || 0})
+                                                        </span>
+                                                      )}
+                                                    </span>
+                                                    <span className="font-medium">
+                                                      {activity.currentValue || activity.pointsValue} points
+                                                    </span>
+                                                  </div>
+                                                ))}
+                                            </div>
+                                          ))}
+
+                                          <div className="flex justify-between items-center pt-4 border-t border-t-2">
+                                            <span className="font-semibold">Total Points</span>
+                                            <span className="text-2xl font-bold">
+                                              {pointsForm.watch("points")}
+                                            </span>
+                                          </div>
+                                        </div>
                                       </div>
 
                                       <Button
@@ -831,23 +807,23 @@ export default function AdminCustomers() {
                                     <Input {...form.register("email")} defaultValue={customer.email} />
                                   </div>
                                   <div className="space-y-2">
-                    <label>First Name</label>
-                    <Input {...form.register("firstName")} defaultValue={customer.firstName} />
-                  </div>
-                  <div className="space-y-2">
-                    <label>Last Name</label>
-                    <Input {...form.register("lastName")} defaultValue={customer.lastName} />
-                  </div>
-                  <div className="space-y-2">
-                    <label>Phone Number</label>
-                    <Input {...form.register("phoneNumber")} defaultValue={customer.phoneNumber} />
-                  </div>
-                  <div className="space-y-2">
-                    <label>Password</label>
-                    <Input
-                      type="password"
-                      {...form.register("password")}
-                      placeholder="Leave blank to keep current password"
+                                    <label>First Name</label>
+                                    <Input {...form.register("firstName")} defaultValue={customer.firstName} />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label>Last Name</label>
+                                    <Input {...form.register("lastName")} defaultValue={customer.lastName} />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label>Phone Number</label>
+                                    <Input {...form.register("phoneNumber")} defaultValue={customer.phoneNumber} />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label>Password</label>
+                                    <Input
+                                      type="password"
+                                      {...form.register("password")}
+                                      placeholder="Leave blank to keep current password"
                     />
                   </div>
                   <Button type="submit">Update Customer</Button>
