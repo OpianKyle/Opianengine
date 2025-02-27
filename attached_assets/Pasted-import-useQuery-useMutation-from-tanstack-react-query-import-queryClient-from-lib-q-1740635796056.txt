@@ -534,7 +534,7 @@ export default function AdminCustomers() {
                                 <DialogHeader>
                                   <DialogTitle className="text-[#43EB3E]">Assign Points to {customer.firstName}</DialogTitle>
                                   <DialogDescription className="text-gray-300">
-                                    Select activities from products to assign points
+                                    Select activities from assigned products to assign points
                                   </DialogDescription>
                                 </DialogHeader>
 
@@ -565,8 +565,7 @@ export default function AdminCustomers() {
                                           <AccordionContent>
                                             <div className="space-y-2 pt-2">
                                               {assignment.product.activities?.map((activity: any) => {
-                                                const isSystemActivity = activity.type === "SYSTEM_ACTIVATION";
-                                                if (isSystemActivity) return null;
+                                                if (activity.type === "SYSTEM_ACTIVATION") return null;
 
                                                 const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
                                                 const multiplierType = activity.type === "PREMIUM_PAYMENT" ? 'premium' : 'card';

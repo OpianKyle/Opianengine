@@ -249,6 +249,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Points assignment endpoint with proper MariaDB integration
   app.post("/api/admin/points", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
@@ -266,13 +267,112 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Points assignment - to be implemented
-      res.status(501).json({ error: "Points assignment functionality is being rebuilt" });
+      const { userId, points, description, selectedActivities } = req.body;
+
+      await connection.beginTransaction();
+
+      try {
+        // Insert transaction
+        const [transactionResult] = await connection.execute(
+          `INSERT INTO transactions (user_id, points, type, description)
+           VALUES (?, ?, 'ADMIN_ADJUSTMENT', ?)`,
+          [userId, points, description]
+        );
+
+        // Log selected activities
+        if (selectedActivities && selectedActivities.length > 0) {
+          for (const activityId of selectedActivities) {
+            const [activity] = await connection.execute(
+              `SELECT pa.*, p.name as product_name 
+               FROM product_activities pa
+               JOIN products p ON pa.product_id = p.id
+               WHERE pa.id = ?`,
+              [activityId]
+            );
+
+            if (activity && activity.length > 0) {
+              await connection.execute(
+                `INSERT INTO activity_logs (
+                  user_id, 
+                  activity_id, 
+                  points_earned, 
+                  description
+                ) VALUES (?, ?, ?, ?)`,
+                [
+                  userId,
+                  activityId,
+                  activity[0].points_value,
+                  `Points from ${activity[0].type} activity`
+                ]
+              );
+            }
+          }
+        }
+
+        // Update user points
+        await connection.execute(
+          'UPDATE users SET points = points + ? WHERE id = ?',
+          [points, userId]
+        );
+
+        // Get updated user info
+        const [updatedUser] = await connection.execute(
+          'SELECT id, email, first_name, last_name, points FROM users WHERE id = ?',
+          [userId]
+        );
+
+        await connection.commit();
+
+        if (!updatedUser || updatedUser.length === 0) {
+          throw new Error("Failed to retrieve updated user data");
+        }
+
+        res.json({
+          points: updatedUser[0].points,
+          message: "Points assigned successfully"
+        });
+
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
     } catch (error) {
-      console.error('Error adjusting points:', error);
-      res.status(500).json({ error: 'Failed to adjust points' });
+      console.error('Error assigning points:', error);
+      res.status(500).json({ error: 'Failed to assign points' });
     } finally {
       await connection.end();
+    }
+  });
+
+  app.get("/api/admin/logs", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+    try {
+      const logs = await db.query.adminLogs.findMany({
+        orderBy: desc(adminLogs.createdAt),
+        with: {
+          admin: {
+            columns: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          targetUser: {
+            columns: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
+      });
+
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching admin logs:', error);
+      res.status(500).json({ error: 'Failed to fetch admin logs' });
     }
   });
 
@@ -769,6 +869,7 @@ export function registerRoutes(app: Express): Server {
         }))
       );
       
+
       res.json(transformedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
