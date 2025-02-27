@@ -398,13 +398,13 @@ export default function RegisterPage() {
   };
 
   const today = new Date().toISOString().split('T')[0];
-  let MandateText = `This signed Authority and Mandate refers to our contract dated
-${today}
-("the Agreement").
+  const MandateText = `I / We hereby authorise you to issue and deliver payment instructions of ${
+    packages.find(pkg => pkg.id === formData.selectedPackage)?.price || 0
+  } per month for the subscription fee to your Banker for collection against my / our abovementioned account at my / our above-mentioned Bank (or any other bank or branch to which I / we may transfer my / our account) on condition that the sum of such payment instructions will never exceed my / our obligations as as agreed to in the Agreement and commencing on 1st of each month and continuing until this Authority and Mandate is terminated by me / us by giving you notice in writing of not less than 60 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
 
-I / We hereby authorise you to issue and deliver payment instructions of R550 per month for the program fee to your Banker for collection against my / our abovementioned account at my / our above-mentioned Bank (or any other bank or branch to which I / we may transfer my / our account) on condition that the sum of such payment instructions will never exceed my / our obligations as as agreed to in the Agreement and commencing on 1rst of each month and continuing until this Authority and Mandate is terminated by me / us by giving you notice in writing of not less than 20 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
-
-The individual payment instructions so authorised to be issued must be issued and delivered as follows: R550 monthly.
+The individual payment instructions so authorised to be issued must be issued and delivered as follows: ${
+    packages.find(pkg => pkg.id === formData.selectedPackage)?.price || 0
+  } monthly for 12 months. This is an annual agreement which is automatically renewable unless canceled in writing 
 
 In the event that the payment day falls on a Sunday, or recognised South African public holiday, the payment day will automatically be the preceding ordinary business day.
 
