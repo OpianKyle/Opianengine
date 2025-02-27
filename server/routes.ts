@@ -905,6 +905,95 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get("/api/admin/customers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Fetch users with their product assignments and activities
+      const [customers] = await connection.execute(
+        `SELECT 
+          u.*,
+          JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'id', pa.id,
+              'product', JSON_OBJECT(
+                'id', p.id,
+                'name', p.name,
+                'description', p.description,
+                'activities', (
+                  SELECT JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                      'id', act.id,
+                      'type', act.type,
+                      'pointsValue', act.points_value
+                    )
+                  )
+                  FROM product_activities act
+                  WHERE act.product_id = p.id
+                )
+              )
+            )
+          ) as product_assignments
+        FROM users u
+        LEFT JOIN product_assignments pa ON u.id = pa.user_id
+        LEFT JOIN products p ON pa.product_id = p.id
+        GROUP BY u.id
+        ORDER BY u.created_at DESC`
+      );
+
+      // Transform the data
+      const transformedCustomers = customers.map(customer => {
+        let productAssignments = [];
+        try {
+          productAssignments = customer.product_assignments ? 
+            JSON.parse(customer.product_assignments.replace(/null/g, '[]')) : [];
+        } catch (e) {
+          console.error('Error parsing product assignments:', e);
+        }
+
+        return {
+          id: customer.id,
+          email: customer.email,
+          firstName: customer.first_name,
+          lastName: customer.last_name,
+          phoneNumber: customer.phone_number,
+          isEnabled: Boolean(customer.is_enabled),
+          points: customer.points || 0,
+          createdAt: customer.created_at,
+          productAssignments: productAssignments.filter(pa => pa.id) // Filter out null assignments
+        };
+      });
+
+      console.log('Fetched customers with product activities:', 
+        transformedCustomers.map(c => ({
+          id: c.id,
+          assignmentsCount: c.productAssignments.length,
+          sampleActivities: c.productAssignments[0]?.product.activities?.length || 0
+        }))
+      );
+
+      res.json(transformedCustomers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   app.put("/api/products/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
