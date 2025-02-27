@@ -267,47 +267,29 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { userId, points, description, selectedActivities } = req.body;
+      const { userId, points, description } = req.body;
 
       await connection.beginTransaction();
 
       try {
+        // Get user details
+        const [users] = await connection.execute(
+          'SELECT id, email, first_name, last_name, points FROM users WHERE id = ?',
+          [userId]
+        );
+
+        if (!users || users.length === 0) {
+          throw new Error("User not found");
+        }
+
+        const user = users[0];
+
         // Insert transaction
         const [transactionResult] = await connection.execute(
           `INSERT INTO transactions (user_id, points, type, description)
-           VALUES (?, ?, 'ADMIN_ADJUSTMENT', ?)`,
+           VALUES (?, ?, 'POS_POINTS', ?)`,
           [userId, points, description]
         );
-
-        // Log selected activities
-        if (selectedActivities && selectedActivities.length > 0) {
-          for (const activityId of selectedActivities) {
-            const [activity] = await connection.execute(
-              `SELECT pa.*, p.name as product_name 
-               FROM product_activities pa
-               JOIN products p ON pa.product_id = p.id
-               WHERE pa.id = ?`,
-              [activityId]
-            );
-
-            if (activity && activity.length > 0) {
-              await connection.execute(
-                `INSERT INTO activity_logs (
-                  user_id, 
-                  activity_id, 
-                  points_earned, 
-                  description
-                ) VALUES (?, ?, ?, ?)`,
-                [
-                  userId,
-                  activityId,
-                  activity[0].points_value,
-                  `Points from ${activity[0].type} activity`
-                ]
-              );
-            }
-          }
-        }
 
         // Update user points
         await connection.execute(
@@ -315,21 +297,35 @@ export function registerRoutes(app: Express): Server {
           [points, userId]
         );
 
-        // Get updated user info
+        // Get updated points for tier calculation
         const [updatedUser] = await connection.execute(
-          'SELECT id, email, first_name, last_name, points FROM users WHERE id = ?',
+          'SELECT points FROM users WHERE id = ?',
           [userId]
+        );
+
+        const updatedPoints = updatedUser[0].points;
+        
+        // Calculate tier
+        let tier = "Bronze";
+        if (updatedPoints >= 150000) tier = "Platinum";
+        else if (updatedPoints >= 100000) tier = "Gold";
+        else if (updatedPoints >= 50000) tier = "Purple";
+        else if (updatedPoints >= 10000) tier = "Silver";
+
+        // Log admin action
+        await connection.execute(
+          `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
+           VALUES (?, 'POINT_ADJUSTMENT', ?, ?)`,
+          [req.user.id, userId, `Added ${points} POS points. Reason: ${description}`]
         );
 
         await connection.commit();
 
-        if (!updatedUser || updatedUser.length === 0) {
-          throw new Error("Failed to retrieve updated user data");
-        }
-
         res.json({
-          points: updatedUser[0].points,
-          message: "Points assigned successfully"
+          success: true,
+          points: updatedPoints,
+          tier,
+          message: "POS points assigned successfully"
         });
 
       } catch (error) {
