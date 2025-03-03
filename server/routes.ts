@@ -651,14 +651,24 @@ export function registerRoutes(app: Express): Server {
 
     const connection = await createConnection();
     try {
+      // Only select users who are either admins or agents
       const [users] = await connection.execute(
         `SELECT u.*, 
          CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
          CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
          FROM users u
          LEFT JOIN admin_users au ON u.id = au.user_id
+         WHERE au.role_type IS NOT NULL OR u.is_agent = 1
          ORDER BY u.created_at DESC`
       );
+
+      console.log('Raw users from database:', users.map((u: any) => ({
+        id: u.id,
+        email: u.email,
+        is_admin: Boolean(u.is_admin),
+        is_super_admin: Boolean(u.is_super_admin),
+        is_agent: Boolean(u.is_agent)
+      })));
 
       const transformedUsers = users.map((user: any) => {
         const { password, ...safeUser } = user;
@@ -676,7 +686,14 @@ export function registerRoutes(app: Express): Server {
         };
       });
 
-      console.log('Fetched users:', transformedUsers.length);
+      console.log('Fetched admin/agent users:', transformedUsers.map(u => ({
+        id: u.id,
+        email: u.email,
+        isAdmin: u.isAdmin,
+        isSuperAdmin: u.isSuperAdmin,
+        isAgent: u.isAgent
+      })));
+
       res.json(transformedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
