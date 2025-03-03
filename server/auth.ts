@@ -104,6 +104,34 @@ export function checkAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+export function checkAgent(req: Request, res: Response, next: NextFunction) {
+  console.log('Checking agent access for request:', {
+    path: req.path,
+    authenticated: req.isAuthenticated(),
+    user: req.user ? {
+      id: req.user.id,
+      email: req.user.email,
+      is_agent: req.user.is_agent
+    } : null
+  });
+
+  if (!req.isAuthenticated()) {
+    console.log('User not authenticated');
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  if (!req.user.is_agent) {
+    console.log('User lacks agent privileges:', {
+      id: req.user.id,
+      email: req.user.email,
+      is_agent: req.user.is_agent
+    });
+    return res.status(403).json({ error: "Agent access required" });
+  }
+
+  next();
+}
+
 // Main setup function
 export function setupAuth(app: Express) {
   app.use(session({
@@ -180,6 +208,7 @@ export function setupAuth(app: Express) {
           ...safeUser,
           is_admin: adminStatus.isAdmin,
           is_super_admin: adminStatus.isSuperAdmin,
+          is_agent: Boolean(safeUser.is_agent),
           is_enabled: Boolean(safeUser.is_enabled)
         };
 
@@ -336,13 +365,13 @@ export function setupAuth(app: Express) {
           initialPoints = 10000;
           break;
         case 'ACTIVE':
-          initialPoints = 15000; 
+          initialPoints = 15000;
           break;
         case 'PROFESSIONAL':
-          initialPoints = 20000; 
+          initialPoints = 20000;
           break;
         case 'EXPERT':
-          initialPoints = 25000; 
+          initialPoints = 25000;
           break;
         default:
           initialPoints = 0;
@@ -379,10 +408,10 @@ export function setupAuth(app: Express) {
         );
 
         const userId = (userResult as any).insertId;
-        console.log('User created successfully:', { 
+        console.log('User created successfully:', {
           id: userId,
           package: selectedPackage,
-          points: initialPoints 
+          points: initialPoints
         });
 
         // Record the points transaction if points were allocated

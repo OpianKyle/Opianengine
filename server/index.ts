@@ -7,6 +7,7 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users } from "@db/schema";
 import mysql from 'mysql2/promise';
+import agentRouter from './routes/agent'; // Added import
 
 // Check required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
@@ -57,6 +58,9 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+app.use('/api/agent', agentRouter); // Added agent route registration
+
 
 (async () => {
   try {

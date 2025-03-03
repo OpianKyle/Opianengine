@@ -112,11 +112,13 @@ export const users = mysqlTable("users", {
   hasCreditCard: boolean("has_credit_card").default(false),
   signature: text("signature"),
   isAdmin: boolean("is_admin").default(false).notNull(),
+  isAgent: boolean("is_agent").default(false).notNull(), // Add agent flag
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
   isEnabled: boolean("is_enabled").default(true).notNull(),
   points: int("points").default(0).notNull(),
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),
+  agentId: int("agent_id"), // Add reference to agent who created the user
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -213,7 +215,8 @@ export const userRelations = relations(users, ({ many }) => ({
   adminLogsTarget: many(adminLogs),
   productAssignments: many(productAssignments),
   quoteRequests: many(quoteRequests),
-  notifications: many(notifications)
+  notifications: many(notifications),
+  agentCustomers: many(users, { relationName: "agent_customers" })
 }));
 
 export const transactionRelations = relations(transactions, ({ one }) => ({

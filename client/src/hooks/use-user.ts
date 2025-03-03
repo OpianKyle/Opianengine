@@ -19,6 +19,7 @@ const userSchema = z.object({
   last_name: z.string().default(""),
   phone_number: z.string().nullable().default(null),
   is_admin: booleanSchema.default(false),
+  is_agent: booleanSchema.default(false), // Add agent flag
   is_super_admin: booleanSchema.default(false),
   is_enabled: booleanSchema.default(true),
   points: z.number().default(0),
@@ -47,6 +48,7 @@ const userSchema = z.object({
     ...data,
     // Simplify boolean transformations to use !! operator
     is_admin: !!data.is_admin,
+    is_agent: !!data.is_agent,
     is_super_admin: !!data.is_super_admin,
     is_enabled: !!data.is_enabled,
     is_south_african: data.is_south_african === null ? null : !!data.is_south_african,

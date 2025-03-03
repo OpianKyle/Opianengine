@@ -31,7 +31,11 @@ import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
 
-function ProtectedRoute({ component: Component, admin = false, ...rest }: any) {
+// Agent page import
+import AgentCustomers from "@/pages/admin/agent-customers";
+
+
+function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
   const { user, isLoading } = useUser();
   useSessionTimeout();
 
@@ -43,30 +47,29 @@ function ProtectedRoute({ component: Component, admin = false, ...rest }: any) {
     );
   }
 
-  // Redirect to home if not logged in
   if (!user) {
     console.log('No user found, redirecting to home');
     return <Redirect to="/" />;
   }
 
-  // Handle admin access
+  // Handle admin/agent access
   if (admin) {
-    // Log the admin check details
-    console.log('Checking admin access:', {
-      userId: user.id,
-      email: user.email,
-      is_admin: user.is_admin,
-      is_super_admin: user.is_super_admin
-    });
-
     if (!(user.is_admin || user.is_super_admin)) {
       console.log('User lacks admin privileges, redirecting to dashboard');
       return <Redirect to="/dashboard" />;
     }
-  } else if (user.is_admin || user.is_super_admin) {
-    // If admin user tries to access customer routes, redirect to admin dashboard
-    console.log('Admin user accessing customer route, redirecting to admin dashboard');
-    return <Redirect to="/admin" />;
+  } else if (agent) {
+    if (!user.is_agent) {
+      console.log('User lacks agent privileges, redirecting to dashboard');
+      return <Redirect to="/dashboard" />;
+    }
+  } else if (user.is_admin || user.is_super_admin || user.is_agent) {
+    // Redirect admin/agent users to their respective dashboards
+    if (user.is_agent) {
+      return <Redirect to="/admin/agent-customers" />;
+    } else {
+      return <Redirect to="/admin" />;
+    }
   }
 
   return <Component {...rest} />;
@@ -129,6 +132,13 @@ function Router() {
         <Route path="/admin/quote-requests">
           <AdminLayout>
             <ProtectedRoute component={AdminQuoteRequests} admin />
+          </AdminLayout>
+        </Route>
+
+        {/* Agent Routes */}
+        <Route path="/admin/agent-customers">
+          <AdminLayout>
+            <ProtectedRoute component={AgentCustomers} agent />
           </AdminLayout>
         </Route>
 
