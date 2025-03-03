@@ -13,6 +13,27 @@ import mysql from 'mysql2/promise';
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
 
+const crypto = {
+  async hashPassword(password: string) {
+    const salt = randomBytes(16).toString('hex');
+    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${buf.toString("hex")}.${salt}`; // hash.salt format
+  },
+
+  async verifyPassword(password: string, storedHash: string) {
+    try {
+      const [hash, salt] = storedHash.split('.');
+      if (!salt || !hash) return false;
+      const hashBuffer = Buffer.from(hash, 'hex');
+      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
+      return timingSafeEqual(hashBuffer, suppliedBuffer);
+    } catch (error) {
+      console.error('Password verification error:', error);
+      return false;
+    }
+  }
+};
+
 // Helper function to create database connection
 async function createConnection() {
   return await mysql.createConnection({
@@ -25,7 +46,6 @@ async function createConnection() {
   });
 }
 
-// Authentication middleware
 export function checkAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Not authenticated" });
@@ -70,7 +90,7 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(new LocalStrategy(
-    { usernameField: 'email' },
+    { usernameField: 'email', passwordField: 'password' },
     async (email, password, done) => {
       const connection = await createConnection();
       try {
@@ -238,7 +258,7 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
 
-  // Register route (rest of the original code remains)
+  // Register route 
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
@@ -658,24 +678,3 @@ process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
   console.error('Stack trace:', err.stack);
 });
-
-const crypto = {
-  async hashPassword(password: string) {
-    const salt = randomBytes(16).toString('hex');
-    const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${salt}.${hash.toString('hex')}`;
-  },
-
-  async verifyPassword(password: string, storedHash: string) {
-    try {
-      const [salt, hash] = storedHash.split('.');
-      if (!salt || !hash) return false;
-      const hashBuffer = Buffer.from(hash, 'hex');
-      const suppliedBuffer = (await scryptAsync(password, salt, 64)) as Buffer;
-      return timingSafeEqual(hashBuffer, suppliedBuffer);
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
-    }
-  }
-};
