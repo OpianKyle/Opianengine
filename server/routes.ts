@@ -449,8 +449,10 @@ export function registerRoutes(app: Express): Server {
       try {
         // Create user with is_agent flag
         const [userResult] = await connection.execute(
-          `INSERT INTO users (email, password, first_name, last_name, phone_number, is_enabled, points, is_agent)
-           VALUES (?, ?, ?, ?, ?, 1, 0, ?)`,
+          `INSERT INTO users (
+            email, password, first_name, last_name, 
+            phone_number, is_enabled, points, is_agent
+          ) VALUES (?, ?, ?, ?, ?, 1, 0, ?)`,
           [email, hashedPassword, firstName, lastName, phoneNumber, isAgent ? 1 : 0]
         );
 
@@ -467,8 +469,14 @@ export function registerRoutes(app: Express): Server {
 
         await connection.commit();
 
+        // Fetch complete user data
         const [newUser] = await connection.execute(
-          'SELECT * FROM users WHERE id = ?',
+          `SELECT u.*, 
+           CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
+           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+           FROM users u
+           LEFT JOIN admin_users au ON u.id = au.user_id
+           WHERE u.id = ?`,
           [userId]
         );
 

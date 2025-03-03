@@ -25,61 +25,13 @@ async function createConnection() {
   });
 }
 
-// Helper function to check admin status
-async function checkUserAdminStatus(userId: number) {
-  const connection = await createConnection();
-  try {
-    console.log('Checking admin status for user:', userId);
-    const [rows] = await connection.execute(
-      'SELECT role_type FROM admin_users WHERE user_id = ?',
-      [userId]
-    );
-
-    if (!Array.isArray(rows) || rows.length === 0) {
-      console.log('No admin entry found for user:', userId);
-      return { isAdmin: false, isSuperAdmin: false };
-    }
-
-    const roleType = rows[0].role_type;
-    console.log('Admin role found:', { userId, roleType });
-
-    return {
-      isAdmin: true,
-      isSuperAdmin: roleType === 'SUPER_ADMIN'
-    };
-  } catch (error) {
-    console.error('Error checking admin status:', error);
-    return { isAdmin: false, isSuperAdmin: false };
-  } finally {
-    await connection.end();
-  }
-}
-
-// Update checkAdmin middleware
+// Authentication middleware
 export function checkAdmin(req: Request, res: Response, next: NextFunction) {
-  console.log('Checking admin access for request:', {
-    path: req.path,
-    authenticated: req.isAuthenticated(),
-    user: req.user ? {
-      id: req.user.id,
-      email: req.user.email,
-      is_admin: req.user.is_admin,
-      is_super_admin: req.user.is_super_admin
-    } : null
-  });
-
   if (!req.isAuthenticated()) {
-    console.log('User not authenticated');
     return res.status(401).json({ error: "Not authenticated" });
   }
 
   if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
-    console.log('User lacks admin privileges:', {
-      id: req.user?.id,
-      email: req.user?.email,
-      is_admin: req.user?.is_admin,
-      is_super_admin: req.user?.is_super_admin
-    });
     return res.status(403).json({ error: "Admin access required" });
   }
 
@@ -87,34 +39,17 @@ export function checkAdmin(req: Request, res: Response, next: NextFunction) {
 }
 
 export function checkAgent(req: Request, res: Response, next: NextFunction) {
-  console.log('Checking agent access for request:', {
-    path: req.path,
-    authenticated: req.isAuthenticated(),
-    user: req.user ? {
-      id: req.user.id,
-      email: req.user.email,
-      is_agent: req.user.is_agent
-    } : null
-  });
-
   if (!req.isAuthenticated()) {
-    console.log('User not authenticated');
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  if (!req.user.is_agent) {
-    console.log('User lacks agent privileges:', {
-      id: req.user.id,
-      email: req.user.email,
-      is_agent: req.user.is_agent
-    });
+  if (!req.user || !req.user.is_agent) {
     return res.status(403).json({ error: "Agent access required" });
   }
 
   next();
 }
 
-// Main setup function
 export function setupAuth(app: Express) {
   app.use(session({
     secret: process.env.SESSION_SECRET!,
@@ -141,33 +76,22 @@ export function setupAuth(app: Express) {
       try {
         console.log('Login attempt:', { email });
 
-        // Get user with admin/agent status
-        const [rows] = await connection.execute(
+        // Get user with all roles
+        const [users] = await connection.execute(
           `SELECT u.*, 
            CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin,
-           CASE WHEN ua.is_agent = 1 THEN 1 ELSE 0 END as is_agent
+           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
            FROM users u
            LEFT JOIN admin_users au ON u.id = au.user_id
-           LEFT JOIN user_agents ua ON u.id = ua.user_id
            WHERE u.email = ?`,
           [email]
         );
 
-        const user = rows[0];
+        const user = users[0];
         if (!user) {
           console.log('User not found:', { email });
           return done(null, false, { message: 'Invalid email or password' });
         }
-
-        console.log('Found user:', {
-          id: user.id,
-          email: user.email,
-          is_admin: Boolean(user.is_admin),
-          is_super_admin: Boolean(user.is_super_admin),
-          is_agent: Boolean(user.is_agent),
-          enabled: user.is_enabled
-        });
 
         if (!user.is_enabled) {
           console.log('Account disabled:', { id: user.id, email });
@@ -214,7 +138,7 @@ export function setupAuth(app: Express) {
     }
   ));
 
-  passport.serializeUser((user: Express.User, done) => {
+  passport.serializeUser((user, done) => {
     console.log('Serializing user:', user.id);
     done(null, user.id);
   });
@@ -224,14 +148,13 @@ export function setupAuth(app: Express) {
     try {
       console.log('Deserializing user:', id);
 
+      // Get user with all roles
       const [users] = await connection.execute(
         `SELECT u.*, 
          CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin,
-         CASE WHEN ua.is_agent = 1 THEN 1 ELSE 0 END as is_agent
+         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
          FROM users u
          LEFT JOIN admin_users au ON u.id = au.user_id
-         LEFT JOIN user_agents ua ON u.id = ua.user_id
          WHERE u.id = ?`,
         [id]
       );
@@ -274,7 +197,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Handle login
   app.post("/api/login", (req, res, next) => {
     console.log('Login request received:', { email: req.body.email });
 
@@ -308,19 +230,7 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // Get current user
   app.get("/api/user", (req, res) => {
-    console.log('User request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? {
-        id: req.user.id,
-        email: req.user.email,
-        is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin,
-        is_agent: req.user.is_agent
-      } : null
-    });
-
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -328,7 +238,7 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
 
-  // Register route
+  // Register route (rest of the original code remains)
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
@@ -560,6 +470,35 @@ export function setupAuth(app: Express) {
 
 
   return app;
+}
+
+async function checkUserAdminStatus(userId: number) {
+  const connection = await createConnection();
+  try {
+    console.log('Checking admin status for user:', userId);
+    const [rows] = await connection.execute(
+      'SELECT role_type FROM admin_users WHERE user_id = ?',
+      [userId]
+    );
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      console.log('No admin entry found for user:', userId);
+      return { isAdmin: false, isSuperAdmin: false };
+    }
+
+    const roleType = rows[0].role_type;
+    console.log('Admin role found:', { userId, roleType });
+
+    return {
+      isAdmin: true,
+      isSuperAdmin: roleType === 'SUPER_ADMIN'
+    };
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return { isAdmin: false, isSuperAdmin: false };
+  } finally {
+    await connection.end();
+  }
 }
 
 export function generateToken(user: Express.User): string {
