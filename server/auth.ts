@@ -73,7 +73,7 @@ async function createAdminUser(userId: number, isSuperAdmin: boolean = false) {
   }
 }
 
-// Authentication middleware
+// Update checkAdmin middleware
 export function checkAdmin(req: Request, res: Response, next: NextFunction) {
   console.log('Checking admin access for request:', {
     path: req.path,
@@ -91,12 +91,12 @@ export function checkAdmin(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  if (!req.user.is_admin && !req.user.is_super_admin) {
+  if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
     console.log('User lacks admin privileges:', {
-      id: req.user.id,
-      email: req.user.email,
-      is_admin: req.user.is_admin,
-      is_super_admin: req.user.is_super_admin
+      id: req.user?.id,
+      email: req.user?.email,
+      is_admin: req.user?.is_admin,
+      is_super_admin: req.user?.is_super_admin
     });
     return res.status(403).json({ error: "Admin access required" });
   }
@@ -234,38 +234,51 @@ export function setupAuth(app: Express) {
     done(null, user.id);
   });
 
+  // Update passport deserializeUser
   passport.deserializeUser(async (id: number, done) => {
     const connection = await createConnection();
     try {
       console.log('Deserializing user:', id);
 
-      // Get user
-      const [rows] = await connection.execute(
-        'SELECT * FROM users WHERE id = ?',
+      // Get user with admin status
+      const [users] = await connection.execute(
+        `SELECT u.*, 
+         CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
+         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+         FROM users u
+         LEFT JOIN admin_users au ON u.id = au.user_id
+         WHERE u.id = ?`,
         [id]
       );
 
-      const user = rows[0];
+      const user = users[0];
       if (!user) {
         console.log('User not found during deserialization:', id);
         return done(null, false);
       }
 
-      // Check admin status
-      const adminStatus = await checkUserAdminStatus(user.id);
-      console.log('Admin status check during deserialization:', {
-        id: user.id,
-        ...adminStatus
-      });
-
       // Transform user object
       const { password: _, ...safeUser } = user;
       const transformedUser = {
         ...safeUser,
-        is_admin: adminStatus.isAdmin,
-        is_super_admin: adminStatus.isSuperAdmin,
-        is_enabled: Boolean(safeUser.is_enabled)
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phoneNumber: user.phone_number,
+        is_admin: Boolean(user.is_admin),
+        is_super_admin: Boolean(user.is_super_admin),
+        is_agent: Boolean(user.is_agent),
+        is_enabled: Boolean(user.is_enabled)
       };
+
+      console.log('User deserialized:', {
+        id: transformedUser.id,
+        email: transformedUser.email,
+        is_admin: transformedUser.is_admin,
+        is_super_admin: transformedUser.is_super_admin,
+        is_agent: transformedUser.is_agent
+      });
 
       done(null, transformedUser);
     } catch (error) {
