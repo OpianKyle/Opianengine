@@ -504,18 +504,22 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                           type="date"
                           value={formData.dateOfBirth}
                           onChange={handleInputChange}
+                          className="w-full"
                         />
                       </div>
-                      <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value as "male" | "female" | "other" }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="space-y-2">
+                        <Label>Gender</Label>
+                        <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value as "male" | "female" | "other" }))}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select Gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 </div>
