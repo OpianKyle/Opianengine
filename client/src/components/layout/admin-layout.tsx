@@ -14,7 +14,8 @@ import {
   FileText,
   LogOut,
   Menu,
-  X
+  X,
+  UserPlus
 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -34,12 +35,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const menuItems = [
     { label: "Dashboard", href: "/admin", icon: <LayoutDashboard className="h-4 w-4 mr-2" /> },
+    { label: "User Management", href: "/admin/manage-users", icon: <UserPlus className="h-4 w-4 mr-2" /> },
     { label: "Customers", href: "/admin/customers", icon: <Users className="h-4 w-4 mr-2" /> },
     { label: "Products", href: "/admin/products", icon: <Package className="h-4 w-4 mr-2" /> },
     { label: "Quote Requests", href: "/admin/quote-requests", icon: <FileText className="h-4 w-4 mr-2" /> },
     { label: "Rewards", href: "/admin/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Cash Redemptions", href: "/admin/cash-redemptions", icon: <DollarSign className="h-4 w-4 mr-2" /> },
-    { label: "Admin Management", href: "/admin/manage-users", icon: <UserCog className="h-4 w-4 mr-2" /> },
     { label: "Action Logs", href: "/admin/logs", icon: <ScrollText className="h-4 w-4 mr-2" /> },
   ];
 
