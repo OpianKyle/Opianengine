@@ -55,24 +55,6 @@ async function checkUserAdminStatus(userId: number) {
   }
 }
 
-// Helper function to create admin user
-async function createAdminUser(userId: number, isSuperAdmin: boolean = false) {
-  const connection = await createConnection();
-  try {
-    await connection.execute(
-      'INSERT INTO admin_users (user_id, role_type) VALUES (?, ?)',
-      [userId, isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN']
-    );
-    console.log(`Created ${isSuperAdmin ? 'super admin' : 'admin'} entry for user:`, userId);
-    return true;
-  } catch (error) {
-    console.error('Error creating admin user:', error);
-    return false;
-  } finally {
-    await connection.end();
-  }
-}
-
 // Update checkAdmin middleware
 export function checkAdmin(req: Request, res: Response, next: NextFunction) {
   console.log('Checking admin access for request:', {
@@ -163,9 +145,11 @@ export function setupAuth(app: Express) {
         const [rows] = await connection.execute(
           `SELECT u.*, 
            CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin,
+           CASE WHEN ua.is_agent = 1 THEN 1 ELSE 0 END as is_agent
            FROM users u
            LEFT JOIN admin_users au ON u.id = au.user_id
+           LEFT JOIN user_agents ua ON u.id = ua.user_id
            WHERE u.email = ?`,
           [email]
         );
@@ -197,7 +181,7 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: 'Invalid email or password' });
         }
 
-        // Transform user object
+        // Transform user object with proper type casting
         const { password: _, ...safeUser } = user;
         const transformedUser = {
           ...safeUser,
@@ -235,19 +219,19 @@ export function setupAuth(app: Express) {
     done(null, user.id);
   });
 
-  // Update passport deserializeUser
   passport.deserializeUser(async (id: number, done) => {
     const connection = await createConnection();
     try {
       console.log('Deserializing user:', id);
 
-      // Get user with admin status
       const [users] = await connection.execute(
         `SELECT u.*, 
          CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin,
+         CASE WHEN ua.is_agent = 1 THEN 1 ELSE 0 END as is_agent
          FROM users u
          LEFT JOIN admin_users au ON u.id = au.user_id
+         LEFT JOIN user_agents ua ON u.id = ua.user_id
          WHERE u.id = ?`,
         [id]
       );
@@ -258,7 +242,7 @@ export function setupAuth(app: Express) {
         return done(null, false);
       }
 
-      // Transform user object
+      // Transform user object with proper type casting
       const { password: _, ...safeUser } = user;
       const transformedUser = {
         ...safeUser,
@@ -315,7 +299,8 @@ export function setupAuth(app: Express) {
           id: user.id,
           email: user.email,
           is_admin: user.is_admin,
-          is_super_admin: user.is_super_admin
+          is_super_admin: user.is_super_admin,
+          is_agent: user.is_agent
         });
 
         res.json(user);
@@ -331,7 +316,8 @@ export function setupAuth(app: Express) {
         id: req.user.id,
         email: req.user.email,
         is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin
+        is_super_admin: req.user.is_super_admin,
+        is_agent: req.user.is_agent
       } : null
     });
 

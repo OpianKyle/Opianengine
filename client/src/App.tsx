@@ -31,9 +31,10 @@ import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
 
-// Agent page import
-import AgentCustomers from "@/pages/admin/agent-customers";
-
+// Agent pages
+import AgentDashboard from "@/pages/agent"; //This file needs to be created
+import AgentLayout from "@/components/layout/agent-layout"; //This file needs to be created or adjusted
+import AgentCustomers from "@/pages/agent/customers";
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
   const { user, isLoading } = useUser();
@@ -52,23 +53,30 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     return <Redirect to="/" />;
   }
 
-  // Handle admin/agent access
-  if (admin) {
-    if (!(user.is_admin || user.is_super_admin)) {
-      console.log('User lacks admin privileges, redirecting to dashboard');
-      return <Redirect to="/dashboard" />;
-    }
-  } else if (agent) {
-    if (!user.is_agent) {
-      console.log('User lacks agent privileges, redirecting to dashboard');
-      return <Redirect to="/dashboard" />;
-    }
-  } else if (user.is_admin || user.is_super_admin || user.is_agent) {
-    // Redirect admin/agent users to their respective dashboards
+  // Handle routing based on user role
+  if (admin && !(user.is_admin || user.is_super_admin)) {
+    console.log('User lacks admin privileges, redirecting to appropriate dashboard');
     if (user.is_agent) {
-      return <Redirect to="/admin/agent-customers" />;
-    } else {
+      return <Redirect to="/agent" />;
+    }
+    return <Redirect to="/dashboard" />;
+  }
+
+  if (agent && !user.is_agent) {
+    console.log('User lacks agent privileges, redirecting to appropriate dashboard');
+    if (user.is_admin || user.is_super_admin) {
       return <Redirect to="/admin" />;
+    }
+    return <Redirect to="/dashboard" />;
+  }
+
+  // Redirect users to their appropriate dashboards
+  if (!admin && !agent) {
+    if (user.is_admin || user.is_super_admin) {
+      return <Redirect to="/admin" />;
+    }
+    if (user.is_agent) {
+      return <Redirect to="/agent" />;
     }
   }
 
@@ -136,10 +144,15 @@ function Router() {
         </Route>
 
         {/* Agent Routes */}
-        <Route path="/admin/agent-customers">
-          <AdminLayout>
+        <Route path="/agent">
+          <AgentLayout>
+            <ProtectedRoute component={AgentDashboard} agent />
+          </AgentLayout>
+        </Route>
+        <Route path="/agent/customers">
+          <AgentLayout>
             <ProtectedRoute component={AgentCustomers} agent />
-          </AdminLayout>
+          </AgentLayout>
         </Route>
 
         {/* Customer Routes */}
