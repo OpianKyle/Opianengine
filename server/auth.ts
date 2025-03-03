@@ -159,7 +159,7 @@ export function setupAuth(app: Express) {
       try {
         console.log('Login attempt:', { email });
 
-        // Get user with admin status
+        // Get user with admin/agent status
         const [rows] = await connection.execute(
           `SELECT u.*, 
            CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
@@ -193,6 +193,7 @@ export function setupAuth(app: Express) {
         // Verify password
         const isValid = await crypto.verifyPassword(password, user.password);
         if (!isValid) {
+          console.log('Invalid password for user:', { id: user.id, email });
           return done(null, false, { message: 'Invalid email or password' });
         }
 
@@ -200,6 +201,11 @@ export function setupAuth(app: Express) {
         const { password: _, ...safeUser } = user;
         const transformedUser = {
           ...safeUser,
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phoneNumber: user.phone_number,
           is_admin: Boolean(user.is_admin),
           is_super_admin: Boolean(user.is_super_admin),
           is_agent: Boolean(user.is_agent),
