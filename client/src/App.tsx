@@ -32,8 +32,8 @@ import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
 
 // Agent pages
-import AgentDashboard from "@/pages/agent"; //This file needs to be created
-import AgentLayout from "@/components/layout/agent-layout"; //This file needs to be created or adjusted
+import AgentDashboard from "@/pages/agent";
+import AgentLayout from "@/components/layout/agent-layout";
 import AgentCustomers from "@/pages/agent/customers";
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
@@ -104,54 +104,46 @@ function Router() {
         {/* Admin Routes */}
         <Route path="/admin">
           <AdminLayout>
-            <ProtectedRoute component={AdminDashboard} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/customers">
-          <AdminLayout>
-            <ProtectedRoute component={AdminCustomers} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/products">
-          <AdminLayout>
-            <ProtectedRoute component={AdminProducts} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/rewards">
-          <AdminLayout>
-            <ProtectedRoute component={AdminRewards} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/cash-redemptions">
-          <AdminLayout>
-            <ProtectedRoute component={CashRedemptions} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/manage-users">
-          <AdminLayout>
-            <ProtectedRoute component={ManageUsers} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/logs">
-          <AdminLayout>
-            <ProtectedRoute component={AdminLogs} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/quote-requests">
-          <AdminLayout>
-            <ProtectedRoute component={AdminQuoteRequests} admin />
+            <Switch>
+              <Route path="/admin">
+                <ProtectedRoute component={AdminDashboard} admin />
+              </Route>
+              <Route path="/admin/customers">
+                <ProtectedRoute component={AdminCustomers} admin />
+              </Route>
+              <Route path="/admin/products">
+                <ProtectedRoute component={AdminProducts} admin />
+              </Route>
+              <Route path="/admin/rewards">
+                <ProtectedRoute component={AdminRewards} admin />
+              </Route>
+              <Route path="/admin/cash-redemptions">
+                <ProtectedRoute component={CashRedemptions} admin />
+              </Route>
+              <Route path="/admin/manage-users">
+                <ProtectedRoute component={ManageUsers} admin />
+              </Route>
+              <Route path="/admin/logs">
+                <ProtectedRoute component={AdminLogs} admin />
+              </Route>
+              <Route path="/admin/quote-requests">
+                <ProtectedRoute component={AdminQuoteRequests} admin />
+              </Route>
+            </Switch>
           </AdminLayout>
         </Route>
 
         {/* Agent Routes */}
         <Route path="/agent">
           <AgentLayout>
-            <ProtectedRoute component={AgentDashboard} agent />
-          </AgentLayout>
-        </Route>
-        <Route path="/agent/customers">
-          <AgentLayout>
-            <ProtectedRoute component={AgentCustomers} agent />
+            <Switch>
+              <Route path="/agent">
+                <ProtectedRoute component={AgentDashboard} agent />
+              </Route>
+              <Route path="/agent/customers">
+                <ProtectedRoute component={AgentCustomers} agent />
+              </Route>
+            </Switch>
           </AgentLayout>
         </Route>
 
