@@ -419,17 +419,18 @@ export function registerRoutes(app: Express): Server {
 
     const connection = await createConnection();
     try {
-      // Check super admin status
+      // Check admin status
       const [adminCheck] = await connection.execute(
         'SELECT role_type FROM admin_users WHERE user_id = ?',
         [req.user.id]
       );
 
-      if (!adminCheck || adminCheck.length === 0 || adminCheck[0].role_type !== 'SUPER_ADMIN') {
-        return res.status(403).json({ error: "Only super admins can create new users" });
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
       }
 
       const { email, password, firstName, lastName, phoneNumber, isAgent } = req.body;
+      console.log('Creating user:', { email, firstName, lastName, isAgent });
 
       // Check for existing user
       const [existingUser] = await connection.execute(
@@ -446,7 +447,7 @@ export function registerRoutes(app: Express): Server {
       await connection.beginTransaction();
 
       try {
-        // Create user
+        // Create user with is_agent flag
         const [userResult] = await connection.execute(
           `INSERT INTO users (email, password, first_name, last_name, phone_number, is_enabled, points, is_agent)
            VALUES (?, ?, ?, ?, ?, 1, 0, ?)`,
@@ -473,10 +474,15 @@ export function registerRoutes(app: Express): Server {
 
         const { password: _, ...safeUser } = newUser[0];
 
+        console.log('User created successfully:', {
+          id: userId,
+          isAgent: Boolean(isAgent)
+        });
+
         res.json({
           ...safeUser,
           is_admin: !isAgent,
-          is_agent: isAgent,
+          is_agent: Boolean(isAgent),
           is_super_admin: false
         });
       } catch (error) {
@@ -612,6 +618,45 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error updating user details:', error);
       res.status(500).json({ error: 'Failed to update user details' });
+    } finally {
+      await connection.end();
+    }
+  });
+
+  app.get("/api/admin/users", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+
+    const connection = await createConnection();
+    try {
+      const [users] = await connection.execute(
+        `SELECT u.*, 
+         CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
+         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+         FROM users u
+         LEFT JOIN admin_users au ON u.id = au.user_id
+         ORDER BY u.created_at DESC`
+      );
+
+      const transformedUsers = users.map((user: any) => {
+        const { password, ...safeUser } = user;
+        return {
+          ...safeUser,
+          id: user.id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phoneNumber: user.phone_number,
+          isAdmin: Boolean(user.is_admin),
+          isAgent: Boolean(user.is_agent),
+          isSuperAdmin: Boolean(user.is_super_admin),
+          isEnabled: Boolean(user.is_enabled),
+          createdAt: user.created_at
+        };
+      });
+
+      res.json(transformedUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: 'Failed to fetch users' });
     } finally {
       await connection.end();
     }

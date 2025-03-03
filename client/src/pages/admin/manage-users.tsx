@@ -12,15 +12,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useMemo } from "react";
 
-const adminSchema = z.object({
+const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
-  password: z.string().optional(),
+  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  isAgent: z.boolean().optional(),
 });
 
-type AdminFormData = z.infer<typeof adminSchema>;
+type UserFormData = z.infer<typeof userSchema>;
 
 type FilterState = {
   search: string;
@@ -44,7 +45,6 @@ export default function AdminManagement() {
     if (!admins) return [];
 
     return admins.filter((admin: any) => {
-      // Search filter
       const searchTerms = filters.search.toLowerCase();
       const matchesSearch = 
         admin.firstName?.toLowerCase().includes(searchTerms) ||
@@ -52,13 +52,11 @@ export default function AdminManagement() {
         admin.email?.toLowerCase().includes(searchTerms) ||
         admin.phoneNumber?.includes(searchTerms);
 
-      // Status filter
       const matchesStatus = 
         filters.status === 'all' ||
         (filters.status === 'active' && admin.isEnabled) ||
         (filters.status === 'disabled' && !admin.isEnabled);
 
-      // Role filter
       const matchesRole =
         filters.role === 'all' ||
         (filters.role === 'admin' && !admin.isAgent) ||
@@ -69,14 +67,15 @@ export default function AdminManagement() {
   }, [admins, filters]);
 
   const { toast } = useToast();
-  const form = useForm<AdminFormData>({
-    resolver: zodResolver(adminSchema),
+  const form = useForm<UserFormData>({
+    resolver: zodResolver(userSchema),
     defaultValues: {
       email: "",
       firstName: "",
       lastName: "",
       phoneNumber: "",
       password: "",
+      isAgent: false,
     },
   });
 
@@ -106,8 +105,9 @@ export default function AdminManagement() {
     },
   });
 
-  const createAdminMutation = useMutation({
-    mutationFn: async (data: AdminFormData) => {
+  const createUserMutation = useMutation({
+    mutationFn: async (data: UserFormData & { isAgent?: boolean }) => {
+      console.log('Creating user with data:', data);
       const res = await fetch("/api/admin/users/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,7 +119,7 @@ export default function AdminManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       refetch();
-      toast({ title: "Success", description: "Admin user created successfully" });
+      toast({ title: "Success", description: "User created successfully" });
       form.reset();
     },
     onError: (error: Error) => {
@@ -132,7 +132,7 @@ export default function AdminManagement() {
   });
 
   const updateAdminMutation = useMutation({
-    mutationFn: async ({ userId, data }: { userId: number, data: AdminFormData }) => {
+    mutationFn: async ({ userId, data }: { userId: number, data: UserFormData }) => {
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -196,7 +196,7 @@ export default function AdminManagement() {
                 <DialogTitle className="text-white">Create New Admin User</DialogTitle>
               </DialogHeader>
               <form 
-                onSubmit={form.handleSubmit((data) => createAdminMutation.mutate(data))} 
+                onSubmit={form.handleSubmit((data) => createUserMutation.mutate({ ...data, isAgent: false }))} 
                 className="space-y-4"
               >
                 <div className="space-y-2">
@@ -259,7 +259,7 @@ export default function AdminManagement() {
                 <DialogTitle className="text-white">Create New Agent User</DialogTitle>
               </DialogHeader>
               <form 
-                onSubmit={form.handleSubmit((data) => createAdminMutation.mutate({ ...data, isAgent: true }))} 
+                onSubmit={form.handleSubmit((data) => createUserMutation.mutate({ ...data, isAgent: true }))} 
                 className="space-y-4"
               >
                 <div className="space-y-2">
@@ -421,6 +421,7 @@ export default function AdminManagement() {
                                     lastName: e.currentTarget.lastName.value,
                                     phoneNumber: e.currentTarget.phoneNumber.value,
                                     password: e.currentTarget.password.value,
+                                    isAgent: admin.isAgent //Added isAgent
                                   };
                                   updateAdminMutation.mutate({ userId: admin.id, data: formData });
                                 }} 
