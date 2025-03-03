@@ -683,7 +683,7 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                           {MandateText}
                         </div>
                       </ScrollArea>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 mt-8 pt-4 border-t">
                         <Checkbox
                           id="acceptMandate"
                           checked={formData.acceptMandate}
@@ -694,7 +694,6 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                           I accept the terms of the mandate
                         </label>
                       </div>
-
                       <div className="space-y-4">
                         <Label>Digital Signature</Label>
                         <Card className="p-4">
