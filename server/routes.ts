@@ -383,6 +383,35 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.post("/api/admin/users/toggle-agent", async (req, res) => {
+    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+    const { userId, isAgent } = req.body;
+
+    try {
+      const [user] = await db
+        .update(users)
+        .set({ isAgent })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await logAdminAction({
+        adminId: req.user.id,
+        actionType: "ADMIN_UPDATED",
+        targetUserId: user.id,
+        details: `${isAgent ? 'Added' : 'Removed'} agent status for user: ${user.email}`,
+      });
+
+      res.json({ message: `User ${isAgent ? 'made agent' : 'removed from agents'} successfully` });
+    } catch (error) {
+      console.error('Error toggling agent status:', error);
+      res.status(500).json({ error: 'Failed to update agent status' });
+    }
+  });
+
   app.post("/api/admin/users/create", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
@@ -397,10 +426,10 @@ export function registerRoutes(app: Express): Server {
       );
 
       if (!adminCheck || adminCheck.length === 0 || adminCheck[0].role_type !== 'SUPER_ADMIN') {
-        return res.status(403).json({ error: "Only super admins can create new admins" });
+        return res.status(403).json({ error: "Only super admins can create new users" });
       }
 
-      const { email, password, firstName, lastName, phoneNumber } = req.body;
+      const { email, password, firstName, lastName, phoneNumber, isAgent } = req.body;
 
       // Check for existing user
       const [existingUser] = await connection.execute(
@@ -419,19 +448,21 @@ export function registerRoutes(app: Express): Server {
       try {
         // Create user
         const [userResult] = await connection.execute(
-          `INSERT INTO users (email, password, first_name, last_name, phone_number, is_enabled, points)
-           VALUES (?, ?, ?, ?, ?, 1, 0)`,
-          [email, hashedPassword, firstName, lastName, phoneNumber]
+          `INSERT INTO users (email, password, first_name, last_name, phone_number, is_enabled, points, is_agent)
+           VALUES (?, ?, ?, ?, ?, 1, 0, ?)`,
+          [email, hashedPassword, firstName, lastName, phoneNumber, isAgent ? 1 : 0]
         );
 
         const userId = userResult.insertId;
 
-        // Create admin role
-        await connection.execute(
-          `INSERT INTO admin_users (user_id, role_type)
-           VALUES (?, ?)`,
-          [userId, 'ADMIN']
-        );
+        // Create admin role if not agent
+        if (!isAgent) {
+          await connection.execute(
+            `INSERT INTO admin_users (user_id, role_type)
+             VALUES (?, ?)`,
+            [userId, 'ADMIN']
+          );
+        }
 
         await connection.commit();
 
@@ -444,7 +475,8 @@ export function registerRoutes(app: Express): Server {
 
         res.json({
           ...safeUser,
-          is_admin: true,
+          is_admin: !isAgent,
+          is_agent: isAgent,
           is_super_admin: false
         });
       } catch (error) {
@@ -452,8 +484,8 @@ export function registerRoutes(app: Express): Server {
         throw error;
       }
     } catch (error) {
-      console.error('Error creating admin user:', error);
-      res.status(500).json({ error: 'Failed to create admin user' });
+      console.error('Error creating user:', error);
+      res.status(500).json({ error: 'Failed to create user' });
     } finally {
       await connection.end();
     }
