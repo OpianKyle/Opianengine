@@ -624,7 +624,30 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/admin/users", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+    console.log('Admin users request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email,
+        is_admin: req.user.is_admin,
+        is_super_admin: req.user.is_super_admin
+      } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    // Check if user is admin or super admin
+    if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
+      console.log('User lacks admin privileges:', {
+        id: req.user?.id,
+        email: req.user?.email,
+        is_admin: req.user?.is_admin,
+        is_super_admin: req.user?.is_super_admin
+      });
+      return res.status(403).json({ error: "Admin access required" });
+    }
 
     const connection = await createConnection();
     try {
@@ -653,6 +676,7 @@ export function registerRoutes(app: Express): Server {
         };
       });
 
+      console.log('Fetched users:', transformedUsers.length);
       res.json(transformedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);

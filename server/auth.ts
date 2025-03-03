@@ -159,9 +159,14 @@ export function setupAuth(app: Express) {
       try {
         console.log('Login attempt:', { email });
 
-        // Get user
+        // Get user with admin status
         const [rows] = await connection.execute(
-          'SELECT * FROM users WHERE email = ?',
+          `SELECT u.*, 
+           CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
+           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+           FROM users u
+           LEFT JOIN admin_users au ON u.id = au.user_id
+           WHERE u.email = ?`,
           [email]
         );
 
@@ -174,6 +179,9 @@ export function setupAuth(app: Express) {
         console.log('Found user:', {
           id: user.id,
           email: user.email,
+          is_admin: Boolean(user.is_admin),
+          is_super_admin: Boolean(user.is_super_admin),
+          is_agent: Boolean(user.is_agent),
           enabled: user.is_enabled
         });
 
@@ -184,39 +192,26 @@ export function setupAuth(app: Express) {
 
         // Verify password
         const isValid = await crypto.verifyPassword(password, user.password);
-        console.log('Password verification:', {
-          id: user.id,
-          email,
-          isValid
-        });
-
         if (!isValid) {
           return done(null, false, { message: 'Invalid email or password' });
         }
-
-        // Check admin status
-        const adminStatus = await checkUserAdminStatus(user.id);
-        console.log('Admin status check:', {
-          id: user.id,
-          email,
-          ...adminStatus
-        });
 
         // Transform user object
         const { password: _, ...safeUser } = user;
         const transformedUser = {
           ...safeUser,
-          is_admin: adminStatus.isAdmin,
-          is_super_admin: adminStatus.isSuperAdmin,
-          is_agent: Boolean(safeUser.is_agent),
-          is_enabled: Boolean(safeUser.is_enabled)
+          is_admin: Boolean(user.is_admin),
+          is_super_admin: Boolean(user.is_super_admin),
+          is_agent: Boolean(user.is_agent),
+          is_enabled: Boolean(user.is_enabled)
         };
 
         console.log('Login successful:', {
           id: transformedUser.id,
           email: transformedUser.email,
           is_admin: transformedUser.is_admin,
-          is_super_admin: transformedUser.is_super_admin
+          is_super_admin: transformedUser.is_super_admin,
+          is_agent: transformedUser.is_agent
         });
 
         return done(null, transformedUser);
