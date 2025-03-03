@@ -707,6 +707,7 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                                   border: '1px solid var(--border)'
                                 }
                               }}
+                              penColor='white'
                             />
                           </div>
                           <Button
