@@ -108,11 +108,15 @@ function Router() {
       </Route>
 
       {/* Agent Routes */}
-      <Route path="/agent/:rest*">
+      <Route path="/agent">
         <AgentLayout>
           <Switch>
-            <Route path="/agent" component={() => <ProtectedRoute component={AgentDashboard} agent />} />
-            <Route path="/agent/customers" component={() => <ProtectedRoute component={AgentCustomers} agent />} />
+            <Route path="/agent" exact>
+              <ProtectedRoute component={AgentDashboard} agent />
+            </Route>
+            <Route path="/agent/customers">
+              <ProtectedRoute component={AgentCustomers} agent />
+            </Route>
           </Switch>
         </AgentLayout>
       </Route>
