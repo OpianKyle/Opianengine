@@ -3108,5 +3108,123 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add customer creation endpoint for agents
+  app.post("/api/agent/customers/create", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Verify agent status
+      const [agentCheck] = await connection.execute(
+        'SELECT id FROM users WHERE id = ? AND is_agent = 1',
+        [req.user.id]
+      );
+
+      if (!agentCheck || agentCheck.length === 0) {
+        return res.status(403).json({ error: "Agent access required" });
+      }
+
+      const { 
+        firstName, lastName, email, phoneNumber, 
+        industry, occupation, address, city, 
+        postalCode, selectedPackage 
+      } = req.body;
+
+      // Check for existing user
+      const [existingUser] = await connection.execute(
+        'SELECT id FROM users WHERE email = ?',
+        [email]
+      );
+
+      if (existingUser.length > 0) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+
+      // Calculate initial points based on selected package
+      let initialPoints = 0;
+      switch (selectedPackage) {
+        case 'BEGINNER': initialPoints = 5000; break;
+        case 'NOVICE': initialPoints = 10000; break;
+        case 'ACTIVE': initialPoints = 15000; break;
+        case 'PROFESSIONAL': initialPoints = 20000; break;
+        case 'EXPERT': initialPoints = 25000; break;
+      }
+
+      await connection.beginTransaction();
+
+      try {
+        // Generate a random password for the customer
+        const tempPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await crypto.hash(tempPassword);
+
+        // Create user with all fields
+        const [userResult] = await connection.execute(
+          `INSERT INTO users (
+            email, password, first_name, last_name, 
+            phone_number, is_enabled, points, selected_package,
+            industry, occupation, address, city, postal_code,
+            agent_id
+          ) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            email,
+            hashedPassword,
+            firstName,
+            lastName,
+            phoneNumber,
+            initialPoints,
+            selectedPackage,
+            industry,
+            occupation,
+            address,
+            city,
+            postalCode,
+            req.user.id // Associate with the agent
+          ]
+        );
+
+        const userId = userResult.insertId;
+
+        // Record the points transaction
+        if (initialPoints > 0) {
+          await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description
+            ) VALUES (?, ?, ?, ?)`,
+            [
+              userId,
+              initialPoints,
+              'WELCOME_BONUS',
+              `Welcome bonus points for ${selectedPackage} package`
+            ]
+          );
+        }
+
+        await connection.commit();
+
+        // Send welcome email with temporary password (implement this later)
+        // await sendEmail({
+        //   to: email,
+        //   subject: "Welcome to OPIAN Rewards",
+        //   text: `Your temporary password is: ${tempPassword}`
+        // });
+
+        res.status(201).json({
+          message: "Customer created successfully",
+          customerId: userId
+        });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      res.status(500).json({ error: 'Failed to create customer' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   return httpServer;
 }
