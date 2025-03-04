@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -48,13 +48,10 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (!user) {
-    console.log('No user found, redirecting to home');
     return <Redirect to="/" />;
   }
 
-  // Handle routing based on user role
   if (admin && !(user.is_admin || user.is_super_admin)) {
-    console.log('User lacks admin privileges, redirecting to appropriate dashboard');
     if (user.is_agent) {
       return <Redirect to="/agent" />;
     }
@@ -62,14 +59,12 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (agent && !user.is_agent) {
-    console.log('User lacks agent privileges, redirecting to appropriate dashboard');
     if (user.is_admin || user.is_super_admin) {
       return <Redirect to="/admin" />;
     }
     return <Redirect to="/dashboard" />;
   }
 
-  // Redirect users to their appropriate dashboards
   if (!admin && !agent) {
     if (user.is_admin || user.is_super_admin) {
       return <Redirect to="/admin" />;
@@ -108,13 +103,13 @@ function Router() {
       </Route>
 
       {/* Agent Routes */}
-      <Route path="/agent">
+      <Route path="/agent/:rest*">
         <AgentLayout>
           <Switch>
             <Route path="/agent" exact>
               <ProtectedRoute component={AgentDashboard} agent />
             </Route>
-            <Route path="/agent/customer">
+            <Route path="/agent/customers">
               <ProtectedRoute component={AgentCustomers} agent />
             </Route>
           </Switch>
