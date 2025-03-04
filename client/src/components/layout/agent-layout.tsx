@@ -27,7 +27,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
 
   const menuItems = [
     { label: "Dashboard", href: "/agent", icon: <LayoutDashboard className="h-4 w-4 mr-2" /> },
-    { label: "My Customers", href: "/agent/customers", icon: <Users className="h-4 w-4 mr-2" /> },
+    { label: "My Customers", href: "/agent/customer", icon: <Users className="h-4 w-4 mr-2" /> },
   ];
 
   return (

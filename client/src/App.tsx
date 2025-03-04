@@ -114,7 +114,7 @@ function Router() {
             <Route path="/agent" exact>
               <ProtectedRoute component={AgentDashboard} agent />
             </Route>
-            <Route path="/agent/customers">
+            <Route path="/agent/customer">
               <ProtectedRoute component={AgentCustomers} agent />
             </Route>
           </Switch>
