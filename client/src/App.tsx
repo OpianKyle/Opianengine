@@ -52,22 +52,36 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     return null;
   }
 
-  // Redirect users based on their role
-  if (user.is_agent) {
-    if (!agent) {
+  // If accessing normal customer routes but user is an admin/agent
+  if (!admin && !agent) {
+    if (user.is_agent) {
       window.location.href = '/agent';
       return null;
     }
-  } else if (user.is_admin || user.is_super_admin) {
-    if (!admin) {
+    if (user.is_admin || user.is_super_admin) {
       window.location.href = '/admin';
       return null;
     }
-  } else {
-    if (admin || agent) {
-      window.location.href = '/dashboard';
+  }
+
+  // If accessing admin routes but user isn't an admin
+  if (admin && !(user.is_admin || user.is_super_admin)) {
+    if (user.is_agent) {
+      window.location.href = '/agent';
       return null;
     }
+    window.location.href = '/dashboard';
+    return null;
+  }
+
+  // If accessing agent routes but user isn't an agent
+  if (agent && !user.is_agent) {
+    if (user.is_admin || user.is_super_admin) {
+      window.location.href = '/admin';
+      return null;
+    }
+    window.location.href = '/dashboard';
+    return null;
   }
 
   return <Component {...rest} />;
