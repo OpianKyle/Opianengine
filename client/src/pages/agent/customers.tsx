@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,9 +13,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import AgentLayout from "@/components/layout/agent-layout";
+import CreateCustomerDialog from "@/components/agent/create-customer-dialog";
 
 export default function AgentCustomers() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const { data: customers, isLoading } = useQuery({
     queryKey: ["/api/agent/customers"],
@@ -35,7 +37,13 @@ export default function AgentCustomers() {
   return (
     <AgentLayout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">My Customers</h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">My Customers</h1>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Create Customer
+          </Button>
+        </div>
 
         <Card>
           <CardHeader>
@@ -94,6 +102,10 @@ export default function AgentCustomers() {
           </CardContent>
         </Card>
       </div>
+      <CreateCustomerDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+      />
     </AgentLayout>
   );
 }

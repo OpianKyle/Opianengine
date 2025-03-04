@@ -56,7 +56,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
           "fixed lg:relative inset-y-0 left-0 z-50",
           "w-64 bg-background border-r",
           "transform transition-transform duration-300 ease-in-out lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex flex-col h-full">
