@@ -10,7 +10,6 @@ import ResetPassword from "@/pages/reset-password";
 import { useUser } from "@/hooks/use-user";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { Loader2 } from "lucide-react";
-import { SidebarProvider } from "@/components/ui/sidebar";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -85,64 +84,35 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
 
 function Router() {
   return (
-    <SidebarProvider>
       <Switch>
         {/* Public Routes */}
-        <Route path="/">
-          <Home />
-        </Route>
-        <Route path="/login">
-          <Login />
-        </Route>
-        <Route path="/register">
-          <Register />
-        </Route>
-        <Route path="/reset-password">
-          <ResetPassword />
-        </Route>
+        <Route path="/" component={Home} />
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+        <Route path="/reset-password" component={ResetPassword} />
 
         {/* Admin Routes */}
-        <Route path="/admin">
+        <Route path="/admin/:rest*">
           <AdminLayout>
             <Switch>
-              <Route path="/admin">
-                <ProtectedRoute component={AdminDashboard} admin />
-              </Route>
-              <Route path="/admin/customers">
-                <ProtectedRoute component={AdminCustomers} admin />
-              </Route>
-              <Route path="/admin/products">
-                <ProtectedRoute component={AdminProducts} admin />
-              </Route>
-              <Route path="/admin/rewards">
-                <ProtectedRoute component={AdminRewards} admin />
-              </Route>
-              <Route path="/admin/cash-redemptions">
-                <ProtectedRoute component={CashRedemptions} admin />
-              </Route>
-              <Route path="/admin/manage-users">
-                <ProtectedRoute component={ManageUsers} admin />
-              </Route>
-              <Route path="/admin/logs">
-                <ProtectedRoute component={AdminLogs} admin />
-              </Route>
-              <Route path="/admin/quote-requests">
-                <ProtectedRoute component={AdminQuoteRequests} admin />
-              </Route>
+              <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} admin />} />
+              <Route path="/admin/customers" component={() => <ProtectedRoute component={AdminCustomers} admin />} />
+              <Route path="/admin/products" component={() => <ProtectedRoute component={AdminProducts} admin />} />
+              <Route path="/admin/rewards" component={() => <ProtectedRoute component={AdminRewards} admin />} />
+              <Route path="/admin/cash-redemptions" component={() => <ProtectedRoute component={CashRedemptions} admin />} />
+              <Route path="/admin/manage-users" component={() => <ProtectedRoute component={ManageUsers} admin />} />
+              <Route path="/admin/logs" component={() => <ProtectedRoute component={AdminLogs} admin />} />
+              <Route path="/admin/quote-requests" component={() => <ProtectedRoute component={AdminQuoteRequests} admin />} />
             </Switch>
           </AdminLayout>
         </Route>
 
         {/* Agent Routes */}
-        <Route path="/agent">
+        <Route path="/agent/:rest*">
           <AgentLayout>
             <Switch>
-              <Route path="/agent">
-                <ProtectedRoute component={AgentDashboard} agent />
-              </Route>
-              <Route path="/agent/customers">
-                <ProtectedRoute component={AgentCustomers} agent />
-              </Route>
+              <Route path="/agent" component={() => <ProtectedRoute component={AgentDashboard} agent />} />
+              <Route path="/agent/customers" component={() => <ProtectedRoute component={AgentCustomers} agent />} />
             </Switch>
           </AgentLayout>
         </Route>
@@ -176,7 +146,6 @@ function Router() {
 
         <Route component={NotFound} />
       </Switch>
-    </SidebarProvider>
   );
 }
 
