@@ -31,16 +31,18 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
   ];
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
+      {/* Mobile menu button */}
       <Button
         variant="outline"
         size="icon"
-        className="fixed top-4 right-6 z-50 lg:hidden h-10 w-10 bg-background shadow-md"
+        className="fixed top-4 right-4 z-50 lg:hidden"
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
         {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
 
+      {/* Backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -48,18 +50,22 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
         />
       )}
 
-      <aside className={cn(
-        "fixed lg:relative inset-y-0 left-0 z-50",
-        "w-64 lg:w-72 bg-background border-r",
-        "transform transition-transform duration-300 ease-in-out",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )}>
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed lg:relative inset-y-0 left-0 z-50",
+          "w-64 bg-background border-r",
+          "transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+      >
         <div className="flex flex-col h-full">
-          <div className="p-4 md:p-6 border-b">
+          {/* Logo */}
+          <div className="p-4 border-b">
             <img 
               src="/Assets/opian-logo-white.png" 
               alt="OPIAN Rewards"
-              className="h-8 md:h-12 w-auto object-contain mx-auto dark:invert"
+              className="h-8 w-auto object-contain mx-auto dark:invert"
               onError={(e) => {
                 const img = e.target as HTMLImageElement;
                 img.onerror = null;
@@ -67,8 +73,10 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
               }}
             />
           </div>
-          <div className="px-2 md:px-3 py-4 flex-1 overflow-y-auto">
-            <h2 className="mb-2 px-3 md:px-4 text-base md:text-lg font-semibold text-[#1b75bc]">
+
+          {/* Navigation */}
+          <nav className="flex-1 px-2 py-4 overflow-y-auto">
+            <h2 className="mb-2 px-4 text-lg font-semibold text-[#1b75bc]">
               Agent Portal
             </h2>
             <div className="space-y-1">
@@ -76,7 +84,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
                 <Button
                   key={item.href}
                   variant={location === item.href ? "secondary" : "ghost"}
-                  className="w-full justify-start text-sm md:text-base capitalize"
+                  className="w-full justify-start"
                   onClick={() => {
                     navigate(item.href);
                     setSidebarOpen(false);
@@ -87,16 +95,18 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
                 </Button>
               ))}
             </div>
-          </div>
-          <div className="p-3 md:p-4 border-t mt-auto">
+          </nav>
+
+          {/* Logout button */}
+          <div className="p-4 border-t">
             <Button 
               variant="outline" 
-              className="w-full text-sm md:text-base" 
+              className="w-full" 
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
             >
               {logoutMutation.isPending ? (
-                <>Loading...</>
+                "Logging out..."
               ) : (
                 <>
                   <LogOut className="h-4 w-4 mr-2" />
@@ -108,8 +118,9 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
+      {/* Main content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="h-full p-4 lg:p-8">
+        <div className="container mx-auto p-4 lg:p-8">
           {children}
         </div>
       </main>
