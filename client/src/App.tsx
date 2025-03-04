@@ -84,68 +84,68 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
 
 function Router() {
   return (
-      <Switch>
-        {/* Public Routes */}
-        <Route path="/" component={Home} />
-        <Route path="/login" component={Login} />
-        <Route path="/register" component={Register} />
-        <Route path="/reset-password" component={ResetPassword} />
+    <Switch>
+      {/* Public Routes */}
+      <Route path="/" component={Home} />
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      <Route path="/reset-password" component={ResetPassword} />
 
-        {/* Admin Routes */}
-        <Route path="/admin/:rest*">
-          <AdminLayout>
-            <Switch>
-              <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} admin />} />
-              <Route path="/admin/customers" component={() => <ProtectedRoute component={AdminCustomers} admin />} />
-              <Route path="/admin/products" component={() => <ProtectedRoute component={AdminProducts} admin />} />
-              <Route path="/admin/rewards" component={() => <ProtectedRoute component={AdminRewards} admin />} />
-              <Route path="/admin/cash-redemptions" component={() => <ProtectedRoute component={CashRedemptions} admin />} />
-              <Route path="/admin/manage-users" component={() => <ProtectedRoute component={ManageUsers} admin />} />
-              <Route path="/admin/logs" component={() => <ProtectedRoute component={AdminLogs} admin />} />
-              <Route path="/admin/quote-requests" component={() => <ProtectedRoute component={AdminQuoteRequests} admin />} />
-            </Switch>
-          </AdminLayout>
-        </Route>
+      {/* Admin Routes */}
+      <Route path="/admin/:rest*">
+        <AdminLayout>
+          <Switch>
+            <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} admin />} />
+            <Route path="/admin/customers" component={() => <ProtectedRoute component={AdminCustomers} admin />} />
+            <Route path="/admin/products" component={() => <ProtectedRoute component={AdminProducts} admin />} />
+            <Route path="/admin/rewards" component={() => <ProtectedRoute component={AdminRewards} admin />} />
+            <Route path="/admin/cash-redemptions" component={() => <ProtectedRoute component={CashRedemptions} admin />} />
+            <Route path="/admin/manage-users" component={() => <ProtectedRoute component={ManageUsers} admin />} />
+            <Route path="/admin/logs" component={() => <ProtectedRoute component={AdminLogs} admin />} />
+            <Route path="/admin/quote-requests" component={() => <ProtectedRoute component={AdminQuoteRequests} admin />} />
+          </Switch>
+        </AdminLayout>
+      </Route>
 
-        {/* Agent Routes */}
-        <Route path="/agent/:rest*">
-          <AgentLayout>
-            <Switch>
-              <Route path="/agent" component={() => <ProtectedRoute component={AgentDashboard} agent />} />
-              <Route path="/agent/customers" component={() => <ProtectedRoute component={AgentCustomers} agent />} />
-            </Switch>
-          </AgentLayout>
-        </Route>
+      {/* Agent Routes */}
+      <Route path="/agent">
+        <AgentLayout>
+          <Switch>
+            <Route path="/" component={() => <ProtectedRoute component={AgentDashboard} agent />} />
+            <Route path="/customers" component={() => <ProtectedRoute component={AgentCustomers} agent />} />
+          </Switch>
+        </AgentLayout>
+      </Route>
 
-        {/* Customer Routes */}
-        <Route path="/dashboard">
-          <CustomerLayout>
-            <ProtectedRoute component={CustomerDashboard} />
-          </CustomerLayout>
-        </Route>
-        <Route path="/rewards">
-          <CustomerLayout>
-            <ProtectedRoute component={CustomerRewards} />
-          </CustomerLayout>
-        </Route>
-        <Route path="/referrals">
-          <CustomerLayout>
-            <ProtectedRoute component={ReferralsPage} />
-          </CustomerLayout>
-        </Route>
-        <Route path="/profile">
-          <CustomerLayout>
-            <ProtectedRoute component={ProfilePage} />
-          </CustomerLayout>
-        </Route>
-        <Route path="/products">
-          <CustomerLayout>
-            <ProtectedRoute component={CustomerProducts} />
-          </CustomerLayout>
-        </Route>
+      {/* Customer Routes */}
+      <Route path="/dashboard">
+        <CustomerLayout>
+          <ProtectedRoute component={CustomerDashboard} />
+        </CustomerLayout>
+      </Route>
+      <Route path="/rewards">
+        <CustomerLayout>
+          <ProtectedRoute component={CustomerRewards} />
+        </CustomerLayout>
+      </Route>
+      <Route path="/referrals">
+        <CustomerLayout>
+          <ProtectedRoute component={ReferralsPage} />
+        </CustomerLayout>
+      </Route>
+      <Route path="/profile">
+        <CustomerLayout>
+          <ProtectedRoute component={ProfilePage} />
+        </CustomerLayout>
+      </Route>
+      <Route path="/products">
+        <CustomerLayout>
+          <ProtectedRoute component={CustomerProducts} />
+        </CustomerLayout>
+      </Route>
 
-        <Route component={NotFound} />
-      </Switch>
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
