@@ -48,29 +48,25 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (!user) {
-    return <Redirect to="/" />;
+    window.location.href = '/login';
+    return null;
   }
 
-  if (admin && !(user.is_admin || user.is_super_admin)) {
-    if (user.is_agent) {
-      return <Redirect to="/agent" />;
+  // Redirect users based on their role
+  if (user.is_agent) {
+    if (!agent) {
+      window.location.href = '/agent';
+      return null;
     }
-    return <Redirect to="/dashboard" />;
-  }
-
-  if (agent && !user.is_agent) {
-    if (user.is_admin || user.is_super_admin) {
-      return <Redirect to="/admin" />;
+  } else if (user.is_admin || user.is_super_admin) {
+    if (!admin) {
+      window.location.href = '/admin';
+      return null;
     }
-    return <Redirect to="/dashboard" />;
-  }
-
-  if (!admin && !agent) {
-    if (user.is_admin || user.is_super_admin) {
-      return <Redirect to="/admin" />;
-    }
-    if (user.is_agent) {
-      return <Redirect to="/agent" />;
+  } else {
+    if (admin || agent) {
+      window.location.href = '/dashboard';
+      return null;
     }
   }
 
@@ -90,14 +86,30 @@ function Router() {
       <Route path="/admin/:rest*">
         <AdminLayout>
           <Switch>
-            <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} admin />} />
-            <Route path="/admin/customers" component={() => <ProtectedRoute component={AdminCustomers} admin />} />
-            <Route path="/admin/products" component={() => <ProtectedRoute component={AdminProducts} admin />} />
-            <Route path="/admin/rewards" component={() => <ProtectedRoute component={AdminRewards} admin />} />
-            <Route path="/admin/cash-redemptions" component={() => <ProtectedRoute component={CashRedemptions} admin />} />
-            <Route path="/admin/manage-users" component={() => <ProtectedRoute component={ManageUsers} admin />} />
-            <Route path="/admin/logs" component={() => <ProtectedRoute component={AdminLogs} admin />} />
-            <Route path="/admin/quote-requests" component={() => <ProtectedRoute component={AdminQuoteRequests} admin />} />
+            <Route path="/admin" exact>
+              <ProtectedRoute component={AdminDashboard} admin />
+            </Route>
+            <Route path="/admin/customers">
+              <ProtectedRoute component={AdminCustomers} admin />
+            </Route>
+            <Route path="/admin/products">
+              <ProtectedRoute component={AdminProducts} admin />
+            </Route>
+            <Route path="/admin/rewards">
+              <ProtectedRoute component={AdminRewards} admin />
+            </Route>
+            <Route path="/admin/cash-redemptions">
+              <ProtectedRoute component={CashRedemptions} admin />
+            </Route>
+            <Route path="/admin/manage-users">
+              <ProtectedRoute component={ManageUsers} admin />
+            </Route>
+            <Route path="/admin/logs">
+              <ProtectedRoute component={AdminLogs} admin />
+            </Route>
+            <Route path="/admin/quote-requests">
+              <ProtectedRoute component={AdminQuoteRequests} admin />
+            </Route>
           </Switch>
         </AdminLayout>
       </Route>
