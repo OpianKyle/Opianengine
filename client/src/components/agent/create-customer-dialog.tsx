@@ -14,6 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -35,6 +36,9 @@ const customerSchema = z.object({
   city: z.string().min(1, "City is required"),
   postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
   selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]),
+  mandateAgreement: z.literal(true, {
+    errorMap: () => ({ message: "You must agree to the mandate terms" }),
+  }),
 });
 
 type CustomerFormData = z.infer<typeof customerSchema>;
@@ -59,7 +63,8 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
       address: "",
       city: "",
       postalCode: "",
-      selectedPackage: "BEGINNER"
+      selectedPackage: "BEGINNER",
+      mandateAgreement: false
     }
   });
 
@@ -254,6 +259,42 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
                 )}
               />
             </div>
+
+            {/* Mandate Agreement Section */}
+            <div className="border rounded-lg p-4 bg-muted/50 space-y-4">
+              <h3 className="font-medium">Customer Mandate Agreement</h3>
+              <p className="text-sm text-muted-foreground">
+                By creating this account, I confirm that the customer has agreed to:
+              </p>
+              <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+                <li>Participate in the OPIAN Rewards loyalty program</li>
+                <li>Allow their personal information to be stored and processed</li>
+                <li>Receive communications about their rewards and account status</li>
+                <li>Accept the terms and conditions of the selected package</li>
+                <li>Understand the points system and redemption process</li>
+              </ul>
+              <FormField
+                control={form.control}
+                name="mandateAgreement"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        I confirm that the customer has agreed to the above mandate
+                      </FormLabel>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"
