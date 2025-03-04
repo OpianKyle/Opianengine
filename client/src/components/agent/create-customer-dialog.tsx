@@ -24,6 +24,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+const packages = [
+  { id: 'BEGINNER', name: 'Beginner', price: 550 },
+  { id: 'NOVICE', name: 'Novice', price: 750 },
+  { id: 'ACTIVE', name: 'Active', price: 950 },
+  { id: 'PROFESSIONAL', name: 'Professional', price: 1150 },
+  { id: 'EXPERT', name: 'Expert', price: 1350 },
+];
 
 const customerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -64,7 +73,7 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
       city: "",
       postalCode: "",
       selectedPackage: "BEGINNER",
-      mandateAgreement: false
+      mandateAgreement: false,
     }
   });
 
@@ -104,6 +113,34 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
   const onSubmit = (data: CustomerFormData) => {
     createCustomerMutation.mutate(data);
   };
+
+  const today = new Date().toISOString().split('T')[0];
+  const MandateText = `This signed Authority and Mandate refers to our contract dated
+${today}
+("the Agreement").
+
+I / We hereby authorise you to issue and deliver payment instructions of ${
+    packages.find(pkg => pkg.id === form.getValues().selectedPackage)?.price || 0
+  } per month for the subscription fee to your Banker for collection against my / our abovementioned account at my / our above-mentioned Bank (or any other bank or branch to which I / we may transfer my / our account) on condition that the sum of such payment instructions will never exceed my / our obligations as as agreed to in the Agreement and commencing on 1st of each month and continuing until this Authority and Mandate is terminated by me / us by giving you notice in writing of not less than 60 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
+
+The individual payment instructions so authorised to be issued must be issued and delivered as follows: ${
+    packages.find(pkg => pkg.id === form.getValues().selectedPackage)?.price || 0
+  } monthly for 12 months. This is an annual agreement which is automatically renewable unless canceled in writing 
+
+In the event that the payment day falls on a Sunday, or recognised South African public holiday, the payment day will automatically be the preceding ordinary business day.
+
+Payment Instructions due in December may be debited against my account on a earlier date
+
+I / We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement. A payment reference is added to this form before the issuing of any payment instruction.
+
+Mandate
+I /We acknowledge that all payment instructions issued by you shall be treated by my / our above-mentioned Bank as if the instructions have been issued by me/us personally.
+
+Cancellation
+I /We agree that although this Authority and Mandate may be cancelled by me/us, such cancellation will not cancel the Agreement. I/We shall not be entitled to any refund of amounts which you have withdrawn while this authority was in force, if such amounts were legally owing to you.
+
+Assignment
+I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty) Ltd as per your agreement with Netcash (Pty) Ltd, but in the absence of such assignment of the Agreement, this Authority and Mandate will be null and void.`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -247,11 +284,11 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="BEGINNER">Beginner</SelectItem>
-                        <SelectItem value="NOVICE">Novice</SelectItem>
-                        <SelectItem value="ACTIVE">Active</SelectItem>
-                        <SelectItem value="PROFESSIONAL">Professional</SelectItem>
-                        <SelectItem value="EXPERT">Expert</SelectItem>
+                        <SelectItem value="BEGINNER">Beginner - R550/month</SelectItem>
+                        <SelectItem value="NOVICE">Novice - R750/month</SelectItem>
+                        <SelectItem value="ACTIVE">Active - R950/month</SelectItem>
+                        <SelectItem value="PROFESSIONAL">Professional - R1150/month</SelectItem>
+                        <SelectItem value="EXPERT">Expert - R1350/month</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -263,16 +300,11 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
             {/* Mandate Agreement Section */}
             <div className="border rounded-lg p-4 bg-muted/50 space-y-4">
               <h3 className="font-medium">Customer Mandate Agreement</h3>
-              <p className="text-sm text-muted-foreground">
-                By creating this account, I confirm that the customer has agreed to:
-              </p>
-              <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
-                <li>Participate in the OPIAN Rewards loyalty program</li>
-                <li>Allow their personal information to be stored and processed</li>
-                <li>Receive communications about their rewards and account status</li>
-                <li>Accept the terms and conditions of the selected package</li>
-                <li>Understand the points system and redemption process</li>
-              </ul>
+              <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                <div className="whitespace-pre-wrap">
+                  {MandateText}
+                </div>
+              </ScrollArea>
               <FormField
                 control={form.control}
                 name="mandateAgreement"
