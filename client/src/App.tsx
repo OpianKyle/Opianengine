@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,6 +10,7 @@ import ResetPassword from "@/pages/reset-password";
 import { useUser } from "@/hooks/use-user";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { Loader2 } from "lucide-react";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -31,8 +32,8 @@ import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
 
 // Agent pages
-import AgentDashboard from "@/pages/agent";
-import AgentLayout from "@/components/layout/agent-layout";
+import AgentDashboard from "@/pages/agent"; //This file needs to be created
+import AgentLayout from "@/components/layout/agent-layout"; //This file needs to be created or adjusted
 import AgentCustomers from "@/pages/agent/customers";
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
@@ -48,40 +49,35 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (!user) {
-    window.location.href = '/login';
-    return null;
+    console.log('No user found, redirecting to home');
+    return <Redirect to="/" />;
   }
 
-  // If accessing normal customer routes but user is an admin/agent
-  if (!admin && !agent) {
-    if (user.is_agent) {
-      window.location.href = '/agent';
-      return null;
-    }
-    if (user.is_admin || user.is_super_admin) {
-      window.location.href = '/admin';
-      return null;
-    }
-  }
-
-  // If accessing admin routes but user isn't an admin
+  // Handle routing based on user role
   if (admin && !(user.is_admin || user.is_super_admin)) {
+    console.log('User lacks admin privileges, redirecting to appropriate dashboard');
     if (user.is_agent) {
-      window.location.href = '/agent';
-      return null;
+      return <Redirect to="/agent" />;
     }
-    window.location.href = '/dashboard';
-    return null;
+    return <Redirect to="/dashboard" />;
   }
 
-  // If accessing agent routes but user isn't an agent
   if (agent && !user.is_agent) {
+    console.log('User lacks agent privileges, redirecting to appropriate dashboard');
     if (user.is_admin || user.is_super_admin) {
-      window.location.href = '/admin';
-      return null;
+      return <Redirect to="/admin" />;
     }
-    window.location.href = '/dashboard';
-    return null;
+    return <Redirect to="/dashboard" />;
+  }
+
+  // Redirect users to their appropriate dashboards
+  if (!admin && !agent) {
+    if (user.is_admin || user.is_super_admin) {
+      return <Redirect to="/admin" />;
+    }
+    if (user.is_agent) {
+      return <Redirect to="/agent" />;
+    }
   }
 
   return <Component {...rest} />;
@@ -89,88 +85,106 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
 
 function Router() {
   return (
-    <Switch>
-      {/* Public Routes */}
-      <Route path="/" component={Home} />
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <Route path="/reset-password" component={ResetPassword} />
+    <SidebarProvider>
+      <Switch>
+        {/* Public Routes */}
+        <Route path="/">
+          <Home />
+        </Route>
+        <Route path="/login">
+          <Login />
+        </Route>
+        <Route path="/register">
+          <Register />
+        </Route>
+        <Route path="/reset-password">
+          <ResetPassword />
+        </Route>
 
-      {/* Admin Routes */}
-      <Route path="/admin/:rest*">
-        <AdminLayout>
-          <Switch>
-            <Route path="/admin" exact>
-              <ProtectedRoute component={AdminDashboard} admin />
-            </Route>
-            <Route path="/admin/customers">
-              <ProtectedRoute component={AdminCustomers} admin />
-            </Route>
-            <Route path="/admin/products">
-              <ProtectedRoute component={AdminProducts} admin />
-            </Route>
-            <Route path="/admin/rewards">
-              <ProtectedRoute component={AdminRewards} admin />
-            </Route>
-            <Route path="/admin/cash-redemptions">
-              <ProtectedRoute component={CashRedemptions} admin />
-            </Route>
-            <Route path="/admin/manage-users">
-              <ProtectedRoute component={ManageUsers} admin />
-            </Route>
-            <Route path="/admin/logs">
-              <ProtectedRoute component={AdminLogs} admin />
-            </Route>
-            <Route path="/admin/quote-requests">
-              <ProtectedRoute component={AdminQuoteRequests} admin />
-            </Route>
-          </Switch>
-        </AdminLayout>
-      </Route>
+        {/* Admin Routes */}
+        <Route path="/admin">
+          <AdminLayout>
+            <ProtectedRoute component={AdminDashboard} admin />
+          </AdminLayout>
+        </Route>
+        <Route path="/admin/customers">
+          <AdminLayout>
+            <ProtectedRoute component={AdminCustomers} admin />
+          </AdminLayout>
+        </Route>
+        <Route path="/admin/products">
+          <AdminLayout>
+            <ProtectedRoute component={AdminProducts} admin />
+          </AdminLayout>
+        </Route>
+        <Route path="/admin/rewards">
+          <AdminLayout>
+            <ProtectedRoute component={AdminRewards} admin />
+          </AdminLayout>
+        </Route>
+        <Route path="/admin/cash-redemptions">
+          <AdminLayout>
+            <ProtectedRoute component={CashRedemptions} admin />
+          </AdminLayout>
+        </Route>
+        <Route path="/admin/manage-users">
+          <AdminLayout>
+            <ProtectedRoute component={ManageUsers} admin />
+          </AdminLayout>
+        </Route>
+        <Route path="/admin/logs">
+          <AdminLayout>
+            <ProtectedRoute component={AdminLogs} admin />
+          </AdminLayout>
+        </Route>
+        <Route path="/admin/quote-requests">
+          <AdminLayout>
+            <ProtectedRoute component={AdminQuoteRequests} admin />
+          </AdminLayout>
+        </Route>
 
-      {/* Agent Routes */}
-      <Route path="/agent/:rest*">
-        <AgentLayout>
-          <Switch>
-            <Route path="/agent" exact>
-              <ProtectedRoute component={AgentDashboard} agent />
-            </Route>
-            <Route path="/agent/customers">
-              <ProtectedRoute component={AgentCustomers} agent />
-            </Route>
-          </Switch>
-        </AgentLayout>
-      </Route>
+        {/* Agent Routes */}
+        <Route path="/agent">
+          <AgentLayout>
+            <ProtectedRoute component={AgentDashboard} agent />
+          </AgentLayout>
+        </Route>
+        <Route path="/agent/customers">
+          <AgentLayout>
+            <ProtectedRoute component={AgentCustomers} agent />
+          </AgentLayout>
+        </Route>
 
-      {/* Customer Routes */}
-      <Route path="/dashboard">
-        <CustomerLayout>
-          <ProtectedRoute component={CustomerDashboard} />
-        </CustomerLayout>
-      </Route>
-      <Route path="/rewards">
-        <CustomerLayout>
-          <ProtectedRoute component={CustomerRewards} />
-        </CustomerLayout>
-      </Route>
-      <Route path="/referrals">
-        <CustomerLayout>
-          <ProtectedRoute component={ReferralsPage} />
-        </CustomerLayout>
-      </Route>
-      <Route path="/profile">
-        <CustomerLayout>
-          <ProtectedRoute component={ProfilePage} />
-        </CustomerLayout>
-      </Route>
-      <Route path="/products">
-        <CustomerLayout>
-          <ProtectedRoute component={CustomerProducts} />
-        </CustomerLayout>
-      </Route>
+        {/* Customer Routes */}
+        <Route path="/dashboard">
+          <CustomerLayout>
+            <ProtectedRoute component={CustomerDashboard} />
+          </CustomerLayout>
+        </Route>
+        <Route path="/rewards">
+          <CustomerLayout>
+            <ProtectedRoute component={CustomerRewards} />
+          </CustomerLayout>
+        </Route>
+        <Route path="/referrals">
+          <CustomerLayout>
+            <ProtectedRoute component={ReferralsPage} />
+          </CustomerLayout>
+        </Route>
+        <Route path="/profile">
+          <CustomerLayout>
+            <ProtectedRoute component={ProfilePage} />
+          </CustomerLayout>
+        </Route>
+        <Route path="/products">
+          <CustomerLayout>
+            <ProtectedRoute component={CustomerProducts} />
+          </CustomerLayout>
+        </Route>
 
-      <Route component={NotFound} />
-    </Switch>
+        <Route component={NotFound} />
+      </Switch>
+    </SidebarProvider>
   );
 }
 
