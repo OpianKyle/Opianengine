@@ -72,21 +72,28 @@ export async function checkAdmin(req: Request, res: Response, next: NextFunction
 export async function checkAgent(req: Request, res: Response, next: NextFunction) {
   try {
     if (!req.session || !req.session.passport || !req.session.passport.user) {
+      console.log('No session or user found:', req.session);
       return res.status(401).json({ error: "Not authenticated" });
     }
 
     const connection = await createConnection();
-    const [agentCheck] = await connection.execute(
-      'SELECT id FROM users WHERE id = ? AND is_agent = 1',
-      [req.session.passport.user]
-    );
-    await connection.end();
+    try {
+      console.log('Checking agent status for user:', req.session.passport.user);
+      const [agentCheck] = await connection.execute(
+        'SELECT id FROM users WHERE id = ? AND is_agent = 1',
+        [req.session.passport.user]
+      );
 
-    if (!agentCheck || (agentCheck as any[]).length === 0) {
-      return res.status(403).json({ error: "Agent access required" });
+      if (!agentCheck || (agentCheck as any[]).length === 0) {
+        console.log('User is not an agent:', req.session.passport.user);
+        return res.status(403).json({ error: "Agent access required" });
+      }
+
+      console.log('Agent check passed for user:', req.session.passport.user);
+      next();
+    } finally {
+      await connection.end();
     }
-
-    next();
   } catch (error) {
     console.error('Error in agent check:', error);
     res.status(500).json({ error: "Internal server error" });
