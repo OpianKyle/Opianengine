@@ -1,7 +1,5 @@
 import { Router } from 'express';
-import { db } from '@db';
-import { users, packagePremiumAmounts } from '@db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { createConnection } from '../db';
 
 const router = Router();
 
@@ -20,30 +18,31 @@ router.get('/api/customer/referrals', async (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
+  const connection = await createConnection();
   try {
     console.log('Fetching referrals for user:', req.user.id);
 
     // Get package premium amounts
-    const premiumAmounts = await db
-      .select()
-      .from(packagePremiumAmounts);
+    const [premiumAmounts] = await connection.execute(
+      'SELECT package_type, premium_amount FROM package_premium_amounts'
+    );
 
-    const premiumMap = premiumAmounts.reduce((acc, curr) => {
-      acc[curr.packageType] = curr.premiumAmount;
+    const premiumMap = (premiumAmounts as any[]).reduce((acc, curr) => {
+      acc[curr.package_type] = curr.premium_amount;
       return acc;
     }, {} as Record<string, number>);
 
     // Get user's referral code
-    const [currentUser] = await db
-      .select({
-        referralCode: users.referralCode
-      })
-      .from(users)
-      .where(eq(users.id, req.user.id));
+    const [currentUser] = await connection.execute(
+      'SELECT referral_code FROM users WHERE id = ?',
+      [req.user.id]
+    );
 
-    if (!currentUser?.referralCode) {
+    if (!currentUser || !(currentUser as any[])[0]?.referral_code) {
       return res.status(400).json({ error: "User has no referral code" });
     }
+
+    const userInfo = (currentUser as any[])[0];
 
     // Initialize package statistics and commission details
     const packageStats = {
@@ -53,34 +52,28 @@ router.get('/api/customer/referrals', async (req, res) => {
     };
 
     // Get direct referrals (Level 1)
-    const level1Referrals = await db
-      .select({
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email,
-        createdAt: users.createdAt,
-        selectedPackage: users.selectedPackage,
-        referralCode: users.referralCode
-      })
-      .from(users)
-      .where(eq(users.referredBy, currentUser.referralCode))
-      .orderBy(desc(users.createdAt));
+    const [level1Referrals] = await connection.execute(
+      `SELECT id, first_name, last_name, email, created_at, selected_package, referral_code
+       FROM users 
+       WHERE referred_by = ?
+       ORDER BY created_at DESC`,
+      [userInfo.referral_code]
+    );
 
     // Calculate Level 1 stats and commissions
     let level1Amount = 0;
-    const level1Count = level1Referrals.length;
+    const level1Count = (level1Referrals as any[]).length;
 
-    level1Referrals.forEach(referral => {
-      if (referral.selectedPackage) {
-        if (!packageStats.level1[referral.selectedPackage]) {
-          packageStats.level1[referral.selectedPackage] = { count: 0, commission: 0 };
+    (level1Referrals as any[]).forEach(referral => {
+      if (referral.selected_package) {
+        if (!packageStats.level1[referral.selected_package]) {
+          packageStats.level1[referral.selected_package] = { count: 0, commission: 0 };
         }
-        packageStats.level1[referral.selectedPackage].count++;
+        packageStats.level1[referral.selected_package].count++;
 
-        if (premiumMap[referral.selectedPackage]) {
-          const commission = calculateCommission(premiumMap[referral.selectedPackage], 1);
-          packageStats.level1[referral.selectedPackage].commission += commission;
+        if (premiumMap[referral.selected_package]) {
+          const commission = calculateCommission(premiumMap[referral.selected_package], 1);
+          packageStats.level1[referral.selected_package].commission += commission;
           level1Amount += commission;
         }
       }
@@ -91,36 +84,30 @@ router.get('/api/customer/referrals', async (req, res) => {
     let level2Count = 0;
     const level2Referrals = [];
 
-    for (const level1Ref of level1Referrals) {
-      if (!level1Ref.referralCode) continue;
+    for (const level1Ref of level1Referrals as any[]) {
+      if (!level1Ref.referral_code) continue;
 
-      const level2Refs = await db
-        .select({
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          email: users.email,
-          createdAt: users.createdAt,
-          selectedPackage: users.selectedPackage,
-          referralCode: users.referralCode
-        })
-        .from(users)
-        .where(eq(users.referredBy, level1Ref.referralCode))
-        .orderBy(desc(users.createdAt));
+      const [level2Refs] = await connection.execute(
+        `SELECT id, first_name, last_name, email, created_at, selected_package, referral_code
+         FROM users 
+         WHERE referred_by = ?
+         ORDER BY created_at DESC`,
+        [level1Ref.referral_code]
+      );
 
-      level2Count += level2Refs.length;
-      level2Referrals.push(...level2Refs);
+      level2Count += (level2Refs as any[]).length;
+      level2Referrals.push(...(level2Refs as any[]));
 
-      level2Refs.forEach(referral => {
-        if (referral.selectedPackage) {
-          if (!packageStats.level2[referral.selectedPackage]) {
-            packageStats.level2[referral.selectedPackage] = { count: 0, commission: 0 };
+      (level2Refs as any[]).forEach(referral => {
+        if (referral.selected_package) {
+          if (!packageStats.level2[referral.selected_package]) {
+            packageStats.level2[referral.selected_package] = { count: 0, commission: 0 };
           }
-          packageStats.level2[referral.selectedPackage].count++;
+          packageStats.level2[referral.selected_package].count++;
 
-          if (premiumMap[referral.selectedPackage]) {
-            const commission = calculateCommission(premiumMap[referral.selectedPackage], 2);
-            packageStats.level2[referral.selectedPackage].commission += commission;
+          if (premiumMap[referral.selected_package]) {
+            const commission = calculateCommission(premiumMap[referral.selected_package], 2);
+            packageStats.level2[referral.selected_package].commission += commission;
             level2Amount += commission;
           }
         }
@@ -133,51 +120,40 @@ router.get('/api/customer/referrals', async (req, res) => {
     const level3Referrals = [];
 
     for (const level2Ref of level2Referrals) {
-      if (!level2Ref.referralCode) continue;
+      if (!level2Ref.referral_code) continue;
 
-      const level3Refs = await db
-        .select({
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          email: users.email,
-          createdAt: users.createdAt,
-          selectedPackage: users.selectedPackage
-        })
-        .from(users)
-        .where(eq(users.referredBy, level2Ref.referralCode))
-        .orderBy(desc(users.createdAt));
+      const [level3Refs] = await connection.execute(
+        `SELECT id, first_name, last_name, email, created_at, selected_package
+         FROM users 
+         WHERE referred_by = ?
+         ORDER BY created_at DESC`,
+        [level2Ref.referral_code]
+      );
 
-      level3Count += level3Refs.length;
-      level3Referrals.push(...level3Refs);
+      level3Count += (level3Refs as any[]).length;
+      level3Referrals.push(...(level3Refs as any[]));
 
-      level3Refs.forEach(referral => {
-        if (referral.selectedPackage) {
-          if (!packageStats.level3[referral.selectedPackage]) {
-            packageStats.level3[referral.selectedPackage] = { count: 0, commission: 0 };
+      (level3Refs as any[]).forEach(referral => {
+        if (referral.selected_package) {
+          if (!packageStats.level3[referral.selected_package]) {
+            packageStats.level3[referral.selected_package] = { count: 0, commission: 0 };
           }
-          packageStats.level3[referral.selectedPackage].count++;
+          packageStats.level3[referral.selected_package].count++;
 
-          if (premiumMap[referral.selectedPackage]) {
-            const commission = calculateCommission(premiumMap[referral.selectedPackage], 3);
-            packageStats.level3[referral.selectedPackage].commission += commission;
+          if (premiumMap[referral.selected_package]) {
+            const commission = calculateCommission(premiumMap[referral.selected_package], 3);
+            packageStats.level3[referral.selected_package].commission += commission;
             level3Amount += commission;
           }
         }
       });
     }
 
-    console.log('Sending response with:', {
-      referralCounts: { level1Count, level2Count, level3Count },
-      commissionAmounts: { level1Amount, level2Amount, level3Amount },
-      packageStats
-    });
-
     res.json({
       level1Count,
       level2Count,
       level3Count,
-      referralCode: currentUser.referralCode,
+      referralCode: userInfo.referral_code,
       referrals: {
         level1: level1Referrals,
         level2: level2Referrals,
@@ -194,6 +170,8 @@ router.get('/api/customer/referrals', async (req, res) => {
   } catch (error) {
     console.error('Error fetching referral data:', error);
     res.status(500).json({ error: 'Failed to fetch referral data' });
+  } finally {
+    await connection.end();
   }
 });
 
@@ -202,16 +180,16 @@ router.get('/api/verify-referral/:code', async (req, res) => {
     const { code } = req.params;
     console.log('Verifying referral code:', code);
 
-    const referrer = await db.query.users.findFirst({
-      where: eq(users.referralCode, code),
-      columns: {
-        id: true,
-        isEnabled: true,
-      }
-    });
+    const connection = await createConnection();
+    const [users] = await connection.execute(
+      'SELECT id, is_enabled FROM users WHERE referral_code = ?',
+      [code]
+    );
+    await connection.end();
 
-    console.log('Referral verification result:', { isValid: !!referrer?.isEnabled });
-    res.json({ isValid: !!referrer?.isEnabled });
+    const referrer = (users as any[])[0];
+    console.log('Referral verification result:', { isValid: !!referrer?.is_enabled });
+    res.json({ isValid: !!referrer?.is_enabled });
   } catch (error) {
     console.error('Error verifying referral:', error);
     res.status(500).json({ error: 'Failed to verify referral code' });

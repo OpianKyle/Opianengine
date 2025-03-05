@@ -1,10 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth, checkAgent } from "./auth";
+import { setupAuth, checkAgent } from "./auth"; 
 import { setupWebSocketServer } from "./websocket";
-import { db } from "@db";
-import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, quoteRequests, notifications } from "@db/schema";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { createConnection } from './db';
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { logAdminAction } from "./admin-logger";
@@ -14,8 +12,7 @@ import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
-import referralRouter from './routes/referral';  // Import referral routes
-import { createConnection } from './db'; // Added import statement
+import referralRouter from './routes/referral';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -203,21 +200,18 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    const connection = await createConnection();
     try {
       console.log('Fetching referral info for user:', req.user.id);
 
       // Get the user's referral data using MySQL syntax
-      const referralInfo = await db.select({
-        referralCode: users.referralCode,
-        firstName: users.firstName,
-        lastName: users.lastName
-      })
-      .from(users)
-      .where(eq(users.id, req.user.id))
-      .limit(1)
-      .execute();
+      const [referralInfo] = await connection.execute(
+        `SELECT referral_code as referralCode, first_name as firstName, last_name as lastName 
+         FROM users WHERE id = ? LIMIT 1`,
+        [req.user.id]
+      );
 
-      if (!referralInfo || referralInfo.length === 0) {
+      if (!referralInfo || !referralInfo.length) {
         console.error('User not found:', req.user.id);
         return res.status(404).json({ error: "User not found" });
       }
@@ -227,10 +221,10 @@ export function registerRoutes(app: Express): Server {
       if (!userInfo.referralCode) {
         // Generate a new referral code if one doesn't exist
         const newReferralCode = `REF${req.user.id}${Date.now().toString(36)}`;
-        await db.update(users)
-          .set({ referralCode: newReferralCode })
-          .where(eq(users.id, req.user.id))
-          .execute();
+        await connection.execute(
+          `UPDATE users SET referral_code = ? WHERE id = ?`,
+          [newReferralCode, req.user.id]
+        );
 
         userInfo.referralCode = newReferralCode;
       }
@@ -238,16 +232,13 @@ export function registerRoutes(app: Express): Server {
       console.log('Found referral code:', userInfo.referralCode);
 
       // Get users who were referred by this user
-      const referrals = await db.select({
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        createdAt: users.createdAt,
-      })
-      .from(users)
-      .where(eq(users.referredBy, userInfo.referralCode))
-      .orderBy(desc(users.createdAt))
-      .execute();
+      const [referrals] = await connection.execute(
+        `SELECT id, first_name as firstName, last_name as lastName, created_at as createdAt
+         FROM users 
+         WHERE referred_by = ?
+         ORDER BY created_at DESC`,
+        [userInfo.referralCode]
+      );
 
       console.log('Found referrals count:', referrals.length);
 
@@ -259,6 +250,8 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error fetching referral data:', error);
       res.status(500).json({ error: 'Failed to fetch referral data' });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -366,33 +359,54 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/admin/logs", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    try {
-      const logs = await db.query.adminLogs.findMany({
-        orderBy: desc(adminLogs.createdAt),
-        with: {
-          admin: {
-            columns: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          targetUser: {
-            columns: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      });
 
-      res.json(logs);
+    const connection = await createConnection();
+    try {
+      const [logs] = await connection.execute(
+        `SELECT 
+          al.*,
+          a.id as admin_id,
+          a.first_name as admin_first_name,
+          a.last_name as admin_last_name,
+          a.email as admin_email,
+          t.id as target_id,
+          t.first_name as target_first_name,
+          t.last_name as target_last_name,
+          t.email as target_email
+         FROM admin_logs al
+         LEFT JOIN users a ON al.admin_id = a.id
+         LEFT JOIN users t ON al.target_user_id = t.id
+         ORDER BY al.created_at DESC`
+      );
+
+      // Transform the results to match the expected format
+      const transformedLogs = logs.map(log => ({
+        id: log.id,
+        adminId: log.admin_id,
+        actionType: log.action_type,
+        targetUserId: log.target_user_id,
+        details: log.details,
+        createdAt: log.created_at,
+        admin: {
+          id: log.admin_id,
+          firstName: log.admin_first_name,
+          lastName: log.admin_last_name,
+          email: log.admin_email
+        },
+        targetUser: log.target_id ? {
+          id: log.target_id,
+          firstName: log.target_first_name,
+          lastName: log.target_last_name,
+          email: log.target_email
+        } : null
+      }));
+
+      res.json(transformedLogs);
     } catch (error) {
       console.error('Error fetching admin logs:', error);
       res.status(500).json({ error: 'Failed to fetch admin logs' });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -534,16 +548,25 @@ export function registerRoutes(app: Express): Server {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
     const { userId, isAgent } = req.body;
 
+    const connection = await createConnection();
     try {
-      const [user] = await db
-        .update(users)
-        .set({ isAgent })
-        .where(eq(users.id, userId))
-        .returning();
+      // First check if user exists and get their current info
+      const [users] = await connection.execute(
+        'SELECT id, email FROM users WHERE id = ?',
+        [userId]
+      );
 
-      if (!user) {
+      if (!users.length) {
         return res.status(404).json({ error: "User not found" });
       }
+
+      const user = users[0];
+
+      // Update the user's agent status
+      await connection.execute(
+        'UPDATE users SET is_agent = ? WHERE id = ?',
+        [isAgent ? 1 : 0, userId]
+      );
 
       await logAdminAction({
         adminId: req.user.id,
@@ -556,6 +579,8 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error toggling agent status:', error);
       res.status(500).json({ error: 'Failed to update agent status' });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -694,27 +719,59 @@ export function registerRoutes(app: Express): Server {
     const { id } = req.params;
     const { email, firstName, lastName, phoneNumber, password } = req.body;
 
+    const connection = await createConnection();
     try {
-      const updates: any = {
-        email,
-        firstName,
-        lastName,
-        phoneNumber,
-      };
+      // Build SQL SET clause and values array
+      const updates = [];
+      const values = [];
 
+      if (email) {
+        updates.push('email = ?');
+        values.push(email);
+      }
+      if (firstName) {
+        updates.push('first_name = ?');
+        values.push(firstName);
+      }
+      if (lastName) {
+        updates.push('last_name = ?');
+        values.push(lastName);
+      }
+      if (phoneNumber) {
+        updates.push('phone_number = ?');
+        values.push(phoneNumber);
+      }
       if (password) {
-        updates.password = await crypto.hash(password);
+        updates.push('password = ?');
+        values.push(await crypto.hash(password));
       }
 
-      const [user] = await db
-        .update(users)
-        .set(updates)
-        .where(eq(users.id, parseInt(id)))
-        .returning()
-        .execute();
+      // Add the id as the last parameter
+      values.push(id);
 
-      if (!user) {
+      if (updates.length === 0) {
+        return res.status(400).json({ error: "No fields to update" });
+      }
+
+      // Update user
+      const [result] = await connection.execute(
+        `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+        values
+      );
+
+      if (result.affectedRows === 0) {
         return res.status(404).json({ error: "User not found" });
+      }
+
+      // Fetch updated user
+      const [users] = await connection.execute(
+        'SELECT * FROM users WHERE id = ?',
+        [id]
+      );
+
+      const user = users[0];
+      if (!user) {
+        return res.status(404).json({ error: "Failed to fetch updated user" });
       }
 
       await logAdminAction({
@@ -730,6 +787,8 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error updating user:', error);
       res.status(500).json({ error: 'Failed to update user' });
+    } finally {
+      await connection.end();
     }
   });
 
