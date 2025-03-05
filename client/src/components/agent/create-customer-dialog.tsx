@@ -120,6 +120,7 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
       const response = await fetch("/api/agent/customers/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify(data),
       });
 

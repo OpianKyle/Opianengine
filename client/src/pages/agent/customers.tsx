@@ -22,7 +22,9 @@ export default function AgentCustomers() {
   const { data: customers, isLoading } = useQuery({
     queryKey: ["/api/agent/customers"],
     queryFn: async () => {
-      const response = await fetch("/api/agent/customers");
+      const response = await fetch("/api/agent/customers", {
+        credentials: 'include'  // Add credentials to include session cookie
+      });
       if (!response.ok) throw new Error("Failed to fetch customers");
       return response.json();
     },
