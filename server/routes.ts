@@ -757,6 +757,115 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.post("/api/agent/customers/create", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Verify agent status
+      const [agentCheck] = await connection.execute(
+        'SELECT id FROM users WHERE id = ? AND is_agent = 1',
+        [req.user.id]
+      );
+
+      if (!agentCheck || agentCheck.length === 0) {
+        return res.status(403).json({ error: "Agent access required" });
+      }
+
+      const { 
+        firstName, lastName, email, phoneNumber, 
+        industry, occupation, address, city, 
+        postalCode, selectedPackage, idNumber,
+        isSouthAfrican, dateOfBirth, gender,
+        accountHolderName, bankName, branchCode,
+        accountNumber, accountType
+      } = req.body;
+
+      // Check for existing user
+      const [existingUser] = await connection.execute(
+        'SELECT id FROM users WHERE email = ?',
+        [email]
+      );
+
+      if (existingUser.length > 0) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+
+      // Generate password reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date();
+      resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 24); // Token valid for 24 hours
+
+      await connection.beginTransaction();
+
+      try {
+        // Create user with all fields
+        const [userResult] = await connection.execute(
+          `INSERT INTO users (
+            email, password, first_name, last_name, 
+            phone_number, is_enabled, points, selected_package,
+            industry, occupation, address, city, postal_code,
+            id_number, is_south_african, date_of_birth, gender,
+            account_holder_name, bank_name, branch_code,
+            account_number, account_type,
+            agent_id, reset_token, reset_token_expiry
+          ) VALUES (?, '', ?, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            email,
+            firstName,
+            lastName,
+            phoneNumber,
+            selectedPackage,
+            industry,
+            occupation,
+            address,
+            city,
+            postalCode,
+            idNumber,
+            isSouthAfrican,
+            dateOfBirth,
+            gender,
+            accountHolderName,
+            bankName,
+            branchCode,
+            accountNumber,
+            accountType,
+            req.user.id,
+            resetToken,
+            resetTokenExpiry
+          ]
+        );
+
+        const userId = userResult.insertId;
+
+        await connection.commit();
+
+        // Send welcome email with password setup link
+        const emailParams = generatePasswordSetupEmail(email, resetToken);
+        const emailSent = await sendEmail(emailParams);
+
+        if (!emailSent) {
+          console.error('Failed to send welcome email to:', email);
+        }
+
+        res.status(201).json({
+          message: "Customer created successfully",
+          customerId: userId
+        });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      res.status(500).json({ error: 'Failed to create customer' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   app.get("/api/quote-requests", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
