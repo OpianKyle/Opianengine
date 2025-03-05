@@ -51,7 +51,7 @@ router.get('/customers', async (req, res) => {
         email: customer.email,
         firstName: customer.first_name,
         lastName: customer.last_name,
-        phoneNumber: customer.phone_number,
+        mobileNumber: customer.phone_number,
         selectedPackage: customer.selected_package,
         points: customer.points,
         createdAt: customer.created_at,
@@ -69,19 +69,21 @@ router.get('/customers', async (req, res) => {
 });
 
 // Create customer as agent
-router.post('/customers', async (req, res) => {
+router.post('/customers/create', async (req, res) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
+  console.log('Creating customer for agent:', req.user.id);
+
   const connection = await createConnection();
   try {
     const { 
-      email, firstName, lastName, phoneNumber, dateOfBirth,
-      gender, idNumber, occupation, industry, address,
-      city, postalCode, selectedPackage, bankName,
+      email, firstName, lastName, mobileNumber, dateOfBirth,
+      gender, idNumber, occupation, industry, addressLine1,
+      suburb, postalCode, selectedPackage, bankName,
       accountType, accountNumber, accountHolderName,
-      branchCode, signature 
+      branchCode, isSouthAfrican, hasCreditCard
     } = req.body;
 
     await connection.beginTransaction();
@@ -97,6 +99,10 @@ router.post('/customers', async (req, res) => {
         return res.status(400).json({ error: "Email already exists" });
       }
 
+      // Generate a temporary password
+      const temporaryPassword = Math.random().toString(36).slice(-8);
+      const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
+
       // Calculate initial points based on selected package
       let initialPoints = 0;
       switch (selectedPackage?.toUpperCase()) {
@@ -110,20 +116,20 @@ router.post('/customers', async (req, res) => {
       // Create user with agent_id
       const [userResult] = await connection.execute(
         `INSERT INTO users (
-          email, first_name, last_name, phone_number,
+          email, password, first_name, last_name, phone_number,
           date_of_birth, gender, id_number, occupation,
-          industry, address, city, postal_code,
+          industry, address, suburb, postal_code,
           selected_package, bank_name, account_type,
           account_number, account_holder_name, branch_code,
-          signature, is_enabled, points, agent_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+          is_south_african, has_credit_card, is_enabled, points, agent_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
         [
-          email, firstName, lastName, phoneNumber,
+          email, defaultPassword, firstName, lastName, mobileNumber,
           dateOfBirth, gender, idNumber, occupation,
-          industry, address, city, postalCode,
+          industry, addressLine1, suburb, postalCode,
           selectedPackage, bankName, accountType,
           accountNumber, accountHolderName, branchCode,
-          signature, initialPoints, req.user.id
+          isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0, 1, initialPoints, req.user.id
         ]
       );
 
@@ -135,7 +141,8 @@ router.post('/customers', async (req, res) => {
         firstName,
         lastName,
         points: initialPoints,
-        selectedPackage
+        selectedPackage,
+        temporaryPassword: '123456' // Default password for all customers
       });
     } catch (error) {
       await connection.rollback();
