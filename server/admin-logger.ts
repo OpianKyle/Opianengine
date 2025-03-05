@@ -3,7 +3,7 @@ import { adminLogs, type User } from "@db/schema";
 
 type AdminAction = {
   adminId: number;
-  actionType: "POINT_ADJUSTMENT" | "ADMIN_CREATED" | "ADMIN_REMOVED" | "REWARD_CREATED" | "REWARD_UPDATED" | "REWARD_DELETED";
+  actionType: "POINT_ADJUSTMENT" | "ADMIN_CREATED" | "ADMIN_REMOVED" | "AGENT_CREATED" | "AGENT_REMOVED" | "REWARD_CREATED" | "REWARD_UPDATED" | "REWARD_DELETED" | "PRODUCT_CREATED" | "PRODUCT_UPDATED" | "PRODUCT_DELETED" | "ADMIN_UPDATED" | "QUOTE_REQUEST_UPDATED" | "QUOTE_REQUEST_COMPLETED" | "QUOTE_REQUEST_REJECTED";
   targetUserId?: number;
   details: string;
 };
@@ -16,18 +16,22 @@ export async function logAdminAction({
 }: AdminAction) {
   try {
     console.log('Attempting to log admin action:', { adminId, actionType, targetUserId, details });
-    const [result] = await db.insert(adminLogs).values({
-      adminId,
-      actionType,
-      targetUserId,
-      details,
-    }).returning();
+
+    const result = await db.insert(adminLogs)
+      .values({
+        adminId,
+        actionType,
+        targetUserId,
+        details,
+      })
+      .$returningAll();
 
     console.log('Admin action logged successfully:', result);
-    return result;
+    return result[0];
   } catch (error) {
     console.error("Failed to log admin action:", error);
-    throw error; // Re-throw to handle in the route
+    // Don't throw the error, just log it
+    return null;
   }
 }
 
