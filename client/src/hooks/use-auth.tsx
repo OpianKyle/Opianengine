@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext } from "react";
+import { ReactNode, createContext, useContext, useState } from "react";
 import {
   useQuery,
   useMutation,
@@ -8,6 +8,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { cleanupWebSockets, handlePageTransition } from "@/lib/utils";
+import { LoadingSpinner } from "@/components/loading";
 
 type User = {
   id: number;
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const {
     data: user,
@@ -47,9 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     retry: false,
     enabled: true,
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    staleTime: 5 * 60 * 1000,
     onError: (error) => {
-      // Only show error toasts for non-401 errors
       if (!(error instanceof Error && error.message.includes("log in"))) {
         toast({
           title: "Error",
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
+      setIsTransitioning(true);
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,16 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return res.json();
     },
     onSuccess: async (user) => {
-      // Update the user data in the cache
       queryClient.setQueryData(["/api/user"], user);
-
-      // Show success message
       toast({
         title: "Welcome back",
         description: `Logged in as ${user.firstName} ${user.lastName}`,
       });
 
-      // Clean up and redirect based on role
       await handlePageTransition(() => {
         if (user.isAgent) {
           setLocation('/agent');
@@ -102,46 +100,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
     },
+    onSettled: () => {
+      setIsTransitioning(false);
+    }
   });
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      // First show loading state
+      setIsTransitioning(true);
       toast({
         title: "Logging out",
         description: "Please wait...",
       });
 
-      // Clean up before making the logout request
-      await handlePageTransition(async () => {
-        // Clear all queries from the cache
-        queryClient.clear();
-        // Reset the user data
-        queryClient.setQueryData(["/api/user"], null);
-
-        // Make the logout request
-        const res = await fetch("/api/logout", {
-          method: "POST",
-          credentials: "include",
-        });
-
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.error || "Failed to logout");
-        }
+      // Make the logout request first
+      const res = await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
       });
 
-      // Clean up any remaining connections
-      cleanupWebSockets();
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to logout");
+      }
+
+      // Then clean up after successful logout
+      await handlePageTransition(async () => {
+        cleanupWebSockets();
+        queryClient.clear();
+        queryClient.setQueryData(["/api/user"], null);
+      });
     },
     onSuccess: () => {
-      // Show success message
       toast({
         title: "Logged out",
         description: "Successfully logged out",
       });
-
-      // Use a regular navigation to ensure clean state
       window.location.href = '/auth';
     },
     onError: (error: Error) => {
@@ -151,6 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
     },
+    onSettled: () => {
+      setIsTransitioning(false);
+    }
   });
 
   return (
@@ -163,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logoutMutation,
       }}
     >
+      {isTransitioning && <LoadingSpinner />}
       {children}
     </AuthContext.Provider>
   );
