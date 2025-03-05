@@ -698,7 +698,7 @@ export function registerRoutes(app: Express): Server {
       };
 
       if (password) {
-        updates.password = await authCrypto.hashPassword(password);
+        updates.password = await crypto.hash(password);
       }
 
       const [user] = await db
@@ -719,7 +719,9 @@ export function registerRoutes(app: Express): Server {
         details: `Updated admin user: ${user.email}`,
       });
 
-      res.json(user);
+      // Don't send the password back
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
     } catch (error) {
       console.error('Error updating user:', error);
       res.status(500).json({ error: 'Failed to update user' });
