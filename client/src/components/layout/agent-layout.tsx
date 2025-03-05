@@ -31,7 +31,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
   ];
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Mobile menu button */}
       <Button
         variant="outline"
@@ -42,7 +42,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
         {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
 
-      {/* Backdrop */}
+      {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
