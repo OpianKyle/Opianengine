@@ -4,6 +4,8 @@ import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import fileUpload from 'express-fileupload';
 import { setupAuth } from "./auth";
+import { db } from "@db";
+import { users } from "@db/schema";
 import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
 import session from 'express-session';
@@ -15,6 +17,7 @@ console.log('Environment:', {
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT || 5000,
   hasSessionSecret: !!process.env.SESSION_SECRET,
+  hasDbUrl: !!process.env.DATABASE_URL
 });
 
 const app = express();
@@ -94,11 +97,12 @@ app.use((req, res, next) => {
   next();
 });
 
+
 (async () => {
   try {
     console.log('Starting database initialization...');
 
-    // Test MariaDB connection
+    // Test MariaDB connection only
     try {
       const connection = await mysql.createConnection({
         host: 'dedi1350.jnb1.host-h.net',
@@ -115,7 +119,7 @@ app.use((req, res, next) => {
       await connection.end();
     } catch (mariaDbError) {
       console.error('MariaDB connection test failed:', mariaDbError);
-      throw mariaDbError;
+      throw mariaDbError; // Critical error, can't continue without database
     }
 
     // Setup authentication (before routes)
@@ -155,6 +159,11 @@ app.use((req, res, next) => {
     });
   } catch (error) {
     console.error('Server startup error:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
     process.exit(1);
   }
 })();

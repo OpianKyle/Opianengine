@@ -1,7 +1,10 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
+import { type User } from '@db/schema';
+import { db } from "@db";
+import { notifications } from "@db/schema";
 import { verifyToken } from './auth';
-import { createConnection } from './db';
+import { eq, desc } from 'drizzle-orm';
 
 // Store active connections with user information
 const clients = new Map<WebSocket, {
@@ -9,7 +12,7 @@ const clients = new Map<WebSocket, {
   isAdmin: boolean;
 }>();
 
-export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
+export function setupWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ 
     server,
     path: '/ws',
@@ -99,31 +102,23 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
         timestamp: new Date().toISOString()
       }));
 
-      // Send unread notifications using MariaDB connection
-      const connection = await createConnection();
-      try {
-        const [unreadNotifications] = await connection.execute(
-          `SELECT id, type, title, message, created_at as createdAt, is_read as isRead
-           FROM notifications 
-           WHERE user_id = ? AND is_read = 0
-           ORDER BY created_at DESC`,
-          [userData.userId]
-        );
+      // Send unread notifications
+      const unreadNotifications = await db.query.notifications.findMany({
+        where: eq(notifications.userId, userData.userId),
+        orderBy: desc(notifications.createdAt),
+      });
 
-        console.log(`Sending ${(unreadNotifications as any[]).length} unread notifications to user ${userData.userId}`);
+      console.log(`Sending ${unreadNotifications.length} unread notifications to user ${userData.userId}`);
 
-        for (const notification of unreadNotifications as any[]) {
-          ws.send(JSON.stringify({
-            type: notification.type,
-            points: notification.type === 'POINTS_AWARDED' ? 
-              parseInt(notification.title.match(/-?\d+/)?.[0] || '0') : undefined,
-            description: notification.message,
-            timestamp: notification.createdAt.toISOString(),
-            id: notification.id.toString()
-          }));
-        }
-      } finally {
-        await connection.end();
+      for (const notification of unreadNotifications) {
+        ws.send(JSON.stringify({
+          type: notification.type,
+          points: notification.type === 'POINTS_AWARDED' ? 
+            parseInt(notification.title.match(/-?\d+/)?.[0] || '0') : undefined,
+          description: notification.message,
+          timestamp: notification.createdAt.toISOString(),
+          id: notification.id.toString()
+        }));
       }
 
       ws.on('close', () => {
@@ -140,52 +135,37 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
   return {
     notifyPointsUpdate: async (userId: number, points: number, description: string) => {
       try {
-        const connection = await createConnection();
-        try {
-          // Store notification in database
-          const [result] = await connection.execute(
-            `INSERT INTO notifications (
-              user_id, type, title, message, is_read, created_at
-            ) VALUES (?, ?, ?, ?, false, NOW())`,
-            [
-              userId,
-              points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
-              `${points >= 0 ? '+' : ''}${points} points`,
-              description
-            ]
-          );
+        // Store notification
+        const [notification] = await db.insert(notifications).values({
+          userId,
+          type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
+          title: `${points >= 0 ? '+' : ''}${points} points`,
+          message: description,
+          isRead: false,
+          createdAt: new Date()
+        }).returning();
 
-          const notificationId = (result as any).insertId;
-          const [notificationRows] = await connection.execute(
-            'SELECT created_at FROM notifications WHERE id = ?',
-            [notificationId]
-          );
-          const notification = (notificationRows as any[])[0];
+        const message = {
+          type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
+          points: Math.abs(points),
+          description,
+          timestamp: notification.createdAt.toISOString(),
+          id: notification.id.toString()
+        };
 
-          const message = {
-            type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
-            points: Math.abs(points),
-            description,
-            timestamp: notification.created_at.toISOString(),
-            id: notificationId.toString()
-          };
+        console.log('Sending points notification:', {
+          userId,
+          points,
+          type: message.type,
+          activeConnections: Array.from(clients.values())
+            .filter(client => client.userId === userId).length
+        });
 
-          console.log('Sending points notification:', {
-            userId,
-            points,
-            type: message.type,
-            activeConnections: Array.from(clients.values())
-              .filter(client => client.userId === userId).length
-          });
-
-          // Send to connected user
-          for (const [ws, client] of clients) {
-            if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify(message));
-            }
+        // Send to connected user
+        for (const [ws, client] of clients) {
+          if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(message));
           }
-        } finally {
-          await connection.end();
         }
       } catch (error) {
         console.error('Error sending points notification:', error);

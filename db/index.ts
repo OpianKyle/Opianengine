@@ -1,4 +1,6 @@
+import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
+import * as schema from "@db/schema";
 
 const poolConnection = mysql.createPool({
   host: 'dedi1350.jnb1.host-h.net',
@@ -16,5 +18,11 @@ const poolConnection = mysql.createPool({
   keepAliveInitialDelay: 0
 });
 
-// Export the pool for direct queries
+export const db = drizzle(poolConnection, { 
+  schema, 
+  mode: 'default',
+  logger: true 
+});
+
+// Export the pool for direct queries if needed
 export const pool = poolConnection;
