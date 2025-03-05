@@ -892,6 +892,53 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.put("/api/user", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const updates: any = {
+        ...req.body
+      };
+
+      // Handle password update separately if provided
+      if (req.body.password) {
+        updates.password = await crypto.hash(req.body.password);
+      } else {
+        // If no password provided, remove it from updates
+        delete updates.password;
+      }
+
+      // Remove any undefined or null values  
+      Object.keys(updates).forEach(key => {
+        if (updates[key] === undefined || updates[key] === null) {
+          delete updates[key];
+        }
+      });
+
+      const [user] = await db
+        .update(users)
+        .set(updates)
+        .where(eq(users.id, req.user.id))
+        .returning();
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Don't send the password back
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ 
+        error: "Failed to update profile", 
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
   app.put("/api/admin/users/:id/toggle-status", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
