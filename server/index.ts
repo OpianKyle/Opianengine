@@ -7,23 +7,21 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users } from "@db/schema";
 import mysql from 'mysql2/promise';
-import agentRouter from './routes/agent'; // Added import
-
-// Check required environment variables
-const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
-if (missingEnvVars.length > 0) {
-  console.error('Missing required environment variables:', missingEnvVars.join(', '));
-  process.exit(1);
-}
+import agentRouter from './routes/agent';
 
 console.log('Starting server initialization...', new Date().toISOString());
+console.log('Environment:', {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT || 5000,
+  hasSessionSecret: !!process.env.SESSION_SECRET,
+  hasDbUrl: !!process.env.DATABASE_URL
+});
 
 const app = express();
 
 // Configure CORS with specific options
 app.use(cors({
-  origin: true, // Allow any origin in development
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -32,7 +30,8 @@ app.use(cors({
 
 console.log('CORS middleware configured');
 
-app.set('trust proxy', 1); // trust first proxy
+// trust first proxy for secure cookies
+app.set('trust proxy', 1);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -50,23 +49,24 @@ console.log('Basic middleware setup complete');
 // Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
+  console.log(`Incoming ${req.method} request to ${req.path}`, {
+    headers: req.headers,
+    sessionID: req.sessionID,
+    isAuthenticated: req.isAuthenticated?.()
+  });
+
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (req.path.startsWith("/api")) {
-      log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
-    }
+    console.log(`${req.method} ${req.path} completed with status ${res.statusCode} in ${duration}ms`);
   });
   next();
 });
-
-app.use('/api/agent', agentRouter); // Added agent route registration
-
 
 (async () => {
   try {
     console.log('Starting database initialization...');
 
-    // Test MariaDB connection
+    // Test MariaDB connection only
     try {
       const connection = await mysql.createConnection({
         host: 'dedi1350.jnb1.host-h.net',
@@ -83,14 +83,7 @@ app.use('/api/agent', agentRouter); // Added agent route registration
       await connection.end();
     } catch (mariaDbError) {
       console.error('MariaDB connection test failed:', mariaDbError);
-    }
-
-    // Test PostgreSQL connection
-    try {
-      await db.select().from(users).limit(1);
-      console.log('PostgreSQL connection successful');
-    } catch (dbError) {
-      console.error('PostgreSQL connection test failed:', dbError);
+      throw mariaDbError; // Critical error, can't continue without database
     }
 
     // Setup authentication (before routes)
@@ -98,6 +91,8 @@ app.use('/api/agent', agentRouter); // Added agent route registration
     setupAuth(app);
     console.log('Authentication setup complete');
 
+    // Register routes
+    app.use('/api/agent', agentRouter);
     const server = registerRoutes(app);
     console.log('Routes registered');
 
@@ -122,17 +117,17 @@ app.use('/api/agent', agentRouter); // Added agent route registration
 
     // Start the server
     const PORT = process.env.PORT || 5000;
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
+      console.log(`Server URL: http://0.0.0.0:${PORT}`);
     });
   } catch (error) {
     console.error('Server startup error:', error);
-    // Log additional details about the error
-    if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Stack trace:', error.stack);
-    }
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
     process.exit(1);
   }
 })();
