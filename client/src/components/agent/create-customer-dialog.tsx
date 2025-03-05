@@ -170,7 +170,6 @@ In the event that the payment day falls on a Sunday, or recognised South African
 Payment Instructions due in December may be debited against my account on a earlier date
 
 I / We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement. A payment reference is added to this form before the issuing of any payment instruction.
-
 Mandate
 I /We acknowledge that all payment instructions issued by you shall be treated by my / our above-mentioned Bank as if the instructions have been issued by me/us personally.
 
@@ -182,7 +181,7 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Customer</DialogTitle>
           <DialogDescription>
@@ -190,38 +189,36 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
               <h3 className="text-lg font-semibold border-b pb-2">Personal Information</h3>
-              <div className="grid gap-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="email"
@@ -248,125 +245,111 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                     </FormItem>
                   )}
                 />
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="idNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ID Number/Passport</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="idNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ID Number/Passport</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isSouthAfrican"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">South African citizen</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="dateOfBirth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date of Birth</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <Input {...field} />
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Gender" />
+                          </SelectTrigger>
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="isSouthAfrican"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
-                          />
-                        </FormControl>
-                        <FormLabel className="!mt-0">South African citizen</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <FormField
-                      control={form.control}
-                      name="dateOfBirth"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date of Birth</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Gender</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select Gender" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="female">Female</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2">Employment Information</h3>
-              <div className="grid gap-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="occupation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Occupation</FormLabel>
+              <h3 className="text-lg font-semibold border-b pb-2">Employment & Address Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="occupation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Occupation</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="industry"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Industry</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <Input {...field} />
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Industry" />
+                          </SelectTrigger>
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="industry"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Industry</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select Industry" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {industries.map(industry => (
-                              <SelectItem key={industry} value={industry}>{industry}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2">Address Information</h3>
-              <div className="grid gap-4">
+                        <SelectContent>
+                          {industries.map(industry => (
+                            <SelectItem key={industry} value={industry}>{industry}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="addressLine1"
@@ -380,144 +363,136 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                     </FormItem>
                   )}
                 />
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="suburb"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Suburb</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="postalCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Postal Code</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="suburb"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Suburb</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="postalCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Postal Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2">Financial Information</h3>
-              <FormField
-                control={form.control}
-                name="hasCreditCard"
-                render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
-                      />
-                    </FormControl>
-                    <FormLabel className="!mt-0">Do you own a credit card?</FormLabel>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2">Select Package</h3>
-              <FormField
-                control={form.control}
-                name="selectedPackage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Package</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+              <h3 className="text-lg font-semibold border-b pb-2">Package & Financial Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="selectedPackage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Package</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a package" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="BEGINNER">Beginner - R550/month</SelectItem>
+                          <SelectItem value="NOVICE">Novice - R750/month</SelectItem>
+                          <SelectItem value="ACTIVE">Active - R950/month</SelectItem>
+                          <SelectItem value="PROFESSIONAL">Professional - R1150/month</SelectItem>
+                          <SelectItem value="EXPERT">Expert - R1350/month</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="hasCreditCard"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6">
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a package" />
-                        </SelectTrigger>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
+                        />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="BEGINNER">Beginner - R550/month</SelectItem>
-                        <SelectItem value="NOVICE">Novice - R750/month</SelectItem>
-                        <SelectItem value="ACTIVE">Active - R950/month</SelectItem>
-                        <SelectItem value="PROFESSIONAL">Professional - R1150/month</SelectItem>
-                        <SelectItem value="EXPERT">Expert - R1350/month</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormLabel className="!mt-0">Do you own a credit card?</FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <div className="space-y-4">
               <h3 className="text-lg font-semibold border-b pb-2">Banking Details</h3>
-              <div className="grid gap-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="accountHolderName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Account Holder Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bankName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bank Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="branchCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Branch Code</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="accountNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Account Number</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="accountHolderName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Holder Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="bankName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bank Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="branchCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Branch Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="accountNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="accountType"
