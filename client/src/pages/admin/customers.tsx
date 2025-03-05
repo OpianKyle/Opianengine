@@ -104,6 +104,7 @@ const getPointsMultiplier = (points: number, type: 'premium' | 'card' | 'pos'): 
 
 export default function AdminCustomers() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const { data: customers } = useQuery({
     queryKey: ["/api/admin/customers"],
     queryFn: async () => {
@@ -157,7 +158,7 @@ export default function AdminCustomers() {
       accountNumber: "",
       accountHolderName: "",
       branchCode: "",
-      selectedPackage: "",
+      selectedPackage: "BEGINNER",
       gender: null,
       hasCreditCard: false,
       isSouthAfrican: false,
@@ -165,6 +166,7 @@ export default function AdminCustomers() {
   });
 
   const handleEditUser = (customer: any) => {
+    setSelectedCustomer(customer);
     const formattedDate = customer.dateOfBirth ? 
       new Date(customer.dateOfBirth).toISOString().split('T')[0] : '';
 
@@ -186,7 +188,7 @@ export default function AdminCustomers() {
       accountHolderName: customer.accountHolderName || "",
       branchCode: customer.branchCode || "",
       selectedPackage: (customer.selectedPackage?.toUpperCase() as "BEGINNER" | "NOVICE" | "ACTIVE" | "PROFESSIONAL" | "EXPERT") || "BEGINNER",
-      gender: customer.gender as typeof genderEnum[number] || null,
+      gender: (customer.gender as typeof genderEnum[number]) || null,
       hasCreditCard: Boolean(customer.hasCreditCard),
       isSouthAfrican: Boolean(customer.isSouthAfrican),
     });
@@ -425,8 +427,6 @@ export default function AdminCustomers() {
     },
   });
 
-
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -570,13 +570,35 @@ export default function AdminCustomers() {
                               </DialogHeader>
                               <Form {...editDetailsForm}>
                                 <form onSubmit={editDetailsForm.handleSubmit((data) =>
-                                  updateUserDetailsMutation.mutate({ userId: customer.id, data })
+                                  updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
                                 )}>
                                   <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-4">
                                     {/* Personal Information */}
                                     <div className="col-span-2">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
                                     </div>
+                                    <FormField
+                                      control={editDetailsForm.control}
+                                      name="selectedPackage"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel className="text-white">Package</FormLabel>
+                                          <FormControl>
+                                            <select
+                                              {...field}
+                                              className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
+                                            >
+                                              <option value="BEGINNER">BEGINNER</option>
+                                              <option value="NOVICE">NOVICE</option>
+                                              <option value="ACTIVE">ACTIVE</option>
+                                              <option value="PROFESSIONAL">PROFESSIONAL</option>
+                                              <option value="EXPERT">EXPERT</option>
+                                            </select>
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
                                     <FormField
                                       control={editDetailsForm.control}
                                       name="firstName"
@@ -723,6 +745,23 @@ export default function AdminCustomers() {
                                         </FormItem>
                                       )}
                                     />
+                                    <FormField
+                                      control={editDetailsForm.control}
+                                      name="isSouthAfrican"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel className="text-white">Is South African</FormLabel>
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                              className="bg-[#022b5c] border-[#043875]"
+                                            />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
 
                                     {/* Employment Information */}
                                     <div className="col-span-2 mt-4">
@@ -779,13 +818,7 @@ export default function AdminCustomers() {
                                         <FormItem>
                                           <FormLabel className="text-white">Account Type</FormLabel>
                                           <FormControl>
-                                            <select {...field} className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white">
-                                              <option value="">Select Account Type</option>
-                                              <option value="SAVINGS">SAVINGS</option>
-                                              <option value="CURRENT">CURRENT</option>
-                                              <option value="CHEQUE">CHEQUE</option>
-                                              <option value="CREDIT">CREDIT</option>
-                                            </select>
+                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -813,8 +846,7 @@ export default function AdminCustomers() {
                                           <FormControl>
                                             <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
                                           </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
+                                          <FormMessage />                                        </FormItem>
                                       )}
                                     />
                                     <FormField
@@ -830,74 +862,30 @@ export default function AdminCustomers() {
                                         </FormItem>
                                       )}
                                     />
-
-                                    {/* Additional Information */}
-                                    <div className="col-span-2 mt-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Additional Information</h3>
-                                    </div>
                                     <FormField
                                       control={editDetailsForm.control}
-                                      name="selectedPackage"
+                                      name="hasCreditCard"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Selected Package</FormLabel>
+                                          <FormLabel className="text-white">Has Credit Card</FormLabel>
                                           <FormControl>
-                                            <select {...field} className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white">
-                                              <option value="">Select Package</option>
-                                              <option value="BEGINNER">BEGINNER</option>
-                                              <option value="NOVICE">NOVICE</option>
-                                              <option value="INTERMEDIATE">INTERMEDIATE</option>
-                                              <option value="ACTIVE">ACTIVE</option>
-                                              <option value="PROFESSIONAL">PROFESSIONAL</option>
-                                              <option value="EXPERT">EXPERT</option>
-                                            </select>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                              className="bg-[#022b5c] border-[#043875]"
+                                            />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
                                       )}
                                     />
-                                    <div className="space-y4">
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="hasCreditCard"
-                                        render={({ field }) => (
-                                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                            <FormControl>
-                                              <Checkbox
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}                                                />
-                                            </FormControl>
-                                            <FormLabel className="text-white">Has Credit Card</FormLabel>
-                                          </FormItem>
-                                        )}
-                                      />
-                                      <FormField
-                                        control={editDetailsForm.control}
-                                        name="isSouthAfrican"
-                                        render={({ field }) => (
-                                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                            <FormControl>
-                                              <Checkbox
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
-                                              />
-                                            </FormControl>
-                                            <FormLabel className="text-white">Is South African</FormLabel>
-                                          </FormItem>
-                                        )}
-                                      />
-                                    </div>
                                   </div>
-                                  <DialogFooter>
+                                  <DialogFooter className="px-4 pb-4">
                                     <Button type="submit" disabled={updateUserDetailsMutation.isPending}>
-                                      {updateUserDetailsMutation.isPending ? (
-                                        <>
-                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                          Updating...
-                                        </>
-                                      ) : (
-                                        'Update Details'
+                                      {updateUserDetailsMutation.isPending && (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                       )}
+                                      Save Changes
                                     </Button>
                                   </DialogFooter>
                                 </form>

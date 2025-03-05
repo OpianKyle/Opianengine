@@ -1,0 +1,595 @@
+[
+    {
+        "id": 28,
+        "email": "kyle.oraclesystems+test22@gmail.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 5000,
+        "createdAt": "2025-03-05T13:18:40.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 27,
+        "email": "kyle.oraclesystems+test1@gmail.com",
+        "firstName": "John",
+        "lastName": "Doe",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 0,
+        "createdAt": "2025-03-05T12:28:17.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 26,
+        "email": "kyle.oraclesystems+test@gmail.com",
+        "firstName": "Agent",
+        "lastName": "Doe",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 0,
+        "createdAt": "2025-03-05T11:25:48.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 25,
+        "email": "kyle.oraclesystems+187565@gmail.com",
+        "firstName": "test",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 0,
+        "createdAt": "2025-03-03T12:35:47.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 24,
+        "email": "kylem+43@opianfsgroup.com",
+        "firstName": "Kyle test",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 0,
+        "createdAt": "2025-03-03T11:13:50.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 23,
+        "email": "kylem55654654@opianfsgroup.com",
+        "firstName": "Kyle test",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 5000,
+        "createdAt": "2025-03-03T10:33:44.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 22,
+        "email": "kylem+4535252@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 20000,
+        "createdAt": "2025-02-27T11:21:11.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 21,
+        "email": "kylem+6456556@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 25000,
+        "createdAt": "2025-02-26T13:16:22.000Z",
+        "productAssignments": [
+            {
+                "id": 3,
+                "product": {
+                    "id": 2,
+                    "name": "Life cover",
+                    "description": "test",
+                    "activities": [
+                        {
+                            "id": 16,
+                            "type": "PRODUCT_ACTIVATION",
+                            "pointsValue": 5000
+                        },
+                        {
+                            "id": 17,
+                            "type": "PREMIUM_PAYMENT",
+                            "pointsValue": 0
+                        },
+                        {
+                            "id": 18,
+                            "type": "CARD_BALANCE",
+                            "pointsValue": 0
+                        },
+                        {
+                            "id": 19,
+                            "type": "UPGRADE",
+                            "pointsValue": 5000
+                        },
+                        {
+                            "id": 20,
+                            "type": "RENEWAL",
+                            "pointsValue": 5000
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 4,
+                "product": {
+                    "id": 3,
+                    "name": "test",
+                    "description": "test",
+                    "activities": [
+                        {
+                            "id": 21,
+                            "type": "PRODUCT_ACTIVATION",
+                            "pointsValue": 5000
+                        },
+                        {
+                            "id": 22,
+                            "type": "PREMIUM_PAYMENT",
+                            "pointsValue": 0
+                        },
+                        {
+                            "id": 23,
+                            "type": "CARD_BALANCE",
+                            "pointsValue": 0
+                        },
+                        {
+                            "id": 24,
+                            "type": "UPGRADE",
+                            "pointsValue": 5000
+                        },
+                        {
+                            "id": 25,
+                            "type": "RENEWAL",
+                            "pointsValue": 776
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 5,
+                "product": {
+                    "id": 4,
+                    "name": "Kyle",
+                    "description": "test",
+                    "activities": [
+                        {
+                            "id": 26,
+                            "type": "PRODUCT_ACTIVATION",
+                            "pointsValue": 5000
+                        },
+                        {
+                            "id": 27,
+                            "type": "PREMIUM_PAYMENT",
+                            "pointsValue": 0
+                        },
+                        {
+                            "id": 28,
+                            "type": "CARD_BALANCE",
+                            "pointsValue": 0
+                        },
+                        {
+                            "id": 29,
+                            "type": "UPGRADE",
+                            "pointsValue": 5000
+                        },
+                        {
+                            "id": 30,
+                            "type": "RENEWAL",
+                            "pointsValue": 6777
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 6,
+                "product": {
+                    "id": 1,
+                    "name": "test",
+                    "description": "testet",
+                    "activities": [
+                        {
+                            "id": 1,
+                            "type": "PRODUCT_ACTIVATION",
+                            "pointsValue": 333
+                        },
+                        {
+                            "id": 2,
+                            "type": "PREMIUM_PAYMENT",
+                            "pointsValue": 0
+                        },
+                        {
+                            "id": 3,
+                            "type": "CARD_BALANCE",
+                            "pointsValue": 0
+                        },
+                        {
+                            "id": 4,
+                            "type": "UPGRADE",
+                            "pointsValue": 34324
+                        },
+                        {
+                            "id": 5,
+                            "type": "RENEWAL",
+                            "pointsValue": 3242
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "id": 20,
+        "email": "kylem+234@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 50000,
+        "createdAt": "2025-02-26T12:58:31.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 19,
+        "email": "kylem+34@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 0,
+        "createdAt": "2025-02-26T12:29:02.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 18,
+        "email": "admin@opianrewards.com",
+        "firstName": "Admin",
+        "lastName": "User",
+        "phoneNumber": "1234567890",
+        "isEnabled": true,
+        "points": 0,
+        "createdAt": "2025-02-26T11:23:22.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 17,
+        "email": "kylem@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 15000,
+        "createdAt": "2025-02-26T11:04:31.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 15,
+        "email": "kylem+4365@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 10000,
+        "createdAt": "2025-02-26T09:18:51.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 14,
+        "email": "kylem+4333@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 10000,
+        "createdAt": "2025-02-26T09:15:08.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 13,
+        "email": "kylem+43435345@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 10000,
+        "createdAt": "2025-02-25T16:02:46.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 12,
+        "email": "kylem+323343@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 15000,
+        "createdAt": "2025-02-25T15:58:34.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 11,
+        "email": "kylem+32343@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 15000,
+        "createdAt": "2025-02-25T15:57:59.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 10,
+        "email": "kylem+43243@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 10000,
+        "createdAt": "2025-02-25T15:39:03.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 9,
+        "email": "kylem+43052@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 10000,
+        "createdAt": "2025-02-25T15:33:41.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 8,
+        "email": "kylem+436@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 10000,
+        "createdAt": "2025-02-25T15:14:05.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 7,
+        "email": "kylem+431@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 10000,
+        "createdAt": "2025-02-25T15:01:16.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    },
+    {
+        "id": 6,
+        "email": "kylem+433@opianfsgroup.com",
+        "firstName": "Kyle",
+        "lastName": "test",
+        "phoneNumber": "0769815243",
+        "isEnabled": true,
+        "points": 5000,
+        "createdAt": "2025-02-25T14:35:33.000Z",
+        "productAssignments": [
+            {
+                "id": [],
+                "product": {
+                    "id": [],
+                    "name": [],
+                    "description": [],
+                    "activities": []
+                }
+            }
+        ]
+    }
+]
