@@ -71,6 +71,13 @@ export async function checkAdmin(req: Request, res: Response, next: NextFunction
 
 export async function checkAgent(req: Request, res: Response, next: NextFunction) {
   try {
+    console.log('Running agent check middleware with session:', {
+      hasSession: !!req.session,
+      hasPassport: !!req.session?.passport,
+      userId: req.session?.passport?.user,
+      sessionID: req.sessionID
+    });
+
     if (!req.session || !req.session.passport || !req.session.passport.user) {
       console.log('No session or user found:', req.session);
       return res.status(401).json({ error: "Not authenticated" });
@@ -78,18 +85,35 @@ export async function checkAgent(req: Request, res: Response, next: NextFunction
 
     const connection = await createConnection();
     try {
-      console.log('Checking agent status for user:', req.session.passport.user);
-      const [agentCheck] = await connection.execute(
-        'SELECT id FROM users WHERE id = ? AND is_agent = 1',
+      // Check if user exists and is an agent
+      const [users] = await connection.execute(
+        `SELECT id, email, is_agent, is_enabled 
+         FROM users 
+         WHERE id = ?`,
         [req.session.passport.user]
       );
 
-      if (!agentCheck || (agentCheck as any[]).length === 0) {
-        console.log('User is not an agent:', req.session.passport.user);
+      const user = users[0];
+      console.log('Agent check results:', {
+        userId: req.session.passport.user,
+        foundUser: !!user,
+        isAgent: user?.is_agent,
+        isEnabled: user?.is_enabled
+      });
+
+      if (!user || !user.is_agent || !user.is_enabled) {
+        console.log('User is not an agent or is disabled:', {
+          userId: req.session.passport.user,
+          isAgent: user?.is_agent,
+          isEnabled: user?.is_enabled
+        });
         return res.status(403).json({ error: "Agent access required" });
       }
 
-      console.log('Agent check passed for user:', req.session.passport.user);
+      console.log('Agent check passed for user:', {
+        userId: user.id,
+        email: user.email
+      });
       next();
     } finally {
       await connection.end();
