@@ -7,7 +7,6 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users } from "@db/schema";
 import mysql from 'mysql2/promise';
-import agentRouter from './routes/agent'; // Added import
 
 // Check required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
@@ -30,10 +29,9 @@ app.use(cors({
   exposedHeaders: ['set-cookie']
 }));
 
-console.log('CORS middleware configured');
-
 app.set('trust proxy', 1); // trust first proxy
 
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -45,7 +43,8 @@ app.use(fileUpload({
   },
 }));
 
-console.log('Basic middleware setup complete');
+// Setup authentication before routes
+setupAuth(app);
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -59,9 +58,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/api/agent', agentRouter); // Added agent route registration
-
-
 (async () => {
   try {
     console.log('Starting database initialization...');
@@ -69,11 +65,11 @@ app.use('/api/agent', agentRouter); // Added agent route registration
     // Test MariaDB connection
     try {
       const connection = await mysql.createConnection({
-        host: 'dedi1350.jnb1.host-h.net',
-        user: 'admin',
-        password: '8E33U976qa800F',
-        database: 'opianrewards',
-        port: 3306,
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        port: parseInt(process.env.DB_PORT || '3306'),
         ssl: {
           rejectUnauthorized: false
         }
@@ -92,11 +88,6 @@ app.use('/api/agent', agentRouter); // Added agent route registration
     } catch (dbError) {
       console.error('PostgreSQL connection test failed:', dbError);
     }
-
-    // Setup authentication (before routes)
-    console.log('Setting up authentication...');
-    setupAuth(app);
-    console.log('Authentication setup complete');
 
     const server = registerRoutes(app);
     console.log('Routes registered');
@@ -127,7 +118,6 @@ app.use('/api/agent', agentRouter); // Added agent route registration
     });
   } catch (error) {
     console.error('Server startup error:', error);
-    // Log additional details about the error
     if (error instanceof Error) {
       console.error('Error name:', error.name);
       console.error('Error message:', error.message);

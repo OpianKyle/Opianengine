@@ -4,20 +4,27 @@ import { type Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { parse as parseCookie } from 'cookie';
-import jwt from 'jsonwebtoken';
-import memorystore from 'memorystore';
-import { JWT_SECRET } from './config';
 import mysql from 'mysql2/promise';
 
 const scryptAsync = promisify(scrypt);
-const MemoryStore = memorystore(session);
+
+// Helper function to create database connection
+async function createConnection() {
+  return await mysql.createConnection({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: parseInt(process.env.DB_PORT || '3306'),
+    ssl: { rejectUnauthorized: false }
+  });
+}
 
 const crypto = {
   async hashPassword(password: string) {
-    const salt = randomBytes(16).toString('hex');
+    const salt = randomBytes(16).toString("hex");
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`; // hash.salt format
+    return `${buf.toString("hex")}.${salt}`;
   },
 
   async verifyPassword(password: string, storedHash: string) {
@@ -33,18 +40,6 @@ const crypto = {
     }
   }
 };
-
-// Helper function to create database connection
-async function createConnection() {
-  return await mysql.createConnection({
-    host: 'dedi1350.jnb1.host-h.net',
-    user: 'admin',
-    password: '8E33U976qa800F',
-    database: 'opianrewards',
-    port: 3306,
-    ssl: { rejectUnauthorized: false }
-  });
-}
 
 export function checkAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated()) {
@@ -71,32 +66,27 @@ export function checkAgent(req: Request, res: Response, next: NextFunction) {
 }
 
 export function setupAuth(app: Express) {
+  // Configure session middleware
   app.use(session({
-    secret: process.env.SESSION_SECRET!,
-    cookie: {
-      maxAge: 86400000,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
-    },
-    store: new MemoryStore({
-      checkPeriod: 86400000
-    }),
+    secret: process.env.SESSION_SECRET || 'development-secret',
     resave: false,
     saveUninitialized: false,
-    name: 'session'
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
   }));
 
+  // Initialize passport and restore authentication state from session
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Configure passport local strategy
   passport.use(new LocalStrategy(
-    { usernameField: 'email', passwordField: 'password' },
+    { usernameField: 'email' },
     async (email, password, done) => {
       const connection = await createConnection();
       try {
-        console.log('Login attempt:', { email });
-
-        // Get user with all roles
         const [users] = await connection.execute(
           `SELECT u.*, 
            CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
@@ -107,50 +97,23 @@ export function setupAuth(app: Express) {
           [email]
         );
 
-        const user = users[0];
-        if (!user) {
-          console.log('User not found:', { email });
+        if (!users[0]) {
           return done(null, false, { message: 'Invalid email or password' });
         }
 
+        const user = users[0];
         if (!user.is_enabled) {
-          console.log('Account disabled:', { id: user.id, email });
           return done(null, false, { message: 'Account is disabled' });
         }
 
-        // Verify password
         const isValid = await crypto.verifyPassword(password, user.password);
         if (!isValid) {
-          console.log('Invalid password for user:', { id: user.id, email });
           return done(null, false, { message: 'Invalid email or password' });
         }
 
-        // Transform user object with proper type casting
         const { password: _, ...safeUser } = user;
-        const transformedUser = {
-          ...safeUser,
-          id: user.id,
-          email: user.email,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          phoneNumber: user.phone_number,
-          is_admin: Boolean(user.is_admin),
-          is_super_admin: Boolean(user.is_super_admin),
-          is_agent: Boolean(user.is_agent),
-          is_enabled: Boolean(user.is_enabled)
-        };
-
-        console.log('Login successful:', {
-          id: transformedUser.id,
-          email: transformedUser.email,
-          is_admin: transformedUser.is_admin,
-          is_super_admin: transformedUser.is_super_admin,
-          is_agent: transformedUser.is_agent
-        });
-
-        return done(null, transformedUser);
+        return done(null, safeUser);
       } catch (error) {
-        console.error('Authentication error:', error);
         return done(error);
       } finally {
         await connection.end();
@@ -158,17 +121,15 @@ export function setupAuth(app: Express) {
     }
   ));
 
-  passport.serializeUser((user, done) => {
-    console.log('Serializing user:', user.id);
+  // Serialize user into the session
+  passport.serializeUser((user: any, done) => {
     done(null, user.id);
   });
 
+  // Deserialize user from the session
   passport.deserializeUser(async (id: number, done) => {
     const connection = await createConnection();
     try {
-      console.log('Deserializing user:', id);
-
-      // Get user with all roles
       const [users] = await connection.execute(
         `SELECT u.*, 
          CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
@@ -179,44 +140,20 @@ export function setupAuth(app: Express) {
         [id]
       );
 
-      const user = users[0];
-      if (!user) {
-        console.log('User not found during deserialization:', id);
+      if (!users[0]) {
         return done(null, false);
       }
 
-      // Transform user object with proper type casting
-      const { password: _, ...safeUser } = user;
-      const transformedUser = {
-        ...safeUser,
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        phoneNumber: user.phone_number,
-        is_admin: Boolean(user.is_admin),
-        is_super_admin: Boolean(user.is_super_admin),
-        is_agent: Boolean(user.is_agent),
-        is_enabled: Boolean(user.is_enabled)
-      };
-
-      console.log('User deserialized:', {
-        id: transformedUser.id,
-        email: transformedUser.email,
-        is_admin: transformedUser.is_admin,
-        is_super_admin: transformedUser.is_super_admin,
-        is_agent: transformedUser.is_agent
-      });
-
-      done(null, transformedUser);
+      const { password: _, ...safeUser } = users[0];
+      done(null, safeUser);
     } catch (error) {
-      console.error('Deserialization error:', error);
       done(error);
     } finally {
       await connection.end();
     }
   });
 
+  // Login route
   app.post("/api/login", (req, res, next) => {
     console.log('Login request received:', { email: req.body.email });
 
@@ -250,16 +187,234 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
+  // User info route
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-
     res.json(req.user);
   });
 
-  // Register route 
-  app.post("/api/register", async (req, res) => {
+  // Logout route
+  app.post("/api/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        console.error('Logout error:', err);
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.status(200).json({ message: "Logged out successfully" });
+    });
+  });
+
+  return app;
+}
+// Check for existing super admin
+async function checkForSuperAdmin() {
+    const connection = await createConnection();
+    try {
+      console.log('Checking for existing super admin...');
+      const [rows] = await connection.execute(
+        'SELECT COUNT(*) as count FROM admin_users WHERE role_type = ?',
+        ['SUPER_ADMIN']
+      );
+
+      const count = (rows as any)[0].count;
+      console.log('Super admin check result:', { count });
+      return count > 0;
+    } catch (error) {
+      console.error('Error checking for super admin:', error);
+      return false;
+    } finally {
+      await connection.end();
+    }
+  }
+
+
+  async function checkUserAdminStatus(userId: number) {
+    const connection = await createConnection();
+    try {
+      console.log('Checking admin status for user:', userId);
+      const [rows] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [userId]
+      );
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        console.log('No admin entry found for user:', userId);
+        return { isAdmin: false, isSuperAdmin: false };
+      }
+
+      const roleType = rows[0].role_type;
+      console.log('Admin role found:', { userId, roleType });
+
+      return {
+        isAdmin: true,
+        isSuperAdmin: roleType === 'SUPER_ADMIN'
+      };
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      return { isAdmin: false, isSuperAdmin: false };
+    } finally {
+      await connection.end();
+    }
+  }
+
+export function generateToken(user: Express.User): string {
+  console.log('Generating token for user:', {
+    userId: user.id,
+    isAdmin: user.isAdmin,
+    isSuperAdmin: user.isSuperAdmin
+  });
+
+  const token = jwt.sign(
+    {
+      id: user.id,
+      isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin
+    },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  console.log('Token generated successfully:', token.slice(0, 10) + '...');
+  return token;
+}
+
+export function verifyToken(token: string): { id: number, isAdmin: boolean, isSuperAdmin: boolean } | null {
+  try {
+    console.log('Verifying token:', {
+      tokenLength: token.length,
+      firstChars: token.substring(0, 10) + '...',
+    });
+
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      id: number,
+      isAdmin: boolean,
+      isSuperAdmin: boolean,
+      exp?: number
+    };
+
+    console.log('Token verified successfully:', {
+      userId: decoded.id,
+      isAdmin: decoded.isAdmin,
+      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
+    });
+
+    return {
+      id: decoded.id,
+      isAdmin: decoded.isAdmin,
+      isSuperAdmin: decoded.isSuperAdmin
+    };
+  } catch (error) {
+    console.error('Token verification failed:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown error type',
+      tokenLength: token?.length
+    });
+    return null;
+  }
+}
+
+export async function verifySession(req: Request): Promise<any> {
+  try {
+    console.log('Verifying session for request:', {
+      url: req.url,
+      headers: {
+        cookie: req.headers.cookie,
+        'sec-websocket-protocol': req.headers['sec-websocket-protocol']
+      }
+    });
+
+    if (req.user) {
+      console.log('Using existing session user:', req.user);
+      return req.user;
+    }
+
+    if (!req.headers.cookie) {
+      console.log('No cookie found in request');
+      return null;
+    }
+
+    const cookies = parseCookie(req.headers.cookie);
+    const sessionId = cookies['connect.sid'];
+
+    if (!sessionId) {
+      console.log('No session ID found in cookies');
+      return null;
+    }
+
+    console.log('Found session ID:', sessionId);
+
+    return new Promise((resolve) => {
+      session({
+        secret: process.env.SESSION_SECRET || 'development-secret',
+        cookie: {
+          maxAge: 86400000,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        },
+        resave: false,
+        saveUninitialized: false
+      }).store.get(sessionId, async (err: any, session: any) => {
+        if (err || !session) {
+          console.log('Session not found or error:', err);
+          resolve(null);
+          return;
+        }
+
+        try {
+          console.log('Retrieved session data:', {
+            ...session,
+            cookie: '[Redacted]',
+            passport: session.passport ? { user: session.passport.user } : undefined
+          });
+
+          const userId = session.passport?.user;
+          if (!userId) {
+            console.log('No user ID in session');
+            resolve(null);
+            return;
+          }
+
+          console.log('Found user ID in session:', userId);
+
+          const connection = await createConnection();
+          const [user] = await connection.execute(
+            'SELECT * FROM users WHERE id = ?',
+            [userId]
+          );
+          await connection.end();
+
+          if (!user) {
+            console.log('User not found in database');
+            resolve(null);
+            return;
+          }
+
+          const adminStatus = await checkUserAdminStatus(userId);
+
+          const { password: _, ...safeUser } = user[0];
+          console.log('Session verified for user:', safeUser.id);
+          resolve({ ...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin });
+        } catch (error) {
+          console.error('Error verifying session:', error);
+          resolve(null);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error in verifySession:', error);
+    return null;
+  }
+}
+
+// Add global error handler
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  console.error('Stack trace:', err.stack);
+});
+
+app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
       console.log('Registration attempt with data:', {
@@ -466,215 +621,3 @@ export function setupAuth(app: Express) {
       await connection.end();
     }
   });
-
-  // Check for existing super admin
-  async function checkForSuperAdmin() {
-    const connection = await createConnection();
-    try {
-      console.log('Checking for existing super admin...');
-      const [rows] = await connection.execute(
-        'SELECT COUNT(*) as count FROM admin_users WHERE role_type = ?',
-        ['SUPER_ADMIN']
-      );
-
-      const count = (rows as any)[0].count;
-      console.log('Super admin check result:', { count });
-      return count > 0;
-    } catch (error) {
-      console.error('Error checking for super admin:', error);
-      return false;
-    } finally {
-      await connection.end();
-    }
-  }
-
-
-  return app;
-}
-
-async function checkUserAdminStatus(userId: number) {
-  const connection = await createConnection();
-  try {
-    console.log('Checking admin status for user:', userId);
-    const [rows] = await connection.execute(
-      'SELECT role_type FROM admin_users WHERE user_id = ?',
-      [userId]
-    );
-
-    if (!Array.isArray(rows) || rows.length === 0) {
-      console.log('No admin entry found for user:', userId);
-      return { isAdmin: false, isSuperAdmin: false };
-    }
-
-    const roleType = rows[0].role_type;
-    console.log('Admin role found:', { userId, roleType });
-
-    return {
-      isAdmin: true,
-      isSuperAdmin: roleType === 'SUPER_ADMIN'
-    };
-  } catch (error) {
-    console.error('Error checking admin status:', error);
-    return { isAdmin: false, isSuperAdmin: false };
-  } finally {
-    await connection.end();
-  }
-}
-
-export function generateToken(user: Express.User): string {
-  console.log('Generating token for user:', {
-    userId: user.id,
-    isAdmin: user.isAdmin,
-    isSuperAdmin: user.isSuperAdmin
-  });
-
-  const token = jwt.sign(
-    {
-      id: user.id,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin
-    },
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-
-  console.log('Token generated successfully:', token.slice(0, 10) + '...');
-  return token;
-}
-
-export function verifyToken(token: string): { id: number, isAdmin: boolean, isSuperAdmin: boolean } | null {
-  try {
-    console.log('Verifying token:', {
-      tokenLength: token.length,
-      firstChars: token.substring(0, 10) + '...',
-    });
-
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      id: number,
-      isAdmin: boolean,
-      isSuperAdmin: boolean,
-      exp?: number
-    };
-
-    console.log('Token verified successfully:', {
-      userId: decoded.id,
-      isAdmin: decoded.isAdmin,
-      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
-    });
-
-    return {
-      id: decoded.id,
-      isAdmin: decoded.isAdmin,
-      isSuperAdmin: decoded.isSuperAdmin
-    };
-  } catch (error) {
-    console.error('Token verification failed:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      name: error instanceof Error ? error.name : 'Unknown error type',
-      tokenLength: token?.length
-    });
-    return null;
-  }
-}
-
-export async function verifySession(req: Request): Promise<any> {
-  try {
-    console.log('Verifying session for request:', {
-      url: req.url,
-      headers: {
-        cookie: req.headers.cookie,
-        'sec-websocket-protocol': req.headers['sec-websocket-protocol']
-      }
-    });
-
-    if (req.user) {
-      console.log('Using existing session user:', req.user);
-      return req.user;
-    }
-
-    if (!req.headers.cookie) {
-      console.log('No cookie found in request');
-      return null;
-    }
-
-    const cookies = parseCookie(req.headers.cookie);
-    const sessionId = cookies['connect.sid'];
-
-    if (!sessionId) {
-      console.log('No session ID found in cookies');
-      return null;
-    }
-
-    console.log('Found session ID:', sessionId);
-
-    return new Promise((resolve) => {
-      session({
-        secret: process.env.SESSION_SECRET || 'development-secret',
-        cookie: {
-          maxAge: 86400000,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax'
-        },
-        store: new MemoryStore({
-          checkPeriod: 86400000
-        }),
-        resave: false,
-        saveUninitialized: false
-      }).store.get(sessionId, async (err: any, session: any) => {
-        if (err || !session) {
-          console.log('Session not found or error:', err);
-          resolve(null);
-          return;
-        }
-
-        try {
-          console.log('Retrieved session data:', {
-            ...session,
-            cookie: '[Redacted]',
-            passport: session.passport ? { user: session.passport.user } : undefined
-          });
-
-          const userId = session.passport?.user;
-          if (!userId) {
-            console.log('No user ID in session');
-            resolve(null);
-            return;
-          }
-
-          console.log('Found user ID in session:', userId);
-
-          const connection = await createConnection();
-          const [user] = await connection.execute(
-            'SELECT * FROM users WHERE id = ?',
-            [userId]
-          );
-          await connection.end();
-
-          if (!user) {
-            console.log('User not found in database');
-            resolve(null);
-            return;
-          }
-
-          const adminStatus = await checkUserAdminStatus(userId);
-
-          const { password: _, ...safeUser } = user[0];
-          console.log('Session verified for user:', safeUser.id);
-          resolve({ ...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin });
-        } catch (error) {
-          console.error('Error verifying session:', error);
-          resolve(null);
-        }
-      });
-    });
-  } catch (error) {
-    console.error('Error in verifySession:', error);
-    return null;
-  }
-}
-
-// Add global error handler
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  console.error('Stack trace:', err.stack);
-});
