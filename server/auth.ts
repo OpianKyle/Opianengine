@@ -83,7 +83,7 @@ export function setupAuth(app: Express) {
         }
 
         const user = users[0];
-        console.log('Found user:', { 
+        console.log('Found user:', {
           id: user.id,
           email: user.email,
           isAgent: user.is_agent,
@@ -674,17 +674,21 @@ export async function checkAdmin(req: Request, res: Response, next: NextFunction
   }
 }
 
+// Add debug logging to checkAgent middleware
 export async function checkAgent(req: Request, res: Response, next: NextFunction) {
   try {
-    console.log('Running agent check middleware with session:', {
+    console.log('Running agent check middleware:', {
       hasSession: !!req.session,
-      hasPassport: !!req.session?.passport,
-      userId: req.session?.passport?.user,
-      sessionID: req.sessionID
+      hasUser: !!req.user,
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated?.()
     });
 
-    if (!req.session || !req.session.passport || !req.session.passport.user) {
-      console.log('No session or user found:', req.session);
+    if (!req.session || !req.isAuthenticated()) {
+      console.log('Authentication check failed:', {
+        hasSession: !!req.session,
+        isAuthenticated: req.isAuthenticated?.()
+      });
       return res.status(401).json({ error: "Not authenticated" });
     }
 
@@ -695,12 +699,12 @@ export async function checkAgent(req: Request, res: Response, next: NextFunction
         `SELECT id, email, is_agent, is_enabled 
          FROM users 
          WHERE id = ?`,
-        [req.session.passport.user]
+        [req.user.id]
       );
 
       const user = users[0];
       console.log('Agent check results:', {
-        userId: req.session.passport.user,
+        userId: req.user.id,
         foundUser: !!user,
         isAgent: user?.is_agent,
         isEnabled: user?.is_enabled
@@ -708,7 +712,7 @@ export async function checkAgent(req: Request, res: Response, next: NextFunction
 
       if (!user || !user.is_agent || !user.is_enabled) {
         console.log('User is not an agent or is disabled:', {
-          userId: req.session.passport.user,
+          userId: req.user.id,
           isAgent: user?.is_agent,
           isEnabled: user?.is_enabled
         });
@@ -734,3 +738,14 @@ process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
   console.error('Stack trace:', err.stack);
 });
+
+//Helper function (assuming it exists elsewhere or needs to be added)
+function parseCookie(cookieString: string | undefined): { [key: string]: string } {
+  if (!cookieString) return {};
+  const cookies: { [key: string]: string } = {};
+  cookieString.split(';').forEach(cookie => {
+    const [key, value] = cookie.trim().split('=');
+    cookies[key] = value;
+  });
+  return cookies;
+}

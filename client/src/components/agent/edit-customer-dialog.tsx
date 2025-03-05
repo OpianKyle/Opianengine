@@ -144,7 +144,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
 
   const updateCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormData) => {
-      const response = await fetch(`/api/admin/users/${customer?.id}/details`, {
+      const response = await fetch(`/api/agent/customers/${customer?.id}/update`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: 'include',

@@ -8,8 +8,8 @@ const router = Router();
 router.use(checkAgent);
 
 // Get agent's customers
-router.get('/customers', async (req, res) => {
-  if (!req.isAuthenticated()) {
+router.get('/customers', async (req: any, res) => {
+  if (!req.session || !req.isAuthenticated()) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
@@ -38,7 +38,7 @@ router.get('/customers', async (req, res) => {
     );
 
     // Transform the customer data to match frontend expectations
-    const transformedCustomers = customers.map(customer => {
+    const transformedCustomers = customers.map((customer: any) => {
       let products = [];
       try {
         products = JSON.parse(customer.products || '[]');
@@ -84,8 +84,8 @@ router.get('/customers', async (req, res) => {
 });
 
 // Create customer as agent
-router.post('/customers/create', async (req, res) => {
-  if (!req.isAuthenticated()) {
+router.post('/customers/create', async (req: any, res) => {
+  if (!req.session || !req.isAuthenticated()) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
@@ -167,9 +167,76 @@ router.post('/customers/create', async (req, res) => {
       console.error('Transaction failed:', error);
       throw error;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating customer:', error);
     res.status(500).json({ error: 'Failed to create customer', details: error.message });
+  } finally {
+    await connection.end();
+  }
+});
+
+// Update customer details
+router.put('/customers/:id/update', async (req: any, res) => {
+  if (!req.session || !req.isAuthenticated()) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  const customerId = req.params.id;
+  const connection = await createConnection();
+
+  try {
+    // Verify the customer belongs to this agent
+    const [customers] = await connection.execute(
+      'SELECT id FROM users WHERE id = ? AND agent_id = ?',
+      [customerId, req.user.id]
+    );
+
+    if (!Array.isArray(customers) || customers.length === 0) {
+      return res.status(404).json({ error: "Customer not found or unauthorized" });
+    }
+
+    const { 
+      email, firstName, lastName, mobileNumber, dateOfBirth,
+      gender, idNumber, occupation, industry, addressLine1,
+      suburb, postalCode, selectedPackage, bankName,
+      accountType, accountNumber, accountHolderName,
+      branchCode, isSouthAfrican, hasCreditCard
+    } = req.body;
+
+    await connection.beginTransaction();
+
+    try {
+      // Update user details
+      await connection.execute(
+        `UPDATE users SET
+          email = ?, first_name = ?, last_name = ?, phone_number = ?,
+          date_of_birth = ?, gender = ?, id_number = ?, occupation = ?,
+          industry = ?, address = ?, city = ?, postal_code = ?,
+          selected_package = ?, bank_name = ?, account_type = ?,
+          account_number = ?, account_holder_name = ?, branch_code = ?,
+          is_south_african = ?, has_credit_card = ?
+        WHERE id = ? AND agent_id = ?`,
+        [
+          email, firstName, lastName, mobileNumber,
+          dateOfBirth, gender, idNumber, occupation,
+          industry, addressLine1, suburb, postalCode,
+          selectedPackage, bankName, accountType,
+          accountNumber, accountHolderName, branchCode,
+          isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0,
+          customerId, req.user.id
+        ]
+      );
+
+      await connection.commit();
+      res.json({ message: "Customer updated successfully" });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Transaction failed:', error);
+      throw error;
+    }
+  } catch (error: any) {
+    console.error('Error updating customer:', error);
+    res.status(500).json({ error: 'Failed to update customer', details: error.message });
   } finally {
     await connection.end();
   }

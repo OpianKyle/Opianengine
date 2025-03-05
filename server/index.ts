@@ -8,6 +8,9 @@ import { db } from "@db";
 import { users } from "@db/schema";
 import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
+import session from 'express-session';
+import passport from 'passport';
+import { MemoryStore } from 'express-session';
 
 console.log('Starting server initialization...', new Date().toISOString());
 console.log('Environment:', {
@@ -61,6 +64,39 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+// Update session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET!,
+  cookie: {
+    maxAge: 86400000,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/'
+  },
+  store: new MemoryStore({
+    checkPeriod: 86400000
+  }),
+  resave: true,
+  saveUninitialized: false,
+  name: 'session'
+}));
+
+// Initialize passport after session
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Add session debug middleware
+app.use((req, res, next) => {
+  console.log('Session debug:', {
+    hasSession: !!req.session,
+    sessionID: req.sessionID,
+    isAuthenticated: req.isAuthenticated?.(),
+    user: req.user ? { id: req.user.id, isAgent: req.user.is_agent } : null
+  });
+  next();
+});
+
 
 (async () => {
   try {
