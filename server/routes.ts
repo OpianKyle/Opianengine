@@ -569,13 +569,22 @@ export function registerRoutes(app: Express): Server {
       await connection.beginTransaction();
 
       try {
-        // Create user with is_agent flag
+        // Create user with is_agent flag and agent_id if applicable
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, 
-            phone_number, is_enabled, points, is_agent
-          ) VALUES (?, ?, ?, ?, ?, 1, 0, ?)`,
-          [email, hashedPassword, firstName, lastName, phoneNumber, isAgent ? 1 : 0]
+            phone_number, is_enabled, points, is_agent,
+            agent_id
+          ) VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?)`,
+          [
+            email, 
+            hashedPassword, 
+            firstName, 
+            lastName, 
+            phoneNumber, 
+            isAgent ? 1 : 0,
+            isAgent ? req.user.id : null // Set agent_id to admin's ID for agents
+          ]
         );
 
         const userId = userResult.insertId;
@@ -590,6 +599,14 @@ export function registerRoutes(app: Express): Server {
         }
 
         await connection.commit();
+
+        // Log the creation
+        await logAdminAction({
+          adminId: req.user.id,
+          actionType: isAgent ? "AGENT_CREATED" : "ADMIN_CREATED",
+          targetUserId: userId,
+          details: `Created new ${isAgent ? 'agent' : 'admin'}: ${email}`,
+        });
 
         // Fetch complete user data
         const [newUser] = await connection.execute(
@@ -606,7 +623,8 @@ export function registerRoutes(app: Express): Server {
 
         console.log('User created successfully:', {
           id: userId,
-          isAgent: Boolean(isAgent)
+          isAgent: Boolean(isAgent),
+          agentId: isAgent ? req.user.id : null
         });
 
         res.json({

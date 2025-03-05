@@ -100,7 +100,6 @@ router.post('/customers/create', async (req, res) => {
       }
 
       // Generate a temporary password
-      const temporaryPassword = Math.random().toString(36).slice(-8);
       const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
 
       // Calculate initial points based on selected package
@@ -121,15 +120,17 @@ router.post('/customers/create', async (req, res) => {
           industry, address, suburb, postal_code,
           selected_package, bank_name, account_type,
           account_number, account_holder_name, branch_code,
-          is_south_african, has_credit_card, is_enabled, points, agent_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+          is_south_african, has_credit_card, is_enabled, points,
+          agent_id, is_agent
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0)`,
         [
           email, defaultPassword, firstName, lastName, mobileNumber,
           dateOfBirth, gender, idNumber, occupation,
           industry, addressLine1, suburb, postalCode,
           selectedPackage, bankName, accountType,
           accountNumber, accountHolderName, branchCode,
-          isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0, 1, initialPoints, req.user.id
+          isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0, initialPoints,
+          req.user.id // Set the agent_id to the current agent's ID
         ]
       );
 
@@ -142,7 +143,8 @@ router.post('/customers/create', async (req, res) => {
         lastName,
         points: initialPoints,
         selectedPackage,
-        temporaryPassword: '123456' // Default password for all customers
+        temporaryPassword: '123456', // Default password for all customers
+        agentId: req.user.id // Include the agent_id in the response
       });
     } catch (error) {
       await connection.rollback();

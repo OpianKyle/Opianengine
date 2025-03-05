@@ -112,13 +112,13 @@ export const users = mysqlTable("users", {
   hasCreditCard: boolean("has_credit_card").default(false),
   signature: text("signature"),
   isAdmin: boolean("is_admin").default(false).notNull(),
-  isAgent: boolean("is_agent").default(false).notNull(), // Add agent flag
+  isAgent: boolean("is_agent").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
   isEnabled: boolean("is_enabled").default(true).notNull(),
   points: int("points").default(0).notNull(),
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),
-  agentId: int("agent_id"), // Add reference to agent who created the user
+  agentId: int("agent_id").references(() => users.id), // Make explicit reference to users table
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -209,14 +209,22 @@ export const productRelations = relations(products, ({ many }) => ({
   assignments: many(productAssignments),
 }));
 
-export const userRelations = relations(users, ({ many }) => ({
+export const userRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
   adminLogsCreated: many(adminLogs),
   adminLogsTarget: many(adminLogs),
   productAssignments: many(productAssignments),
   quoteRequests: many(quoteRequests),
   notifications: many(notifications),
-  agentCustomers: many(users, { relationName: "agent_customers" })
+  // Add explicit agent-customer relationship
+  agent: one(users, {
+    fields: [users.agentId],
+    references: [users.id],
+  }),
+  customers: many(users, {
+    fields: [users.id],
+    references: [users.agentId],
+  }),
 }));
 
 export const transactionRelations = relations(transactions, ({ one }) => ({
