@@ -4,27 +4,20 @@ import { type Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
+import { parse as parseCookie } from 'cookie';
+import jwt from 'jsonwebtoken';
+import memorystore from 'memorystore';
+import { JWT_SECRET } from './config';
 import mysql from 'mysql2/promise';
 
 const scryptAsync = promisify(scrypt);
+const MemoryStore = memorystore(session);
 
-// Helper function to create database connection
-async function createConnection() {
-  return await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: parseInt(process.env.DB_PORT || '3306'),
-    ssl: { rejectUnauthorized: false }
-  });
-}
-
-const authUtils = {
+const crypto = {
   async hashPassword(password: string) {
-    const salt = randomBytes(16).toString("hex");
+    const salt = randomBytes(16).toString('hex');
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
+    return `${buf.toString("hex")}.${salt}`; // hash.salt format
   },
 
   async verifyPassword(password: string, storedHash: string) {
@@ -41,28 +34,69 @@ const authUtils = {
   }
 };
 
+// Helper function to create database connection
+async function createConnection() {
+  return await mysql.createConnection({
+    host: 'dedi1350.jnb1.host-h.net',
+    user: 'admin',
+    password: '8E33U976qa800F',
+    database: 'opianrewards',
+    port: 3306,
+    ssl: { rejectUnauthorized: false }
+  });
+}
+
+export function checkAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+
+  next();
+}
+
+export function checkAgent(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  if (!req.user || !req.user.is_agent) {
+    return res.status(403).json({ error: "Agent access required" });
+  }
+
+  next();
+}
+
 export function setupAuth(app: Express) {
-  // Configure session middleware
   app.use(session({
-    secret: process.env.SESSION_SECRET || 'development-secret',
+    secret: process.env.SESSION_SECRET!,
+    cookie: {
+      maxAge: 86400000,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    },
+    store: new MemoryStore({
+      checkPeriod: 86400000
+    }),
     resave: false,
     saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+    name: 'session'
   }));
 
-  // Initialize passport and restore authentication state
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Configure passport local strategy
   passport.use(new LocalStrategy(
-    { usernameField: 'email' },
+    { usernameField: 'email', passwordField: 'password' },
     async (email, password, done) => {
       const connection = await createConnection();
       try {
+        console.log('Login attempt:', { email });
+
+        // Get user with all roles
         const [users] = await connection.execute(
           `SELECT u.*, 
            CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
@@ -73,23 +107,50 @@ export function setupAuth(app: Express) {
           [email]
         );
 
-        if (!users || !users[0]) {
+        const user = users[0];
+        if (!user) {
+          console.log('User not found:', { email });
           return done(null, false, { message: 'Invalid email or password' });
         }
 
-        const user = users[0];
         if (!user.is_enabled) {
+          console.log('Account disabled:', { id: user.id, email });
           return done(null, false, { message: 'Account is disabled' });
         }
 
-        const isValid = await authUtils.verifyPassword(password, user.password);
+        // Verify password
+        const isValid = await crypto.verifyPassword(password, user.password);
         if (!isValid) {
+          console.log('Invalid password for user:', { id: user.id, email });
           return done(null, false, { message: 'Invalid email or password' });
         }
 
+        // Transform user object with proper type casting
         const { password: _, ...safeUser } = user;
-        return done(null, safeUser);
+        const transformedUser = {
+          ...safeUser,
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phoneNumber: user.phone_number,
+          is_admin: Boolean(user.is_admin),
+          is_super_admin: Boolean(user.is_super_admin),
+          is_agent: Boolean(user.is_agent),
+          is_enabled: Boolean(user.is_enabled)
+        };
+
+        console.log('Login successful:', {
+          id: transformedUser.id,
+          email: transformedUser.email,
+          is_admin: transformedUser.is_admin,
+          is_super_admin: transformedUser.is_super_admin,
+          is_agent: transformedUser.is_agent
+        });
+
+        return done(null, transformedUser);
       } catch (error) {
+        console.error('Authentication error:', error);
         return done(error);
       } finally {
         await connection.end();
@@ -97,48 +158,77 @@ export function setupAuth(app: Express) {
     }
   ));
 
-  // Serialize user into session
-  passport.serializeUser((user: any, done) => {
+  passport.serializeUser((user, done) => {
+    console.log('Serializing user:', user.id);
     done(null, user.id);
   });
 
-  // Deserialize user from session
   passport.deserializeUser(async (id: number, done) => {
     const connection = await createConnection();
     try {
+      console.log('Deserializing user:', id);
+
+      // Get user with all roles
       const [users] = await connection.execute(
         `SELECT u.*, 
          CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-         CASE WHEN au.role_type IS NOT NULL THEN 1 END as is_admin
+         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
          FROM users u
          LEFT JOIN admin_users au ON u.id = au.user_id
          WHERE u.id = ?`,
         [id]
       );
 
-      if (!users || !users[0]) {
+      const user = users[0];
+      if (!user) {
+        console.log('User not found during deserialization:', id);
         return done(null, false);
       }
 
-      const { password: _, ...safeUser } = users[0];
-      done(null, safeUser);
+      // Transform user object with proper type casting
+      const { password: _, ...safeUser } = user;
+      const transformedUser = {
+        ...safeUser,
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phoneNumber: user.phone_number,
+        is_admin: Boolean(user.is_admin),
+        is_super_admin: Boolean(user.is_super_admin),
+        is_agent: Boolean(user.is_agent),
+        is_enabled: Boolean(user.is_enabled)
+      };
+
+      console.log('User deserialized:', {
+        id: transformedUser.id,
+        email: transformedUser.email,
+        is_admin: transformedUser.is_admin,
+        is_super_admin: transformedUser.is_super_admin,
+        is_agent: transformedUser.is_agent
+      });
+
+      done(null, transformedUser);
     } catch (error) {
+      console.error('Deserialization error:', error);
       done(error);
     } finally {
       await connection.end();
     }
   });
 
-  // Authentication routes
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    console.log('Login request received:', { email: req.body.email });
+
+    passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
       if (err) {
         console.error('Authentication error:', err);
-        return res.status(500).json({ error: "Authentication failed" });
+        return res.status(500).json({ error: "Authentication error" });
       }
 
       if (!user) {
-        return res.status(401).json({ error: info?.message || "Invalid credentials" });
+        console.log('Authentication failed:', info?.message);
+        return res.status(401).json({ error: info?.message || "Invalid email or password" });
       }
 
       req.login(user, (loginErr) => {
@@ -146,62 +236,30 @@ export function setupAuth(app: Express) {
           console.error('Login error:', loginErr);
           return res.status(500).json({ error: "Login failed" });
         }
+
+        console.log('Login successful:', {
+          id: user.id,
+          email: user.email,
+          is_admin: user.is_admin,
+          is_super_admin: user.is_super_admin,
+          is_agent: user.is_agent
+        });
+
         res.json(user);
       });
     })(req, res, next);
-  });
-
-  app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        console.error('Logout error:', err);
-        return res.status(500).json({ error: "Logout failed" });
-      }
-      res.json({ message: "Logged out successfully" });
-    });
   });
 
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
+
     res.json(req.user);
   });
 
-  return app;
-}
-
-// Middleware to check if user is authenticated
-export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: "Not authenticated" });
-}
-
-// Middleware to check if user is an admin
-export function isAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.isAuthenticated() && req.user && (req.user.is_admin || req.user.is_super_admin)) {
-    return next();
-  }
-  res.status(403).json({ error: "Admin access required" });
-}
-
-// Middleware to check if user is an agent
-export function isAgent(req: Request, res: Response, next: NextFunction) {
-  if (req.isAuthenticated() && req.user && req.user.is_agent) {
-    return next();
-  }
-  res.status(403).json({ error: "Agent access required" });
-}
-
-// Add global error handler
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  console.error('Stack trace:', err.stack);
-});
-
-app.post("/api/register", async (req, res) => {
+  // Register route 
+  app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
       console.log('Registration attempt with data:', {
@@ -221,7 +279,7 @@ app.post("/api/register", async (req, res) => {
         });
       }
 
-      const hashedPassword = await authUtils.hashPassword(req.body.password);
+      const hashedPassword = await crypto.hashPassword(req.body.password);
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       // Calculate initial points based on selected package
@@ -359,10 +417,13 @@ app.post("/api/register", async (req, res) => {
           throw new Error("Failed to retrieve created user");
         }
 
+        const adminStatus = await checkUserAdminStatus(userId);
         const { password: _, ...safeUser } = newUser;
 
         const transformedUser = {
           ...safeUser,
+          is_admin: adminStatus.isAdmin,
+          is_super_admin: adminStatus.isSuperAdmin,
           is_enabled: Boolean(safeUser.is_enabled),
           is_south_african: Boolean(safeUser.is_south_african),
           has_credit_card: Boolean(safeUser.has_credit_card)
@@ -380,6 +441,8 @@ app.post("/api/register", async (req, res) => {
             email: transformedUser.email,
             points: transformedUser.points,
             selected_package: transformedUser.selected_package,
+            is_admin: transformedUser.is_admin,
+            is_super_admin: transformedUser.is_super_admin
           });
 
           res.status(201).json(transformedUser);
@@ -403,3 +466,215 @@ app.post("/api/register", async (req, res) => {
       await connection.end();
     }
   });
+
+  // Check for existing super admin
+  async function checkForSuperAdmin() {
+    const connection = await createConnection();
+    try {
+      console.log('Checking for existing super admin...');
+      const [rows] = await connection.execute(
+        'SELECT COUNT(*) as count FROM admin_users WHERE role_type = ?',
+        ['SUPER_ADMIN']
+      );
+
+      const count = (rows as any)[0].count;
+      console.log('Super admin check result:', { count });
+      return count > 0;
+    } catch (error) {
+      console.error('Error checking for super admin:', error);
+      return false;
+    } finally {
+      await connection.end();
+    }
+  }
+
+
+  return app;
+}
+
+async function checkUserAdminStatus(userId: number) {
+  const connection = await createConnection();
+  try {
+    console.log('Checking admin status for user:', userId);
+    const [rows] = await connection.execute(
+      'SELECT role_type FROM admin_users WHERE user_id = ?',
+      [userId]
+    );
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      console.log('No admin entry found for user:', userId);
+      return { isAdmin: false, isSuperAdmin: false };
+    }
+
+    const roleType = rows[0].role_type;
+    console.log('Admin role found:', { userId, roleType });
+
+    return {
+      isAdmin: true,
+      isSuperAdmin: roleType === 'SUPER_ADMIN'
+    };
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return { isAdmin: false, isSuperAdmin: false };
+  } finally {
+    await connection.end();
+  }
+}
+
+export function generateToken(user: Express.User): string {
+  console.log('Generating token for user:', {
+    userId: user.id,
+    isAdmin: user.isAdmin,
+    isSuperAdmin: user.isSuperAdmin
+  });
+
+  const token = jwt.sign(
+    {
+      id: user.id,
+      isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin
+    },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  console.log('Token generated successfully:', token.slice(0, 10) + '...');
+  return token;
+}
+
+export function verifyToken(token: string): { id: number, isAdmin: boolean, isSuperAdmin: boolean } | null {
+  try {
+    console.log('Verifying token:', {
+      tokenLength: token.length,
+      firstChars: token.substring(0, 10) + '...',
+    });
+
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      id: number,
+      isAdmin: boolean,
+      isSuperAdmin: boolean,
+      exp?: number
+    };
+
+    console.log('Token verified successfully:', {
+      userId: decoded.id,
+      isAdmin: decoded.isAdmin,
+      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
+    });
+
+    return {
+      id: decoded.id,
+      isAdmin: decoded.isAdmin,
+      isSuperAdmin: decoded.isSuperAdmin
+    };
+  } catch (error) {
+    console.error('Token verification failed:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown error type',
+      tokenLength: token?.length
+    });
+    return null;
+  }
+}
+
+export async function verifySession(req: Request): Promise<any> {
+  try {
+    console.log('Verifying session for request:', {
+      url: req.url,
+      headers: {
+        cookie: req.headers.cookie,
+        'sec-websocket-protocol': req.headers['sec-websocket-protocol']
+      }
+    });
+
+    if (req.user) {
+      console.log('Using existing session user:', req.user);
+      return req.user;
+    }
+
+    if (!req.headers.cookie) {
+      console.log('No cookie found in request');
+      return null;
+    }
+
+    const cookies = parseCookie(req.headers.cookie);
+    const sessionId = cookies['connect.sid'];
+
+    if (!sessionId) {
+      console.log('No session ID found in cookies');
+      return null;
+    }
+
+    console.log('Found session ID:', sessionId);
+
+    return new Promise((resolve) => {
+      session({
+        secret: process.env.SESSION_SECRET || 'development-secret',
+        cookie: {
+          maxAge: 86400000,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        },
+        store: new MemoryStore({
+          checkPeriod: 86400000
+        }),
+        resave: false,
+        saveUninitialized: false
+      }).store.get(sessionId, async (err: any, session: any) => {
+        if (err || !session) {
+          console.log('Session not found or error:', err);
+          resolve(null);
+          return;
+        }
+
+        try {
+          console.log('Retrieved session data:', {
+            ...session,
+            cookie: '[Redacted]',
+            passport: session.passport ? { user: session.passport.user } : undefined
+          });
+
+          const userId = session.passport?.user;
+          if (!userId) {
+            console.log('No user ID in session');
+            resolve(null);
+            return;
+          }
+
+          console.log('Found user ID in session:', userId);
+
+          const connection = await createConnection();
+          const [user] = await connection.execute(
+            'SELECT * FROM users WHERE id = ?',
+            [userId]
+          );
+          await connection.end();
+
+          if (!user) {
+            console.log('User not found in database');
+            resolve(null);
+            return;
+          }
+
+          const adminStatus = await checkUserAdminStatus(userId);
+
+          const { password: _, ...safeUser } = user[0];
+          console.log('Session verified for user:', safeUser.id);
+          resolve({ ...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin });
+        } catch (error) {
+          console.error('Error verifying session:', error);
+          resolve(null);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error in verifySession:', error);
+    return null;
+  }
+}
+
+// Add global error handler
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  console.error('Stack trace:', err.stack);
+});

@@ -7,6 +7,7 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { users } from "@db/schema";
 import mysql from 'mysql2/promise';
+import agentRouter from './routes/agent'; // Added import
 
 // Check required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
@@ -29,9 +30,10 @@ app.use(cors({
   exposedHeaders: ['set-cookie']
 }));
 
+console.log('CORS middleware configured');
+
 app.set('trust proxy', 1); // trust first proxy
 
-// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -43,31 +45,58 @@ app.use(fileUpload({
   },
 }));
 
-// Setup authentication before routes
-setupAuth(app);
+console.log('Basic middleware setup complete');
 
 // Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
     const duration = Date.now() - start;
-    log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
+    if (req.path.startsWith("/api")) {
+      log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
+    }
   });
   next();
 });
 
+app.use('/api/agent', agentRouter); // Added agent route registration
+
+
 (async () => {
   try {
-    console.log('Starting server initialization...');
+    console.log('Starting database initialization...');
 
-    // Test database connections
+    // Test MariaDB connection
+    try {
+      const connection = await mysql.createConnection({
+        host: 'dedi1350.jnb1.host-h.net',
+        user: 'admin',
+        password: '8E33U976qa800F',
+        database: 'opianrewards',
+        port: 3306,
+        ssl: {
+          rejectUnauthorized: false
+        }
+      });
+
+      console.log('MariaDB connection successful');
+      await connection.end();
+    } catch (mariaDbError) {
+      console.error('MariaDB connection test failed:', mariaDbError);
+    }
+
+    // Test PostgreSQL connection
     try {
       await db.select().from(users).limit(1);
-      console.log('Database connection successful');
+      console.log('PostgreSQL connection successful');
     } catch (dbError) {
-      console.error('Database connection test failed:', dbError);
-      throw dbError;
+      console.error('PostgreSQL connection test failed:', dbError);
     }
+
+    // Setup authentication (before routes)
+    console.log('Setting up authentication...');
+    setupAuth(app);
+    console.log('Authentication setup complete');
 
     const server = registerRoutes(app);
     console.log('Routes registered');
@@ -94,10 +123,16 @@ app.use((req, res, next) => {
     // Start the server
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
     });
   } catch (error) {
     console.error('Server startup error:', error);
+    // Log additional details about the error
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Stack trace:', error.stack);
+    }
     process.exit(1);
   }
 })();
