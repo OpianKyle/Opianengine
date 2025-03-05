@@ -43,11 +43,10 @@ const userSchema = z.object({
   accountNumber: z.string().optional(),
   accountHolderName: z.string().optional(),
   branchCode: z.string().optional(),
-  selectedPackage: z.string().optional(),
+  selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]).optional(),
   gender: z.enum(genderEnum).nullable(),
   hasCreditCard: z.boolean().optional(),
   isSouthAfrican: z.boolean().optional(),
-  signature: z.string().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -162,18 +161,20 @@ export default function AdminCustomers() {
       gender: null,
       hasCreditCard: false,
       isSouthAfrican: false,
-      signature: "",
     },
   });
 
   const handleEditUser = (customer: any) => {
+    const formattedDate = customer.dateOfBirth ? 
+      new Date(customer.dateOfBirth).toISOString().split('T')[0] : '';
+
     editDetailsForm.reset({
       email: customer.email || "",
       firstName: customer.firstName || "",
       lastName: customer.lastName || "",
       phoneNumber: customer.phoneNumber || "",
       idNumber: customer.idNumber || "",
-      dateOfBirth: customer.dateOfBirth || "",
+      dateOfBirth: formattedDate,
       address: customer.address || "",
       city: customer.city || "",
       postalCode: customer.postalCode || "",
@@ -184,21 +185,24 @@ export default function AdminCustomers() {
       accountNumber: customer.accountNumber || "",
       accountHolderName: customer.accountHolderName || "",
       branchCode: customer.branchCode || "",
-      selectedPackage: customer.selectedPackage || "",
+      selectedPackage: (customer.selectedPackage?.toUpperCase() as "BEGINNER" | "NOVICE" | "ACTIVE" | "PROFESSIONAL" | "EXPERT") || "BEGINNER",
       gender: customer.gender as typeof genderEnum[number] || null,
       hasCreditCard: Boolean(customer.hasCreditCard),
       isSouthAfrican: Boolean(customer.isSouthAfrican),
-      signature: customer.signature || "",
     });
     setEditDialogOpen(true);
   };
 
   const updateUserDetailsMutation = useMutation({
-    mutationFn: async ({ userId, data }: { userId: number; data: any }) => {
+    mutationFn: async ({ userId, data }: { userId: number; data: UserFormData }) => {
       const res = await fetch(`/api/admin/users/${userId}/details`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        credentials: 'include',
+        body: JSON.stringify({
+          ...data,
+          selectedPackage: data.selectedPackage?.toUpperCase()
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
@@ -396,6 +400,13 @@ export default function AdminCustomers() {
     },
   });
 
+  type PointsFormData = {
+    selectedActivities?: number[];
+    posPoints: number;
+    posBaseValue: number;
+    description: string;
+  };
+
   const pointsSchema = z.object({
     selectedActivities: z.array(z.number()).optional(),
     posPoints: z.number().min(0, "POS points must be 0 or greater"),
@@ -403,7 +414,6 @@ export default function AdminCustomers() {
     description: z.string().min(1, "Description is required"),
   });
 
-  type PointsFormData = z.infer<typeof pointsSchema>;
 
   const pointsForm = useForm<PointsFormData>({
     resolver: zodResolver(pointsSchema),
@@ -414,6 +424,7 @@ export default function AdminCustomers() {
       description: "",
     },
   });
+
 
 
   return (
