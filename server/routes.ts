@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
+import { setupAuth, checkAgent } from "./auth";
 import { setupWebSocketServer } from "./websocket";
 import { db } from "@db";
 import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, quoteRequests, notifications } from "@db/schema";
@@ -50,6 +50,128 @@ export function registerRoutes(app: Express): Server {
 
   const httpServer = createServer(app);
   const wsServer = setupWebSocketServer(httpServer, sessionMiddleware);
+
+  // Add agent customer management endpoints
+  app.get("/api/agent/customers", checkAgent, async (req, res) => {
+    const connection = await createConnection();
+    try {
+      // Get customers associated with this agent
+      const [customers] = await connection.execute(
+        `SELECT id, first_name as firstName, last_name as lastName, 
+                email, phone_number as phoneNumber, points, 
+                is_enabled as isEnabled, selected_package as selectedPackage
+         FROM users 
+         WHERE agent_id = ?
+         ORDER BY created_at DESC`,
+        [req.session?.passport?.user]
+      );
+
+      res.json(customers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    } finally {
+      await connection.end();
+    }
+  });
+
+  // Add customer creation endpoint for agents
+  app.post("/api/agent/customers/create", checkAgent, async (req, res) => {
+    const connection = await createConnection();
+    try {
+      const { 
+        firstName, lastName, email, phoneNumber, 
+        industry, occupation, address, city, 
+        postalCode, selectedPackage 
+      } = req.body;
+
+      // Check for existing user
+      const [existingUser] = await connection.execute(
+        'SELECT id FROM users WHERE email = ?',
+        [email]
+      );
+
+      if ((existingUser as any[]).length > 0) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+
+      // Calculate initial points based on selected package
+      let initialPoints = 0;
+      switch (selectedPackage) {
+        case 'BEGINNER': initialPoints = 5000; break;
+        case 'NOVICE': initialPoints = 10000; break;
+        case 'ACTIVE': initialPoints = 15000; break;
+        case 'PROFESSIONAL': initialPoints = 20000; break;
+        case 'EXPERT': initialPoints = 25000; break;
+      }
+
+      await connection.beginTransaction();
+
+      try {
+        // Generate a random password for the customer
+        const tempPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await crypto.hash(tempPassword);
+
+        // Create user with all fields
+        const [userResult] = await connection.execute(
+          `INSERT INTO users (
+            email, password, first_name, last_name, 
+            phone_number, is_enabled, points, selected_package,
+            industry, occupation, address, city, postal_code,
+            agent_id
+          ) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            email,
+            hashedPassword,
+            firstName,
+            lastName,
+            phoneNumber,
+            initialPoints,
+            selectedPackage,
+            industry,
+            occupation,
+            address,
+            city,
+            postalCode,
+            req.session?.passport?.user // Associate with the agent
+          ]
+        );
+
+        const userId = userResult.insertId;
+
+        // Record the points transaction
+        if (initialPoints > 0) {
+          await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description
+            ) VALUES (?, ?, ?, ?)`,
+            [
+              userId,
+              initialPoints,
+              'WELCOME_BONUS',
+              `Welcome bonus points for ${selectedPackage} package`
+            ]
+          );
+        }
+
+        await connection.commit();
+
+        res.status(201).json({
+          message: "Customer created successfully",
+          customerId: userId,
+          temporaryPassword: tempPassword // Include the temporary password in the response
+        });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      res.status(500).json({ error: 'Failed to create customer' });
+    } finally {
+      await connection.end();
+    }
+  });
 
   app.get("/api/customer/referral", async (req, res) => {
     if (!req.user) {

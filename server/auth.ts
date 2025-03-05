@@ -34,7 +34,6 @@ const crypto = {
   }
 };
 
-// Helper function to create database connection
 async function createConnection() {
   return await mysql.createConnection({
     host: 'dedi1350.jnb1.host-h.net',
@@ -46,28 +45,52 @@ async function createConnection() {
   });
 }
 
-export function checkAdmin(req: Request, res: Response, next: NextFunction) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
+export async function checkAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.session || !req.session.passport || !req.session.passport.user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
-  if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
-    return res.status(403).json({ error: "Admin access required" });
-  }
+    const connection = await createConnection();
+    const [adminCheck] = await connection.execute(
+      'SELECT role_type FROM admin_users WHERE user_id = ?',
+      [req.session.passport.user]
+    );
+    await connection.end();
 
-  next();
+    if (!adminCheck || (adminCheck as any[]).length === 0) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error in admin check:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 }
 
-export function checkAgent(req: Request, res: Response, next: NextFunction) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
+export async function checkAgent(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.session || !req.session.passport || !req.session.passport.user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
-  if (!req.user || !req.user.is_agent) {
-    return res.status(403).json({ error: "Agent access required" });
-  }
+    const connection = await createConnection();
+    const [agentCheck] = await connection.execute(
+      'SELECT id FROM users WHERE id = ? AND is_agent = 1',
+      [req.session.passport.user]
+    );
+    await connection.end();
 
-  next();
+    if (!agentCheck || (agentCheck as any[]).length === 0) {
+      return res.status(403).json({ error: "Agent access required" });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error in agent check:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 }
 
 export function setupAuth(app: Express) {

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -92,10 +92,10 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Success",
-        description: "Customer created successfully",
+        description: "Customer created successfully. Their temporary password is: " + data.temporaryPassword,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/agent/customers"] });
       form.reset();
@@ -147,6 +147,9 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create New Customer</DialogTitle>
+          <DialogDescription>
+            Enter customer details and have them agree to the mandate to create their account.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
