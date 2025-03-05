@@ -75,6 +75,7 @@ router.post('/customers/create', async (req, res) => {
   }
 
   console.log('Creating customer for agent:', req.user.id);
+  console.log('Customer data:', req.body);
 
   const connection = await createConnection();
   try {
@@ -112,12 +113,12 @@ router.post('/customers/create', async (req, res) => {
         case 'EXPERT': initialPoints = 25000; break;
       }
 
-      // Create user with agent_id
+      // Create user with all fields and agent_id
       const [userResult] = await connection.execute(
         `INSERT INTO users (
           email, password, first_name, last_name, phone_number,
           date_of_birth, gender, id_number, occupation,
-          industry, address, suburb, postal_code,
+          industry, address, city, postal_code,
           selected_package, bank_name, account_type,
           account_number, account_holder_name, branch_code,
           is_south_african, has_credit_card, is_enabled, points,
@@ -148,11 +149,12 @@ router.post('/customers/create', async (req, res) => {
       });
     } catch (error) {
       await connection.rollback();
+      console.error('Transaction failed:', error);
       throw error;
     }
   } catch (error) {
     console.error('Error creating customer:', error);
-    res.status(500).json({ error: 'Failed to create customer' });
+    res.status(500).json({ error: 'Failed to create customer', details: error.message });
   } finally {
     await connection.end();
   }
