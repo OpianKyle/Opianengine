@@ -30,15 +30,29 @@ export function cleanupWebSockets() {
 
 // Helper to handle page transitions
 export function handlePageTransition(callback?: () => void) {
-  cleanupWebSockets();
+  // Prevent any ongoing network requests
+  window.stop();
 
-  // Clear any hanging network requests
-  if (typeof window !== 'undefined' && window.stop) {
-    window.stop();
+  // Clear any pending timeouts
+  const highestTimeoutId = window.setTimeout(() => {}, 0);
+  for (let i = 0; i < highestTimeoutId; i++) {
+    window.clearTimeout(i);
   }
+
+  // Clean up WebSocket connections
+  cleanupWebSockets();
 
   // Execute any additional cleanup
   if (callback) {
     callback();
   }
+
+  // Give the browser a moment to process cleanup
+  return new Promise(resolve => setTimeout(resolve, 100));
+}
+
+// Helper to ensure clean navigation
+export async function navigateTo(path: string) {
+  await handlePageTransition();
+  window.location.href = path;
 }

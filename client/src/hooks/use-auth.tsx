@@ -37,7 +37,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
   const {
     data: user,
@@ -48,6 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: false,
     enabled: true,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    onError: (error) => {
+      // Only show error toasts for non-401 errors
+      if (!(error instanceof Error && error.message.includes("log in"))) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    }
   });
 
   const loginMutation = useMutation({
@@ -64,20 +74,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return res.json();
     },
-    onSuccess: (user) => {
-      // On successful login:
-      // 1. Update the user data in the cache
+    onSuccess: async (user) => {
+      // Update the user data in the cache
       queryClient.setQueryData(["/api/user"], user);
-      // 2. Clean up any existing connections
-      handlePageTransition();
-      // 3. Redirect based on user role
-      if (user.isAgent) {
-        setLocation('/agent');
-      } else if (user.isAdmin || user.isSuperAdmin) {
-        setLocation('/admin');
-      } else {
-        setLocation('/');
-      }
+
+      // Show success message
+      toast({
+        title: "Welcome back",
+        description: `Logged in as ${user.firstName} ${user.lastName}`,
+      });
+
+      // Clean up and redirect based on role
+      await handlePageTransition(() => {
+        if (user.isAgent) {
+          setLocation('/agent');
+        } else if (user.isAdmin || user.isSuperAdmin) {
+          setLocation('/admin');
+        } else {
+          setLocation('/');
+        }
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -90,27 +106,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      // Clean up before making the logout request
-      handlePageTransition();
-
-      const res = await fetch("/api/logout", {
-        method: "POST",
-        credentials: "include",
+      // First show loading state
+      toast({
+        title: "Logging out",
+        description: "Please wait...",
       });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to logout");
-      }
-    },
-    onSuccess: () => {
-      // Clear all queries from the cache
-      queryClient.clear();
-      // Reset the user data
-      queryClient.setQueryData(["/api/user"], null);
+
+      // Clean up before making the logout request
+      await handlePageTransition(async () => {
+        // Clear all queries from the cache
+        queryClient.clear();
+        // Reset the user data
+        queryClient.setQueryData(["/api/user"], null);
+
+        // Make the logout request
+        const res = await fetch("/api/logout", {
+          method: "POST",
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || "Failed to logout");
+        }
+      });
+
       // Clean up any remaining connections
       cleanupWebSockets();
-      // Redirect to auth page after ensuring cache is cleared
-      setTimeout(() => setLocation('/auth'), 100);
+    },
+    onSuccess: () => {
+      // Show success message
+      toast({
+        title: "Logged out",
+        description: "Successfully logged out",
+      });
+
+      // Use a regular navigation to ensure clean state
+      window.location.href = '/auth';
     },
     onError: (error: Error) => {
       toast({
