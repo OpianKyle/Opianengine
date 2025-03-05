@@ -45,6 +45,26 @@ export function registerRoutes(app: Express): Server {
   app.use(sessionMiddleware);
   setupAuth(app);
 
+  // Enhanced logout handling 
+  app.post("/api/logout", (req, res) => {
+    // Always clear the session cookie
+    res.clearCookie('connect.sid');
+    
+    // Attempt proper passport logout
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+          // Still send success since we cleared the cookie
+        }
+        res.status(200).json({ message: "Logged out successfully" });
+      });
+    } else {
+      // If no session exists, still return success
+      res.status(200).json({ message: "Logged out successfully" });
+    }
+  });
+
   // Mount referral routes
   app.use(referralRouter);
 
