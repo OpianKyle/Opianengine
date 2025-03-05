@@ -113,7 +113,32 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
   // Load customer data when dialog opens
   useEffect(() => {
     if (customer && open) {
-      form.reset(customer);
+      // Format date to YYYY-MM-DD for the date input
+      const formattedDate = customer.dateOfBirth ? 
+        new Date(customer.dateOfBirth).toISOString().split('T')[0] : '';
+
+      form.reset({
+        email: customer.email || "",
+        firstName: customer.firstName || "",
+        lastName: customer.lastName || "",
+        isSouthAfrican: customer.isSouthAfrican || false,
+        idNumber: customer.idNumber || "",
+        dateOfBirth: formattedDate,
+        gender: customer.gender || "male",
+        mobileNumber: customer.mobileNumber || "",
+        occupation: customer.occupation || "",
+        industry: customer.industry || "",
+        addressLine1: customer.addressLine1 || "",
+        suburb: customer.suburb || "",
+        postalCode: customer.postalCode || "",
+        hasCreditCard: customer.hasCreditCard || false,
+        selectedPackage: customer.selectedPackage || "BEGINNER",
+        accountHolderName: customer.accountHolderName || "",
+        bankName: customer.bankName || "",
+        branchCode: customer.branchCode || "",
+        accountNumber: customer.accountNumber || "",
+        accountType: customer.accountType || "SAVINGS",
+      });
     }
   }, [customer, open, form]);
 

@@ -15,7 +15,7 @@ router.get('/customers', async (req, res) => {
 
   const connection = await createConnection();
   try {
-    // Fetch customers created by this agent
+    // Fetch customers created by this agent with all fields
     const [customers] = await connection.execute(
       `SELECT u.*, 
        COALESCE(
@@ -37,7 +37,7 @@ router.get('/customers', async (req, res) => {
       [req.user.id]
     );
 
-    // Transform the customer data
+    // Transform the customer data to match frontend expectations
     const transformedCustomers = customers.map(customer => {
       let products = [];
       try {
@@ -52,8 +52,23 @@ router.get('/customers', async (req, res) => {
         firstName: customer.first_name,
         lastName: customer.last_name,
         mobileNumber: customer.phone_number,
+        idNumber: customer.id_number,
+        dateOfBirth: customer.date_of_birth,
+        gender: customer.gender,
+        occupation: customer.occupation,
+        industry: customer.industry,
+        addressLine1: customer.address,
+        suburb: customer.city,
+        postalCode: customer.postal_code,
         selectedPackage: customer.selected_package,
+        isSouthAfrican: Boolean(customer.is_south_african),
+        hasCreditCard: Boolean(customer.has_credit_card),
         points: customer.points,
+        bankName: customer.bank_name,
+        accountType: customer.account_type,
+        accountNumber: customer.account_number,
+        accountHolderName: customer.account_holder_name,
+        branchCode: customer.branch_code,
         createdAt: customer.created_at,
         products: products
       };
