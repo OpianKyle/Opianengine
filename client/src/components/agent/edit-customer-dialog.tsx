@@ -41,11 +41,11 @@ const customerSchema = z.object({
   idNumber: z.string().min(1, "ID Number is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   gender: z.enum(["male", "female", "other"], { required_error: "Please select a gender" }),
-  mobileNumber: z.string().min(10, "Phone number must be at least 10 digits"),
+  phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
   occupation: z.string().min(1, "Occupation is required"),
   industry: z.string().min(1, "Industry is required"),
-  addressLine1: z.string().min(1, "Address is required"),
-  suburb: z.string().min(1, "Suburb is required"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
   postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
   hasCreditCard: z.boolean(),
   selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]),
@@ -94,11 +94,11 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
       idNumber: "",
       dateOfBirth: "",
       gender: "male",
-      mobileNumber: "",
+      phoneNumber: "",
       occupation: "",
       industry: "",
-      addressLine1: "",
-      suburb: "",
+      address: "",
+      city: "",
       postalCode: "",
       hasCreditCard: false,
       selectedPackage: "BEGINNER",
@@ -110,11 +110,9 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
     }
   });
 
-  // Load customer data when dialog opens
   useEffect(() => {
     if (customer && open) {
-      // Format date to YYYY-MM-DD for the date input
-      const formattedDate = customer.dateOfBirth ? 
+      const formattedDate = customer.dateOfBirth ?
         new Date(customer.dateOfBirth).toISOString().split('T')[0] : '';
 
       form.reset({
@@ -125,14 +123,14 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
         idNumber: customer.idNumber || "",
         dateOfBirth: formattedDate,
         gender: customer.gender || "male",
-        mobileNumber: customer.mobileNumber || "",
+        phoneNumber: customer.phoneNumber || "",
         occupation: customer.occupation || "",
         industry: customer.industry || "",
-        addressLine1: customer.addressLine1 || "",
-        suburb: customer.suburb || "",
+        address: customer.address || "",
+        city: customer.city || "",
         postalCode: customer.postalCode || "",
         hasCreditCard: customer.hasCreditCard || false,
-        selectedPackage: customer.selectedPackage || "BEGINNER",
+        selectedPackage: customer.selectedPackage?.toUpperCase() || "BEGINNER",
         accountHolderName: customer.accountHolderName || "",
         bankName: customer.bankName || "",
         branchCode: customer.branchCode || "",
@@ -150,9 +148,10 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
         credentials: 'include',
         body: JSON.stringify({
           ...data,
-          // Map form fields to API fields
-          phoneNumber: data.mobileNumber,
-          address: data.addressLine1
+          phoneNumber: data.phoneNumber,
+          address: data.address,
+          city: data.city,
+          selectedPackage: data.selectedPackage?.toUpperCase()
         }),
       });
 
@@ -239,10 +238,10 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
                 />
                 <FormField
                   control={form.control}
-                  name="mobileNumber"
+                  name="phoneNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mobile Number</FormLabel>
+                      <FormLabel>Phone Number</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -357,7 +356,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
                 />
                 <FormField
                   control={form.control}
-                  name="addressLine1"
+                  name="address"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Address</FormLabel>
@@ -370,10 +369,10 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
                 />
                 <FormField
                   control={form.control}
-                  name="suburb"
+                  name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Suburb</FormLabel>
+                      <FormLabel>City</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>

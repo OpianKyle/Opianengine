@@ -38,7 +38,7 @@ router.get('/customers', async (req: any, res) => {
     );
 
     // Transform the customer data to match frontend expectations
-    const transformedCustomers = customers.map((customer: any) => {
+    const transformedCustomers = customers?.map((customer: any) => {
       let products = [];
       try {
         products = JSON.parse(customer.products || '[]');
@@ -51,14 +51,14 @@ router.get('/customers', async (req: any, res) => {
         email: customer.email,
         firstName: customer.first_name,
         lastName: customer.last_name,
-        mobileNumber: customer.phone_number,
+        phoneNumber: customer.phone_number,
         idNumber: customer.id_number,
         dateOfBirth: customer.date_of_birth,
         gender: customer.gender,
         occupation: customer.occupation,
         industry: customer.industry,
-        addressLine1: customer.address,
-        suburb: customer.city,
+        address: customer.address,
+        city: customer.city,
         postalCode: customer.postal_code,
         selectedPackage: customer.selected_package,
         isSouthAfrican: Boolean(customer.is_south_african),
