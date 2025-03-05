@@ -51,42 +51,22 @@ app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (req.path.startsWith("/api")) {
-      log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
-    }
+    log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
   });
   next();
 });
 
 (async () => {
   try {
-    console.log('Starting database initialization...');
+    console.log('Starting server initialization...');
 
-    // Test MariaDB connection
-    try {
-      const connection = await mysql.createConnection({
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        port: parseInt(process.env.DB_PORT || '3306'),
-        ssl: {
-          rejectUnauthorized: false
-        }
-      });
-
-      console.log('MariaDB connection successful');
-      await connection.end();
-    } catch (mariaDbError) {
-      console.error('MariaDB connection test failed:', mariaDbError);
-    }
-
-    // Test PostgreSQL connection
+    // Test database connections
     try {
       await db.select().from(users).limit(1);
-      console.log('PostgreSQL connection successful');
+      console.log('Database connection successful');
     } catch (dbError) {
-      console.error('PostgreSQL connection test failed:', dbError);
+      console.error('Database connection test failed:', dbError);
+      throw dbError;
     }
 
     const server = registerRoutes(app);
@@ -114,15 +94,10 @@ app.use((req, res, next) => {
     // Start the server
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () => {
-      console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
+      console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
     console.error('Server startup error:', error);
-    if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Stack trace:', error.stack);
-    }
     process.exit(1);
   }
 })();
