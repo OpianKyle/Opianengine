@@ -181,7 +181,7 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto bg-background border-border">
+      <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto bg-background border-border">
         <DialogHeader className="border-b pb-4">
           <DialogTitle className="text-foreground">Create New Customer</DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -189,10 +189,10 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-3">
               <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Personal Information</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <FormField
                   control={form.control}
                   name="firstName"
@@ -312,9 +312,9 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Employment & Address Information</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <FormField
                   control={form.control}
                   name="occupation"
@@ -392,9 +392,9 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Package & Financial Information</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <FormField
                   control={form.control}
                   name="selectedPackage"
@@ -438,9 +438,9 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Banking Details</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <FormField
                   control={form.control}
                   name="accountHolderName"
@@ -520,10 +520,10 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Mandate Agreement</h3>
-              <div className="border rounded-lg p-4 bg-muted space-y-4">
-                <ScrollArea className="h-[200px] w-full rounded-md border p-4 bg-background">
+              <div className="border rounded-lg p-4 bg-muted space-y-3">
+                <ScrollArea className="h-[150px] w-full rounded-md border p-4 bg-background">
                   <div className="whitespace-pre-wrap text-foreground">
                     {MandateText}
                   </div>
