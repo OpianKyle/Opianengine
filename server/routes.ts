@@ -897,45 +897,72 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    const connection = await createConnection();
     try {
-      const updates: any = {
-        ...req.body
-      };
+      // Build updates object
+      const updates = { ...req.body };
 
       // Handle password update separately if provided
       if (req.body.password) {
         updates.password = await crypto.hash(req.body.password);
       } else {
-        // If no password provided, remove it from updates
         delete updates.password;
       }
 
-      // Remove any undefined or null values  
+      // Remove any undefined or null values
       Object.keys(updates).forEach(key => {
         if (updates[key] === undefined || updates[key] === null) {
           delete updates[key];
         }
       });
 
-      const [user] = await db
-        .update(users)
-        .set(updates)
-        .where(eq(users.id, req.user.id))
-        .returning();
-
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
+      // If no fields to update, return current user
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No fields to update" });
       }
 
-      // Don't send the password back
-      const { password: _, ...safeUser } = user;
-      res.json(safeUser);
+      await connection.beginTransaction();
+
+      try {
+        // Build the SET clause dynamically
+        const setClause = Object.keys(updates)
+          .map(key => `${key} = ?`)
+          .join(', ');
+        const values = [...Object.values(updates), req.user.id];
+
+        // Update user
+        await connection.execute(
+          `UPDATE users SET ${setClause} WHERE id = ?`,
+          values
+        );
+
+        // Fetch updated user
+        const [updatedUsers] = await connection.execute(
+          'SELECT * FROM users WHERE id = ?',
+          [req.user.id]
+        );
+
+        if (!updatedUsers || updatedUsers.length === 0) {
+          throw new Error("Failed to fetch updated user");
+        }
+
+        await connection.commit();
+
+        // Don't send the password back
+        const { password: _, ...safeUser } = updatedUsers[0];
+        res.json(safeUser);
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
     } catch (error) {
       console.error('Error updating user profile:', error);
       res.status(500).json({ 
         error: "Failed to update profile", 
         message: error instanceof Error ? error.message : "Unknown error occurred"
       });
+    } finally {
+      await connection.end();
     }
   });
 
