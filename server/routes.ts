@@ -909,6 +909,16 @@ export function registerRoutes(app: Express): Server {
         delete updates.password;
       }
 
+      // Map any addressLine1 to address field
+      if (updates.addressLine1) {
+        updates.address = updates.addressLine1;
+        delete updates.addressLine1;
+      }
+
+      // Remove any fields that don't exist in the database
+      const invalidFields = ['addressLine2'];
+      invalidFields.forEach(field => delete updates[field]);
+
       // Remove any undefined or null values
       Object.keys(updates).forEach(key => {
         if (updates[key] === undefined || updates[key] === null) {
