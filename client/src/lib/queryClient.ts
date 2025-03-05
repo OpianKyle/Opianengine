@@ -17,8 +17,14 @@ export async function apiRequest(method: string, url: string, body?: any) {
       throw new Error("Please log in to continue");
     }
 
-    const errorText = await response.text();
-    throw new Error(errorText || `${response.status}: ${response.statusText}`);
+    let errorMessage = "An error occurred";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || `${response.status}: ${response.statusText}`;
+    } catch {
+      errorMessage = await response.text() || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
   return response;
@@ -28,12 +34,35 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: async ({ queryKey }) => {
-        const response = await apiRequest("GET", queryKey[0] as string);
-        return response.json();
+        try {
+          const response = await apiRequest("GET", queryKey[0] as string);
+          return response.json();
+        } catch (error) {
+          // If we get a network error, retry up to 3 times
+          if (error instanceof TypeError && error.message.includes('network')) {
+            return new Promise((resolve, reject) => {
+              setTimeout(() => {
+                apiRequest("GET", queryKey[0] as string)
+                  .then(response => response.json())
+                  .then(resolve)
+                  .catch(reject);
+              }, 1000);
+            });
+          }
+          throw error;
+        }
       },
-      retry: false,
+      retry: (failureCount, error) => {
+        // Retry up to 3 times for network errors
+        if (error instanceof TypeError && error.message.includes('network')) {
+          return failureCount < 3;
+        }
+        // Don't retry for other errors
+        return false;
+      },
+      retryDelay: attemptIndex => Math.min(1000 * (2 ** attemptIndex), 30000),
       refetchOnWindowFocus: false,
-      staleTime: 0
+      staleTime: 5 * 60 * 1000 // Data remains fresh for 5 minutes
     },
     mutations: {
       retry: false,
