@@ -48,7 +48,12 @@ export function registerRoutes(app: Express): Server {
   // Enhanced logout handling 
   app.post("/api/logout", (req, res) => {
     // Always clear the session cookie
-    res.clearCookie('connect.sid');
+    res.clearCookie('connect.sid', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
     
     // Attempt proper passport logout
     if (req.session) {
