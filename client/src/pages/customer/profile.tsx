@@ -26,7 +26,6 @@ const profileSchema = z.object({
   last_name: z.string().min(1, "Last name is required"),
   phone_number: z.string().min(1, "Mobile number is required"),
   address: z.string().min(1, "Address is required"),
-  address_line2: z.string().optional(),
   city: z.string().min(1, "City is required"),
   postal_code: z.string().min(1, "Postal code is required"),
   id_number: z.string().min(1, "ID number is required"),
@@ -44,7 +43,6 @@ const profileSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
-// Update packages to match registration
 const packages = [
   {
     name: "BEGINNER",
@@ -215,8 +213,7 @@ export default function ProfilePage() {
       first_name: user?.first_name || "",
       last_name: user?.last_name || "",
       phone_number: user?.phone_number || "",
-      address: user?.address?.split('\n')[0] || "",
-      address_line2: user?.address?.split('\n')[1] || "",
+      address: user?.address || "",
       city: user?.city || "",
       postal_code: user?.postal_code || "",
       id_number: user?.id_number || "",
@@ -243,8 +240,8 @@ export default function ProfilePage() {
         credentials: 'include',
         body: JSON.stringify({
           ...data,
-          // Combine address lines
-          address: data.address + (data.address_line2 ? `\n${data.address_line2}` : ''),
+          // Combine address lines -  No longer needed with address_line2 removed
+          address: data.address,
         }),
       });
 
@@ -473,21 +470,7 @@ export default function ProfilePage() {
                     name="address"
                     render={({ field }) => (
                       <FormItem className="col-span-full">
-                        <FormLabel>Address Line 1</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="w-full" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="address_line2"
-                    render={({ field }) => (
-                      <FormItem className="col-span-full">
-                        <FormLabel>Address Line 2 (Optional)</FormLabel>
+                        <FormLabel>Address</FormLabel>
                         <FormControl>
                           <Input {...field} className="w-full" />
                         </FormControl>
