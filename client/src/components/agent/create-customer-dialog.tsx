@@ -181,7 +181,7 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto bg-background border-border">
+      <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto bg-background border-border [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-[#43EB3E]">
         <DialogHeader className="border-b pb-4">
           <DialogTitle className="text-foreground">Create New Customer</DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -523,7 +523,7 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
             <div className="space-y-3">
               <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Mandate Agreement</h3>
               <div className="border rounded-lg p-4 bg-muted space-y-3">
-                <ScrollArea className="h-[150px] w-full rounded-md border p-4 bg-background">
+                <ScrollArea className="h-[150px] w-full rounded-md border p-4 bg-background [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-[#43EB3E]">
                   <div className="whitespace-pre-wrap text-foreground">
                     {MandateText}
                   </div>
