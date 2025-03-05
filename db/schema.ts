@@ -1,4 +1,4 @@
-import { mysqlTable, text, int, boolean, timestamp } from "drizzle-orm/mysql-core";
+import { mysqlTable, text, int, boolean, timestamp, mysqlEnum } from "drizzle-orm/mysql-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
@@ -69,15 +69,7 @@ const NOTIFICATION_TYPES = [
   "SYSTEM_UPDATE"
 ] as const;
 
-const PACKAGE_PREMIUMS = [
-  "BEGINNER_PREMIUM",
-  "NOVICE_PREMIUM", 
-  "ACTIVE_PREMIUM",
-  "PROFESSIONAL_PREMIUM",
-  "EXPERT_PREMIUM"
-] as const;
-
-// Table Definitions - ordered to avoid forward references
+// Table Definitions
 export const products = mysqlTable("products", {
   id: int("id").primaryKey().autoincrement(),
   name: text("name").notNull(),
@@ -103,9 +95,9 @@ export const users = mysqlTable("users", {
   address: text("address"),
   city: text("city"),
   postalCode: text("postal_code"),
-  selectedPackage: text("selected_package", { enum: PACKAGE_TYPES }),
+  selectedPackage: mysqlEnum("selected_package", PACKAGE_TYPES),
   bankName: text("bank_name"),
-  accountType: text("account_type", { enum: ACCOUNT_TYPES }),
+  accountType: mysqlEnum("account_type", ACCOUNT_TYPES),
   accountNumber: text("account_number"),
   accountHolderName: text("account_holder_name"),
   branchCode: text("branch_code"),
@@ -118,23 +110,16 @@ export const users = mysqlTable("users", {
   points: int("points").default(0).notNull(),
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),
-  agentId: int("agent_id").references(() => users.id), // Make explicit reference to users table
+  agentId: int("agent_id").references(() => users.id),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const productAssignments = mysqlTable("product_assignments", {
-  id: int("id").primaryKey().autoincrement(),
-  userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  productId: int("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const product_activities = mysqlTable("product_activities", {
+export const productActivities = mysqlTable("product_activities", {
   id: int("id").primaryKey().autoincrement(),
   productId: int("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
-  type: text("type", { enum: ACTIVITY_TYPES }).notNull(),
+  type: mysqlEnum("type", ACTIVITY_TYPES).notNull(),
   pointsValue: int("points_value").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -154,10 +139,10 @@ export const transactions = mysqlTable("transactions", {
   id: int("id").primaryKey().autoincrement(),
   userId: int("user_id").references(() => users.id).notNull(),
   points: int("points").notNull(),
-  type: text("type", { enum: TRANSACTION_TYPES }).notNull(),
+  type: mysqlEnum("type", TRANSACTION_TYPES).notNull(),
   description: text("description").notNull(),
   rewardId: int("reward_id").references(() => rewards.id),
-  status: text("status", { enum: TRANSACTION_STATUS }).default("PENDING"),
+  status: mysqlEnum("status", TRANSACTION_STATUS).default("PENDING"),
   processedAt: timestamp("processed_at"),
   processedBy: int("processed_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -167,8 +152,15 @@ export const adminLogs = mysqlTable("admin_logs", {
   id: int("id").primaryKey().autoincrement(),
   adminId: int("admin_id").references(() => users.id).notNull(),
   targetUserId: int("target_user_id").references(() => users.id),
-  actionType: text("action_type", { enum: ADMIN_ACTION_TYPES }).notNull(),
+  actionType: mysqlEnum("action_type", ADMIN_ACTION_TYPES).notNull(),
   details: text("details").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const productAssignments = mysqlTable("product_assignments", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  productId: int("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -176,7 +168,7 @@ export const quoteRequests = mysqlTable("quote_requests", {
   id: int("id").primaryKey().autoincrement(),
   userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
   productId: int("product_id").references(() => products.id, { onDelete: 'cascade' }).notNull(),
-  status: text("status", { enum: QUOTE_REQUEST_STATUS }).default("PENDING").notNull(),
+  status: mysqlEnum("status", QUOTE_REQUEST_STATUS).default("PENDING").notNull(),
   notes: text("notes"),
   completedAt: timestamp("completed_at"),
   completedBy: int("completed_by").references(() => users.id),
@@ -187,7 +179,7 @@ export const quoteRequests = mysqlTable("quote_requests", {
 export const notifications = mysqlTable("notifications", {
   id: int("id").primaryKey().autoincrement(),
   userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  type: text("type", { enum: NOTIFICATION_TYPES }).notNull(),
+  type: mysqlEnum("type", NOTIFICATION_TYPES).notNull(),
   title: text("title").notNull(),
   message: text("message").notNull(),
   isRead: boolean("is_read").default(false).notNull(),
@@ -195,65 +187,37 @@ export const notifications = mysqlTable("notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const packagePremiumAmounts = mysqlTable("package_premium_amounts", {
-  id: int("id").primaryKey().autoincrement(),
-  packageType: text("package_type", { enum: PACKAGE_TYPES }).notNull(),
-  premiumAmount: int("premium_amount").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
 // Relations
 export const productRelations = relations(products, ({ many }) => ({
-  activities: many(product_activities),
+  activities: many(productActivities),
   assignments: many(productAssignments),
 }));
 
 export const userRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
-  adminLogsCreated: many(adminLogs),
-  adminLogsTarget: many(adminLogs),
+  adminLogsCreated: many(adminLogs, { relationName: 'adminLogsCreated' }),
+  adminLogsTarget: many(adminLogs, { relationName: 'adminLogsTarget' }),
   productAssignments: many(productAssignments),
   quoteRequests: many(quoteRequests),
   notifications: many(notifications),
-  // Add explicit agent-customer relationship
   agent: one(users, {
     fields: [users.agentId],
     references: [users.id],
   }),
   customers: many(users, {
+    relationName: 'agentCustomers',
     fields: [users.id],
     references: [users.agentId],
   }),
 }));
 
-export const transactionRelations = relations(transactions, ({ one }) => ({
-  user: one(users),
-  reward: one(rewards)
-}));
-
-export const adminLogRelations = relations(adminLogs, ({ one }) => ({
-  admin: one(users),
-  targetUser: one(users)
-}));
-
-export const quoteRequestRelations = relations(quoteRequests, ({ one }) => ({
-  user: one(users),
-  product: one(products),
-  completedByUser: one(users)
-}));
-
-export const notificationRelations = relations(notifications, ({ one }) => ({
-  user: one(users)
-}));
-
-// Type exports
+// Export types and schemas
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
-export type ProductActivity = typeof product_activities.$inferSelect;
-export type InsertProductActivity = typeof product_activities.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+export type ProductActivity = typeof productActivities.$inferSelect;
+export type InsertProductActivity = typeof productActivities.$inferInsert;
 export type Reward = typeof rewards.$inferSelect;
 export type InsertReward = typeof rewards.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
@@ -266,14 +230,10 @@ export type QuoteRequest = typeof quoteRequests.$inferSelect;
 export type InsertQuoteRequest = typeof quoteRequests.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
-export type PackagePremiumAmount = typeof packagePremiumAmounts.$inferSelect;
-export type InsertPackagePremiumAmount = typeof packagePremiumAmounts.$inferInsert;
 
 // Schema exports
 export const insertProductSchema = createInsertSchema(products);
 export const selectProductSchema = createSelectSchema(products);
-export const insertProductActivitySchema = createInsertSchema(product_activities);
-export const selectProductActivitySchema = createSelectSchema(product_activities);
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export const insertRewardSchema = createInsertSchema(rewards);
@@ -288,5 +248,3 @@ export const insertQuoteRequestSchema = createInsertSchema(quoteRequests);
 export const selectQuoteRequestSchema = createSelectSchema(quoteRequests);
 export const insertNotificationSchema = createInsertSchema(notifications);
 export const selectNotificationSchema = createSelectSchema(notifications);
-export const insertPackagePremiumAmountSchema = createInsertSchema(packagePremiumAmounts);
-export const selectPackagePremiumAmountSchema = createSelectSchema(packagePremiumAmounts);

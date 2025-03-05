@@ -1,18 +1,28 @@
 import { Router } from 'express';
 import { db } from '@db';
-import { users, packagePremiumAmounts } from '@db/schema';
+import { users } from '@db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
 const router = Router();
 
 // Helper function to calculate commission percentages
-const calculateCommission = (amount: number, level: number) => {
+const calculateCommission = (packageType: string, level: number) => {
+  const packageAmounts = {
+    'BEGINNER': 500,
+    'NOVICE': 1000,
+    'ACTIVE': 2000,
+    'PROFESSIONAL': 5000,
+    'EXPERT': 10000
+  };
+
   const percentages = {
     1: 0.15, // 15% for level 1
     2: 0.10, // 10% for level 2
     3: 0.05, // 5% for level 3
   };
-  return Math.floor(amount * percentages[level as keyof typeof percentages]);
+
+  const amount = packageAmounts[packageType as keyof typeof packageAmounts] || 0;
+  return Math.floor(amount * (percentages[level as keyof typeof percentages] || 0));
 };
 
 router.get('/api/customer/referrals', async (req, res) => {
@@ -22,16 +32,6 @@ router.get('/api/customer/referrals', async (req, res) => {
 
   try {
     console.log('Fetching referrals for user:', req.user.id);
-
-    // Get package premium amounts
-    const premiumAmounts = await db
-      .select()
-      .from(packagePremiumAmounts);
-
-    const premiumMap = premiumAmounts.reduce((acc, curr) => {
-      acc[curr.packageType] = curr.premiumAmount;
-      return acc;
-    }, {} as Record<string, number>);
 
     // Get user's referral code
     const [currentUser] = await db
@@ -78,11 +78,9 @@ router.get('/api/customer/referrals', async (req, res) => {
         }
         packageStats.level1[referral.selectedPackage].count++;
 
-        if (premiumMap[referral.selectedPackage]) {
-          const commission = calculateCommission(premiumMap[referral.selectedPackage], 1);
-          packageStats.level1[referral.selectedPackage].commission += commission;
-          level1Amount += commission;
-        }
+        const commission = calculateCommission(referral.selectedPackage, 1);
+        packageStats.level1[referral.selectedPackage].commission += commission;
+        level1Amount += commission;
       }
     });
 
@@ -118,11 +116,9 @@ router.get('/api/customer/referrals', async (req, res) => {
           }
           packageStats.level2[referral.selectedPackage].count++;
 
-          if (premiumMap[referral.selectedPackage]) {
-            const commission = calculateCommission(premiumMap[referral.selectedPackage], 2);
-            packageStats.level2[referral.selectedPackage].commission += commission;
-            level2Amount += commission;
-          }
+          const commission = calculateCommission(referral.selectedPackage, 2);
+          packageStats.level2[referral.selectedPackage].commission += commission;
+          level2Amount += commission;
         }
       });
     }
@@ -158,20 +154,12 @@ router.get('/api/customer/referrals', async (req, res) => {
           }
           packageStats.level3[referral.selectedPackage].count++;
 
-          if (premiumMap[referral.selectedPackage]) {
-            const commission = calculateCommission(premiumMap[referral.selectedPackage], 3);
-            packageStats.level3[referral.selectedPackage].commission += commission;
-            level3Amount += commission;
-          }
+          const commission = calculateCommission(referral.selectedPackage, 3);
+          packageStats.level3[referral.selectedPackage].commission += commission;
+          level3Amount += commission;
         }
       });
     }
-
-    console.log('Sending response with:', {
-      referralCounts: { level1Count, level2Count, level3Count },
-      commissionAmounts: { level1Amount, level2Amount, level3Amount },
-      packageStats
-    });
 
     res.json({
       level1Count,

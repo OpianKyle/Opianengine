@@ -5,7 +5,6 @@ import cors from "cors";
 import fileUpload from 'express-fileupload';
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { users } from "@db/schema";
 import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
 import session from 'express-session';
@@ -17,7 +16,6 @@ console.log('Environment:', {
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT || 5000,
   hasSessionSecret: !!process.env.SESSION_SECRET,
-  hasDbUrl: !!process.env.DATABASE_URL
 });
 
 const app = express();
@@ -92,17 +90,16 @@ app.use((req, res, next) => {
     hasSession: !!req.session,
     sessionID: req.sessionID,
     isAuthenticated: req.isAuthenticated?.(),
-    user: req.user ? { id: req.user.id, isAgent: req.user.is_agent } : null
+    user: req.user ? { id: (req.user as any).id, isAgent: (req.user as any).is_agent } : null
   });
   next();
 });
-
 
 (async () => {
   try {
     console.log('Starting database initialization...');
 
-    // Test MariaDB connection only
+    // Test MariaDB connection
     try {
       const connection = await mysql.createConnection({
         host: 'dedi1350.jnb1.host-h.net',
@@ -119,7 +116,7 @@ app.use((req, res, next) => {
       await connection.end();
     } catch (mariaDbError) {
       console.error('MariaDB connection test failed:', mariaDbError);
-      throw mariaDbError; // Critical error, can't continue without database
+      throw mariaDbError;
     }
 
     // Setup authentication (before routes)
@@ -133,9 +130,9 @@ app.use((req, res, next) => {
     console.log('Routes registered');
 
     // Global error handler
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       console.error('Global error handler caught:', err);
-      const status = err.status || err.statusCode || 500;
+      const status = (err as any).status || (err as any).statusCode || 500;
       const message = err.message || "Internal Server Error";
       res.status(status).json({ error: message });
     });
@@ -157,7 +154,7 @@ app.use((req, res, next) => {
       console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
       console.log(`Server URL: http://0.0.0.0:${PORT}`);
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Server startup error:', error);
     console.error('Error details:', {
       name: error.name,
