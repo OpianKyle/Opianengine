@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { cleanupWebSockets, handlePageTransition } from "@/lib/utils";
 
 type User = {
   id: number;
@@ -67,7 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // On successful login:
       // 1. Update the user data in the cache
       queryClient.setQueryData(["/api/user"], user);
-      // 2. Redirect based on user role
+      // 2. Clean up any existing connections
+      handlePageTransition();
+      // 3. Redirect based on user role
       if (user.isAgent) {
         setLocation('/agent');
       } else if (user.isAdmin || user.isSuperAdmin) {
@@ -87,9 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      // Close any existing WebSocket connections
-      const wsInstances = window.WebSocket ? Array.from(document.querySelectorAll('script[src*="ws"]')) : [];
-      wsInstances.forEach(ws => ws.remove());
+      // Clean up before making the logout request
+      handlePageTransition();
 
       const res = await fetch("/api/logout", {
         method: "POST",
@@ -105,6 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.clear();
       // Reset the user data
       queryClient.setQueryData(["/api/user"], null);
+      // Clean up any remaining connections
+      cleanupWebSockets();
       // Redirect to auth page after ensuring cache is cleared
       setTimeout(() => setLocation('/auth'), 100);
     },

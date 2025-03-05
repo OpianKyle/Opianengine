@@ -1,0 +1,116 @@
+Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+contentScript.js:3 Starting nGrams value 0
+toaster.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+not-found.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+home.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+register.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+login.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+reset-password.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+use-user.ts:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+sidebar.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+use-session-timeout.ts:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+dashboard.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+customers.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+admin-layout.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+rewards.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+manage-users.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+logs.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+cash-redemptions.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+products.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+quote-requests.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+dashboard.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+customer-layout.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+rewards.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+referrals.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+profile.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+index.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+products.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+agent-layout.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+customers.tsx:1 
+            
+            
+           Failed to load resource: net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+client:535 WebSocket connection to 'wss://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/' failed: 
+setupWebSocket @ client:535Understand this errorAI
+client:535 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.
+    at setupWebSocket (client:535:19)
+    at fallback (client:508:16)
+    at WebSocket.<anonymous> (client:551:7)
