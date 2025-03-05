@@ -1,0 +1,139 @@
+client:535 WebSocket connection to 'wss://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/' failed: 
+setupWebSocket @ client:535
+(anonymous) @ client:530Understand this errorAI
+client:535 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.
+    at setupWebSocket (client:535:19)
+    at fallback (client:508:16)
+    at WebSocket.<anonymous> (client:551:7)
+setupWebSocket @ client:535
+fallback @ client:508
+(anonymous) @ client:551Understand this errorAI
+App.tsx:39 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/admin/quote-requests.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+App.tsx:40 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/customer/dashboard.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+App.tsx:41 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/customer/rewards.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+App.tsx:42 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/layout/customer-layout.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+contentScript.js:3 Starting nGrams value 0
+App.tsx:43 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/customer/referrals.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+App.tsx:44 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/customer/profile.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+App.tsx:45 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/customer/products.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+App.tsx:46 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/agent/index.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+App.tsx:47 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/layout/agent-layout.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+App.tsx:48 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/agent/customers.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+toaster.tsx:18 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/hooks/use-toast.ts net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+toaster.tsx:26 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/toast.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+home.tsx:22 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/button.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+not-found.tsx:17 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/card.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+login.tsx:22 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/input.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+login.tsx:25 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/dialog.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+register.tsx:33 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/carousel.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+register.tsx:40 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/select.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+register.tsx:41 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/checkbox.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+register.tsx:43 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/badge.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+register.tsx:44 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/scroll-area.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+register.tsx:45 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/label.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+sidebar.tsx:22 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/hooks/use-mobile.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+sidebar.tsx:23 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/lib/utils.ts net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+sidebar.tsx:26 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/separator.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+sidebar.tsx:27 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/sheet.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+sidebar.tsx:28 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/skeleton.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+sidebar.tsx:34 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/tooltip.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+customers.tsx:21 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/table.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+customers.tsx:33 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/dropdown-menu.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+customers.tsx:35 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/form.tsx net::ERR_NETWORK_CHANGEDUnderstand this errorAI
+customers.tsx:42 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/accordion.tsx net::ERR_NETWORK_CHANGED

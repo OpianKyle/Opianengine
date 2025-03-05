@@ -45,6 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<User>({
     queryKey: ["/api/user"],
     retry: false,
+    enabled: true,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 
   const loginMutation = useMutation({
@@ -61,9 +63,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      setLocation('/agent');
+    onSuccess: (user) => {
+      // On successful login:
+      // 1. Update the user data in the cache
+      queryClient.setQueryData(["/api/user"], user);
+      // 2. Redirect based on user role
+      if (user.isAgent) {
+        setLocation('/agent');
+      } else if (user.isAdmin || user.isSuperAdmin) {
+        setLocation('/admin');
+      } else {
+        setLocation('/');
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -76,6 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      // Close any existing WebSocket connections
+      const wsInstances = window.WebSocket ? Array.from(document.querySelectorAll('script[src*="ws"]')) : [];
+      wsInstances.forEach(ws => ws.remove());
+
       const res = await fetch("/api/logout", {
         method: "POST",
         credentials: "include",
@@ -86,9 +101,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     onSuccess: () => {
+      // Clear all queries from the cache
+      queryClient.clear();
+      // Reset the user data
       queryClient.setQueryData(["/api/user"], null);
-      queryClient.invalidateQueries();
-      setLocation('/auth');
+      // Redirect to auth page after ensuring cache is cleared
+      setTimeout(() => setLocation('/auth'), 100);
     },
     onError: (error: Error) => {
       toast({
