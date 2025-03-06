@@ -133,12 +133,15 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get only regular customers (not admins or agents)
+      // Get regular customers with transactions and assignments
       const [customers] = await connection.execute(
         `SELECT 
           u.*,
           COALESCE(pa.assignment_count, 0) as assignment_count,
-          GROUP_CONCAT(DISTINCT pa2.product_id) as assigned_products
+          GROUP_CONCAT(DISTINCT pa2.product_id) as assigned_products,
+          COALESCE(tr.last_transaction, NULL) as last_transaction,
+          COALESCE(tr.transaction_type, NULL) as last_transaction_type,
+          COALESCE(tr.transaction_points, NULL) as last_transaction_points
          FROM users u
          LEFT JOIN (
            SELECT user_id, COUNT(*) as assignment_count 
@@ -146,6 +149,19 @@ export function registerRoutes(app: Express): Server {
            GROUP BY user_id
          ) pa ON u.id = pa.user_id
          LEFT JOIN product_assignments pa2 ON u.id = pa2.user_id
+         LEFT JOIN (
+           SELECT 
+             user_id,
+             created_at as last_transaction,
+             type as transaction_type,
+             points as transaction_points
+           FROM transactions t1
+           WHERE created_at = (
+             SELECT MAX(created_at)
+             FROM transactions t2
+             WHERE t2.user_id = t1.user_id
+           )
+         ) tr ON u.id = tr.user_id
          LEFT JOIN admin_users au ON u.id = au.user_id
          WHERE au.user_id IS NULL 
          AND u.is_agent = 0
@@ -167,6 +183,11 @@ export function registerRoutes(app: Express): Server {
         assignmentCount: customer.assignment_count,
         assignedProducts: customer.assigned_products ? 
           customer.assigned_products.split(',').map(Number) : [],
+        lastActivity: customer.last_transaction ? {
+          date: customer.last_transaction,
+          type: customer.transaction_type,
+          points: customer.transaction_points
+        } : null,
         // Explicitly map all customer fields
         idNumber: customer.id_number || '',
         dateOfBirth: customer.date_of_birth || '',
@@ -183,7 +204,7 @@ export function registerRoutes(app: Express): Server {
         branchCode: customer.branch_code || '',
         hasCreditCard: Boolean(customer.has_credit_card),
         isSouthAfrican: Boolean(customer.is_south_african),
-        // Include agent relationship
+        // Include agent relationship 
         agentId: customer.agent_id || null
       }));
 
