@@ -99,6 +99,58 @@ export function registerRoutes(app: Express): Server {
   // Move setupAuth before defining routes that use passport
   setupAuth(app);
 
+  // Helper function to get package price
+  async function getPackagePrice(connection: any, packageName: string): Promise<number> {
+    // Get package price from the table
+    const [prices] = await connection.execute(
+      'SELECT premium_amount FROM package_premium_amounts WHERE package_type = ?',
+      [packageName?.toUpperCase()]
+    );
+
+    return prices.length > 0 ? Number(prices[0].premium_amount) : 0;
+  }
+
+  // Helper function to calculate referral commission points
+  async function calculateCommissionPoints(connection: any, packageName: string, level: number): Promise<{points: number, randValue: number}> {
+    const packageValue = await getPackagePrice(connection, packageName);
+    
+    console.log('Package value for commission calculation:', {
+      packageName,
+      packageValue,
+      level
+    });
+    
+    // Apply level-based commission percentage
+    let commissionPercentage = 0;
+    switch (level) {
+      case 1: // Direct referral
+        commissionPercentage = 0.15; // 15%
+        break;
+      case 2:
+        commissionPercentage = 0.10; // 10%
+        break;
+      case 3:
+        commissionPercentage = 0.05; // 5%
+        break;
+      default:
+        commissionPercentage = 0;
+    }
+
+    // Calculate commission in Rands
+    const randValue = packageValue * commissionPercentage;
+    // Convert to points (1 Rand = 100 points)
+    const points = Math.floor(randValue * 100);
+
+    console.log('Commission calculation result:', {
+      packageValue,
+      commissionPercentage,
+      randValue,
+      points
+    });
+
+    return { points, randValue };
+  }
+
 
 
   // Registration endpoint with referral commission handling
