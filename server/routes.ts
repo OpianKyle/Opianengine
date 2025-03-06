@@ -914,6 +914,46 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add the transactions endpoint
+  app.get("/api/customer/transactions", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const connection = await createConnection();
+    try {
+      console.log('Fetching transactions for user:', req.user.id);
+
+      const [transactions] = await connection.execute(
+        `SELECT 
+          t.*,
+          DATE_FORMAT(t.created_at, '%Y-%m-%dT%H:%i:%s.000Z') as formatted_date
+        FROM transactions t
+        WHERE t.user_id = ?
+        ORDER BY t.created_at DESC`,
+        [req.user.id]
+      );
+
+      console.log('Found transactions:', transactions.length);
+
+      // Transform the transactions data
+      const transformedTransactions = transactions.map((t: any) => ({
+        id: t.id,
+        points: t.points,
+        type: t.type,
+        description: t.description,
+        createdAt: t.formatted_date
+      }));
+
+      res.json(transformedTransactions);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      res.status(500).json({ error: 'Failed to fetch transactions' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   // Add proper error handling and validation for cash redemption
   app.post("/api/rewards/redeem-cash", async (req, res) => {
     if (!req.user) {
