@@ -17,6 +17,8 @@ import {
   FaEnvelope as EmailIcon,
   FaGem as PackageIcon
 } from "react-icons/fa6";
+import { PackageIcon as LucidePackageIcon } from "lucide-react";
+
 
 interface ReferralStats {
   referralCode: string;
@@ -75,7 +77,7 @@ const PackageEmblem = ({ type, count, totalReferrals, level }: {
 }) => (
   <div className="flex flex-col items-center space-y-2">
     <div className={`p-4 rounded-full ${packageColors[type as keyof typeof packageColors] || "bg-gray-200"}`}>
-      <PackageIcon className="h-6 w-6 text-white" />
+      <LucidePackageIcon className="h-6 w-6 text-white" />
     </div>
     <div className="text-center">
       <div className="font-semibold">{type}</div>
@@ -185,6 +187,52 @@ export default function ReferralsPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">My Referrals</h1>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Direct Referrals</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[400px]">
+            <div className="space-y-4">
+              {referralStats?.referralsByLevel[1]?.map((referral) => (
+                <div
+                  key={referral.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {referral.firstName} {referral.lastName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {referral.email}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Joined: {new Date(referral.createdAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Direct Referrals: {referral.directReferralCount}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="outline" className={packageColors[referral.selectedPackage as keyof typeof packageColors]}>
+                      Package: {referral.selectedPackage || 'None'}
+                    </Badge>
+                    <Badge variant="outline" className="bg-green-50">
+                      Commission: R{referral.commission.randValue}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+              {(!referralStats?.referralsByLevel[1] || referralStats.referralsByLevel[1].length === 0) && (
+                <p className="text-center text-muted-foreground py-4">
+                  No referrals yet. Share your referral link to get started!
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
       {[1, 2, 3].map(level => (
         <Card key={level}>
           <CardHeader>
@@ -282,52 +330,6 @@ export default function ReferralsPage() {
               </Card>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Direct Referrals</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-4">
-              {referralStats?.referralsByLevel[1]?.map((referral) => (
-                <div
-                  key={referral.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {referral.firstName} {referral.lastName}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {referral.email}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Joined: {new Date(referral.createdAt).toLocaleDateString()}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Direct Referrals: {referral.directReferralCount}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge variant="outline" className={packageColors[referral.selectedPackage as keyof typeof packageColors]}>
-                      Package: {referral.selectedPackage || 'None'}
-                    </Badge>
-                    <Badge variant="outline" className="bg-green-50">
-                      Commission: R{referral.commission.randValue}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-              {(!referralStats?.referralsByLevel[1] || referralStats.referralsByLevel[1].length === 0) && (
-                <p className="text-center text-muted-foreground py-4">
-                  No referrals yet. Share your referral link to get started!
-                </p>
-              )}
-            </div>
-          </ScrollArea>
         </CardContent>
       </Card>
 
