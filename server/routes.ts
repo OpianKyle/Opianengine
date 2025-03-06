@@ -29,45 +29,24 @@ const crypto = {
 
 // Helper function to get package price
 async function getPackagePrice(connection: any, packageName: string): Promise<number> {
-  // Ensure the package_premium_amounts table exists
-  await connection.execute(`
-    CREATE TABLE IF NOT EXISTS package_premium_amounts (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      package_name VARCHAR(50) NOT NULL UNIQUE,
-      amount DECIMAL(10,2) NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  // Check if data exists
-  const [rows] = await connection.execute(
-    'SELECT COUNT(*) as count FROM package_premium_amounts'
-  );
-
-  // Insert package prices if table is empty
-  if (rows[0].count === 0) {
-    await connection.execute(`
-      INSERT INTO package_premium_amounts (package_name, amount) VALUES 
-      ('BEGINNER', 275.00),
-      ('NOVICE', 385.00),
-      ('ACTIVE', 495.00),
-      ('PROFESSIONAL', 660.00),
-      ('EXPERT', 825.00)
-    `);
-  }
-
-  // Get package price
+  // Get package price from the table
   const [prices] = await connection.execute(
-    'SELECT amount FROM package_premium_amounts WHERE package_name = ?',
+    'SELECT premium_amount FROM package_premium_amounts WHERE package_type = ?',
     [packageName?.toUpperCase()]
   );
 
-  return prices.length > 0 ? Number(prices[0].amount) : 0;
+  return prices.length > 0 ? Number(prices[0].premium_amount) : 0;
 }
 
 // Helper function to calculate referral commission points
 async function calculateCommissionPoints(connection: any, packageName: string, level: number): Promise<{points: number, randValue: number}> {
   const packageValue = await getPackagePrice(connection, packageName);
+  
+  console.log('Package value for commission calculation:', {
+    packageName,
+    packageValue,
+    level
+  });
   
   // Apply level-based commission percentage
   let commissionPercentage = 0;
@@ -89,6 +68,13 @@ async function calculateCommissionPoints(connection: any, packageName: string, l
   const randValue = packageValue * commissionPercentage;
   // Convert to points (1 Rand = 100 points)
   const points = Math.floor(randValue * 100);
+
+  console.log('Commission calculation result:', {
+    packageValue,
+    commissionPercentage,
+    randValue,
+    points
+  });
 
   return { points, randValue };
 }

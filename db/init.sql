@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 ) ENGINE=InnoDB;
 
--- Create dependent tables that reference the base tables
 CREATE TABLE IF NOT EXISTS product_activities (
     id INT PRIMARY KEY AUTO_INCREMENT,
     product_id INT NOT NULL,
@@ -138,7 +137,16 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE TABLE IF NOT EXISTS package_premium_amounts (
     id INT PRIMARY KEY AUTO_INCREMENT,
     package_type ENUM('BEGINNER', 'NOVICE', 'ACTIVE', 'PROFESSIONAL', 'EXPERT') NOT NULL,
-    premium_amount INT NOT NULL,
+    premium_amount DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
 ) ENGINE=InnoDB;
+
+-- Insert default package premium amounts
+INSERT INTO package_premium_amounts (package_type, premium_amount) VALUES 
+    ('BEGINNER', 275.00),
+    ('NOVICE', 385.00),
+    ('ACTIVE', 495.00),
+    ('PROFESSIONAL', 660.00),
+    ('EXPERT', 825.00)
+ON DUPLICATE KEY UPDATE premium_amount = VALUES(premium_amount);
