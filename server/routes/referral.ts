@@ -36,7 +36,18 @@ const calculateCommission = async (connection: any, packageType: string, level: 
   }
 };
 
-// Shared logic for both endpoints
+// Helper function to get package prices
+const getPackagePrices = async (connection: any) => {
+  const [packagePrices] = await connection.execute(
+    'SELECT package_type, premium_amount FROM package_premium_amounts'
+  );
+  return packagePrices.reduce((acc: any, pkg: any) => {
+    acc[pkg.package_type] = pkg.premium_amount;
+    return acc;
+  }, {});
+};
+
+// Shared logic for getting referral info
 const getReferralInfo = async (userId: number) => {
   const connection = await createConnection();
   try {
@@ -63,50 +74,112 @@ const getReferralInfo = async (userId: number) => {
     }
     console.log('Using referral code:', referralCode);
 
-    // Get level 1 referrals
-    const [level1Referrals] = await connection.execute(`
+    // Get all levels of referrals
+    const [referrals] = await connection.execute(`
+      WITH RECURSIVE referral_tree AS (
+        -- Level 1 (direct referrals)
+        SELECT 
+          id,
+          first_name,
+          last_name,
+          email,
+          selected_package,
+          created_at,
+          referral_code,
+          1 as level
+        FROM users 
+        WHERE referred_by = ?
+
+        UNION ALL
+
+        -- Level 2 and 3
+        SELECT 
+          u.id,
+          u.first_name,
+          u.last_name,
+          u.email,
+          u.selected_package,
+          u.created_at,
+          u.referral_code,
+          rt.level + 1
+        FROM users u
+        INNER JOIN referral_tree rt ON u.referred_by = rt.referral_code
+        WHERE rt.level < 3
+      )
       SELECT 
-        u.id,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.selected_package,
-        u.created_at,
-        u.referral_code,
-        COUNT(r.id) as direct_referral_count
-      FROM users u
-      LEFT JOIN users r ON r.referred_by = u.referral_code
-      WHERE u.referred_by = ?
-      GROUP BY u.id, u.first_name, u.last_name, u.email, u.selected_package, u.created_at, u.referral_code
+        rt.*,
+        (SELECT COUNT(*) FROM users WHERE referred_by = rt.referral_code) as direct_referral_count
+      FROM referral_tree rt
+      ORDER BY rt.level, rt.created_at DESC
     `, [referralCode]);
 
-    // Transform level 1 referrals with commission calculations
-    const transformedReferrals = await Promise.all(
-      level1Referrals.map(async (ref: any) => {
-        const commission = await calculateCommission(connection, ref.selected_package, 1);
-        return {
-          id: ref.id,
-          firstName: ref.first_name,
-          lastName: ref.last_name,
-          email: ref.email,
-          selectedPackage: ref.selected_package,
-          createdAt: ref.created_at,
-          directReferralCount: ref.direct_referral_count || 0,
+    // Get package prices
+    const packagePrices = await getPackagePrices(connection);
+
+    // Transform and group referrals by level
+    const referralsByLevel = {};
+    const packageStatsByLevel = {};
+
+    for (const ref of referrals) {
+      const level = ref.level;
+      const commission = await calculateCommission(connection, ref.selected_package, level);
+
+      // Transform referral data
+      const transformedRef = {
+        id: ref.id,
+        firstName: ref.first_name,
+        lastName: ref.last_name,
+        email: ref.email,
+        selectedPackage: ref.selected_package,
+        createdAt: ref.created_at,
+        directReferralCount: ref.direct_referral_count,
+        commission: {
+          percentage: level === 1 ? 15 : level === 2 ? 10 : 5,
+          randValue: commission.toFixed(2),
+          points: Math.floor(commission * 100)
+        }
+      };
+
+      // Group by level
+      if (!referralsByLevel[level]) {
+        referralsByLevel[level] = [];
+      }
+      referralsByLevel[level].push(transformedRef);
+
+      // Calculate package stats
+      if (!packageStatsByLevel[level]) {
+        packageStatsByLevel[level] = {};
+      }
+
+      const packageType = ref.selected_package || 'UNKNOWN';
+      if (!packageStatsByLevel[level][packageType]) {
+        packageStatsByLevel[level][packageType] = {
+          count: 0,
+          totalReferrals: 0,
+          referralsByPackage: {
+            BEGINNER: 0,
+            NOVICE: 0,
+            ACTIVE: 0,
+            PROFESSIONAL: 0,
+            EXPERT: 0
+          },
           commission: {
-            percentage: 15,
-            randValue: commission.toFixed(2),
-            points: Math.floor(commission * 100)
+            percentage: level === 1 ? 15 : level === 2 ? 10 : 5,
+            baseAmount: packagePrices[packageType] || 0
           }
         };
-      })
-    );
+      }
+
+      packageStatsByLevel[level][packageType].count++;
+      packageStatsByLevel[level][packageType].totalReferrals += ref.direct_referral_count || 0;
+    }
 
     return {
       referralCode,
-      referralCount: level1Referrals.length,
-      referralsByLevel: {
-        1: transformedReferrals
-      }
+      referralCount: referrals.length,
+      packagePrices,
+      packageStatsByLevel,
+      referralsByLevel
     };
 
   } catch (error) {
@@ -152,27 +225,6 @@ router.get('/referrals', async (req, res) => {
       error: 'Failed to fetch referral data',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
-  }
-});
-
-router.get('/api/verify-referral/:code', async (req, res) => {
-  try {
-    const { code } = req.params;
-    console.log('Verifying referral code:', code);
-
-    const referrer = await db.query.users.findFirst({
-      where: eq(users.referralCode, code),
-      columns: {
-        id: true,
-        isEnabled: true,
-      }
-    });
-
-    console.log('Referral verification result:', { isValid: !!referrer?.isEnabled });
-    res.json({ isValid: !!referrer?.isEnabled });
-  } catch (error) {
-    console.error('Error verifying referral:', error);
-    res.status(500).json({ error: 'Failed to verify referral code' });
   }
 });
 

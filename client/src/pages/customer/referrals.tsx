@@ -49,12 +49,7 @@ interface ReferralStats {
       email: string;
       selectedPackage: string;
       createdAt: string;
-      level: number;
       directReferralCount: number;
-      packageStats: Array<{
-        package: string;
-        count: number;
-      }>;
       commission: {
         percentage: number;
         randValue: string;
@@ -164,16 +159,24 @@ export default function ReferralsPage() {
     }, 0);
   };
 
-  const badges = referralStats ?  referralBadges.map(badge => ({
-      ...badge,
-      earned: referralStats.referralCount >= badge.requirement,
-      progress: Math.min(referralStats.referralCount, badge.requirement)
+  const badges = referralStats ? referralBadges.map(badge => ({
+    ...badge,
+    earned: referralStats.referralCount >= badge.requirement,
+    progress: Math.min(referralStats.referralCount, badge.requirement)
   })) : [];
 
   if (error) {
     return (
       <div className="p-4">
         <p className="text-red-500">Error loading referral data. Please try again later.</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <p>Loading referral data...</p>
       </div>
     );
   }
@@ -282,85 +285,6 @@ export default function ReferralsPage() {
         </CardContent>
       </Card>
 
-      <Card className="bg-primary/5">
-        <CardHeader>
-          <CardTitle>Your Referral Link</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Share this link with others to earn referral points. You'll receive commission when they sign up and choose a package!
-          </p>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Input
-                value={referralLink}
-                readOnly
-                className="font-mono text-sm bg-background"
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={copyToClipboard}
-                className={copied ? "text-green-500" : ""}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex gap-2 justify-center">
-              {/* Social share buttons */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => window.open(socialShareUrls.twitter, '_blank')}
-                className="text-[#1DA1F2] hover:text-[#1DA1F2]/80"
-              >
-                <TwitterIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => window.open(socialShareUrls.facebook, '_blank')}
-                className="text-[#4267B2] hover:text-[#4267B2]/80"
-              >
-                <FacebookIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => window.open(socialShareUrls.linkedin, '_blank')}
-                className="text-[#0077B5] hover:text-[#0077B5]/80"
-              >
-                <LinkedInIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => window.open(socialShareUrls.whatsapp, '_blank')}
-                className="text-[#25D366] hover:text-[#25D366]/80"
-              >
-                <WhatsAppIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => window.open(socialShareUrls.telegram, '_blank')}
-                className="text-[#0088cc] hover:text-[#0088cc]/80"
-              >
-                <TelegramIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => window.open(socialShareUrls.email, '_blank')}
-                className="text-gray-600 hover:text-gray-800"
-              >
-                <EmailIcon className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle>Your Direct Referrals</CardTitle>
@@ -406,6 +330,7 @@ export default function ReferralsPage() {
           </ScrollArea>
         </CardContent>
       </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Achievement Badges</CardTitle>
