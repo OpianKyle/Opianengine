@@ -73,6 +73,83 @@ export function registerRoutes(app: Express): Server {
   // Mount referral routes
   app.use(referralRouter);
 
+  // Admin customers endpoint - get only regular customers
+  app.get("/api/admin/customers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get only regular customers (not admins or agents)
+      const [customers] = await connection.execute(
+        `SELECT u.*, 
+          COALESCE(pa.assignment_count, 0) as assignment_count,
+          GROUP_CONCAT(DISTINCT pa2.product_id) as assigned_products
+         FROM users u
+         LEFT JOIN (
+           SELECT user_id, COUNT(*) as assignment_count 
+           FROM product_assignments 
+           GROUP BY user_id
+         ) pa ON u.id = pa.user_id
+         LEFT JOIN product_assignments pa2 ON u.id = pa2.user_id
+         LEFT JOIN admin_users au ON u.id = au.user_id
+         WHERE au.user_id IS NULL 
+         AND u.is_agent = 0
+         GROUP BY u.id
+         ORDER BY u.created_at DESC`
+      );
+
+      // Transform the data
+      const transformedCustomers = customers.map((customer: any) => ({
+        id: customer.id,
+        email: customer.email,
+        firstName: customer.first_name,
+        lastName: customer.last_name,
+        phoneNumber: customer.phone_number,
+        isEnabled: Boolean(customer.is_enabled),
+        points: customer.points,
+        createdAt: customer.created_at,
+        selectedPackage: customer.selected_package,
+        assignmentCount: customer.assignment_count,
+        assignedProducts: customer.assigned_products ? 
+          customer.assigned_products.split(',').map(Number) : [],
+        // Additional customer fields
+        dateOfBirth: customer.date_of_birth,
+        gender: customer.gender,
+        occupation: customer.occupation,
+        industry: customer.industry,
+        address: customer.address,
+        city: customer.city,
+        postalCode: customer.postal_code,
+        bankName: customer.bank_name,
+        accountType: customer.account_type,
+        accountNumber: customer.account_number,
+        accountHolderName: customer.account_holder_name,
+        branchCode: customer.branch_code,
+        hasCreditCard: Boolean(customer.has_credit_card),
+        isSouthAfrican: Boolean(customer.is_south_african)
+      }));
+
+      res.json(transformedCustomers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   const httpServer = createServer(app);
   const wsServer = setupWebSocketServer(httpServer, sessionMiddleware);
 
