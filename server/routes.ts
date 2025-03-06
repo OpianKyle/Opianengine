@@ -27,6 +27,72 @@ const crypto = {
   }
 };
 
+// Helper function to get package price
+async function getPackagePrice(connection: any, packageName: string): Promise<number> {
+  // Ensure the package_premium_amounts table exists
+  await connection.execute(`
+    CREATE TABLE IF NOT EXISTS package_premium_amounts (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      package_name VARCHAR(50) NOT NULL UNIQUE,
+      amount DECIMAL(10,2) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Check if data exists
+  const [rows] = await connection.execute(
+    'SELECT COUNT(*) as count FROM package_premium_amounts'
+  );
+
+  // Insert package prices if table is empty
+  if (rows[0].count === 0) {
+    await connection.execute(`
+      INSERT INTO package_premium_amounts (package_name, amount) VALUES 
+      ('BEGINNER', 275.00),
+      ('NOVICE', 385.00),
+      ('ACTIVE', 495.00),
+      ('PROFESSIONAL', 660.00),
+      ('EXPERT', 825.00)
+    `);
+  }
+
+  // Get package price
+  const [prices] = await connection.execute(
+    'SELECT amount FROM package_premium_amounts WHERE package_name = ?',
+    [packageName?.toUpperCase()]
+  );
+
+  return prices.length > 0 ? Number(prices[0].amount) : 0;
+}
+
+// Helper function to calculate referral commission points
+async function calculateCommissionPoints(connection: any, packageName: string, level: number): Promise<{points: number, randValue: number}> {
+  const packageValue = await getPackagePrice(connection, packageName);
+  
+  // Apply level-based commission percentage
+  let commissionPercentage = 0;
+  switch (level) {
+    case 1: // Direct referral
+      commissionPercentage = 0.15; // 15%
+      break;
+    case 2:
+      commissionPercentage = 0.10; // 10%
+      break;
+    case 3:
+      commissionPercentage = 0.05; // 5%
+      break;
+    default:
+      commissionPercentage = 0;
+  }
+
+  // Calculate commission in Rands
+  const randValue = packageValue * commissionPercentage;
+  // Convert to points (1 Rand = 100 points)
+  const points = Math.floor(randValue * 100);
+
+  return { points, randValue };
+}
+
 export function registerRoutes(app: Express): Server {
   const MemoryStoreSession = MemoryStore(session);
   const sessionMiddleware = session({
@@ -47,54 +113,7 @@ export function registerRoutes(app: Express): Server {
   // Move setupAuth before defining routes that use passport
   setupAuth(app);
 
-  // Helper function to calculate referral commission points
-  function calculateCommissionPoints(packageName: string, level: number): {points: number, randValue: number} {
-    let packageValue = 0;
-    
-    // Get monetary value of package in Rands
-    switch (packageName?.toUpperCase()) {
-      case 'BEGINNER':
-        packageValue = 275; // R275
-        break;
-      case 'NOVICE':
-        packageValue = 385; // R385
-        break;
-      case 'ACTIVE':
-        packageValue = 495; // R495
-        break;
-      case 'PROFESSIONAL':
-        packageValue = 660; // R660
-        break;
-      case 'EXPERT':
-        packageValue = 825; // R825
-        break;
-      default:
-        packageValue = 0;
-    }
 
-    // Apply level-based commission percentage
-    let commissionPercentage = 0;
-    switch (level) {
-      case 1: // Direct referral
-        commissionPercentage = 0.15; // 15%
-        break;
-      case 2:
-        commissionPercentage = 0.10; // 10%
-        break;
-      case 3:
-        commissionPercentage = 0.05; // 5%
-        break;
-      default:
-        commissionPercentage = 0;
-    }
-
-    // Calculate commission in Rands
-    const randValue = packageValue * commissionPercentage;
-    // Convert to points (1 Rand = 100 points)
-    const points = Math.floor(randValue * 100);
-
-    return { points, randValue };
-  }
 
   // Registration endpoint with referral commission handling
   app.post("/api/register", async (req, res) => {
@@ -208,7 +227,7 @@ export function registerRoutes(app: Express): Server {
 
           // Process commission for each referrer
           for (const referrer of referrers) {
-            const commission = calculateCommissionPoints(selectedPackage, referrer.level);
+            const commission = await calculateCommissionPoints(connection, selectedPackage, referrer.level);
             
             if (commission.points > 0) {
               // Update referrer's points
