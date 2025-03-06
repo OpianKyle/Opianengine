@@ -189,78 +189,6 @@ export default function ReferralsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Your Direct Referrals</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-4">
-              {referralStats?.referralsByLevel[1]?.map((referral) => (
-                <div
-                  key={referral.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {referral.firstName} {referral.lastName}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {referral.email}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Joined: {new Date(referral.createdAt).toLocaleDateString()}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Direct Referrals: {referral.directReferralCount}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge variant="outline" className={packageColors[referral.selectedPackage as keyof typeof packageColors]}>
-                      Package: {referral.selectedPackage || 'None'}
-                    </Badge>
-                    <Badge variant="outline" className="bg-green-50">
-                      Commission: R{referral.commission.randValue}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-              {(!referralStats?.referralsByLevel[1] || referralStats.referralsByLevel[1].length === 0) && (
-                <p className="text-center text-muted-foreground py-4">
-                  No referrals yet. Share your referral link to get started!
-                </p>
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-
-      {[1, 2, 3].map(level => (
-        <Card key={level}>
-          <CardHeader>
-            <CardTitle>Level {level} Referral Stats</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Overview of your level {level} referrals by package type and their subsequent referrals.
-              </p>
-              <div className="grid grid-cols-5 gap-4">
-                {Object.entries(referralStats?.packageStatsByLevel[level] || {}).map(([packageType, stats]) => (
-                  <PackageEmblem
-                    key={packageType}
-                    type={packageType}
-                    count={stats.count}
-                    totalReferrals={stats.totalReferrals}
-                    level={level}
-                  />
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-
-      <Card>
-        <CardHeader>
           <CardTitle>Monthly Commission Summary</CardTitle>
         </CardHeader>
         <CardContent>
@@ -332,6 +260,78 @@ export default function ReferralsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Direct Referrals</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[400px]">
+            <div className="space-y-4">
+              {referralStats?.referralsByLevel[1]?.map((referral) => (
+                <div
+                  key={referral.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {referral.firstName} {referral.lastName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {referral.email}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Joined: {new Date(referral.createdAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Direct Referrals: {referral.directReferralCount}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="outline" className={packageColors[referral.selectedPackage as keyof typeof packageColors]}>
+                      Package: {referral.selectedPackage || 'None'}
+                    </Badge>
+                    <Badge className="bg-primary text-white">
+                      Commission: R{referral.commission.randValue}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+              {(!referralStats?.referralsByLevel[1] || referralStats.referralsByLevel[1].length === 0) && (
+                <p className="text-center text-muted-foreground py-4">
+                  No referrals yet. Share your referral link to get started!
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {[1, 2, 3].map(level => (
+        <Card key={level}>
+          <CardHeader>
+            <CardTitle>Level {level} Referral Stats</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Overview of your level {level} referrals by package type and their subsequent referrals.
+              </p>
+              <div className="grid grid-cols-5 gap-4">
+                {Object.entries(referralStats?.packageStatsByLevel[level] || {}).map(([packageType, stats]) => (
+                  <PackageEmblem
+                    key={packageType}
+                    type={packageType}
+                    count={stats.count}
+                    totalReferrals={stats.totalReferrals}
+                    level={level}
+                  />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
 
       <Card>
         <CardHeader>
