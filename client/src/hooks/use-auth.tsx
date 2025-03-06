@@ -53,6 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    // Handle session expiry by redirecting to home
+    onError: () => {
+      queryClient.setQueryData(["/api/user"], null);
+      window.location.href = '/'; // Changed from '/auth' to '/'
+    }
   });
 
   const loginMutation = useMutation({
@@ -132,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Clear all session storage on logout
       sessionStorage.clear();
-      window.location.href = '/auth';
+      window.location.href = '/'; // Changed from '/auth' to '/'
     },
     onError: (error: Error) => {
       toast({
