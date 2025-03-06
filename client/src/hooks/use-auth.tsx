@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: async (user) => {
       queryClient.setQueryData(["/api/user"], user);
+      // Show welcome message only here, removed from server-side
       toast({
         title: "Welcome back",
         description: `Logged in as ${user.firstName} ${user.lastName}`,
@@ -113,7 +114,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Please wait...",
       });
 
-      // Make the logout request first
       const res = await fetch("/api/logout", {
         method: "POST",
         credentials: 'include',
@@ -124,7 +124,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(error.error || "Failed to logout");
       }
 
-      // Then clean up after successful logout
       await handlePageTransition(async () => {
         cleanupWebSockets();
         queryClient.clear();
@@ -132,7 +131,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryClient.setQueryData(["/api/user"], null);
       });
 
-      // Force a hard reload to clear all client state
       window.location.href = '/auth';
     },
     onError: (error: Error) => {
