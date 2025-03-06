@@ -914,6 +914,99 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add proper error handling and validation for cash redemption
+  app.post("/api/rewards/redeem-cash", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const connection = await createConnection();
+    try {
+      console.log('Cash redemption request:', {
+        userId: req.user.id,
+        amount: req.body.amount
+      });
+
+      // Start transaction
+      await connection.beginTransaction();
+
+      try {
+        // Get user's current points
+        const [users] = await connection.execute(
+          'SELECT points FROM users WHERE id = ?',
+          [req.user.id]
+        );
+
+        if (!users || users.length === 0) {
+          throw new Error("User not found");
+        }
+
+        const user = users[0];
+        const redemptionAmount = Number(req.body.amount);
+        const pointsRequired = redemptionAmount * 100; // 1 ZAR = 100 points
+
+        console.log('Redemption calculation:', {
+          currentPoints: user.points,
+          pointsRequired,
+          redemptionAmount
+        });
+
+        // Validate points balance
+        if (user.points < pointsRequired) {
+          throw new Error("Insufficient points balance");
+        }
+
+        // Update user points
+        await connection.execute(
+          'UPDATE users SET points = points - ? WHERE id = ?',
+          [pointsRequired, req.user.id]
+        );
+
+        // Record the transaction
+        await connection.execute(
+          `INSERT INTO transactions (
+            user_id, points, type, description
+          ) VALUES (?, ?, ?, ?)`,
+          [
+            req.user.id,
+            -pointsRequired,
+            'CASH_REDEMPTION',
+            `Redeemed R${redemptionAmount.toFixed(2)} in cash`
+          ]
+        );
+
+        await connection.commit();
+
+        // Get updated points balance
+        const [updated] = await connection.execute(
+          'SELECT points FROM users WHERE id = ?',
+          [req.user.id]
+        );
+
+        console.log('Redemption successful:', {
+          userId: req.user.id,
+          newBalance: updated[0].points
+        });
+
+        res.json({
+          message: "Points redeemed successfully",
+          newBalance: updated[0].points
+        });
+
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error processing redemption:', error);
+      res.status(500).json({
+        error: error.message || "Failed to process redemption"
+      });
+    } finally {
+      await connection.end();
+    }
+  });
+
   app.put("/api/admin/users/:id/details", async (req, res) => {
     console.log('Update user details request:', {
       isAuthenticated: req.isAuthenticated(),
