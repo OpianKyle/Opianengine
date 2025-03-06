@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import passport from "passport"; // Add passport import
 import { setupAuth, checkAgent } from "./auth";
 import { setupWebSocketServer } from "./websocket";
 import { db } from "@db";
@@ -14,8 +15,8 @@ import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
-import referralRouter from './routes/referral';  // Import referral routes
-import { createConnection } from './db'; // Added import statement
+import referralRouter from './routes/referral';
+import { createConnection } from './db';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -43,9 +44,10 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.use(sessionMiddleware);
+  // Move setupAuth before defining routes that use passport
   setupAuth(app);
 
-  // Login endpoint
+  // Login endpoint uses imported passport instance
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
     console.log('Login successful:', {
       id: req.user.id,
