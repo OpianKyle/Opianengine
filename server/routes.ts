@@ -45,6 +45,28 @@ export function registerRoutes(app: Express): Server {
   app.use(sessionMiddleware);
   setupAuth(app);
 
+  // Login endpoint
+  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+    console.log('Login successful:', {
+      id: req.user.id,
+      email: req.user.email,
+      is_admin: req.user.is_admin,
+      is_super_admin: req.user.is_super_admin,
+      is_agent: req.user.is_agent
+    });
+
+    // Send only the user data without success message
+    res.json({
+      id: req.user.id,
+      email: req.user.email,
+      firstName: req.user.firstName,
+      lastName: req.user.lastName,
+      isAdmin: req.user.is_admin,
+      isSuperAdmin: req.user.is_super_admin,
+      isAgent: req.user.is_agent
+    });
+  });
+
   // Enhanced logout handling 
   app.post("/api/logout", (req, res) => {
     // Always clear the session cookie

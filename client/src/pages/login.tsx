@@ -21,14 +21,12 @@ export default function LoginPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
-  // Handle user redirection in useEffect
   useEffect(() => {
     if (user) {
-      navigate(user.isAdmin || user.isSuperAdmin ? '/admin' : '/dashboard');
+      navigate(user.is_admin || user.is_super_admin ? '/admin' : '/dashboard');
     }
   }, [user, navigate]);
 
-  // Show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -39,6 +37,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Login form submitted'); // Debug log
     setError("");
 
     if (!email || !password) {
@@ -47,27 +46,15 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await loginMutation.mutateAsync({
+      // Remove the toast from here since it's handled in the mutation
+      await loginMutation.mutateAsync({
         email,
         password
       });
-
-      if (response) {
-        toast({
-          title: "Success",
-          description: "Login successful",
-        });
-      } else {
-        throw new Error("Login failed");
-      }
+      // Success toast is now handled in useUser hook
     } catch (err) {
       console.error("Login error:", err);
       setError("Invalid email or password");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Invalid email or password",
-      });
     }
   };
 

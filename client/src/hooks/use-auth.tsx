@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext, useState } from "react";
+import { ReactNode, createContext, useContext, useState, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Silent user data fetch
   const {
     data: user,
     error,
@@ -49,20 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     retry: false,
     enabled: true,
-    staleTime: 5 * 60 * 1000,
-    onError: (error) => {
-      if (!(error instanceof Error && error.message.includes("log in"))) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    }
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
+      console.log('Login mutation started');
       setIsTransitioning(true);
       const res = await fetch("/api/login", {
         method: "POST",
@@ -77,12 +72,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return res.json();
     },
     onSuccess: async (user) => {
+      console.log('Login mutation success', { userId: user.id });
+
+      // Set user data in query cache
       queryClient.setQueryData(["/api/user"], user);
-      // Show welcome message only here, removed from server-side
-      toast({
-        title: "Welcome back",
-        description: `Logged in as ${user.firstName} ${user.lastName}`,
-      });
+
+      // Show welcome message only if not shown in this session
+      const sessionKey = `welcome_shown_${user.id}`;
+      if (!sessionStorage.getItem(sessionKey)) {
+        console.log('Showing welcome message');
+        toast({
+          title: "Welcome back",
+          description: `Logged in as ${user.firstName} ${user.lastName}`,
+        });
+        sessionStorage.setItem(sessionKey, 'true');
+      }
 
       await handlePageTransition(() => {
         if (user.isAgent) {
@@ -90,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else if (user.isAdmin || user.isSuperAdmin) {
           setLocation('/admin');
         } else {
-          setLocation('/');
+          setLocation('/dashboard');
         }
       });
     },
@@ -109,11 +113,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       setIsTransitioning(true);
-      toast({
-        title: "Logging out",
-        description: "Please wait...",
-      });
-
       const res = await fetch("/api/logout", {
         method: "POST",
         credentials: 'include',
@@ -131,6 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryClient.setQueryData(["/api/user"], null);
       });
 
+      // Clear all session storage on logout
+      sessionStorage.clear();
       window.location.href = '/auth';
     },
     onError: (error: Error) => {
