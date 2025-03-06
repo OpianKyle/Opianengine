@@ -8,52 +8,88 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { AchievementBadges, referralBadges, type AchievementBadge } from "@/components/ui/badges";
-import { 
+import {
   FaXTwitter as TwitterIcon,
   FaFacebook as FacebookIcon,
   FaLinkedin as LinkedInIcon,
   FaWhatsapp as WhatsAppIcon,
   FaTelegram as TelegramIcon,
-  FaEnvelope as EmailIcon
+  FaEnvelope as EmailIcon,
+  FaGem as PackageIcon
 } from "react-icons/fa6";
 
-interface Referral {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  createdAt: string;
-  selectedPackage: string | null;
+interface ReferralStats {
+  referralCode: string;
+  referralCount: number;
+  packagePrices: Record<string, number>;
+  directReferralsByPackage: {
+    [key: string]: {
+      count: number;
+      totalReferrals: number;
+      referralsByPackage: {
+        BEGINNER: number;
+        NOVICE: number;
+        ACTIVE: number;
+        PROFESSIONAL: number;
+        EXPERT: number;
+      };
+      commission: {
+        percentage: number;
+        baseAmount: number;
+      };
+    };
+  };
+  referralsByLevel: {
+    [key: number]: Array<{
+      id: number;
+      firstName: string;
+      lastName: string;
+      email: string;
+      selectedPackage: string;
+      createdAt: string;
+      level: number;
+      directReferralCount: number;
+      commission: {
+        percentage: number;
+        randValue: string;
+        points: number;
+      };
+    }>;
+  };
 }
 
-interface ReferralResponse {
-  level1Count: number;
-  level2Count: number;
-  level3Count: number;
-  referralCode: string;
-  referrals: {
-    level1: Referral[];
-    level2: Referral[];
-    level3: Referral[];
-  };
-  packageStats: {
-    level1: Record<string, { count: number; commission: number }>;
-    level2: Record<string, { count: number; commission: number }>;
-    level3: Record<string, { count: number; commission: number }>;
-  };
-  commission: {
-    level1Amount: number;
-    level2Amount: number;
-    level3Amount: number;
-    totalAmount: number;
-  };
-}
+const packageColors = {
+  BEGINNER: "bg-zinc-400",
+  NOVICE: "bg-blue-400",
+  ACTIVE: "bg-green-400",
+  PROFESSIONAL: "bg-purple-400",
+  EXPERT: "bg-amber-400"
+};
+
+const PackageEmblem = ({ type, count, totalReferrals }: {
+  type: string;
+  count: number;
+  totalReferrals: number;
+}) => (
+  <div className="flex flex-col items-center space-y-2">
+    <div className={`p-4 rounded-full ${packageColors[type as keyof typeof packageColors] || "bg-gray-200"}`}>
+      <PackageIcon className="h-6 w-6 text-white" />
+    </div>
+    <div className="text-center">
+      <div className="font-semibold">{type}</div>
+      <div className="text-sm text-muted-foreground">{count} referrals</div>
+      <div className="text-xs text-muted-foreground">
+        ({totalReferrals} sub-referrals)
+      </div>
+    </div>
+  </div>
+);
 
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const { data: referralStats, isLoading } = useQuery<ReferralResponse>({
+  const { data: referralStats, isLoading } = useQuery<ReferralStats>({
     queryKey: ["/api/customer/referrals"],
     queryFn: async () => {
       const response = await fetch("/api/customer/referrals", {
@@ -66,7 +102,7 @@ export default function ReferralsPage() {
     },
   });
 
-  const referralLink = referralStats?.referralCode 
+  const referralLink = referralStats?.referralCode
     ? `${window.location.origin}/?ref=${referralStats.referralCode}`
     : '';
 
@@ -101,18 +137,46 @@ export default function ReferralsPage() {
     }
   };
 
-  const badges = calculateBadgeProgress(referralStats?.level1Count || 0);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR'
-    }).format(amount / 100); // Assuming amount is in cents
+  // Calculate total commission for each level
+  const calculateLevelCommission = (level: number) => {
+    if (!referralStats?.referralsByLevel[level]) return 0;
+    return referralStats.referralsByLevel[level].reduce((sum, ref) => {
+      return sum + Number(ref.commission.randValue);
+    }, 0);
   };
+
+  const badges = referralStats ?  referralBadges.map(badge => ({
+      ...badge,
+      earned: referralStats.referralCount >= badge.requirement,
+      progress: Math.min(referralStats.referralCount, badge.requirement)
+  })) : [];
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">My Referrals</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Package Referral Stats</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Overview of your direct referrals by package type and their subsequent referrals.
+            </p>
+            <div className="grid grid-cols-5 gap-4">
+              {Object.entries(referralStats?.directReferralsByPackage || {}).map(([packageType, stats]) => (
+                <PackageEmblem
+                  key={packageType}
+                  type={packageType}
+                  count={stats.count}
+                  totalReferrals={stats.totalReferrals}
+                />
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -121,7 +185,7 @@ export default function ReferralsPage() {
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Your commission earnings for the current month based on your referral network's premium packages.
+              Your commission earnings based on your referral network's packages.
             </p>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
@@ -130,10 +194,10 @@ export default function ReferralsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {formatCurrency(referralStats?.commission.level1Amount || 0)}
+                    R{calculateLevelCommission(1).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    From {referralStats?.level1Count || 0} direct referrals
+                    From {referralStats?.referralsByLevel[1]?.length || 0} direct referrals
                   </p>
                 </CardContent>
               </Card>
@@ -144,10 +208,10 @@ export default function ReferralsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {formatCurrency(referralStats?.commission.level2Amount || 0)}
+                    R{calculateLevelCommission(2).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    From {referralStats?.level2Count || 0} indirect referrals
+                    From {referralStats?.referralsByLevel[2]?.length || 0} indirect referrals
                   </p>
                 </CardContent>
               </Card>
@@ -158,10 +222,10 @@ export default function ReferralsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {formatCurrency(referralStats?.commission.level3Amount || 0)}
+                    R{calculateLevelCommission(3).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    From {referralStats?.level3Count || 0} level 3 referrals
+                    From {referralStats?.referralsByLevel[3]?.length || 0} level 3 referrals
                   </p>
                 </CardContent>
               </Card>
@@ -172,7 +236,11 @@ export default function ReferralsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-primary">
-                    {formatCurrency(referralStats?.commission.totalAmount || 0)}
+                    R{(
+                      calculateLevelCommission(1) +
+                      calculateLevelCommission(2) +
+                      calculateLevelCommission(3)
+                    ).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Paid out monthly
@@ -184,25 +252,13 @@ export default function ReferralsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Achievement Badges</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Earn badges by growing your referral network. Each badge represents a milestone in your journey!
-          </p>
-          <AchievementBadges badges={badges} />
-        </CardContent>
-      </Card>
-
       <Card className="bg-primary/5">
         <CardHeader>
           <CardTitle>Your Referral Link</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Share this link with others to earn referral points. You'll receive points when they sign up and start participating!
+            Share this link with others to earn referral points. You'll receive commission when they sign up and choose a package!
           </p>
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -221,6 +277,7 @@ export default function ReferralsPage() {
               </Button>
             </div>
             <div className="flex gap-2 justify-center">
+              {/* Social share buttons */}
               <Button
                 variant="outline"
                 size="icon"
@@ -281,7 +338,7 @@ export default function ReferralsPage() {
         <CardContent>
           <ScrollArea className="h-[400px]">
             <div className="space-y-4">
-              {referralStats?.referrals.level1.map((referral) => (
+              {referralStats?.referralsByLevel[1]?.map((referral) => (
                 <div
                   key={referral.id}
                   className="flex items-center justify-between p-4 border rounded-lg"
@@ -296,15 +353,21 @@ export default function ReferralsPage() {
                     <p className="text-sm text-muted-foreground">
                       Joined: {new Date(referral.createdAt).toLocaleDateString()}
                     </p>
+                    <p className="text-sm text-muted-foreground">
+                      Direct Referrals: {referral.directReferralCount}
+                    </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <Badge variant="outline">
+                    <Badge variant="outline" className={packageColors[referral.selectedPackage as keyof typeof packageColors]}>
                       Package: {referral.selectedPackage || 'None'}
+                    </Badge>
+                    <Badge variant="outline" className="bg-green-50">
+                      Commission: R{referral.commission.randValue}
                     </Badge>
                   </div>
                 </div>
               ))}
-              {(!referralStats?.referrals.level1 || referralStats.referrals.level1.length === 0) && (
+              {(!referralStats?.referralsByLevel[1] || referralStats.referralsByLevel[1].length === 0) && (
                 <p className="text-center text-muted-foreground py-4">
                   No referrals yet. Share your referral link to get started!
                 </p>
@@ -313,14 +376,17 @@ export default function ReferralsPage() {
           </ScrollArea>
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Achievement Badges</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Earn badges by growing your referral network. Each badge represents a milestone in your journey!
+          </p>
+          <AchievementBadges badges={badges} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-const calculateBadgeProgress = (totalReferrals: number): AchievementBadge[] => {
-  return referralBadges.map(badge => ({
-    ...badge,
-    earned: totalReferrals >= badge.requirement,
-    progress: Math.min(totalReferrals, badge.requirement)
-  }));
-};

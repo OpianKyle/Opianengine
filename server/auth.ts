@@ -4,13 +4,14 @@ import { type Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import memorystore from 'memorystore';
+import { db } from "@db"; // Assuming this import is correct and available
+import mysql from 'mysql2/promise';
 import { JWT_SECRET } from './config';
 import jwt from 'jsonwebtoken';
 import { createConnection } from './db';
+import { MemoryStore } from 'express-session';
 
 const scryptAsync = promisify(scrypt);
-const MemoryStore = memorystore(session);
 
 const crypto = {
   async hashPassword(password: string) {
@@ -42,110 +43,131 @@ const crypto = {
 };
 
 export function setupAuth(app: Express) {
-  app.use(session({
+  // Configure session middleware with debug logging
+  const sessionConfig = {
     secret: process.env.SESSION_SECRET!,
     cookie: {
       maxAge: 86400000,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
+      sameSite: 'lax',
+      path: '/'
     },
     store: new MemoryStore({
       checkPeriod: 86400000
     }),
-    resave: false,
+    resave: true,
     saveUninitialized: false,
     name: 'session'
-  }));
+  };
 
+  console.log('Setting up session with config:', {
+    ...sessionConfig,
+    secret: '[REDACTED]',
+    store: 'MemoryStore'
+  });
+
+  app.use(session(sessionConfig));
   app.use(passport.initialize());
   app.use(passport.session());
 
-  passport.use(new LocalStrategy(
-    { usernameField: 'email', passwordField: 'password' },
-    async (email, password, done) => {
-      console.log('Login attempt:', { email });
-      const connection = await createConnection();
-      try {
-        // Get user with all roles
-        const [users] = await connection.execute(
-          `SELECT u.*, 
-           CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
-           FROM users u
-           LEFT JOIN admin_users au ON u.id = au.user_id
-           WHERE u.email = ?`,
-          [email]
-        );
+  // Add session debug middleware
+  app.use((req, res, next) => {
+    console.log('Session debug:', {
+      hasSession: !!req.session,
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated?.(),
+      user: req.user ? { id: (req.user as any).id } : null,
+      cookies: req.headers.cookie
+    });
+    next();
+  });
 
-        if (!users || users.length === 0) {
-          console.log('User not found:', { email });
-          return done(null, false, { message: 'Invalid email or password' });
+  // Configure authentication strategy
+  passport.use(
+    new LocalStrategy(
+      { usernameField: 'email', passwordField: 'password' },
+      async (email, password, done) => {
+        console.log('Login attempt:', { email });
+        const connection = await createConnection();
+        try {
+          // Get user with all roles
+          const [users] = await connection.execute(
+            `SELECT u.*, 
+             CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
+             CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+             FROM users u
+             LEFT JOIN admin_users au ON u.id = au.user_id
+             WHERE u.email = ?`,
+            [email]
+          );
+
+          if (!users || users.length === 0) {
+            console.log('User not found:', { email });
+            return done(null, false, { message: 'Invalid email or password' });
+          }
+
+          const user = users[0];
+          console.log('Found user:', {
+            id: user.id,
+            email: user.email,
+            isAdmin: user.is_admin,
+            isSuperAdmin: user.is_super_admin
+          });
+
+          // Verify password
+          const isValid = await crypto.verifyPassword(password, user.password);
+          if (!isValid) {
+            console.log('Invalid password for user:', { id: user.id, email });
+            return done(null, false, { message: 'Invalid email or password' });
+          }
+
+          if (!user.is_enabled) {
+            console.log('Account disabled:', { id: user.id, email });
+            return done(null, false, { message: 'Account is disabled' });
+          }
+
+          // Transform user object
+          const { password: _, ...safeUser } = user;
+          const transformedUser = {
+            ...safeUser,
+            id: user.id,
+            email: user.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            phoneNumber: user.phone_number,
+            is_admin: Boolean(user.is_admin),
+            is_super_admin: Boolean(user.is_super_admin),
+            is_agent: Boolean(user.is_agent),
+            is_enabled: Boolean(user.is_enabled)
+          };
+
+          console.log('Login successful:', {
+            id: transformedUser.id,
+            email: transformedUser.email,
+            isAdmin: transformedUser.is_admin,
+            isSuperAdmin: transformedUser.is_super_admin
+          });
+
+          return done(null, transformedUser);
+        } catch (error) {
+          console.error('Authentication error:', error);
+          return done(error);
+        } finally {
+          await connection.end();
         }
-
-        const user = users[0];
-        console.log('Found user:', {
-          id: user.id,
-          email: user.email,
-          isAgent: user.is_agent,
-          isAdmin: user.is_admin,
-          isSuperAdmin: user.is_super_admin
-        });
-
-        // Verify password
-        const isValid = await crypto.verifyPassword(password, user.password);
-        if (!isValid) {
-          console.log('Invalid password for user:', { id: user.id, email });
-          return done(null, false, { message: 'Invalid email or password' });
-        }
-
-        if (!user.is_enabled) {
-          console.log('Account disabled:', { id: user.id, email });
-          return done(null, false, { message: 'Account is disabled' });
-        }
-
-        // Transform user object 
-        const { password: _, ...safeUser } = user;
-        const transformedUser = {
-          ...safeUser,
-          id: user.id,
-          email: user.email,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          phoneNumber: user.phone_number,
-          is_admin: Boolean(user.is_admin),
-          is_super_admin: Boolean(user.is_super_admin),
-          is_agent: Boolean(user.is_agent),
-          is_enabled: Boolean(user.is_enabled)
-        };
-
-        console.log('Login successful:', {
-          id: transformedUser.id,
-          email: transformedUser.email,
-          is_admin: transformedUser.is_admin,
-          is_super_admin: transformedUser.is_super_admin,
-          is_agent: transformedUser.is_agent
-        });
-
-        return done(null, transformedUser);
-      } catch (error) {
-        console.error('Authentication error:', error);
-        return done(error);
-      } finally {
-        await connection.end();
       }
-    }
-  ));
+    )
+  );
 
-  passport.serializeUser((user, done) => {
-    console.log('Serializing user:', user.id);
+  passport.serializeUser((user: any, done) => {
+    console.log('Serializing user:', { id: user.id });
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
+    console.log('Deserializing user:', { id });
     const connection = await createConnection();
     try {
-      console.log('Deserializing user:', id);
-
       const [users] = await connection.execute(
         `SELECT u.*, 
          CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
@@ -156,13 +178,12 @@ export function setupAuth(app: Express) {
         [id]
       );
 
-      const user = users[0];
-      if (!user) {
-        console.log('User not found during deserialization:', id);
+      if (!users || users.length === 0) {
+        console.log('User not found during deserialization:', { id });
         return done(null, false);
       }
 
-      // Transform user object with proper type casting
+      const user = users[0];
       const { password: _, ...safeUser } = user;
       const transformedUser = {
         ...safeUser,
@@ -180,9 +201,8 @@ export function setupAuth(app: Express) {
       console.log('User deserialized:', {
         id: transformedUser.id,
         email: transformedUser.email,
-        is_admin: transformedUser.is_admin,
-        is_super_admin: transformedUser.is_super_admin,
-        is_agent: transformedUser.is_agent
+        isAdmin: transformedUser.is_admin,
+        isSuperAdmin: transformedUser.is_super_admin
       });
 
       done(null, transformedUser);
@@ -194,6 +214,25 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Add API routes
+  app.get("/api/user", (req, res) => {
+    console.log('GET /api/user request:', {
+      isAuthenticated: req.isAuthenticated?.(),
+      user: req.user ? { id: (req.user as any).id } : null,
+      sessionID: req.sessionID,
+      cookies: req.headers.cookie
+    });
+
+    if (!req.isAuthenticated()) {
+      console.log('User not authenticated');
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    console.log('Returning user data:', req.user);
+    res.json(req.user);
+  });
+
+  // Login endpoint
   app.post("/api/login", (req, res, next) => {
     console.log('Login request received:', { email: req.body.email });
 
@@ -215,11 +254,9 @@ export function setupAuth(app: Express) {
         }
 
         console.log('Login successful:', {
-          id: user.id,
-          email: user.email,
-          is_admin: user.is_admin,
-          is_super_admin: user.is_super_admin,
-          is_agent: user.is_agent
+          id: (user as any).id,
+          email: (user as any).email,
+          sessionID: req.sessionID
         });
 
         res.json(user);
@@ -227,12 +264,48 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
+  // Enhanced logout handling
+  app.post("/api/logout", (req, res) => {
+    console.log('Logout request received:', {
+      sessionID: req.sessionID,
+      user: req.user ? { id: (req.user as any).id } : null
+    });
 
-    res.json(req.user);
+    // Clear all cookies
+    res.clearCookie('connect.sid', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    res.clearCookie('session', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    // Destroy the session
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+        }
+        console.log('Session destroyed successfully');
+
+        req.logout((err) => {
+          if (err) {
+            console.error('Error during passport logout:', err);
+          }
+          console.log('Passport logout successful');
+          res.status(200).json({ message: "Logged out successfully" });
+        });
+      });
+    } else {
+      console.log('No session to destroy');
+      res.status(200).json({ message: "Logged out successfully" });
+    }
   });
 
   // Register route 
