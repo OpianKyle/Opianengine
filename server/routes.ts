@@ -47,6 +47,263 @@ export function registerRoutes(app: Express): Server {
   // Move setupAuth before defining routes that use passport
   setupAuth(app);
 
+  // Helper function to calculate referral commission points
+  function calculateCommissionPoints(packageName: string, level: number): number {
+    let basePoints = 0;
+    
+    // Get base points from package
+    switch (packageName?.toUpperCase()) {
+      case 'BEGINNER':
+        basePoints = 5000;
+        break;
+      case 'NOVICE':
+        basePoints = 10000;
+        break;
+      case 'ACTIVE':
+        basePoints = 15000;
+        break;
+      case 'PROFESSIONAL':
+        basePoints = 20000;
+        break;
+      case 'EXPERT':
+        basePoints = 25000;
+        break;
+      default:
+        basePoints = 0;
+    }
+
+    // Apply level-based commission percentage
+    let commissionPercentage = 0;
+    switch (level) {
+      case 1: // Direct referral
+        commissionPercentage = 0.15; // 15%
+        break;
+      case 2:
+        commissionPercentage = 0.10; // 10%
+        break;
+      case 3:
+        commissionPercentage = 0.05; // 5%
+        break;
+      default:
+        commissionPercentage = 0;
+    }
+
+    return Math.floor(basePoints * commissionPercentage);
+  }
+
+  // Registration endpoint with referral commission handling
+  app.post("/api/register", async (req, res) => {
+    const connection = await createConnection();
+    try {
+      console.log('Registration attempt with data:', {
+        ...req.body,
+        password: '[REDACTED]'
+      });
+
+      // Check for existing user
+      const [existingUsers] = await connection.execute(
+        'SELECT id FROM users WHERE email = ?',
+        [req.body.email]
+      );
+
+      if ((existingUsers as any[]).length > 0) {
+        return res.status(400).json({
+          error: "This email address is already registered"
+        });
+      }
+
+      const hashedPassword = await crypto.hash(req.body.password);
+      const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
+
+      // Calculate initial points based on selected package
+      let initialPoints = 0;
+      const selectedPackage = req.body.selectedPackage?.toUpperCase();
+      console.log('Processing package activation:', { selectedPackage });
+
+      switch (selectedPackage) {
+        case 'BEGINNER':
+          initialPoints = 5000;
+          break;
+        case 'NOVICE':
+          initialPoints = 10000;
+          break;
+        case 'ACTIVE':
+          initialPoints = 15000;
+          break;
+        case 'PROFESSIONAL':
+          initialPoints = 20000;
+          break;
+        case 'EXPERT':
+          initialPoints = 25000;
+          break;
+        default:
+          initialPoints = 0;
+      }
+
+      await connection.beginTransaction();
+
+      try {
+        // Create new user
+        const [userResult] = await connection.execute(
+          `INSERT INTO users (
+            email, password, first_name, last_name, 
+            phone_number, is_enabled, points, referral_code, 
+            referred_by, selected_package
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            req.body.email,
+            hashedPassword,
+            req.body.firstName,
+            req.body.lastName,
+            req.body.mobileNumber,
+            1, // is_enabled
+            initialPoints,
+            newReferralCode,
+            req.body.referralCode || null,
+            selectedPackage
+          ]
+        );
+
+        const userId = (userResult as any).insertId;
+
+        // Handle referral commissions if user was referred
+        if (req.body.referralCode) {
+          // Get referrer chain (up to 3 levels)
+          const [referrers] = await connection.execute(
+            `WITH RECURSIVE referral_chain AS (
+              -- Base case: direct referrer (level 1)
+              SELECT 
+                id, 
+                referred_by,
+                1 as level
+              FROM users 
+              WHERE referral_code = ?
+              
+              UNION ALL
+              
+              -- Recursive case: find higher level referrers
+              SELECT 
+                u.id,
+                u.referred_by,
+                rc.level + 1
+              FROM users u
+              INNER JOIN referral_chain rc ON u.referral_code = rc.referred_by
+              WHERE rc.level < 3
+            )
+            SELECT 
+              rc.*,
+              u.email,
+              u.first_name,
+              u.last_name
+            FROM referral_chain rc
+            JOIN users u ON rc.id = u.id
+            ORDER BY rc.level`,
+            [req.body.referralCode]
+          );
+
+          // Process commission for each referrer
+          for (const referrer of referrers) {
+            const commissionPoints = calculateCommissionPoints(selectedPackage, referrer.level);
+            
+            if (commissionPoints > 0) {
+              // Update referrer's points
+              await connection.execute(
+                'UPDATE users SET points = points + ? WHERE id = ?',
+                [commissionPoints, referrer.id]
+              );
+
+              // Record commission transaction
+              await connection.execute(
+                `INSERT INTO transactions (
+                  user_id, points, type, description
+                ) VALUES (?, ?, ?, ?)`,
+                [
+                  referrer.id,
+                  commissionPoints,
+                  'REFERRAL_COMMISSION',
+                  `Level ${referrer.level} referral commission from ${req.body.email} (${selectedPackage} package)`
+                ]
+              );
+
+              console.log('Referral commission processed:', {
+                referrerId: referrer.id,
+                referrerEmail: referrer.email,
+                level: referrer.level,
+                points: commissionPoints,
+                package: selectedPackage
+              });
+            }
+          }
+        }
+
+        // Record the initial points transaction
+        if (initialPoints > 0) {
+          await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description
+            ) VALUES (?, ?, ?, ?)`,
+            [
+              userId,
+              initialPoints,
+              'WELCOME_BONUS',
+              `Welcome bonus points for ${selectedPackage} package`
+            ]
+          );
+        }
+
+        await connection.commit();
+
+        // Fetch complete user data
+        const [newUserCheck] = await connection.execute(
+          'SELECT * FROM users WHERE id = ?',
+          [userId]
+        );
+
+        const newUser = newUserCheck[0];
+        if (!newUser) {
+          throw new Error("Failed to retrieve created user");
+        }
+
+        const adminStatus = await checkUserAdminStatus(userId);
+        const { password: _, ...safeUser } = newUser;
+
+        const transformedUser = {
+          ...safeUser,
+          is_admin: adminStatus.isAdmin,
+          is_super_admin: adminStatus.isSuperAdmin,
+          is_enabled: Boolean(safeUser.is_enabled),
+          is_south_african: Boolean(safeUser.is_south_african),
+          has_credit_card: Boolean(safeUser.has_credit_card)
+        };
+
+        // Log the user in after successful registration
+        req.login(transformedUser, (err) => {
+          if (err) {
+            console.error('Login error after registration:', err);
+            return res.status(500).json({ error: "Registration successful but login failed" });
+          }
+
+          res.status(201).json(transformedUser);
+        });
+
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      if (!res.headersSent) {
+        return res.status(500).json({
+          error: "Registration failed. Please try again.",
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+      }
+    } finally {
+      await connection.end();
+    }
+  });
+
   // Login endpoint uses imported passport instance
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
     console.log('Login successful:', {
