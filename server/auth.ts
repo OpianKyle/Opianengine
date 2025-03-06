@@ -7,7 +7,7 @@ import { promisify } from "util";
 import memorystore from 'memorystore';
 import { JWT_SECRET } from './config';
 import jwt from 'jsonwebtoken';
-import { createConnection } from './db';
+import { pool } from './db';  // Use pool instead of createConnection
 
 const scryptAsync = promisify(scrypt);
 const MemoryStore = memorystore(session);
@@ -64,7 +64,7 @@ export function setupAuth(app: Express) {
     { usernameField: 'email', passwordField: 'password' },
     async (email, password, done) => {
       console.log('Login attempt:', { email });
-      const connection = await createConnection();
+      const connection = await pool.getConnection();
       try {
         // Get user with all roles
         const [users] = await connection.execute(
@@ -131,7 +131,7 @@ export function setupAuth(app: Express) {
         console.error('Authentication error:', error);
         return done(error);
       } finally {
-        await connection.end();
+        connection.release(); // Release connection back to pool
       }
     }
   ));
@@ -142,7 +142,7 @@ export function setupAuth(app: Express) {
   });
 
   passport.deserializeUser(async (id: number, done) => {
-    const connection = await createConnection();
+    const connection = await pool.getConnection();
     try {
       console.log('Deserializing user:', id);
 
@@ -190,7 +190,7 @@ export function setupAuth(app: Express) {
       console.error('Deserialization error:', error);
       done(error);
     } finally {
-      await connection.end();
+      connection.release(); // Release connection back to pool
     }
   });
 
@@ -237,7 +237,7 @@ export function setupAuth(app: Express) {
 
   // Register route 
   app.post("/api/register", async (req, res) => {
-    const connection = await createConnection();
+    const connection = await pool.getConnection();
     try {
       console.log('Registration attempt with data:', {
         ...req.body,
@@ -440,13 +440,13 @@ export function setupAuth(app: Express) {
         });
       }
     } finally {
-      await connection.end();
+      connection.release(); // Release connection back to pool
     }
   });
 
   // Check for existing super admin
   async function checkForSuperAdmin() {
-    const connection = await createConnection();
+    const connection = await pool.getConnection();
     try {
       console.log('Checking for existing super admin...');
       const [rows] = await connection.execute(
@@ -461,7 +461,7 @@ export function setupAuth(app: Express) {
       console.error('Error checking for super admin:', error);
       return false;
     } finally {
-      await connection.end();
+      connection.release(); // Release connection back to pool
     }
   }
 
@@ -469,8 +469,8 @@ export function setupAuth(app: Express) {
   return app;
 }
 
-async function checkUserAdminStatus(userId: number) {
-  const connection = await createConnection();
+export async function checkUserAdminStatus(userId: number) {
+  const connection = await pool.getConnection();
   try {
     console.log('Checking admin status for user:', userId);
     const [rows] = await connection.execute(
@@ -494,7 +494,7 @@ async function checkUserAdminStatus(userId: number) {
     console.error('Error checking admin status:', error);
     return { isAdmin: false, isSuperAdmin: false };
   } finally {
-    await connection.end();
+    connection.release(); // Release connection back to pool
   }
 }
 
@@ -620,24 +620,26 @@ export async function verifySession(req: Request): Promise<any> {
 
           console.log('Found user ID in session:', userId);
 
-          const connection = await createConnection();
-          const [user] = await connection.execute(
-            'SELECT * FROM users WHERE id = ?',
-            [userId]
-          );
-          await connection.end();
+          const connection = await pool.getConnection();
+          try {
+            const [user] = await connection.execute(
+              'SELECT * FROM users WHERE id = ?',
+              [userId]
+            );
 
-          if (!user) {
-            console.log('User not found in database');
-            resolve(null);
-            return;
+            if (!user || !user[0]) {
+              console.log('User not found in database');
+              resolve(null);
+              return;
+            }
+
+            const adminStatus = await checkUserAdminStatus(userId);
+            const { password: _, ...safeUser } = user[0];
+            console.log('Session verified for user:', safeUser.id);
+            resolve({ ...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin });
+          } finally {
+            connection.release(); // Release connection back to pool
           }
-
-          const adminStatus = await checkUserAdminStatus(userId);
-
-          const { password: _, ...safeUser } = user[0];
-          console.log('Session verified for user:', safeUser.id);
-          resolve({ ...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin });
         } catch (error) {
           console.error('Error verifying session:', error);
           resolve(null);
@@ -656,25 +658,27 @@ export async function checkAdmin(req: Request, res: Response, next: NextFunction
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await createConnection();
-    const [adminCheck] = await connection.execute(
-      'SELECT role_type FROM admin_users WHERE user_id = ?',
-      [req.session.passport.user]
-    );
-    await connection.end();
+    const connection = await pool.getConnection();
+    try {
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.session.passport.user]
+      );
 
-    if (!adminCheck || (adminCheck as any[]).length === 0) {
-      return res.status(403).json({ error: "Admin access required" });
+      if (!adminCheck || (adminCheck as any[]).length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      next();
+    } finally {
+      connection.release(); // Release connection back to pool
     }
-
-    next();
   } catch (error) {
     console.error('Error in admin check:', error);
     res.status(500).json({ error: "Internal server error" });
   }
 }
 
-// Add debug logging to checkAgent middleware
 export async function checkAgent(req: Request, res: Response, next: NextFunction) {
   try {
     console.log('Running agent check middleware:', {
@@ -692,7 +696,7 @@ export async function checkAgent(req: Request, res: Response, next: NextFunction
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await createConnection();
+    const connection = await pool.getConnection();
     try {
       // Check if user exists and is an agent
       const [users] = await connection.execute(
@@ -725,7 +729,7 @@ export async function checkAgent(req: Request, res: Response, next: NextFunction
       });
       next();
     } finally {
-      await connection.end();
+      connection.release(); // Release connection back to pool
     }
   } catch (error) {
     console.error('Error in agent check:', error);
@@ -739,7 +743,7 @@ process.on('uncaughtException', (err) => {
   console.error('Stack trace:', err.stack);
 });
 
-//Helper function (assuming it exists elsewhere or needs to be added)
+//Helper function
 function parseCookie(cookieString: string | undefined): { [key: string]: string } {
   if (!cookieString) return {};
   const cookies: { [key: string]: string } = {};

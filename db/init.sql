@@ -142,3 +142,12 @@ CREATE TABLE IF NOT EXISTS package_premium_amounts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
 ) ENGINE=InnoDB;
+
+-- Add performance-optimizing indexes
+ALTER TABLE users ADD INDEX idx_user_created (created_at);
+ALTER TABLE users ADD INDEX idx_user_email (email);
+ALTER TABLE product_assignments ADD INDEX idx_product_assignments_user (user_id);
+ALTER TABLE product_assignments ADD INDEX idx_product_assignments_product (product_id);
+ALTER TABLE admin_logs ADD INDEX idx_admin_logs_created (created_at);
+ALTER TABLE admin_logs ADD INDEX idx_admin_logs_admin (admin_id);
+ALTER TABLE admin_logs ADD INDEX idx_admin_logs_target (target_user_id);
