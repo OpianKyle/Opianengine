@@ -57,7 +57,6 @@ router.get('/referrals', async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Generate or retrieve referral code
     let referralCode = userInfo[0].referral_code;
     if (!referralCode) {
       referralCode = `REF${req.user.id}${Date.now().toString(36)}`;
@@ -68,29 +67,63 @@ router.get('/referrals', async (req, res) => {
     }
     console.log('Using referral code:', referralCode);
 
-    // Get direct referrals with their package info
+    // Get referrals up to level 3 with package info
     const [referrals] = await connection.execute(`
+      WITH RECURSIVE referral_chain AS (
+        -- Level 1 (direct referrals)
+        SELECT 
+          id,
+          first_name,
+          last_name,
+          email,
+          selected_package,
+          created_at,
+          referral_code,
+          1 as level
+        FROM users 
+        WHERE referred_by = ?
+
+        UNION ALL
+
+        -- Level 2 and 3
+        SELECT 
+          u.id,
+          u.first_name,
+          u.last_name,
+          u.email,
+          u.selected_package,
+          u.created_at,
+          u.referral_code,
+          rc.level + 1
+        FROM users u
+        INNER JOIN referral_chain rc ON u.referred_by = rc.referral_code
+        WHERE rc.level < 3
+      )
       SELECT 
-        u.id,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.selected_package,
-        u.created_at,
-        COUNT(r.id) as direct_referral_count,
-        p.premium_amount as package_amount
-      FROM users u
-      LEFT JOIN users r ON r.referred_by = u.referral_code
-      LEFT JOIN package_premium_amounts p ON p.package_type = u.selected_package
-      WHERE u.referred_by = ?
-      GROUP BY u.id, u.first_name, u.last_name, u.email, u.selected_package, 
-               u.created_at, p.premium_amount`,
-      [referralCode]
-    );
+        rc.*,
+        pp.premium_amount as package_amount,
+        (
+          SELECT COUNT(*) 
+          FROM users u2 
+          WHERE u2.referred_by = rc.referral_code
+        ) as direct_referral_count,
+        (
+          SELECT JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'package', u3.selected_package,
+              'count', COUNT(*)
+            )
+          )
+          FROM users u3
+          WHERE u3.referred_by = rc.referral_code
+          GROUP BY u3.selected_package
+        ) as package_stats
+      FROM referral_chain rc
+      LEFT JOIN package_premium_amounts pp ON pp.package_type = rc.selected_package
+      ORDER BY rc.level, rc.created_at DESC
+    `, [referralCode]);
 
-    console.log('Found referrals:', { count: referrals.length });
-
-    // Get package prices for display
+    // Get package prices
     const [packagePrices] = await connection.execute(
       'SELECT package_type, premium_amount FROM package_premium_amounts'
     );
@@ -103,7 +136,13 @@ router.get('/referrals', async (req, res) => {
     // Transform referrals with commission calculations
     const transformedReferrals = await Promise.all(
       referrals.map(async (ref: any) => {
-        const commission = await calculateCommission(connection, ref.selected_package, 1);
+        const commission = await calculateCommission(connection, ref.selected_package, ref.level);
+
+        // Parse package stats
+        const packageStats = ref.package_stats 
+          ? JSON.parse(ref.package_stats)
+          : [];
+
         return {
           id: ref.id,
           firstName: ref.first_name,
@@ -111,9 +150,11 @@ router.get('/referrals', async (req, res) => {
           email: ref.email,
           selectedPackage: ref.selected_package,
           createdAt: ref.created_at,
+          level: ref.level,
           directReferralCount: ref.direct_referral_count,
+          packageStats,
           commission: {
-            percentage: 15,
+            percentage: ref.level === 1 ? 15 : ref.level === 2 ? 10 : 5,
             randValue: commission.toFixed(2),
             points: Math.floor(commission * 100)
           }
@@ -121,28 +162,51 @@ router.get('/referrals', async (req, res) => {
       })
     );
 
-    // Group referrals by package type
-    const directReferralsByPackage = transformedReferrals.reduce((acc: any, ref: any) => {
-      const packageType = ref.selectedPackage || 'UNKNOWN';
-      if (!acc[packageType]) {
-        acc[packageType] = {
-          count: 0,
-          totalReferrals: 0,
-          referralsByPackage: {
-            BEGINNER: 0,
-            NOVICE: 0,
-            ACTIVE: 0,
-            PROFESSIONAL: 0,
-            EXPERT: 0
-          },
-          commission: {
-            percentage: 15,
-            baseAmount: packagePriceMap[packageType] || 0
-          }
-        };
+    // Group referrals by level
+    const referralsByLevel = transformedReferrals.reduce((acc: any, ref: any) => {
+      if (!acc[ref.level]) {
+        acc[ref.level] = [];
       }
-      acc[packageType].count++;
-      acc[packageType].totalReferrals += ref.directReferralCount;
+      acc[ref.level].push(ref);
+      return acc;
+    }, {});
+
+    // Calculate package statistics for each level
+    const packageStatsByLevel = [1, 2, 3].reduce((acc: any, level: number) => {
+      const levelReferrals = referralsByLevel[level] || [];
+
+      acc[level] = levelReferrals.reduce((levelAcc: any, ref: any) => {
+        const packageType = ref.selectedPackage || 'UNKNOWN';
+        if (!levelAcc[packageType]) {
+          levelAcc[packageType] = {
+            count: 0,
+            totalReferrals: 0,
+            referralsByPackage: {
+              BEGINNER: 0,
+              NOVICE: 0,
+              ACTIVE: 0,
+              PROFESSIONAL: 0,
+              EXPERT: 0
+            },
+            commission: {
+              percentage: level === 1 ? 15 : level === 2 ? 10 : 5,
+              baseAmount: packagePriceMap[packageType] || 0
+            }
+          };
+        }
+        levelAcc[packageType].count++;
+        levelAcc[packageType].totalReferrals += ref.directReferralCount;
+
+        // Add up referrals by package
+        ref.packageStats.forEach((stat: any) => {
+          if (stat.package) {
+            levelAcc[packageType].referralsByPackage[stat.package] += stat.count;
+          }
+        });
+
+        return levelAcc;
+      }, {});
+
       return acc;
     }, {});
 
@@ -150,16 +214,15 @@ router.get('/referrals', async (req, res) => {
       referralCode,
       referralCount: referrals.length,
       packagePrices: packagePriceMap,
-      directReferralsByPackage,
-      referralsByLevel: {
-        1: transformedReferrals
-      }
+      packageStatsByLevel,
+      referralsByLevel
     };
 
     console.log('Sending response:', {
       referralCode,
       referralCount: referrals.length,
-      directReferralCount: Object.keys(directReferralsByPackage).length
+      levels: Object.keys(referralsByLevel).length,
+      totalCommission: transformedReferrals.reduce((sum, ref) => sum + Number(ref.commission.randValue), 0)
     });
 
     res.json(response);

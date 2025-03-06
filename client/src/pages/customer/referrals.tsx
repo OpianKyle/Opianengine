@@ -22,20 +22,22 @@ interface ReferralStats {
   referralCode: string;
   referralCount: number;
   packagePrices: Record<string, number>;
-  directReferralsByPackage: {
-    [key: string]: {
-      count: number;
-      totalReferrals: number;
-      referralsByPackage: {
-        BEGINNER: number;
-        NOVICE: number;
-        ACTIVE: number;
-        PROFESSIONAL: number;
-        EXPERT: number;
-      };
-      commission: {
-        percentage: number;
-        baseAmount: number;
+  packageStatsByLevel: {
+    [key: number]: {
+      [key: string]: {
+        count: number;
+        totalReferrals: number;
+        referralsByPackage: {
+          BEGINNER: number;
+          NOVICE: number;
+          ACTIVE: number;
+          PROFESSIONAL: number;
+          EXPERT: number;
+        };
+        commission: {
+          percentage: number;
+          baseAmount: number;
+        };
       };
     };
   };
@@ -47,7 +49,12 @@ interface ReferralStats {
       email: string;
       selectedPackage: string;
       createdAt: string;
+      level: number;
       directReferralCount: number;
+      packageStats: Array<{
+        package: string;
+        count: number;
+      }>;
       commission: {
         percentage: number;
         randValue: string;
@@ -65,10 +72,11 @@ const packageColors = {
   EXPERT: "bg-amber-400"
 };
 
-const PackageEmblem = ({ type, count, totalReferrals }: {
+const PackageEmblem = ({ type, count, totalReferrals, level }: {
   type: string;
   count: number;
   totalReferrals: number;
+  level: number;
 }) => (
   <div className="flex flex-col items-center space-y-2">
     <div className={`p-4 rounded-full ${packageColors[type as keyof typeof packageColors] || "bg-gray-200"}`}>
@@ -76,7 +84,7 @@ const PackageEmblem = ({ type, count, totalReferrals }: {
     </div>
     <div className="text-center">
       <div className="font-semibold">{type}</div>
-      <div className="text-sm text-muted-foreground">{count} referrals</div>
+      <div className="text-sm text-muted-foreground">{count} level {level} referrals</div>
       <div className="text-xs text-muted-foreground">
         ({totalReferrals} sub-referrals)
       </div>
@@ -174,28 +182,31 @@ export default function ReferralsPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">My Referrals</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Package Referral Stats</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Overview of your direct referrals by package type and their subsequent referrals.
-            </p>
-            <div className="grid grid-cols-5 gap-4">
-              {Object.entries(referralStats?.directReferralsByPackage || {}).map(([packageType, stats]) => (
-                <PackageEmblem
-                  key={packageType}
-                  type={packageType}
-                  count={stats.count}
-                  totalReferrals={stats.totalReferrals}
-                />
-              ))}
+      {[1, 2, 3].map(level => (
+        <Card key={level}>
+          <CardHeader>
+            <CardTitle>Level {level} Referral Stats</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Overview of your level {level} referrals by package type and their subsequent referrals.
+              </p>
+              <div className="grid grid-cols-5 gap-4">
+                {Object.entries(referralStats?.packageStatsByLevel[level] || {}).map(([packageType, stats]) => (
+                  <PackageEmblem
+                    key={packageType}
+                    type={packageType}
+                    count={stats.count}
+                    totalReferrals={stats.totalReferrals}
+                    level={level}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ))}
 
       <Card>
         <CardHeader>
