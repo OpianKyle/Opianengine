@@ -93,7 +93,8 @@ export function registerRoutes(app: Express): Server {
 
       // Get only regular customers (not admins or agents)
       const [customers] = await connection.execute(
-        `SELECT u.*, 
+        `SELECT 
+          u.*,
           COALESCE(pa.assignment_count, 0) as assignment_count,
           GROUP_CONCAT(DISTINCT pa2.product_id) as assigned_products
          FROM users u
@@ -110,7 +111,7 @@ export function registerRoutes(app: Express): Server {
          ORDER BY u.created_at DESC`
       );
 
-      // Transform the data
+      // Transform the data with explicit field mapping
       const transformedCustomers = customers.map((customer: any) => ({
         id: customer.id,
         email: customer.email,
@@ -124,21 +125,24 @@ export function registerRoutes(app: Express): Server {
         assignmentCount: customer.assignment_count,
         assignedProducts: customer.assigned_products ? 
           customer.assigned_products.split(',').map(Number) : [],
-        // Additional customer fields
-        dateOfBirth: customer.date_of_birth,
-        gender: customer.gender,
-        occupation: customer.occupation,
-        industry: customer.industry,
-        address: customer.address,
-        city: customer.city,
-        postalCode: customer.postal_code,
-        bankName: customer.bank_name,
-        accountType: customer.account_type,
-        accountNumber: customer.account_number,
-        accountHolderName: customer.account_holder_name,
-        branchCode: customer.branch_code,
+        // Explicitly map all customer fields
+        idNumber: customer.id_number || '',
+        dateOfBirth: customer.date_of_birth || '',
+        gender: customer.gender || '',
+        occupation: customer.occupation || '',
+        industry: customer.industry || '',
+        address: customer.address || '',
+        city: customer.city || '',
+        postalCode: customer.postal_code || '',
+        bankName: customer.bank_name || '',
+        accountType: customer.account_type || '',
+        accountNumber: customer.account_number || '',
+        accountHolderName: customer.account_holder_name || '',
+        branchCode: customer.branch_code || '',
         hasCreditCard: Boolean(customer.has_credit_card),
-        isSouthAfrican: Boolean(customer.is_south_african)
+        isSouthAfrican: Boolean(customer.is_south_african),
+        // Include agent relationship
+        agentId: customer.agent_id || null
       }));
 
       res.json(transformedCustomers);
@@ -184,7 +188,9 @@ export function registerRoutes(app: Express): Server {
       const { 
         firstName, lastName, email, phoneNumber, 
         industry, occupation, address, city, 
-        postalCode, selectedPackage 
+        postalCode, selectedPackage,
+        idNumber, dateOfBirth, gender,
+        isSouthAfrican
       } = req.body;
 
       // Check for existing user
@@ -220,8 +226,9 @@ export function registerRoutes(app: Express): Server {
             email, password, first_name, last_name, 
             phone_number, is_enabled, points, selected_package,
             industry, occupation, address, city, postal_code,
+            id_number, date_of_birth, gender, is_south_african,
             agent_id
-          ) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             email,
             hashedPassword,
@@ -230,11 +237,15 @@ export function registerRoutes(app: Express): Server {
             phoneNumber,
             initialPoints,
             selectedPackage,
-            industry,
-            occupation,
-            address,
-            city,
-            postalCode,
+            industry || null,
+            occupation || null,
+            address || null,
+            city || null,
+            postalCode || null,
+            idNumber || null,
+            dateOfBirth || null,
+            gender || null,
+            isSouthAfrican || false,
             req.session?.passport?.user // Associate with the agent
           ]
         );
