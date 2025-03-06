@@ -453,34 +453,64 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/admin/logs", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
-    try {
-      const logs = await db.query.adminLogs.findMany({
-        orderBy: desc(adminLogs.createdAt),
-        with: {
-          admin: {
-            columns: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          targetUser: {
-            columns: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
-      });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
-      res.json(logs);
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get admin logs with user details
+      const [logs] = await connection.execute(
+        `SELECT 
+          al.*,
+          admin.email as admin_email,
+          admin.first_name as admin_first_name,
+          admin.last_name as admin_last_name,
+          target.email as target_email,
+          target.first_name as target_first_name,
+          target.last_name as target_last_name
+         FROM admin_logs al
+         JOIN users admin ON al.admin_id = admin.id
+         LEFT JOIN users target ON al.target_user_id = target.id
+         ORDER BY al.created_at DESC`
+      );
+
+      // Transform the logs data
+      const transformedLogs = logs.map((log: any) => ({
+        id: log.id,
+        actionType: log.action_type,
+        details: log.details,
+        createdAt: log.created_at,
+        admin: {
+          id: log.admin_id,
+          email: log.admin_email,
+          firstName: log.admin_first_name,
+          lastName: log.admin_last_name
+        },
+        targetUser: log.target_user_id ? {
+          id: log.target_user_id,
+          email: log.target_email,
+          firstName: log.target_first_name,
+          lastName: log.target_last_name
+        } : null
+      }));
+
+      res.json(transformedLogs);
     } catch (error) {
       console.error('Error fetching admin logs:', error);
       res.status(500).json({ error: 'Failed to fetch admin logs' });
+    } finally {
+      await connection.end();
     }
   });
 
