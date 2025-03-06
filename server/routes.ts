@@ -48,7 +48,7 @@ export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Helper function to calculate referral commission points
-  function calculateCommissionPoints(packageName: string, level: number): number {
+  function calculateCommissionPoints(packageName: string, level: number): {points: number, randValue: number} {
     let packageValue = 0;
     
     // Get monetary value of package in Rands
@@ -88,9 +88,12 @@ export function registerRoutes(app: Express): Server {
         commissionPercentage = 0;
     }
 
-    // Calculate commission in Rands then convert to points (1 Rand = 100 points)
-    const commissionValue = packageValue * commissionPercentage;
-    return Math.floor(commissionValue * 100); // Convert to points
+    // Calculate commission in Rands
+    const randValue = packageValue * commissionPercentage;
+    // Convert to points (1 Rand = 100 points)
+    const points = Math.floor(randValue * 100);
+
+    return { points, randValue };
   }
 
   // Registration endpoint with referral commission handling
@@ -205,13 +208,13 @@ export function registerRoutes(app: Express): Server {
 
           // Process commission for each referrer
           for (const referrer of referrers) {
-            const commissionPoints = calculateCommissionPoints(selectedPackage, referrer.level);
+            const commission = calculateCommissionPoints(selectedPackage, referrer.level);
             
-            if (commissionPoints > 0) {
+            if (commission.points > 0) {
               // Update referrer's points
               await connection.execute(
                 'UPDATE users SET points = points + ? WHERE id = ?',
-                [commissionPoints, referrer.id]
+                [commission.points, referrer.id]
               );
 
               // Record commission transaction
@@ -221,9 +224,9 @@ export function registerRoutes(app: Express): Server {
                 ) VALUES (?, ?, ?, ?)`,
                 [
                   referrer.id,
-                  commissionPoints,
+                  commission.points,
                   'REFERRAL_COMMISSION',
-                  `Level ${referrer.level} referral commission from ${req.body.email} (${selectedPackage} package)`
+                  `Level ${referrer.level} referral commission (R${commission.randValue.toFixed(2)}) from ${req.body.email} (${selectedPackage} package)`
                 ]
               );
 
@@ -231,7 +234,8 @@ export function registerRoutes(app: Express): Server {
                 referrerId: referrer.id,
                 referrerEmail: referrer.email,
                 level: referrer.level,
-                points: commissionPoints,
+                points: commission.points,
+                randValue: commission.randValue,
                 package: selectedPackage
               });
             }
