@@ -15,7 +15,7 @@ import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';  // Import referral routes
-import { pool } from './db'; // Use connection pool instead of single connections
+import { createConnection } from './db'; // Added import statement
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -79,9 +79,9 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
-      // Check admin status - using prepared statement
+      // Check admin status
       const [adminCheck] = await connection.execute(
         'SELECT role_type FROM admin_users WHERE user_id = ?',
         [req.user.id]
@@ -91,46 +91,27 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Optimized query with specific field selection and efficient JOINs
+      // Get only regular customers (not admins or agents)
       const [customers] = await connection.execute(
         `SELECT 
-          u.id,
-          u.email,
-          u.first_name,
-          u.last_name,
-          u.phone_number,
-          u.is_enabled,
-          u.points,
-          u.created_at,
-          u.selected_package,
-          u.id_number,
-          u.date_of_birth,
-          u.gender,
-          u.occupation,
-          u.industry,
-          u.address,
-          u.city,
-          u.postal_code,
-          u.bank_name,
-          u.account_type,
-          u.account_number,
-          u.account_holder_name,
-          u.branch_code,
-          u.has_credit_card,
-          u.is_south_african,
-          u.agent_id,
-          COUNT(DISTINCT pa.id) as assignment_count,
-          GROUP_CONCAT(DISTINCT pa.product_id) as assigned_products
+          u.*,
+          COALESCE(pa.assignment_count, 0) as assignment_count,
+          GROUP_CONCAT(DISTINCT pa2.product_id) as assigned_products
          FROM users u
-         LEFT JOIN product_assignments pa ON u.id = pa.user_id
+         LEFT JOIN (
+           SELECT user_id, COUNT(*) as assignment_count 
+           FROM product_assignments 
+           GROUP BY user_id
+         ) pa ON u.id = pa.user_id
+         LEFT JOIN product_assignments pa2 ON u.id = pa2.user_id
          LEFT JOIN admin_users au ON u.id = au.user_id
          WHERE au.user_id IS NULL 
-           AND u.is_agent = 0
+         AND u.is_agent = 0
          GROUP BY u.id
          ORDER BY u.created_at DESC`
       );
 
-      // Transform the data with efficient mapping
+      // Transform the data with explicit field mapping
       const transformedCustomers = customers.map((customer: any) => ({
         id: customer.id,
         email: customer.email,
@@ -141,9 +122,10 @@ export function registerRoutes(app: Express): Server {
         points: customer.points,
         createdAt: customer.created_at,
         selectedPackage: customer.selected_package,
-        assignmentCount: parseInt(customer.assignment_count),
+        assignmentCount: customer.assignment_count,
         assignedProducts: customer.assigned_products ? 
           customer.assigned_products.split(',').map(Number) : [],
+        // Explicitly map all customer fields
         idNumber: customer.id_number || '',
         dateOfBirth: customer.date_of_birth || '',
         gender: customer.gender || '',
@@ -159,6 +141,7 @@ export function registerRoutes(app: Express): Server {
         branchCode: customer.branch_code || '',
         hasCreditCard: Boolean(customer.has_credit_card),
         isSouthAfrican: Boolean(customer.is_south_african),
+        // Include agent relationship
         agentId: customer.agent_id || null
       }));
 
@@ -167,7 +150,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error fetching customers:', error);
       res.status(500).json({ error: 'Failed to fetch customers' });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
@@ -176,23 +159,17 @@ export function registerRoutes(app: Express): Server {
 
   // Add agent customer management endpoints
   app.get("/api/agent/customers", checkAgent, async (req, res) => {
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       // Get customers associated with this agent
       const [customers] = await connection.execute(
-        `SELECT 
-          id, 
-          first_name as firstName, 
-          last_name as lastName, 
-          email, 
-          phone_number as phoneNumber, 
-          points, 
-          is_enabled as isEnabled, 
-          selected_package as selectedPackage
+        `SELECT id, first_name as firstName, last_name as lastName, 
+                email, phone_number as phoneNumber, points, 
+                is_enabled as isEnabled, selected_package as selectedPackage
          FROM users 
          WHERE agent_id = ?
          ORDER BY created_at DESC`,
-        [req.user.id]
+        [req.session?.passport?.user]
       );
 
       res.json(customers);
@@ -200,13 +177,13 @@ export function registerRoutes(app: Express): Server {
       console.error('Error fetching customers:', error);
       res.status(500).json({ error: 'Failed to fetch customers' });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
   // Add customer creation endpoint for agents
   app.post("/api/agent/customers/create", checkAgent, async (req, res) => {
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       const { 
         firstName, lastName, email, phoneNumber, 
@@ -269,7 +246,7 @@ export function registerRoutes(app: Express): Server {
             dateOfBirth || null,
             gender || null,
             isSouthAfrican || false,
-            req.user.id // Associate with the agent
+            req.session?.passport?.user // Associate with the agent
           ]
         );
 
@@ -305,7 +282,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error creating customer:', error);
       res.status(500).json({ error: 'Failed to create customer' });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
@@ -380,7 +357,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       // Check admin status
       const [adminCheck] = await connection.execute(
@@ -471,7 +448,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error fetching assignment:', error);
       res.status(500).json({ error: 'Failed to fetch assignment' });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
@@ -480,7 +457,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       // Check admin status
       const [adminCheck] = await connection.execute(
@@ -533,7 +510,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error fetching admin logs:', error);
       res.status(500).json({ error: 'Failed to fetch admin logs' });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
@@ -542,7 +519,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       // Check admin status
       const [adminCheck] = await connection.execute(
@@ -667,7 +644,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error adjusting points:', error);
       res.status(500).json({ error: 'Failed to adjust points' });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
@@ -707,7 +684,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       // Check admin status
       const [adminCheck] = await connection.execute(
@@ -826,7 +803,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error creating user:', error);
       res.status(500).json({ error: 'Failed to create user', details: error.message });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
@@ -888,7 +865,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       // Check admin status
       const [adminCheck] = await connection.execute(
@@ -954,7 +931,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error updating user details:', error);
       res.status(500).json({ error: 'Failed to update user details' });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
@@ -1043,7 +1020,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       // Build updates object
       const updates = { ...req.body };
@@ -1118,7 +1095,7 @@ export function registerRoutes(app: Express): Server {
         message: error instanceof Error ? error.message : "Unknown error occurred"
       });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
@@ -1127,7 +1104,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       // Check admin status
       const [adminCheck] = await connection.execute(
@@ -1164,7 +1141,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error toggling user status:', error);
       res.status(500).json({ error: 'Failed to toggle user status' });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
@@ -1209,7 +1186,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       // Check admin status
       const [adminCheck] = await connection.execute(
@@ -1345,12 +1322,12 @@ export function registerRoutes(app: Express): Server {
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
   app.get("/api/products", async (req, res) => {
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       console.log('Fetching products...');
       const [products] = await connection.execute(
@@ -1421,7 +1398,7 @@ export function registerRoutes(app: Express): Server {
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 
@@ -1447,7 +1424,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await pool.getConnection();
+    const connection = await createConnection();
     try {
       // Check admin status
       const [adminCheck] = await connection.execute(
@@ -1527,7 +1504,7 @@ export function registerRoutes(app: Express): Server {
       console.error('Error fetching customers:', error);
       res.status(500).json({ error: 'Failed to fetch customers' });
     } finally {
-      connection.release(); // Release connection back to pool
+      await connection.end();
     }
   });
 

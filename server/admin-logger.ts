@@ -1,4 +1,4 @@
-import { pool } from "@db";
+import { createConnection } from "./db";
 
 type AdminAction = {
   adminId: number;
@@ -13,7 +13,7 @@ export async function logAdminAction({
   targetUserId,
   details,
 }: AdminAction) {
-  const connection = await pool.getConnection();
+  const connection = await createConnection();
   try {
     console.log('Attempting to log admin action:', { adminId, actionType, targetUserId, details });
 
@@ -30,36 +30,29 @@ export async function logAdminAction({
     // Don't throw the error, just log it
     return null;
   } finally {
-    connection.release(); // Release connection back to pool
+    await connection.end();
   }
 }
 
 export async function getAdminLogs() {
-  const connection = await pool.getConnection();
+  const connection = await createConnection();
   try {
-    // Optimized query with specific field selection
     const [logs] = await connection.execute(
       `SELECT 
-        al.id,
-        al.action_type,
-        al.details,
-        al.created_at,
-        al.admin_id,
+        al.*,
         admin.email as admin_email,
         admin.first_name as admin_first_name,
         admin.last_name as admin_last_name,
-        al.target_user_id,
         target.email as target_email,
         target.first_name as target_first_name,
         target.last_name as target_last_name
        FROM admin_logs al
        JOIN users admin ON al.admin_id = admin.id
        LEFT JOIN users target ON al.target_user_id = target.id
-       WHERE al.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-       ORDER BY al.created_at DESC
-       LIMIT 1000`
+       ORDER BY al.created_at DESC`
     );
 
+    console.log('Retrieved admin logs:', logs.length);
     return logs.map((log: any) => ({
       id: log.id,
       actionType: log.action_type,
@@ -82,6 +75,6 @@ export async function getAdminLogs() {
     console.error("Failed to fetch admin logs:", error);
     return [];
   } finally {
-    connection.release(); // Release connection back to pool
+    await connection.end();
   }
 }

@@ -1,12 +1,27 @@
 import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
 import * as schema from "@db/schema";
-import { pool } from '../server/db';  // Import pool from server/db.ts
 
-// Create and export the drizzle instance with the pool connection
-export const db = drizzle(pool, { 
+const poolConnection = mysql.createPool({
+  host: 'dedi1350.jnb1.host-h.net',
+  user: 'admin',
+  password: '8E33U976qa800F',
+  database: 'opianrewards',
+  port: 3306,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
+});
+
+export const db = drizzle(poolConnection, { 
   schema,
   mode: 'default'
 });
 
-// Re-export the pool for direct queries if needed
-export { pool };
+// Export the pool for direct queries if needed
+export const pool = poolConnection;
