@@ -53,10 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    // Handle session expiry by redirecting to home
     onError: () => {
       queryClient.setQueryData(["/api/user"], null);
-      window.location.href = '/'; // Changed from '/auth' to '/'
+      window.location.href = '/'; // Redirect to home on auth error
     }
   });
 
@@ -129,15 +128,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       await handlePageTransition(async () => {
-        cleanupWebSockets();
+        // Clear all React Query cache and remove queries
         queryClient.clear();
         queryClient.removeQueries();
+
+        // Ensure user data is cleared
         queryClient.setQueryData(["/api/user"], null);
+
+        // Clean up WebSocket connections
+        cleanupWebSockets();
+
+        // Clear session storage
+        sessionStorage.clear();
+
+        // Disable React Query's auto refetching temporarily
+        await queryClient.cancelQueries();
+        queryClient.setDefaultOptions({
+          queries: {
+            enabled: false,
+          },
+        });
       });
 
-      // Clear all session storage on logout
-      sessionStorage.clear();
-      window.location.href = '/'; // Changed from '/auth' to '/'
+      // Force a clean reload to reset all state
+      window.location.href = '/';
     },
     onError: (error: Error) => {
       toast({

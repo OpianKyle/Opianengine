@@ -71,6 +71,8 @@ export function registerRoutes(app: Express): Server {
 
   // Enhanced logout handling 
   app.post("/api/logout", (req, res) => {
+    console.log('Logout request received');
+    
     // Always clear the session cookie
     res.clearCookie('connect.sid', {
       path: '/',
@@ -86,10 +88,12 @@ export function registerRoutes(app: Express): Server {
           console.error('Error destroying session:', err);
           // Still send success since we cleared the cookie
         }
+        console.log('Session destroyed successfully');
         res.status(200).json({ message: "Logged out successfully" });
       });
     } else {
       // If no session exists, still return success
+      console.log('No session to destroy');
       res.status(200).json({ message: "Logged out successfully" });
     }
   });
