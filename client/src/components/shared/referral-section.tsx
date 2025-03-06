@@ -16,17 +16,43 @@ import {
   FaEnvelope as EmailIcon
 } from "react-icons/fa6";
 
-interface Referral {
-  id: number;
-  firstName: string;
-  lastName: string;
-  createdAt: string;
-}
-
 interface ReferralInfo {
   referralCode: string;
   referralCount: number;
-  referrals: Referral[];
+  packagePrices: Record<string, number>;
+  directReferralsByPackage: {
+    [key: string]: {
+      count: number;
+      totalReferrals: number;
+      referralsByPackage: {
+        BEGINNER: number;
+        NOVICE: number;
+        ACTIVE: number;
+        PROFESSIONAL: number;
+        EXPERT: number;
+      };
+      commission: {
+        percentage: number;
+        baseAmount: number;
+      };
+    };
+  };
+  referralsByLevel: {
+    [key: number]: Array<{
+      id: number;
+      firstName: string;
+      lastName: string;
+      email: string;
+      selectedPackage: string;
+      createdAt: string;
+      directReferralCount: number;
+      commission: {
+        percentage: number;
+        randValue: string;
+        points: number;
+      };
+    }>;
+  };
 }
 
 export default function ReferralSection() {
@@ -41,7 +67,9 @@ export default function ReferralSection() {
         credentials: 'include'
       });
       if (!response.ok) {
-        throw new Error("Failed to fetch referral data");
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Referral fetch error:', { status: response.status, error: errorData });
+        throw new Error(errorData.error || "Failed to fetch referral data");
       }
       const data = await response.json();
       console.log('Referral data received:', data);
@@ -200,11 +228,11 @@ export default function ReferralSection() {
             <span className="font-medium">{referralInfo.referralCount}</span> successful referrals
           </div>
         )}
-        {referralInfo?.referrals?.length > 0 && (
+        {referralInfo?.referralsByLevel[1]?.length > 0 && (
           <div className="space-y-2">
             <div className="text-sm font-medium">Recent Referrals</div>
             <div className="space-y-2">
-              {referralInfo.referrals.map((referral) => (
+              {referralInfo.referralsByLevel[1].map((referral) => (
                 <div
                   key={referral.id}
                   className="text-sm p-2 bg-muted rounded-lg flex justify-between items-center"
@@ -214,7 +242,7 @@ export default function ReferralSection() {
                     <span className="text-muted-foreground"> joined on </span>
                     <span>{new Date(referral.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <Badge variant="outline">+2,500 points</Badge>
+                  <Badge variant="outline">+{referral.commission.points} points</Badge>
                 </div>
               ))}
             </div>
