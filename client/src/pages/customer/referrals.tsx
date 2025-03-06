@@ -47,7 +47,6 @@ interface ReferralStats {
       email: string;
       selectedPackage: string;
       createdAt: string;
-      level: number;
       directReferralCount: number;
       commission: {
         percentage: number;
@@ -89,21 +88,28 @@ export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const { data: referralStats, isLoading } = useQuery<ReferralStats>({
+  const { data: referralStats, isLoading, error } = useQuery<ReferralStats>({
     queryKey: ["/api/customer/referrals"],
     queryFn: async () => {
       console.log('Fetching referral data...');
-      const response = await fetch("/api/customer/referrals", {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Referral fetch error:', { status: response.status, error: errorData });
-        throw new Error(errorData.error || "Failed to fetch referral data");
+      try {
+        const response = await fetch("/api/customer/referrals", {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Referral fetch error:', { status: response.status, error: errorData });
+          throw new Error(errorData.error || "Failed to fetch referral data");
+        }
+
+        const data = await response.json();
+        console.log('Referral data received:', data);
+        return data;
+      } catch (error) {
+        console.error('Error fetching referrals:', error);
+        throw error;
       }
-      const data = await response.json();
-      console.log('Referral data received:', data);
-      return data;
     },
   });
 
@@ -155,6 +161,14 @@ export default function ReferralsPage() {
       earned: referralStats.referralCount >= badge.requirement,
       progress: Math.min(referralStats.referralCount, badge.requirement)
   })) : [];
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <p className="text-red-500">Error loading referral data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

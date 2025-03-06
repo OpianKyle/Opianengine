@@ -36,7 +36,7 @@ const calculateCommission = async (connection: any, packageType: string, level: 
   }
 };
 
-router.get('/referral', async (req, res) => {
+router.get('/referrals', async (req, res) => {
   if (!req.user?.id) {
     console.log('Unauthorized referral request');
     return res.status(401).json({ error: "Unauthorized" });
@@ -68,7 +68,7 @@ router.get('/referral', async (req, res) => {
     }
     console.log('Using referral code:', referralCode);
 
-    // Get all referrals and their package details
+    // Get direct referrals with their package info
     const [referrals] = await connection.execute(`
       SELECT 
         u.id,
@@ -77,7 +77,6 @@ router.get('/referral', async (req, res) => {
         u.email,
         u.selected_package,
         u.created_at,
-        u.referral_code,
         COUNT(r.id) as direct_referral_count,
         p.premium_amount as package_amount
       FROM users u
@@ -85,13 +84,23 @@ router.get('/referral', async (req, res) => {
       LEFT JOIN package_premium_amounts p ON p.package_type = u.selected_package
       WHERE u.referred_by = ?
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.selected_package, 
-               u.created_at, u.referral_code, p.premium_amount`,
+               u.created_at, p.premium_amount`,
       [referralCode]
     );
 
     console.log('Found referrals:', { count: referrals.length });
 
-    // Transform the referrals data
+    // Get package prices for display
+    const [packagePrices] = await connection.execute(
+      'SELECT package_type, premium_amount FROM package_premium_amounts'
+    );
+
+    const packagePriceMap = packagePrices.reduce((acc: any, pkg: any) => {
+      acc[pkg.package_type] = pkg.premium_amount;
+      return acc;
+    }, {});
+
+    // Transform referrals with commission calculations
     const transformedReferrals = await Promise.all(
       referrals.map(async (ref: any) => {
         const commission = await calculateCommission(connection, ref.selected_package, 1);
@@ -111,16 +120,6 @@ router.get('/referral', async (req, res) => {
         };
       })
     );
-
-    // Get package prices for display
-    const [packagePrices] = await connection.execute(
-      'SELECT package_type, premium_amount FROM package_premium_amounts'
-    );
-
-    const packagePriceMap = packagePrices.reduce((acc: any, pkg: any) => {
-      acc[pkg.package_type] = pkg.premium_amount;
-      return acc;
-    }, {});
 
     // Group referrals by package type
     const directReferralsByPackage = transformedReferrals.reduce((acc: any, ref: any) => {
@@ -147,15 +146,23 @@ router.get('/referral', async (req, res) => {
       return acc;
     }, {});
 
-    res.json({
+    const response = {
       referralCode,
       referralCount: referrals.length,
       packagePrices: packagePriceMap,
       directReferralsByPackage,
       referralsByLevel: {
-        1: transformedReferrals,
+        1: transformedReferrals
       }
+    };
+
+    console.log('Sending response:', {
+      referralCode,
+      referralCount: referrals.length,
+      directReferralCount: Object.keys(directReferralsByPackage).length
     });
+
+    res.json(response);
 
   } catch (error) {
     console.error('Error in referral handler:', error);
