@@ -265,7 +265,7 @@ export default function ReferralsPage() {
                   <CardTitle className="text-sm font-medium">Total Commission</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-primary">
+                  <div className="text-2xl font-bold text-white">
                     R{(
                       calculateLevelCommission(1) +
                       calculateLevelCommission(2) +

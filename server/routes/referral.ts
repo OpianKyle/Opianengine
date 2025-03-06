@@ -36,38 +36,34 @@ const calculateCommission = async (connection: any, packageType: string, level: 
   }
 };
 
-router.get('/referrals', async (req, res) => {
-  if (!req.user?.id) {
-    console.log('Unauthorized referral request');
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
+// Shared logic for both endpoints
+const getReferralInfo = async (userId: number) => {
   const connection = await createConnection();
   try {
-    console.log('Fetching referral info for user:', req.user.id);
+    console.log('Fetching referral info for user:', userId);
 
     // Get user's referral code
     const [userInfo] = await connection.execute(
       'SELECT referral_code FROM users WHERE id = ?',
-      [req.user.id]
+      [userId]
     );
 
     if (!userInfo || userInfo.length === 0) {
-      console.log('User not found:', req.user.id);
-      return res.status(404).json({ error: "User not found" });
+      console.log('User not found:', userId);
+      throw new Error("User not found");
     }
 
     let referralCode = userInfo[0].referral_code;
     if (!referralCode) {
-      referralCode = `REF${req.user.id}${Date.now().toString(36)}`;
+      referralCode = `REF${userId}${Date.now().toString(36)}`;
       await connection.execute(
         'UPDATE users SET referral_code = ? WHERE id = ?',
-        [referralCode, req.user.id]
+        [referralCode, userId]
       );
     }
     console.log('Using referral code:', referralCode);
 
-    // First get all direct referrals (level 1)
+    // Get level 1 referrals
     const [level1Referrals] = await connection.execute(`
       SELECT 
         u.id,
@@ -84,61 +80,10 @@ router.get('/referrals', async (req, res) => {
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.selected_package, u.created_at, u.referral_code
     `, [referralCode]);
 
-    // Get level 2 referrals
-    const level2Referrals = [];
-    for (const level1 of level1Referrals) {
-      const [refs] = await connection.execute(`
-        SELECT 
-          u.id,
-          u.first_name,
-          u.last_name,
-          u.email,
-          u.selected_package,
-          u.created_at,
-          u.referral_code,
-          COUNT(r.id) as direct_referral_count
-        FROM users u
-        LEFT JOIN users r ON r.referred_by = u.referral_code
-        WHERE u.referred_by = ?
-        GROUP BY u.id, u.first_name, u.last_name, u.email, u.selected_package, u.created_at, u.referral_code
-      `, [level1.referral_code]);
-      level2Referrals.push(...refs);
-    }
-
-    // Get level 3 referrals
-    const level3Referrals = [];
-    for (const level2 of level2Referrals) {
-      const [refs] = await connection.execute(`
-        SELECT 
-          u.id,
-          u.first_name,
-          u.last_name,
-          u.email,
-          u.selected_package,
-          u.created_at,
-          COUNT(r.id) as direct_referral_count
-        FROM users u
-        LEFT JOIN users r ON r.referred_by = u.referral_code
-        WHERE u.referred_by = ?
-        GROUP BY u.id, u.first_name, u.last_name, u.email, u.selected_package, u.created_at
-      `, [level2.referral_code]);
-      level3Referrals.push(...refs);
-    }
-
-    // Get package prices
-    const [packagePrices] = await connection.execute(
-      'SELECT package_type, premium_amount FROM package_premium_amounts'
-    );
-
-    const packagePriceMap = packagePrices.reduce((acc: any, pkg: any) => {
-      acc[pkg.package_type] = pkg.premium_amount;
-      return acc;
-    }, {});
-
-    // Transform referrals with commission calculations
-    const transformLevel = async (referrals: any[], level: number) => {
-      return Promise.all(referrals.map(async (ref: any) => {
-        const commission = await calculateCommission(connection, ref.selected_package, level);
+    // Transform level 1 referrals with commission calculations
+    const transformedReferrals = await Promise.all(
+      level1Referrals.map(async (ref: any) => {
+        const commission = await calculateCommission(connection, ref.selected_package, 1);
         return {
           id: ref.id,
           firstName: ref.first_name,
@@ -148,81 +93,65 @@ router.get('/referrals', async (req, res) => {
           createdAt: ref.created_at,
           directReferralCount: ref.direct_referral_count || 0,
           commission: {
-            percentage: level === 1 ? 15 : level === 2 ? 10 : 5,
+            percentage: 15,
             randValue: commission.toFixed(2),
             points: Math.floor(commission * 100)
           }
         };
-      }));
-    };
+      })
+    );
 
-    const level1Transformed = await transformLevel(level1Referrals, 1);
-    const level2Transformed = await transformLevel(level2Referrals, 2);
-    const level3Transformed = await transformLevel(level3Referrals, 3);
-
-    // Calculate package statistics for each level
-    const calculateLevelStats = (referrals: any[]) => {
-      return referrals.reduce((acc: any, ref: any) => {
-        const packageType = ref.selectedPackage || 'UNKNOWN';
-        if (!acc[packageType]) {
-          acc[packageType] = {
-            count: 0,
-            totalReferrals: 0,
-            referralsByPackage: {
-              BEGINNER: 0,
-              NOVICE: 0,
-              ACTIVE: 0,
-              PROFESSIONAL: 0,
-              EXPERT: 0
-            },
-            commission: {
-              percentage: ref.commission.percentage,
-              baseAmount: packagePriceMap[packageType] || 0
-            }
-          };
-        }
-        acc[packageType].count++;
-        acc[packageType].totalReferrals += ref.directReferralCount;
-        return acc;
-      }, {});
-    };
-
-    const packageStatsByLevel = {
-      1: calculateLevelStats(level1Transformed),
-      2: calculateLevelStats(level2Transformed),
-      3: calculateLevelStats(level3Transformed)
-    };
-
-    const response = {
+    return {
       referralCode,
-      referralCount: level1Transformed.length + level2Transformed.length + level3Transformed.length,
-      packagePrices: packagePriceMap,
-      packageStatsByLevel,
+      referralCount: level1Referrals.length,
       referralsByLevel: {
-        1: level1Transformed,
-        2: level2Transformed,
-        3: level3Transformed
+        1: transformedReferrals
       }
     };
 
-    console.log('Sending response:', {
-      referralCode,
-      referralCount: response.referralCount,
-      levels: Object.keys(response.referralsByLevel).length,
-      totalCommission: [...level1Transformed, ...level2Transformed, ...level3Transformed]
-        .reduce((sum, ref) => sum + Number(ref.commission.randValue), 0)
-    });
+  } catch (error) {
+    console.error('Error getting referral info:', error);
+    throw error;
+  } finally {
+    await connection.end();
+  }
+};
 
-    res.json(response);
+// Route for the referral section component
+router.get('/referral', async (req, res) => {
+  if (!req.user?.id) {
+    console.log('Unauthorized referral request');
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
+  try {
+    const referralInfo = await getReferralInfo(req.user.id);
+    res.json(referralInfo);
   } catch (error) {
     console.error('Error in referral handler:', error);
     res.status(500).json({
       error: 'Failed to fetch referral data',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
-  } finally {
-    await connection.end();
+  }
+});
+
+// Route for the full referrals page
+router.get('/referrals', async (req, res) => {
+  if (!req.user?.id) {
+    console.log('Unauthorized referrals request');
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const referralInfo = await getReferralInfo(req.user.id);
+    res.json(referralInfo);
+  } catch (error) {
+    console.error('Error in referrals handler:', error);
+    res.status(500).json({
+      error: 'Failed to fetch referral data',
+      details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
   }
 });
 
