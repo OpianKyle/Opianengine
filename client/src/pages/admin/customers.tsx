@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2 } from "lucide-react";
@@ -14,17 +15,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import cn from 'classnames';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem, 
-  AccordionTrigger 
-} from "@/components/ui/accordion";
+import cn from 'classnames';
 
 const genderEnum = ["male", "female", "other"] as const;
+const packageEnum = ["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"] as const;
+const accountTypeEnum = ["SAVINGS", "CHEQUE", "CURRENT", "CREDIT"] as const;
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -33,79 +29,29 @@ const userSchema = z.object({
   phoneNumber: z.string().min(1, "Phone number is required"),
   idNumber: z.string().optional(),
   dateOfBirth: z.string().optional(),
+  gender: z.enum(genderEnum).nullable(),
+  occupation: z.string().optional(),
+  industry: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   postalCode: z.string().optional(),
-  industry: z.string().optional(),
-  occupation: z.string().optional(),
+  selectedPackage: z.enum(packageEnum).optional(),
   bankName: z.string().optional(),
-  accountType: z.string().optional(),
+  accountType: z.enum(accountTypeEnum).optional(),
   accountNumber: z.string().optional(),
   accountHolderName: z.string().optional(),
   branchCode: z.string().optional(),
-  selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]).optional(),
-  gender: z.enum(genderEnum).nullable(),
   hasCreditCard: z.boolean().optional(),
   isSouthAfrican: z.boolean().optional(),
+  isEnabled: z.boolean().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
 
-const getTierInfo = (points: number): { name: string; color: string; nextTier?: { name: string; pointsNeeded: number } } => {
-  if (points >= 150000) {
-    return {
-      name: 'Platinum',
-      color: 'bg-gradient-to-r from-purple-400 to-gray-300 text-white'
-    };
-  }
-  if (points >= 100000) {
-    return {
-      name: 'Gold',
-      color: 'bg-yellow-500 text-white',
-      nextTier: { name: 'Platinum', pointsNeeded: 150000 - points }
-    };
-  }
-  if (points >= 50000) {
-    return {
-      name: 'Purple',
-      color: 'bg-purple-500 text-white',
-      nextTier: { name: 'Gold', pointsNeeded: 100000 - points }
-    };
-  }
-  if (points >= 10000) {
-    return {
-      name: 'Silver',
-      color: 'bg-gray-400 text-white',
-      nextTier: { name: 'Purple', pointsNeeded: 50000 - points }
-    };
-  }
-  return {
-    name: 'Bronze',
-    color: 'bg-amber-600 text-white',
-    nextTier: { name: 'Silver', pointsNeeded: 10000 - points }
-  };
-};
-
-const getPointsMultiplier = (points: number, type: 'premium' | 'card' | 'pos'): number => {
-  if (points >= 150000) { // Platinum
-    return type === 'pos' ? 2.5 : type === 'premium' ? 2.5 : 0.5;
-  }
-  if (points >= 100000) { // Gold
-    return type === 'pos' ? 2.0 : type === 'premium' ? 2.0 : 0.25;
-  }
-  if (points >= 50000) { // Purple
-    return type === 'pos' ? 1.5 : type === 'premium' ? 1.5 : 0.10;
-  }
-  if (points >= 10000) { // Silver
-    return type === 'pos' ? 1.0 : type === 'premium' ? 1.0 : 0.05;
-  }
-  return type === 'pos' ? 0 : 0; // Bronze
-};
-
 export default function AdminCustomers() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  const { data: customers } = useQuery({
+  const { data: customers, isLoading } = useQuery({
     queryKey: ["/api/admin/customers"],
     queryFn: async () => {
       const response = await fetch("/api/admin/customers", {
@@ -115,25 +61,6 @@ export default function AdminCustomers() {
         throw new Error("Failed to fetch customers");
       }
       return response.json();
-    }
-  });
-
-  const { data: products } = useQuery({
-    queryKey: ["/api/products"],
-    queryFn: async () => {
-      const response = await fetch("/api/products", {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch products");
-      }
-      return response.json();
-    },
-    select: (data) => {
-      return data?.map((product: any) => ({
-        ...product,
-        activities: product.activities || []
-      }));
     }
   });
 
@@ -148,20 +75,21 @@ export default function AdminCustomers() {
       phoneNumber: "",
       idNumber: "",
       dateOfBirth: "",
+      gender: null,
+      occupation: "",
+      industry: "",
       address: "",
       city: "",
       postalCode: "",
-      industry: "",
-      occupation: "",
+      selectedPackage: "BEGINNER",
       bankName: "",
-      accountType: "",
+      accountType: "SAVINGS",
       accountNumber: "",
       accountHolderName: "",
       branchCode: "",
-      selectedPackage: "BEGINNER",
-      gender: null,
       hasCreditCard: false,
       isSouthAfrican: false,
+      isEnabled: true,
     },
   });
 
@@ -177,20 +105,21 @@ export default function AdminCustomers() {
       phoneNumber: customer.phoneNumber || "",
       idNumber: customer.idNumber || "",
       dateOfBirth: formattedDate,
+      gender: (customer.gender as typeof genderEnum[number]) || null,
+      occupation: customer.occupation || "",
+      industry: customer.industry || "",
       address: customer.address || "",
       city: customer.city || "",
       postalCode: customer.postalCode || "",
-      industry: customer.industry || "",
-      occupation: customer.occupation || "",
+      selectedPackage: (customer.selectedPackage?.toUpperCase() as typeof packageEnum[number]) || "BEGINNER",
       bankName: customer.bankName || "",
-      accountType: customer.accountType || "",
+      accountType: (customer.accountType?.toUpperCase() as typeof accountTypeEnum[number]) || "SAVINGS",
       accountNumber: customer.accountNumber || "",
       accountHolderName: customer.accountHolderName || "",
       branchCode: customer.branchCode || "",
-      selectedPackage: (customer.selectedPackage?.toUpperCase() as "BEGINNER" | "NOVICE" | "ACTIVE" | "PROFESSIONAL" | "EXPERT") || "BEGINNER",
-      gender: (customer.gender as typeof genderEnum[number]) || null,
       hasCreditCard: Boolean(customer.hasCreditCard),
       isSouthAfrican: Boolean(customer.isSouthAfrican),
+      isEnabled: Boolean(customer.isEnabled),
     });
     setEditDialogOpen(true);
   };
@@ -203,7 +132,8 @@ export default function AdminCustomers() {
         credentials: 'include',
         body: JSON.stringify({
           ...data,
-          selectedPackage: data.selectedPackage?.toUpperCase()
+          selectedPackage: data.selectedPackage?.toUpperCase(),
+          accountType: data.accountType?.toUpperCase(),
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -212,7 +142,6 @@ export default function AdminCustomers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
       toast({ title: "Success", description: "User details updated successfully" });
-      editDetailsForm.reset();
       setEditDialogOpen(false);
     },
     onError: (error: Error) => {
@@ -427,8 +356,31 @@ export default function AdminCustomers() {
     },
   });
 
+  const { data: products } = useQuery({
+    queryKey: ["/api/products"],
+    queryFn: async () => {
+      const response = await fetch("/api/products", {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch products");
+      }
+      return response.json();
+    },
+    select: (data) => {
+      return data?.map((product: any) => ({
+        ...product,
+        activities: product.activities || []
+      }));
+    }
+  });
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Customer Management</h1>
         <div className="flex gap-2">
@@ -467,30 +419,21 @@ export default function AdminCustomers() {
           <CardTitle>All Customers</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Package</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead>Points</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Assigned Products</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers?.map((customer: any) => {
-                const tierInfo = getTierInfo(customer.points);
-                return (
-                  <TableRow
-                    key={customer.id}
-                    className={cn(
-                      !customer.isEnabled && "opacity-60 bg-muted/50"
-                    )}
-                  >
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Package</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {customers?.map((customer: any) => (
+                  <TableRow key={customer.id}>
                     <TableCell>{customer.firstName} {customer.lastName}</TableCell>
                     <TableCell>{customer.email}</TableCell>
                     <TableCell>{customer.phoneNumber}</TableCell>
@@ -500,50 +443,12 @@ export default function AdminCustomers() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="space-y-1">
-                        <Badge className={`${tierInfo.color}`}>
-                          {tierInfo.name}
-                        </Badge>
-                        {tierInfo.nextTier && (
-                          <p className="text-xs text-muted-foreground">
-                            {tierInfo.nextTier.pointsNeeded.toLocaleString()} points to {tierInfo.nextTier.name}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{customer.points.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        customer.isEnabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {customer.isEnabled ? 'Active' : 'Disabled'}
+                      <span className={cn(
+                        "px-2 py-1 rounded-full text-xs",
+                        customer.isEnabled ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                      )}>
+                        {customer.isEnabled ? "Active" : "Disabled"}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <ScrollArea className="h-[100px]">
-                        <div className="space-x-1">
-                          {customer.productAssignments?.map((assignment: any) => (
-                            <Badge
-                              key={assignment.id}
-                              variant="secondary"
-                              className="cursor-pointer hover:bg-destructive/20"
-                              onClick={() => {
-                                if (confirm('Are you sure you want to unassign this product?')) {
-                                  unassignProductMutation.mutate({
-                                    productId: assignment.product.id,
-                                    userId: customer.id
-                                  });
-                                }
-                              }}
-                            >
-                              {assignment.product.name} ×
-                            </Badge>
-                          ))}
-                          {(!customer.productAssignments || customer.productAssignments.length === 0) && (
-                            <span className="text-sm text-muted-foreground">No products assigned</span>
-                          )}
-                        </div>
-                      </ScrollArea>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -554,683 +459,394 @@ export default function AdminCustomers() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                            <DialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => {
-                                e.preventDefault();
-                                handleEditUser(customer);
-                              }}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit Details
-                              </DropdownMenuItem>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl bg-[#011d3d] border-[#022b5c] text-white">
-                              <DialogHeader>
-                                <DialogTitle className="text-[#43EB3E]">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
-                              </DialogHeader>
-                              <Form {...editDetailsForm}>
-                                <form onSubmit={editDetailsForm.handleSubmit((data) =>
-                                  updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
-                                )}>
-                                  <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-4">
-                                    {/* Personal Information */}
-                                    <div className="col-span-2">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
-                                    </div>
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="selectedPackage"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Package</FormLabel>
-                                          <FormControl>
-                                            <select
-                                              {...field}
-                                              className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
-                                            >
-                                              <option value="BEGINNER">BEGINNER</option>
-                                              <option value="NOVICE">NOVICE</option>
-                                              <option value="ACTIVE">ACTIVE</option>
-                                              <option value="PROFESSIONAL">PROFESSIONAL</option>
-                                              <option value="EXPERT">EXPERT</option>
-                                            </select>
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="firstName"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">First Name</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="lastName"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Last Name</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="email"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Email</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="phoneNumber"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Phone Number</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="gender"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Gender</FormLabel>
-                                          <FormControl>
-                                            <select
-                                              {...field}
-                                              value={field.value || ""}
-                                              className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
-                                            >
-                                              <option value="">Select Gender</option>
-                                              {genderEnum.map((gender) => (
-                                                <option key={gender} value={gender}>
-                                                  {gender.charAt(0).toUpperCase() + gender.slice(1)}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="dateOfBirth"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Date of Birth</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} type="date" className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="idNumber"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">ID Number</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-
-                                    {/* Address Information */}
-                                    <div className="col-span-2 mt-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Address Information</h3>
-                                    </div>
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="address"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Address</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="city"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">City</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="postalCode"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Postal Code</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="isSouthAfrican"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Is South African</FormLabel>
-                                          <FormControl>
-                                            <Checkbox
-                                              checked={field.value}
-                                              onCheckedChange={field.onChange}
-                                              className="bg-[#022b5c] border-[#043875]"
-                                            />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-
-                                    {/* Employment Information */}
-                                    <div className="col-span-2 mt-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Employment Information</h3>
-                                    </div>
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="industry"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Industry</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="occupation"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Occupation</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-
-                                    {/* Banking Information */}
-                                    <div className="col-span-2 mt-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Banking Information</h3>
-                                    </div>
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="bankName"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Bank Name</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="accountType"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Account Type</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="accountNumber"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Account Number</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="accountHolderName"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Account Holder Name</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="branchCode"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Branch Code</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="hasCreditCard"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Has Credit Card</FormLabel>
-                                          <FormControl>
-                                            <Checkbox
-                                              checked={field.value}
-                                              onCheckedChange={field.onChange}
-                                              className="bg-[#022b5c] border-[#043875]"
-                                            />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  <DialogFooter className="px-4 pb-4">
-                                    <Button type="submit" disabled={updateUserDetailsMutation.isPending}>
-                                      {updateUserDetailsMutation.isPending && (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      )}
-                                      Save Changes
-                                    </Button>
-                                  </DialogFooter>
-                                </form>
-                              </Form>
-                            </DialogContent>
-                          </Dialog>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              if (confirm('Are you sure you want to toggle this user\'s status?')) {
-                                toggleUserStatusMutation.mutate({
-                                  userId: customer.id,
-                                  enabled: !customer.isEnabled
-                                });
-                              }
-                            }}
-                          >
-                            {customer.isEnabled ? (
-                              <PowerOff className="mr-2 h-4 w-4" />
-                            ) : (
-                              <Power className="mr-2 h-4 w-4" />
-                            )}
-                            <span>{customer.isEnabled ? 'Disable' : 'Enable'} User</span>
+                          <DropdownMenuItem onSelect={() => handleEditUser(customer)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit Details
                           </DropdownMenuItem>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                <Package className="mr-2 h-4 w-4" />
-                                Assign Product
-                              </DropdownMenuItem>
-                            </DialogTrigger>
-                            <DialogContent className="bg-[#011d3d] border-[#022b5c] text-white">
-                              <DialogHeader>
-                                <DialogTitle className="text-[#43EB3E]">Assign Products to {customer.firstName}</DialogTitle>
-                              </DialogHeader>
-                              <div className="grid gap-4">
-                                {products?.map((product: any) => {
-                                  const isAssigned = customer.productAssignments?.some(
-                                    (a: any) => a.product.id === product.id
-                                  );
-                                  return (
-                                    <div
-                                      key={product.id}
-                                      className="flex items-center justify-between p-4 rounded-lg border border-[#043875]"
-                                    >
-                                      <div>
-                                        <h3 className="font-medium">{product.name}</h3>
-                                        <p className="text-sm text-muted-foreground">
-                                          {product.description}
-                                        </p>
-                                      </div>
-                                      <Button
-                                        variant={isAssigned ? "secondary" : "default"}
-                                        onClick={() => {
-                                          if (isAssigned) {
-                                            if (confirm('Are you sure you want to unassign this product?')) {
-                                              unassignProductMutation.mutate({
-                                                productId: product.id,
-                                                userId: customer.id
-                                              });
-                                            }
-                                          } else {
-                                            assignProductMutation.mutate({
-                                              productId: product.id,
-                                              userId: customer.id
-                                            });
-                                          }
-                                        }}
-                                      >
-                                        {isAssigned ? 'Unassign' : 'Assign'}
-                                      </Button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                <TrendingUp className="mr-2 h-4 w-4" />
-                                Assign Points
-                              </DropdownMenuItem>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl bg-[#011d3d] border-[#022b5c] text-white">
-                              <DialogHeader>
-                                <DialogTitle className="text-[#43EB3E]">
-                                  Assign Points - {customer.firstName} {customer.lastName}
-                                </DialogTitle>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <span className="text-sm text-muted-foreground">Current Tier:</span>
-                                  <Badge className={`${getTierInfo(customer.points).color}`}>
-                                    {getTierInfo(customer.points).name}
-                                  </Badge>
-                                  {getTierInfo(customer.points).nextTier && (
-                                    <span className="text-xs text-muted-foreground">
-                                      ({getTierInfo(customer.points).nextTier?.pointsNeeded.toLocaleString()} points to {getTierInfo(customer.points).nextTier?.name})
-                                    </span>
-                                  )}
-                                </div>
-                              </DialogHeader>
-                              <Form {...pointsForm}>
-                                <form
-                                  onSubmit={pointsForm.handleSubmit((data) =>
-                                    assignPointsMutation.mutate({ userId: customer.id, data })
-                                  )}
-                                  className="space-y-4"
-                                >
-                                  <div className="grid grid-cols-2 gap-6">
-                                    {/* Left Column - Product Activities and POS Points */}
-                                    <div className="space-y-6">
-                                      <h3 className="text-lg font-semibold">Product Activities</h3>
-                                      <ScrollArea className="h-[400px] pr-4">
-                                        <div className="space-y-4">
-                                          {customer.productAssignments?.map((assignment: any) => (
-                                            <Accordion type="single" collapsible key={assignment.id}>
-                                              <AccordionItem value="activities">
-                                                <AccordionTrigger className="p-3 bg-accent/50 rounded-lg hover:no-underline">
-                                                  <div className="flex justify-between items-center w-full pr-4">
-                                                    <div className="text-left">
-                                                      <p className="font-medium">{assignment.product.name}</p>
-                                                      <p className="text-sm text-muted-foreground">
-                                                        {assignment.product.description}
-                                                      </p>
-                                                    </div>
-                                                    {pointsForm.watch("selectedActivities")?.some(id =>
-                                                      assignment.product.activities?.some((a: any) => a.id === id)
-                                                    ) && (
-                                                      <Badge variant="secondary" className="ml-2">
-                                                        {assignment.product.activities?.filter((a: any) =>
-                                                          pointsForm.watch("selectedActivities")?.includes(a.id)
-                                                        ).length} selected
-                                                      </Badge>
-                                                    )}
-                                                  </div>
-                                                </AccordionTrigger>
-                                                <AccordionContent>
-                                                  <div className="space-y-2 pt-2">
-                                                    {assignment.product.activities?.map((activity: any) => {
-                                                      const isSystemActivity = activity.type === "SYSTEM_ACTIVATION";
-                                                      if (isSystemActivity) return null;
-
-                                                      const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
-                                                      const multiplierType = activity.type === "PREMIUM_PAYMENT" ? 'premium' : 'card';
-                                                      const pointsMultiplier = getPointsMultiplier(customer.points, multiplierType);
-
-                                                      return (
-                                                        <div
-                                                          key={activity.id}
-                                                          className="flex items-center justify-between p-2 pl-6 border rounded-lg"
-                                                        >
-                                                          <div className="flex items-center space-x-2">
-                                                            <Checkbox
-                                                              id={`activity-${activity.id}`}
-                                                              checked={pointsForm.watch("selectedActivities")?.includes(activity.id)}
-                                                              onCheckedChange={(checked) => {
-                                                                const currentSelected = pointsForm.getValues("selectedActivities") || [];
-                                                                const currentPoints = pointsForm.getValues("points") || 0;
-
-                                                                if (checked) {
-                                                                  pointsForm.setValue("selectedActivities", [...currentSelected, activity.id]);
-                                                                  if (!isPremiumOrCard) {
-                                                                    pointsForm.setValue("points", currentPoints + activity.pointsValue);
-                                                                  }
-                                                                  const description = `Points for ${activity.type.toLowerCase().replace('_', ' ')} activity`;
-                                                                  if (!pointsForm.getValues("description")) {
-                                                                    pointsForm.setValue("description", description);
-                                                                  }
-                                                                } else {
-                                                                  pointsForm.setValue(
-                                                                    "selectedActivities",
-                                                                    currentSelected.filter(id => id !== activity.id)
-                                                                  );
-                                                                  if (!isPremiumOrCard) {
-                                                                    pointsForm.setValue("points", currentPoints - activity.pointsValue);
-                                                                  } else {
-                                                                    const oldValue = activity.currentValue || 0;
-                                                                    pointsForm.setValue("points", currentPoints - oldValue);
-                                                                    activity.currentValue = 0;
-                                                                    activity.baseValue = 0;
-                                                                  }
-                                                                }
-                                                              }}
-                                                            />
-                                                            <label
-                                                              htmlFor={`activity-${activity.id}`}
-                                                              className="text-sm font-medium"
-                                                            >
-                                                              {activity.type.replace('_', ' ')}
-                                                              {isPremiumOrCard && pointsMultiplier > 0 && (
-                                                                <span className="ml-2 text-xs text-muted-foreground">
-                                                                  (×{pointsMultiplier})
-                                                                </span>
-                                                              )}
-                                                            </label>
-                                                          </div>
-                                                          {isPremiumOrCard ? (
-                                                            <div className="flex items-center space-x-2">
-                                                              <Input
-                                                                type="number"
-                                                                className="w-32"
-                                                                placeholder="Enter points"
-                                                                disabled={!pointsForm.watch("selectedActivities")?.includes(activity.id)}
-                                                                onChange={(e) => {
-                                                                  const baseValue = parseInt(e.target.value) || 0;
-                                                                  const multipliedValue = Math.floor(baseValue * pointsMultiplier);
-                                                                  const currentPoints = pointsForm.getValues("points") || 0;
-                                                                  const oldValue = activity.currentValue || 0;
-                                                                  pointsForm.setValue("points", currentPoints - oldValue + multipliedValue);
-                                                                  activity.currentValue = multipliedValue;
-                                                                  activity.baseValue = baseValue;
-                                                                }}
-                                                              />
-                                                              {pointsMultiplier > 0 && (
-                                                                <span className="text-sm text-muted-foreground">
-                                                                  = {activity.currentValue || 0} points
-                                                                </span>
-                                                              )}
-                                                            </div>
-                                                          ) : (
-                                                            <span className="text-sm font-semibold">
-                                                              {activity.pointsValue} points
-                                                            </span>
-                                                          )}
-                                                        </div>
-                                                      );
-                                                    })}
-                                                  </div>
-                                                </AccordionContent>
-                                              </AccordionItem>
-                                            </Accordion>
-                                          ))}
-                                        </div>
-                                      </ScrollArea>
-
-                                      <div className="space-y-4 pt-4 border-t border-[#043875]">
-                                        <h3 className="font-medium">POS Points</h3>
-                                        <div className="grid grid-cols-2 gap-4">
-                                          <FormField
-                                            control={pointsForm.control}
-                                            name="posBaseValue"
-                                            render={({ field }) => (
-                                              <FormItem>
-                                                <FormLabel className="text-white">Base Value (R)</FormLabel>
-                                                <FormControl>
-                                                  <Input
-                                                    type="number"
-                                                    {...field}
-                                                    onChange={(e) => {
-                                                      const baseValue = Number(e.target.value);
-                                                      field.onChange(baseValue);
-                                                      const posMultiplier = getPointsMultiplier(customer.points, 'pos');
-                                                      pointsForm.setValue("posPoints", Math.floor(baseValue * posMultiplier));
-                                                    }}
-                                                    className="bg-[#022b5c] border-[#043875] text-white"
-                                                  />
-                                                </FormControl>
-                                                <FormMessage />
-                                              </FormItem>
-                                            )}
-                                          />
-                                          <div className="flex items-end">
-                                            <span className="text-sm text-muted-foreground">
-                                              × {getPointsMultiplier(customer.points, 'pos')} = {pointsForm.watch("posPoints")} points
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* Right Column - Points Summary */}
-                                    <div className="space-y-4">
-                                      <h3 className="text-lg font-semibold">Points Summary</h3>
-                                      <div className="rounded-lg border border-[#043875] p-4 space-y-2">
-                                        {pointsForm.watch('selectedActivities')?.map((activityId) => {
-                                          const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
-                                          if (!activity) return null;
-                                          return (
-                                            <div key={activity.id} className="flex justify-between">
-                                              <span>{activity.type}</span>
-                                              <span>{activity.currentValue || activity.pointsValue} points</span>
-                                            </div>
-                                          );
-                                        })}
-                                        {pointsForm.watch('posPoints') > 0 && (
-                                          <div className="flex justify-between">
-                                            <span>POS Points (R{pointsForm.watch('posBaseValue')})</span>
-                                            <span>{pointsForm.watch('posPoints')} points</span>
-                                          </div>
-                                        )}
-                                        <div className="pt-2 border-t border-[#043875] flex justify-between font-medium">
-                                          <span>Total</span>
-                                          <span>
-                                            {(pointsForm.watch('selectedActivities')?.reduce((sum, activityId) => {
-                                              const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
-                                              return sum + (activity?.currentValue || activity?.pointsValue || 0);
-                                            }, 0) || 0) + (pointsForm.watch('posPoints') || 0)} points
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      <FormField
-                                        control={pointsForm.control}
-                                        name="description"
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel className="text-white">Description</FormLabel>
-                                            <FormControl>
-                                              <Input
-                                                {...field}
-                                                className="bg-[#022b5c] border-[#043875] text-white"
-                                              />
-                                            </FormControl>
-                                            <FormMessage />
-                                          </FormItem>
-                                        )}
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <DialogFooter>
-                                    <Button
-                                      type="submit"
-                                      disabled={assignPointsMutation.isPending}
-                                      className="bg-[#43EB3E] text-black hover:bg-[#43EB3E]/90"
-                                    >
-                                      {assignPointsMutation.isPending && (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      )}
-                                      Assign Points
-                                    </Button>
-                                  </DialogFooter>
-                                </form>
-                              </Form>
-                            </DialogContent>
-                          </Dialog>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Customer Details</DialogTitle>
+          </DialogHeader>
+          <Form {...editDetailsForm}>
+            <form onSubmit={editDetailsForm.handleSubmit((data) =>
+              updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
+            )}>
+              <ScrollArea className="max-h-[60vh]">
+                <div className="grid grid-cols-2 gap-4 p-4">
+                  <div className="col-span-2">
+                    <h3 className="text-lg font-semibold mb-2">Personal Information</h3>
+                  </div>
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="idNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ID Number</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="dateOfBirth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date of Birth</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="date" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Gender</FormLabel>
+                        <FormControl>
+                          <select
+                            {...field}
+                            value={field.value || ""}
+                            className="w-full p-2 rounded border"
+                          >
+                            <option value="">Select Gender</option>
+                            {genderEnum.map((gender) => (
+                              <option key={gender} value={gender}>
+                                {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                              </option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="selectedPackage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Package</FormLabel>
+                        <FormControl>
+                          <select
+                            {...field}
+                            className="w-full p-2 rounded border"
+                          >
+                            {packageEnum.map((pkg) => (
+                              <option key={pkg} value={pkg}>
+                                {pkg}
+                              </option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="col-span-2">
+                    <h3 className="text-lg font-semibold mb-2 mt-4">Address Information</h3>
+                  </div>
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="postalCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Postal Code</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="col-span-2">
+                    <h3 className="text-lg font-semibold mb-2 mt-4">Bank Information</h3>
+                  </div>
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="bankName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bank Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="accountType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Type</FormLabel>
+                        <FormControl>
+                          <select
+                            {...field}
+                            className="w-full p-2 rounded border"
+                          >
+                            {accountTypeEnum.map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="accountNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Number</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="accountHolderName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Holder Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="branchCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Branch Code</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="col-span-2">
+                    <h3 className="text-lg font-semibold mb-2 mt-4">Additional Information</h3>
+                  </div>
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="occupation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Occupation</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="industry"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Industry</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="hasCreditCard"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel>Has Credit Card</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="isSouthAfrican"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel>Is South African</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editDetailsForm.control}
+                    name="isEnabled"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel>Account Active</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </ScrollArea>
+
+              <DialogFooter className="mt-6">
+                <Button
+                  type="submit"
+                  disabled={updateUserDetailsMutation.isPending}
+                >
+                  {updateUserDetailsMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
