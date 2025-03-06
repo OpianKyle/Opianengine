@@ -694,13 +694,36 @@ export function registerRoutes(app: Express): Server {
         )
         SELECT 
           rt.*,
-          (SELECT COUNT(*) 
-           FROM users u2 
-           WHERE u2.referred_by = rt.referral_code) as referral_count
+          (
+            SELECT COUNT(*) 
+            FROM users u2 
+            WHERE u2.referred_by = rt.referral_code
+          ) as direct_referral_count,
+          (
+            SELECT JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'package', u3.selected_package,
+                'count', COUNT(*)
+              )
+            )
+            FROM users u3
+            WHERE u3.referred_by = rt.referral_code
+            GROUP BY u3.selected_package
+          ) as referral_package_stats
         FROM referral_tree rt
         ORDER BY rt.level, rt.created_at DESC`,
         [referralCode]
       );
+
+      // Get package prices for commission calculations
+      const [packagePrices] = await connection.execute(
+        'SELECT package_type, premium_amount FROM package_premium_amounts'
+      );
+
+      const packagePriceMap = packagePrices.reduce((acc: any, pkg: any) => {
+        acc[pkg.package_type] = pkg.premium_amount;
+        return acc;
+      }, {});
 
       // Transform referrals data with commission calculations
       const transformedReferrals = referrals.map((referral: any) => {
@@ -711,8 +734,14 @@ export function registerRoutes(app: Express): Server {
           referral.level === 3 ? 0.05 : // 5% for level 3
           0;
         
-        const randValue = (referral.package_amount || 0) * commissionPercentage;
+        const packageAmount = referral.package_amount || 0;
+        const randValue = packageAmount * commissionPercentage;
         const points = Math.floor(randValue * 100);
+
+        // Parse referral package stats
+        const packageStats = referral.referral_package_stats 
+          ? JSON.parse(referral.referral_package_stats)
+          : [];
 
         return {
           id: referral.id,
@@ -722,7 +751,8 @@ export function registerRoutes(app: Express): Server {
           selectedPackage: referral.selected_package,
           createdAt: referral.created_at,
           level: referral.level,
-          referralCount: referral.referral_count,
+          directReferralCount: referral.direct_referral_count,
+          referralPackageStats: packageStats,
           commission: {
             percentage: commissionPercentage * 100, // Convert to percentage
             randValue: randValue.toFixed(2),
@@ -731,7 +761,42 @@ export function registerRoutes(app: Express): Server {
         };
       });
 
-      // Group referrals by level
+      // Group direct referrals by package type with their referral stats
+      const directReferrals = transformedReferrals
+        .filter(ref => ref.level === 1)
+        .reduce((acc: any, ref: any) => {
+          const packageType = ref.selectedPackage || 'UNKNOWN';
+          if (!acc[packageType]) {
+            acc[packageType] = {
+              count: 0,
+              totalReferrals: 0,
+              referralsByPackage: {
+                BEGINNER: 0,
+                NOVICE: 0,
+                ACTIVE: 0,
+                PROFESSIONAL: 0,
+                EXPERT: 0
+              },
+              commission: {
+                percentage: 15,
+                baseAmount: packagePriceMap[packageType] || 0
+              }
+            };
+          }
+          acc[packageType].count++;
+          acc[packageType].totalReferrals += ref.directReferralCount;
+          
+          // Add up referrals by package
+          ref.referralPackageStats.forEach((stat: any) => {
+            if (stat.package) {
+              acc[packageType].referralsByPackage[stat.package] += stat.count;
+            }
+          });
+          
+          return acc;
+        }, {});
+
+      // Group all referrals by level for the full tree view
       const groupedReferrals = transformedReferrals.reduce((acc: any, ref: any) => {
         if (!acc[ref.level]) {
           acc[ref.level] = [];
@@ -743,6 +808,8 @@ export function registerRoutes(app: Express): Server {
       res.json({
         referralCode,
         referralCount: referrals.length,
+        packagePrices: packagePriceMap,
+        directReferralsByPackage: directReferrals,
         referralsByLevel: groupedReferrals
       });
     } catch (error) {
