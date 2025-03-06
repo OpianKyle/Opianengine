@@ -67,25 +67,27 @@ router.get('/referrals', async (req, res) => {
     }
     console.log('Using referral code:', referralCode);
 
-    // Get referrals up to level 3 with package info
-    const [referrals] = await connection.execute(`
-      WITH RECURSIVE referral_chain AS (
-        -- Level 1 (direct referrals)
-        SELECT 
-          id,
-          first_name,
-          last_name,
-          email,
-          selected_package,
-          created_at,
-          referral_code,
-          1 as level
-        FROM users 
-        WHERE referred_by = ?
+    // First get all direct referrals (level 1)
+    const [level1Referrals] = await connection.execute(`
+      SELECT 
+        u.id,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.selected_package,
+        u.created_at,
+        u.referral_code,
+        COUNT(r.id) as direct_referral_count
+      FROM users u
+      LEFT JOIN users r ON r.referred_by = u.referral_code
+      WHERE u.referred_by = ?
+      GROUP BY u.id, u.first_name, u.last_name, u.email, u.selected_package, u.created_at, u.referral_code
+    `, [referralCode]);
 
-        UNION ALL
-
-        -- Level 2 and 3
+    // Get level 2 referrals
+    const level2Referrals = [];
+    for (const level1 of level1Referrals) {
+      const [refs] = await connection.execute(`
         SELECT 
           u.id,
           u.first_name,
@@ -94,34 +96,34 @@ router.get('/referrals', async (req, res) => {
           u.selected_package,
           u.created_at,
           u.referral_code,
-          rc.level + 1
+          COUNT(r.id) as direct_referral_count
         FROM users u
-        INNER JOIN referral_chain rc ON u.referred_by = rc.referral_code
-        WHERE rc.level < 3
-      )
-      SELECT 
-        rc.*,
-        pp.premium_amount as package_amount,
-        (
-          SELECT COUNT(*) 
-          FROM users u2 
-          WHERE u2.referred_by = rc.referral_code
-        ) as direct_referral_count,
-        (
-          SELECT JSON_ARRAYAGG(
-            JSON_OBJECT(
-              'package', u3.selected_package,
-              'count', COUNT(*)
-            )
-          )
-          FROM users u3
-          WHERE u3.referred_by = rc.referral_code
-          GROUP BY u3.selected_package
-        ) as package_stats
-      FROM referral_chain rc
-      LEFT JOIN package_premium_amounts pp ON pp.package_type = rc.selected_package
-      ORDER BY rc.level, rc.created_at DESC
-    `, [referralCode]);
+        LEFT JOIN users r ON r.referred_by = u.referral_code
+        WHERE u.referred_by = ?
+        GROUP BY u.id, u.first_name, u.last_name, u.email, u.selected_package, u.created_at, u.referral_code
+      `, [level1.referral_code]);
+      level2Referrals.push(...refs);
+    }
+
+    // Get level 3 referrals
+    const level3Referrals = [];
+    for (const level2 of level2Referrals) {
+      const [refs] = await connection.execute(`
+        SELECT 
+          u.id,
+          u.first_name,
+          u.last_name,
+          u.email,
+          u.selected_package,
+          u.created_at,
+          COUNT(r.id) as direct_referral_count
+        FROM users u
+        LEFT JOIN users r ON r.referred_by = u.referral_code
+        WHERE u.referred_by = ?
+        GROUP BY u.id, u.first_name, u.last_name, u.email, u.selected_package, u.created_at
+      `, [level2.referral_code]);
+      level3Referrals.push(...refs);
+    }
 
     // Get package prices
     const [packagePrices] = await connection.execute(
@@ -134,15 +136,9 @@ router.get('/referrals', async (req, res) => {
     }, {});
 
     // Transform referrals with commission calculations
-    const transformedReferrals = await Promise.all(
-      referrals.map(async (ref: any) => {
-        const commission = await calculateCommission(connection, ref.selected_package, ref.level);
-
-        // Parse package stats
-        const packageStats = ref.package_stats 
-          ? JSON.parse(ref.package_stats)
-          : [];
-
+    const transformLevel = async (referrals: any[], level: number) => {
+      return Promise.all(referrals.map(async (ref: any) => {
+        const commission = await calculateCommission(connection, ref.selected_package, level);
         return {
           id: ref.id,
           firstName: ref.first_name,
@@ -150,35 +146,26 @@ router.get('/referrals', async (req, res) => {
           email: ref.email,
           selectedPackage: ref.selected_package,
           createdAt: ref.created_at,
-          level: ref.level,
-          directReferralCount: ref.direct_referral_count,
-          packageStats,
+          directReferralCount: ref.direct_referral_count || 0,
           commission: {
-            percentage: ref.level === 1 ? 15 : ref.level === 2 ? 10 : 5,
+            percentage: level === 1 ? 15 : level === 2 ? 10 : 5,
             randValue: commission.toFixed(2),
             points: Math.floor(commission * 100)
           }
         };
-      })
-    );
+      }));
+    };
 
-    // Group referrals by level
-    const referralsByLevel = transformedReferrals.reduce((acc: any, ref: any) => {
-      if (!acc[ref.level]) {
-        acc[ref.level] = [];
-      }
-      acc[ref.level].push(ref);
-      return acc;
-    }, {});
+    const level1Transformed = await transformLevel(level1Referrals, 1);
+    const level2Transformed = await transformLevel(level2Referrals, 2);
+    const level3Transformed = await transformLevel(level3Referrals, 3);
 
     // Calculate package statistics for each level
-    const packageStatsByLevel = [1, 2, 3].reduce((acc: any, level: number) => {
-      const levelReferrals = referralsByLevel[level] || [];
-
-      acc[level] = levelReferrals.reduce((levelAcc: any, ref: any) => {
+    const calculateLevelStats = (referrals: any[]) => {
+      return referrals.reduce((acc: any, ref: any) => {
         const packageType = ref.selectedPackage || 'UNKNOWN';
-        if (!levelAcc[packageType]) {
-          levelAcc[packageType] = {
+        if (!acc[packageType]) {
+          acc[packageType] = {
             count: 0,
             totalReferrals: 0,
             referralsByPackage: {
@@ -189,40 +176,41 @@ router.get('/referrals', async (req, res) => {
               EXPERT: 0
             },
             commission: {
-              percentage: level === 1 ? 15 : level === 2 ? 10 : 5,
+              percentage: ref.commission.percentage,
               baseAmount: packagePriceMap[packageType] || 0
             }
           };
         }
-        levelAcc[packageType].count++;
-        levelAcc[packageType].totalReferrals += ref.directReferralCount;
-
-        // Add up referrals by package
-        ref.packageStats.forEach((stat: any) => {
-          if (stat.package) {
-            levelAcc[packageType].referralsByPackage[stat.package] += stat.count;
-          }
-        });
-
-        return levelAcc;
+        acc[packageType].count++;
+        acc[packageType].totalReferrals += ref.directReferralCount;
+        return acc;
       }, {});
+    };
 
-      return acc;
-    }, {});
+    const packageStatsByLevel = {
+      1: calculateLevelStats(level1Transformed),
+      2: calculateLevelStats(level2Transformed),
+      3: calculateLevelStats(level3Transformed)
+    };
 
     const response = {
       referralCode,
-      referralCount: referrals.length,
+      referralCount: level1Transformed.length + level2Transformed.length + level3Transformed.length,
       packagePrices: packagePriceMap,
       packageStatsByLevel,
-      referralsByLevel
+      referralsByLevel: {
+        1: level1Transformed,
+        2: level2Transformed,
+        3: level3Transformed
+      }
     };
 
     console.log('Sending response:', {
       referralCode,
-      referralCount: referrals.length,
-      levels: Object.keys(referralsByLevel).length,
-      totalCommission: transformedReferrals.reduce((sum, ref) => sum + Number(ref.commission.randValue), 0)
+      referralCount: response.referralCount,
+      levels: Object.keys(response.referralsByLevel).length,
+      totalCommission: [...level1Transformed, ...level2Transformed, ...level3Transformed]
+        .reduce((sum, ref) => sum + Number(ref.commission.randValue), 0)
     });
 
     res.json(response);
