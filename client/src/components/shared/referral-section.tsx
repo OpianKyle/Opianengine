@@ -36,15 +36,20 @@ export default function ReferralSection() {
   const { data: referralInfo, isLoading, error } = useQuery<ReferralInfo>({
     queryKey: ["/api/customer/referral"],
     queryFn: async () => {
+      console.log('Fetching referral data...');
       const response = await fetch("/api/customer/referral", {
         credentials: 'include'
       });
       if (!response.ok) {
         throw new Error("Failed to fetch referral data");
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Referral data received:', data);
+      return data;
     },
   });
+
+  console.log('Current referral info:', referralInfo);
 
   const referralLink = referralInfo?.referralCode 
     ? `${window.location.origin}/?ref=${referralInfo.referralCode}`
