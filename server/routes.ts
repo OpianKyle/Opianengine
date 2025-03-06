@@ -1,6 +1,6 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import passport from "passport"; // Add passport import
+import passport from "passport";
 import { setupAuth, checkAgent } from "./auth";
 import { setupWebSocketServer } from "./websocket";
 import { db } from "@db";
@@ -324,24 +324,32 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Login endpoint uses imported passport instance
+  // Global error handler
+  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    console.error('Global error handler caught:', err);
+    const status = (err as any).status || (err as any).statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    res.status(status).json({ error: message });
+  });
+
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
     console.log('Login successful:', {
-      id: req.user.id,
-      email: req.user.email,
-      is_admin: req.user.is_admin,
-      is_super_admin: req.user.is_super_admin,
-      is_agent: req.user.is_agent
+      id: req.user?.id,
+      email: req.user?.email,
+      is_admin: req.user?.is_admin,
+      is_super_admin: req.user?.is_super_admin,
+      is_agent: req.user?.is_agent
     });
 
     // Send only the user data without success message
     res.json({
-      id: req.user.id,
-      email: req.user.email,
-      firstName: req.user.firstName,
-      lastName: req.user.lastName,
-      isAdmin: req.user.is_admin,
-      isSuperAdmin: req.user.is_super_admin,
-      isAgent: req.user.is_agent
+      id: req.user?.id,
+      email: req.user?.email,
+      firstName: req.user?.firstName,
+      lastName: req.user?.lastName,
+      isAdmin: req.user?.is_admin,
+      isSuperAdmin: req.user?.is_super_admin,
+      isAgent: req.user?.is_agent
     });
   });
 
@@ -389,7 +397,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Mount referral routes
-  app.use(referralRouter);
+  app.use('/api/customer', referralRouter);
 
   // Admin customers endpoint - get only regular customers
   app.get("/api/admin/customers", async (req, res) => {

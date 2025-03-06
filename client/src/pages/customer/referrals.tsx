@@ -7,7 +7,7 @@ import { Copy } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { AchievementBadges, referralBadges, type AchievementBadge } from "@/components/ui/badges";
+import { AchievementBadges, referralBadges } from "@/components/ui/badges";
 import {
   FaXTwitter as TwitterIcon,
   FaFacebook as FacebookIcon,
@@ -92,13 +92,18 @@ export default function ReferralsPage() {
   const { data: referralStats, isLoading } = useQuery<ReferralStats>({
     queryKey: ["/api/customer/referrals"],
     queryFn: async () => {
+      console.log('Fetching referral data...');
       const response = await fetch("/api/customer/referrals", {
         credentials: 'include'
       });
       if (!response.ok) {
-        throw new Error("Failed to fetch referral data");
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Referral fetch error:', { status: response.status, error: errorData });
+        throw new Error(errorData.error || "Failed to fetch referral data");
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Referral data received:', data);
+      return data;
     },
   });
 
