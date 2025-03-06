@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext, useState, useEffect } from "react";
+import { ReactNode, createContext, useContext, useState, useCallback, useRef } from "react";
 import {
   useQuery,
   useMutation,
@@ -7,8 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { cleanupWebSockets, handlePageTransition } from "@/lib/utils";
-import { LoadingSpinner } from "@/components/loading";
+import { cleanupWebSockets } from "@/lib/utils";
 
 type User = {
   id: number;
@@ -40,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const isLoggingOut = useRef(false);
 
   // Silent user data fetch
   const {
@@ -49,15 +49,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<User>({
     queryKey: ["/api/user"],
     retry: false,
-    enabled: true,
+    enabled: !isLoggingOut.current, // Disable during logout
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    onError: () => {
-      queryClient.setQueryData(["/api/user"], null);
-      window.location.href = '/'; // Redirect to home on auth error
-    }
   });
+
+  const clearAuthState = useCallback(async () => {
+    isLoggingOut.current = true;
+
+    // Disable all queries
+    await queryClient.cancelQueries();
+    queryClient.setDefaultOptions({
+      queries: { enabled: false }
+    });
+
+    // Clear all caches
+    queryClient.clear();
+    queryClient.removeQueries();
+    queryClient.setQueryData(["/api/user"], null);
+
+    // Clear storage
+    sessionStorage.clear();
+    localStorage.clear();
+
+    // Clean up connections
+    cleanupWebSockets();
+  }, [queryClient]);
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
@@ -76,7 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return res.json();
     },
     onSuccess: async (user) => {
-      console.log('Login mutation success', { userId: user.id });
+      console.log('Login mutation success');
+      isLoggingOut.current = false;
 
       // Set user data in query cache
       queryClient.setQueryData(["/api/user"], user);
@@ -84,7 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Show welcome message only if not shown in this session
       const sessionKey = `welcome_shown_${user.id}`;
       if (!sessionStorage.getItem(sessionKey)) {
-        console.log('Showing welcome message');
         toast({
           title: "Welcome back",
           description: `Logged in as ${user.firstName} ${user.lastName}`,
@@ -92,15 +110,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem(sessionKey, 'true');
       }
 
-      await handlePageTransition(() => {
-        if (user.isAgent) {
-          setLocation('/agent');
-        } else if (user.isAdmin || user.isSuperAdmin) {
-          setLocation('/admin');
-        } else {
-          setLocation('/dashboard');
-        }
-      });
+      // Navigate based on user role
+      if (user.isAgent) {
+        setLocation('/agent');
+      } else if (user.isAdmin || user.isSuperAdmin) {
+        setLocation('/admin');
+      } else {
+        setLocation('/dashboard');
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -117,6 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       setIsTransitioning(true);
+      // Clear state before making request
+      await clearAuthState();
+
       const res = await fetch("/api/logout", {
         method: "POST",
         credentials: 'include',
@@ -126,32 +146,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const error = await res.json();
         throw new Error(error.error || "Failed to logout");
       }
-
-      await handlePageTransition(async () => {
-        // Clear all React Query cache and remove queries
-        queryClient.clear();
-        queryClient.removeQueries();
-
-        // Ensure user data is cleared
-        queryClient.setQueryData(["/api/user"], null);
-
-        // Clean up WebSocket connections
-        cleanupWebSockets();
-
-        // Clear session storage
-        sessionStorage.clear();
-
-        // Disable React Query's auto refetching temporarily
-        await queryClient.cancelQueries();
-        queryClient.setDefaultOptions({
-          queries: {
-            enabled: false,
-          },
-        });
-      });
-
-      // Force a clean reload to reset all state
-      window.location.href = '/';
     },
     onError: (error: Error) => {
       toast({
@@ -162,6 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSettled: () => {
       setIsTransitioning(false);
+      // Force reload to ensure clean state
+      window.location.href = '/';
     }
   });
 
@@ -175,7 +171,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logoutMutation,
       }}
     >
-      {isTransitioning && <LoadingSpinner />}
       {children}
     </AuthContext.Provider>
   );

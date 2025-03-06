@@ -466,6 +466,49 @@ export function setupAuth(app: Express) {
   }
 
 
+  // Enhanced logout handling with proper session destruction
+  app.post("/api/logout", (req, res) => {
+    console.log('Logout request received');
+
+    // Clear the session cookie
+    res.clearCookie('session', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    // Clear the connect.sid cookie
+    res.clearCookie('connect.sid', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    // Destroy the session
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+        }
+        console.log('Session destroyed successfully');
+
+        // Properly logout with passport
+        req.logout((err) => {
+          if (err) {
+            console.error('Error during passport logout:', err);
+          }
+          console.log('Passport logout successful');
+          res.status(200).json({ message: "Logged out successfully" });
+        });
+      });
+    } else {
+      console.log('No session to destroy');
+      res.status(200).json({ message: "Logged out successfully" });
+    }
+  });
+
   return app;
 }
 

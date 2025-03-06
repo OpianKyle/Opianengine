@@ -73,23 +73,37 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/logout", (req, res) => {
     console.log('Logout request received');
     
-    // Always clear the session cookie
+    // Clear all cookies
     res.clearCookie('connect.sid', {
       path: '/',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax'
     });
+
+    res.clearCookie('session', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
     
-    // Attempt proper passport logout
+    // Destroy the session and logout
     if (req.session) {
       req.session.destroy((err) => {
         if (err) {
           console.error('Error destroying session:', err);
-          // Still send success since we cleared the cookie
         }
         console.log('Session destroyed successfully');
-        res.status(200).json({ message: "Logged out successfully" });
+        
+        // Properly logout with passport
+        req.logout((err) => {
+          if (err) {
+            console.error('Error during passport logout:', err);
+          }
+          console.log('Passport logout successful');
+          res.status(200).json({ message: "Logged out successfully" });
+        });
       });
     } else {
       // If no session exists, still return success
