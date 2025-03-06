@@ -630,62 +630,126 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    const connection = await createConnection();
     try {
       console.log('Fetching referral info for user:', req.user.id);
 
-      // Get the user's referral data using MySQL syntax
-      const referralInfo = await db.select({
-        referralCode: users.referralCode,
-        firstName: users.firstName,
-        lastName: users.lastName
-      })
-      .from(users)
-      .where(eq(users.id, req.user.id))
-      .limit(1)
-      .execute();
+      // First get user's referral code
+      const [userInfo] = await connection.execute(
+        `SELECT referral_code, first_name, last_name 
+         FROM users 
+         WHERE id = ?`,
+        [req.user.id]
+      );
 
-      if (!referralInfo || referralInfo.length === 0) {
-        console.error('User not found:', req.user.id);
+      if (!userInfo || userInfo.length === 0) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const userInfo = referralInfo[0];
-
-      if (!userInfo.referralCode) {
-        // Generate a new referral code if one doesn't exist
-        const newReferralCode = `REF${req.user.id}${Date.now().toString(36)}`;
-        await db.update(users)
-          .set({ referralCode: newReferralCode })
-          .where(eq(users.id, req.user.id))
-          .execute();
-
-        userInfo.referralCode = newReferralCode;
+      // Generate referral code if none exists
+      let referralCode = userInfo[0].referral_code;
+      if (!referralCode) {
+        referralCode = `REF${req.user.id}${Date.now().toString(36)}`;
+        await connection.execute(
+          'UPDATE users SET referral_code = ? WHERE id = ?',
+          [referralCode, req.user.id]
+        );
       }
 
-      console.log('Found referral code:', userInfo.referralCode);
+      // Get direct referrals with their package info and nested referrals count
+      const [referrals] = await connection.execute(
+        `WITH RECURSIVE referral_tree AS (
+          -- Base case: direct referrals (level 1)
+          SELECT 
+            u.id,
+            u.first_name,
+            u.last_name,
+            u.email,
+            u.selected_package,
+            u.created_at,
+            u.referral_code,
+            1 as level,
+            pp.premium_amount as package_amount
+          FROM users u
+          LEFT JOIN package_premium_amounts pp ON pp.package_type = u.selected_package
+          WHERE u.referred_by = ?
 
-      // Get users who were referred by this user
-      const referrals = await db.select({
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        createdAt: users.createdAt,
-      })
-      .from(users)
-      .where(eq(users.referredBy, userInfo.referralCode))
-      .orderBy(desc(users.createdAt))
-      .execute();
+          UNION ALL
 
-      console.log('Found referrals count:', referrals.length);
+          -- Recursive case: find nested referrals
+          SELECT 
+            u.id,
+            u.first_name,
+            u.last_name,
+            u.email,
+            u.selected_package,
+            u.created_at,
+            u.referral_code,
+            rt.level + 1,
+            pp.premium_amount
+          FROM users u
+          LEFT JOIN package_premium_amounts pp ON pp.package_type = u.selected_package
+          INNER JOIN referral_tree rt ON u.referred_by = rt.referral_code
+          WHERE rt.level < 3
+        )
+        SELECT 
+          rt.*,
+          (SELECT COUNT(*) 
+           FROM users u2 
+           WHERE u2.referred_by = rt.referral_code) as referral_count
+        FROM referral_tree rt
+        ORDER BY rt.level, rt.created_at DESC`,
+        [referralCode]
+      );
+
+      // Transform referrals data with commission calculations
+      const transformedReferrals = referrals.map((referral: any) => {
+        // Calculate commission based on level
+        const commissionPercentage = 
+          referral.level === 1 ? 0.15 : // 15% for level 1
+          referral.level === 2 ? 0.10 : // 10% for level 2
+          referral.level === 3 ? 0.05 : // 5% for level 3
+          0;
+        
+        const randValue = (referral.package_amount || 0) * commissionPercentage;
+        const points = Math.floor(randValue * 100);
+
+        return {
+          id: referral.id,
+          firstName: referral.first_name,
+          lastName: referral.last_name,
+          email: referral.email,
+          selectedPackage: referral.selected_package,
+          createdAt: referral.created_at,
+          level: referral.level,
+          referralCount: referral.referral_count,
+          commission: {
+            percentage: commissionPercentage * 100, // Convert to percentage
+            randValue: randValue.toFixed(2),
+            points: points
+          }
+        };
+      });
+
+      // Group referrals by level
+      const groupedReferrals = transformedReferrals.reduce((acc: any, ref: any) => {
+        if (!acc[ref.level]) {
+          acc[ref.level] = [];
+        }
+        acc[ref.level].push(ref);
+        return acc;
+      }, {});
 
       res.json({
-        referralCode: userInfo.referralCode,
+        referralCode,
         referralCount: referrals.length,
-        referrals: referrals
+        referralsByLevel: groupedReferrals
       });
     } catch (error) {
       console.error('Error fetching referral data:', error);
       res.status(500).json({ error: 'Failed to fetch referral data' });
+    } finally {
+      await connection.end();
     }
   });
 
