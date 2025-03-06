@@ -49,27 +49,27 @@ export function registerRoutes(app: Express): Server {
 
   // Helper function to calculate referral commission points
   function calculateCommissionPoints(packageName: string, level: number): number {
-    let basePoints = 0;
+    let packageValue = 0;
     
-    // Get base points from package
+    // Get monetary value of package in Rands
     switch (packageName?.toUpperCase()) {
       case 'BEGINNER':
-        basePoints = 5000;
+        packageValue = 275; // R275
         break;
       case 'NOVICE':
-        basePoints = 10000;
+        packageValue = 385; // R385
         break;
       case 'ACTIVE':
-        basePoints = 15000;
+        packageValue = 495; // R495
         break;
       case 'PROFESSIONAL':
-        basePoints = 20000;
+        packageValue = 660; // R660
         break;
       case 'EXPERT':
-        basePoints = 25000;
+        packageValue = 825; // R825
         break;
       default:
-        basePoints = 0;
+        packageValue = 0;
     }
 
     // Apply level-based commission percentage
@@ -88,7 +88,9 @@ export function registerRoutes(app: Express): Server {
         commissionPercentage = 0;
     }
 
-    return Math.floor(basePoints * commissionPercentage);
+    // Calculate commission in Rands then convert to points (1 Rand = 100 points)
+    const commissionValue = packageValue * commissionPercentage;
+    return Math.floor(commissionValue * 100); // Convert to points
   }
 
   // Registration endpoint with referral commission handling
