@@ -560,18 +560,52 @@ export function registerRoutes(app: Express): Server {
       const [countResult] = await connection.execute(
         'SELECT COUNT(*) as total FROM notifications'
       );
+
+      // Test creating a notification
+      const testData = {
+        user_id: 1, // Using a test user ID
+        type: 'SYSTEM_UPDATE',
+        title: 'Database Test',
+        message: 'Testing database connectivity',
+        is_read: false,
+        metadata: JSON.stringify({ test: true, time: new Date().toISOString() }),
+        created_at: new Date()
+      };
+
+      const [insertResult] = await connection.execute(
+        `INSERT INTO notifications (
+          user_id, type, title, message, is_read, metadata, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          testData.user_id,
+          testData.type,
+          testData.title,
+          testData.message,
+          testData.is_read,
+          testData.metadata,
+          testData.created_at
+        ]
+      );
       
       res.json({
         tableExists: true,
         tableStructure: columns,
         sampleNotifications: notifications,
         totalNotifications: countResult[0].total,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        testInsert: {
+          success: true,
+          insertId: insertResult.insertId,
+          testData
+        }
       });
       
     } catch (error) {
       console.error('Error testing notifications:', error);
-      res.status(500).json({ error: 'Failed to test notifications system' });
+      res.status(500).json({ 
+        error: 'Failed to test notifications system',
+        details: error.message
+      });
     } finally {
       await connection.end();
     }
