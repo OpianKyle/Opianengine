@@ -3,13 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { AchievementBadges, referralBadges } from "@/components/ui/badges";
-import { useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
 import {
   FaXTwitter as TwitterIcon,
   FaFacebook as FacebookIcon,
@@ -94,14 +92,6 @@ const PackageEmblem = ({ type, count, totalReferrals, level }: {
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const { user } = useAuth();
-
-  // Redirect if not authenticated
-  if (!user) {
-    setLocation('/auth');
-    return null;
-  }
 
   const { data: referralStats, isLoading, error } = useQuery<ReferralStats>({
     queryKey: ["/api/customer/referrals"],
@@ -109,18 +99,12 @@ export default function ReferralsPage() {
       console.log('Fetching referral data...');
       try {
         const response = await fetch("/api/customer/referrals", {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-          }
+          credentials: 'include'
         });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error('Referral fetch error:', { 
-            status: response.status, 
-            error: errorData 
-          });
+          console.error('Referral fetch error:', { status: response.status, error: errorData });
           throw new Error(errorData.error || "Failed to fetch referral data");
         }
 
@@ -129,50 +113,10 @@ export default function ReferralsPage() {
         return data;
       } catch (error) {
         console.error('Error fetching referrals:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load referrals"
-        });
         throw error;
       }
     },
-    retry: (failureCount, error) => {
-      if (error instanceof Error && error.message.includes('Please log in')) {
-        setLocation('/auth');
-        return false;
-      }
-      return failureCount < 2;
-    },
-    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
-    enabled: !!user // Only fetch if user is authenticated
   });
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-8 text-center">
-        <p className="text-destructive text-lg">Error loading referral data</p>
-        <p className="text-muted-foreground mt-2">
-          {error instanceof Error ? error.message : "Please try again later"}
-        </p>
-        <Button
-          variant="outline"
-          className="mt-4"
-          onClick={() => window.location.reload()}
-        >
-          Retry
-        </Button>
-      </div>
-    );
-  }
 
   const referralLink = referralStats?.referralCode
     ? `${window.location.origin}/?ref=${referralStats.referralCode}`
@@ -223,6 +167,21 @@ export default function ReferralsPage() {
     progress: Math.min(referralStats.referralCount, badge.requirement)
   })) : [];
 
+  if (error) {
+    return (
+      <div className="p-4">
+        <p className="text-red-500">Error loading referral data. Please try again later.</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <p>Loading referral data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

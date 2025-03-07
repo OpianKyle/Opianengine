@@ -23,7 +23,7 @@ export function useNotifications() {
   const maxReconnectAttempts = 5;
   const isConnectingRef = useRef(false);
 
-  // Fetch notifications from API with improved caching
+  // Fetch notifications from API
   const { data: notifications = [] } = useQuery<PointsNotification[]>({
     queryKey: ['notifications'],
     queryFn: async () => {
@@ -40,10 +40,7 @@ export function useNotifications() {
       if (!response.ok) throw new Error('Failed to fetch notifications');
       return response.json();
     },
-    enabled: !!user && !!token,
-    staleTime: 1000 * 60 * 2, // Consider data fresh for 2 minutes
-    cacheTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
-    refetchInterval: 1000 * 60 * 2, // Refetch every 2 minutes
+    enabled: !!user && !!token
   });
 
   const connectWebSocket = () => {

@@ -6,18 +6,6 @@ import { eq, and, desc } from 'drizzle-orm';
 
 const router = Router();
 
-// Middleware to check if user is authenticated
-const isAuthenticated = (req, res, next) => {
-  if (!req.isAuthenticated()) {
-    console.log('Unauthorized referral request - no session');
-    return res.status(401).json({ error: "Please log in to access this resource" });
-  }
-  next();
-};
-
-// Apply authentication middleware to all routes
-router.use(isAuthenticated);
-
 // Helper function to calculate commission for referrals
 const calculateCommission = async (connection: any, packageType: string, level: number) => {
   try {
@@ -204,10 +192,13 @@ const getReferralInfo = async (userId: number) => {
 
 // Route for the referral section component
 router.get('/referral', async (req, res) => {
-  const connection = await createConnection();
+  if (!req.user?.id) {
+    console.log('Unauthorized referral request');
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
   try {
-    console.log('Fetching referral info for user:', req.user?.id);
-    const referralInfo = await getReferralInfo(req.user!.id);
+    const referralInfo = await getReferralInfo(req.user.id);
     res.json(referralInfo);
   } catch (error) {
     console.error('Error in referral handler:', error);
@@ -215,17 +206,18 @@ router.get('/referral', async (req, res) => {
       error: 'Failed to fetch referral data',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
-  } finally {
-    await connection.end();
   }
 });
 
 // Route for the full referrals page
 router.get('/referrals', async (req, res) => {
-  const connection = await createConnection();
+  if (!req.user?.id) {
+    console.log('Unauthorized referrals request');
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
   try {
-    console.log('Fetching referrals for user:', req.user?.id);
-    const referralInfo = await getReferralInfo(req.user!.id);
+    const referralInfo = await getReferralInfo(req.user.id);
     res.json(referralInfo);
   } catch (error) {
     console.error('Error in referrals handler:', error);
@@ -233,8 +225,6 @@ router.get('/referrals', async (req, res) => {
       error: 'Failed to fetch referral data',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
-  } finally {
-    await connection.end();
   }
 });
 

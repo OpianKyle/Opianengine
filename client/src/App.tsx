@@ -11,7 +11,6 @@ import { useUser } from "@/hooks/use-user";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { AuthProvider } from "@/hooks/use-auth";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -33,8 +32,8 @@ import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
 
 // Agent pages
-import AgentDashboard from "@/pages/agent";
-import AgentLayout from "@/components/layout/agent-layout";
+import AgentDashboard from "@/pages/agent"; //This file needs to be created
+import AgentLayout from "@/components/layout/agent-layout"; //This file needs to be created or adjusted
 import AgentCustomers from "@/pages/agent/customers";
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
@@ -192,12 +191,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <div className="min-h-screen w-full bg-background">
-          <Router />
-          <Toaster />
-        </div>
-      </AuthProvider>
+      <div className="min-h-screen w-full bg-background">
+        <Router />
+        <Toaster />
+      </div>
     </QueryClientProvider>
   );
 }
