@@ -476,6 +476,64 @@ export function registerRoutes(app: Express): Server {
   // Mount referral routes
   app.use('/api/customer', referralRouter);
 
+  // Points adjustment endpoint with notifications
+  app.post("/api/admin/points/adjust", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { userId, points, description } = req.body;
+
+      // Update user points
+      await connection.execute(
+        'UPDATE users SET points = points + ? WHERE id = ?',
+        [points, userId]
+      );
+
+      // Record transaction
+      await connection.execute(
+        `INSERT INTO transactions (user_id, points, type, description)
+         VALUES (?, ?, ?, ?)`,
+        [userId, points, points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED', description]
+      );
+
+      // Create notification
+      await NotificationService.createNotification({
+        userId,
+        type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
+        title: points >= 0 ? `Earned ${points} points` : `Deducted ${Math.abs(points)} points`,
+        message: description,
+        metadata: { points, adjustedBy: req.user.id }
+      });
+
+      console.log('Points adjusted and notification sent:', {
+        userId,
+        points,
+        description,
+        adminId: req.user.id
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error adjusting points:', error);
+      res.status(500).json({ error: 'Failed to adjust points' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   // Admin customers endpoint - get only regular customers
   app.get("/api/admin/customers", async (req, res) => {
     if (!req.isAuthenticated()) {
