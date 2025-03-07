@@ -34,11 +34,8 @@ export function useNotifications() {
   const { user } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const socketRef = useRef<WebSocket | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const maxReconnectAttempts = 5;
 
   // Fetch notifications from API
   const { data: notifications = [] } = useQuery<Notification[]>({
@@ -47,7 +44,7 @@ export function useNotifications() {
       if (!user) return [];
 
       const response = await fetch('/api/notifications', {
-        credentials: 'include' // Important: include credentials
+        credentials: 'include'
       });
 
       if (!response.ok) throw new Error('Failed to fetch notifications');
@@ -56,113 +53,71 @@ export function useNotifications() {
     enabled: !!user
   });
 
-  const connectWebSocket = () => {
-    if (!user || socketRef.current?.readyState === WebSocket.OPEN) {
-      console.log('Skipping WebSocket connection:', {
-        hasUser: !!user,
-        isConnected: socketRef.current?.readyState === WebSocket.OPEN
-      });
-      return;
-    }
+  // Setup SSE connection
+  useEffect(() => {
+    if (!user?.id || eventSourceRef.current) return;
 
-    try {
-      // Close existing connection if any
-      if (socketRef.current) {
-        socketRef.current.close();
-        socketRef.current = null;
+    const eventSource = new EventSource('/api/notifications/stream');
+    eventSourceRef.current = eventSource;
+
+    eventSource.onopen = () => {
+      console.log('SSE connection established');
+      setIsConnected(true);
+    };
+
+    eventSource.addEventListener('connected', (event) => {
+      const data = JSON.parse(event.data);
+      console.log('SSE connected:', data);
+    });
+
+    eventSource.addEventListener('notification', (event) => {
+      try {
+        const notification = JSON.parse(event.data) as Notification;
+        console.log('Received notification:', notification);
+
+        // Update notifications cache
+        queryClient.setQueryData(['notifications'], (old: Notification[] = []) => {
+          return [notification, ...old];
+        });
+
+        // Show toast notification
+        const toastConfig = {
+          title: notification.title,
+          description: notification.message,
+          duration: 5000
+        };
+
+        switch (notification.type) {
+          case 'POINTS_AWARDED':
+          case 'PRODUCT_ACTIVITY':
+          case 'REWARD_REDEMPTION':
+          case 'REFERRAL_COMMISSION':
+            toast({ ...toastConfig, variant: 'default' });
+            break;
+          case 'POINTS_DEDUCTED':
+            toast({ ...toastConfig, variant: 'destructive' });
+            break;
+          default:
+            toast(toastConfig);
+        }
+      } catch (error) {
+        console.error('Failed to process notification:', error);
       }
+    });
 
-      // Construct WebSocket URL using current window location
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws`;
-
-      console.log('Connecting to WebSocket:', {
-        protocol,
-        host,
-        wsUrl,
-        userId: user.id
-      });
-
-      const socket = new WebSocket(wsUrl);
-      socketRef.current = socket;
-
-      socket.onopen = () => {
-        console.log('WebSocket connection established');
-        setIsConnected(true);
-        setReconnectAttempts(0);
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const notification = JSON.parse(event.data) as Notification;
-          console.log('Received notification:', notification);
-
-          // Update notifications cache
-          queryClient.setQueryData(['notifications'], (old: Notification[] = []) => {
-            return [notification, ...old];
-          });
-
-          // Show toast notification
-          const toastConfig = {
-            title: notification.title,
-            description: notification.message,
-            duration: 5000
-          };
-
-          switch (notification.type) {
-            case 'POINTS_AWARDED':
-            case 'PRODUCT_ACTIVITY':
-            case 'REWARD_REDEMPTION':
-            case 'REFERRAL_COMMISSION':
-              toast({ ...toastConfig, variant: 'default' });
-              break;
-            case 'POINTS_DEDUCTED':
-              toast({ ...toastConfig, variant: 'destructive' });
-              break;
-            default:
-              toast(toastConfig);
-          }
-        } catch (error) {
-          console.error('Failed to process notification:', error);
-        }
-      };
-
-      socket.onclose = (event) => {
-        console.log('WebSocket connection closed:', event);
-        setIsConnected(false);
-        socketRef.current = null;
-
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-        }
-
-        if (reconnectAttempts < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-          console.log(`Attempting reconnect in ${delay}ms (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            setReconnectAttempts(prev => prev + 1);
-            connectWebSocket();
-          }, delay);
-        } else {
-          console.log('Max reconnection attempts reached');
-          toast({
-            title: 'Connection Lost',
-            description: 'Unable to receive real-time notifications. Please refresh the page.',
-            variant: 'destructive'
-          });
-        }
-      };
-
-      socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-
-    } catch (error) {
-      console.error('Failed to create WebSocket connection:', error);
+    eventSource.onerror = (error) => {
+      console.error('SSE error:', error);
       setIsConnected(false);
-    }
-  };
+      eventSource.close();
+      eventSourceRef.current = null;
+    };
+
+    return () => {
+      eventSource.close();
+      eventSourceRef.current = null;
+      setIsConnected(false);
+    };
+  }, [user?.id, queryClient, toast]);
 
   // Mutation for marking notifications as read
   const markAsRead = useMutation({
@@ -191,25 +146,6 @@ export function useNotifications() {
       });
     }
   });
-
-  useEffect(() => {
-    if (user?.id) {
-      console.log('Initializing WebSocket connection:', {
-        userId: user.id
-      });
-      connectWebSocket();
-    }
-
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (socketRef.current) {
-        socketRef.current.close();
-        socketRef.current = null;
-      }
-    };
-  }, [user?.id]);
 
   return {
     notifications,

@@ -17,6 +17,7 @@ import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
 import { createConnection } from './db';
+import { NotificationService } from './services/notification-service';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -393,6 +394,66 @@ export function registerRoutes(app: Express): Server {
       // If no session exists, still return success
       console.log('No session to destroy');
       res.status(200).json({ message: "Logged out successfully" });
+    }
+  });
+
+  // Notification endpoints
+  app.get("/api/notifications/stream", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    // Set headers for SSE
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
+    // Send initial connection success
+    res.write('event: connected\n');
+    res.write(`data: ${JSON.stringify({ userId: req.user.id })}\n\n`);
+
+    // Add this client to notification service
+    const sendNotification = (notification) => {
+      res.write('event: notification\n');
+      res.write(`data: ${JSON.stringify(notification)}\n\n`);
+    };
+
+    NotificationService.addClient(req.user.id, sendNotification);
+
+    // Remove client on connection close
+    req.on('close', () => {
+      NotificationService.removeClient(req.user.id, sendNotification);
+    });
+  });
+
+  app.get("/api/notifications", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const notifications = await NotificationService.getUnreadNotifications(req.user.id);
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+  });
+
+  app.post("/api/notifications/mark-read", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const { notificationId } = req.body;
+      await NotificationService.markAsRead(req.user.id, notificationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ error: 'Failed to mark notification as read' });
     }
   });
 

@@ -10,13 +10,10 @@ import agentRouter from './routes/agent';
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
-import { setupWebSocketServer } from './websocket';
-import { createServer } from 'http';
 
 console.log('Starting server initialization...', new Date().toISOString());
 
 const app = express();
-const server = createServer(app);
 
 // Configure CORS with specific options
 app.use(cors({
@@ -79,9 +76,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Setup WebSocket server with session support
-setupWebSocketServer(server, sessionMiddleware);
-
 (async () => {
   try {
     console.log('Starting database initialization...');
@@ -127,7 +121,7 @@ setupWebSocketServer(server, sessionMiddleware);
     // Setup appropriate server based on environment
     if (process.env.NODE_ENV !== "production") {
       console.log('Setting up Vite development server...');
-      await setupVite(app, server);
+      await setupVite(app);
       console.log('Vite setup complete');
     } else {
       console.log('Setting up static file serving...');
@@ -137,7 +131,7 @@ setupWebSocketServer(server, sessionMiddleware);
 
     // Start the server
     const PORT = process.env.PORT || 5000;
-    server.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
       console.log(`Server URL: http://0.0.0.0:${PORT}`);
     });

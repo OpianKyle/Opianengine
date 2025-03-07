@@ -1,29 +1,28 @@
 import { db } from "@db";
 import { notifications, type InsertNotification } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
-import { WebSocket } from 'ws';
+
+type NotificationCallback = (notification: any) => void;
 
 export class NotificationService {
-  private static clients = new Map<number, WebSocket[]>();
+  private static clients = new Map<number, Set<NotificationCallback>>();
 
-  static addClient(userId: number, ws: WebSocket) {
-    const userClients = this.clients.get(userId) || [];
-    userClients.push(ws);
-    this.clients.set(userId, userClients);
-    console.log(`Client added for user ${userId}. Total clients: ${userClients.length}`);
+  static addClient(userId: number, callback: NotificationCallback) {
+    const userCallbacks = this.clients.get(userId) || new Set();
+    userCallbacks.add(callback);
+    this.clients.set(userId, userCallbacks);
+    console.log(`Client added for user ${userId}. Total clients: ${userCallbacks.size}`);
   }
 
-  static removeClient(userId: number, ws: WebSocket) {
-    const userClients = this.clients.get(userId) || [];
-    const updatedClients = userClients.filter(client => client !== ws);
-
-    if (updatedClients.length === 0) {
-      this.clients.delete(userId);
-    } else {
-      this.clients.set(userId, updatedClients);
+  static removeClient(userId: number, callback: NotificationCallback) {
+    const userCallbacks = this.clients.get(userId);
+    if (userCallbacks) {
+      userCallbacks.delete(callback);
+      if (userCallbacks.size === 0) {
+        this.clients.delete(userId);
+      }
+      console.log(`Client removed for user ${userId}. Remaining clients: ${userCallbacks.size}`);
     }
-
-    console.log(`Client removed for user ${userId}. Remaining clients: ${updatedClients.length}`);
   }
 
   static async createNotification(data: InsertNotification) {
@@ -40,7 +39,10 @@ export class NotificationService {
       console.log('Successfully created notification:', newNotification);
 
       // Send to connected clients
-      await this.sendNotificationToUser(data.userId, newNotification);
+      const userCallbacks = this.clients.get(data.userId);
+      if (userCallbacks) {
+        userCallbacks.forEach(callback => callback(newNotification));
+      }
 
       return newNotification;
     } catch (error) {
@@ -84,46 +86,14 @@ export class NotificationService {
     }
   }
 
-  private static async sendNotificationToUser(userId: number, notification: any) {
-    try {
-      const userClients = this.clients.get(userId) || [];
-      const message = JSON.stringify({
-        id: notification.id.toString(),
-        type: notification.type,
-        title: notification.title,
-        message: notification.message,
-        metadata: notification.metadata,
-        timestamp: notification.createdAt.toISOString(),
-        read: notification.isRead
-      });
-
-      console.log(`Attempting to send notification to ${userClients.length} clients for user ${userId}`);
-
-      let sentCount = 0;
-      for (const client of userClients) {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(message);
-          sentCount++;
-        }
-      }
-
-      console.log(`Successfully sent notification to ${sentCount}/${userClients.length} clients`);
-    } catch (error) {
-      console.error('Error sending notification to user:', error);
-    }
-  }
-
   // Activity tracking notifications
-  static async notifyTransaction(userId: number, points: number, description: string, senderId?: number) {
+  static async notifyTransaction(userId: number, points: number, description: string) {
     try {
-      console.log('Creating transaction notification:', { userId, points, description });
-
       return await this.createNotification({
         userId,
         type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
         title: points >= 0 ? `Earned ${points} points` : `Deducted ${Math.abs(points)} points`,
         message: description,
-        senderId,
         isRead: false,
         metadata: JSON.stringify({ points, type: 'TRANSACTION' }),
         createdAt: new Date()
@@ -142,7 +112,7 @@ export class NotificationService {
         title: `Product Activity: ${activityType}`,
         message: `You earned ${pointsEarned} points for ${activityType}`,
         isRead: false,
-        metadata: JSON.stringify({ productId, activityType, pointsEarned, type: 'PRODUCT_ACTIVITY' }),
+        metadata: JSON.stringify({ productId, activityType, pointsEarned }),
         createdAt: new Date()
       });
     } catch (error) {
@@ -159,7 +129,7 @@ export class NotificationService {
         title: 'Reward Redeemed',
         message: `You redeemed a reward for ${pointsCost} points`,
         isRead: false,
-        metadata: JSON.stringify({ rewardId, pointsCost, type: 'REWARD_REDEMPTION' }),
+        metadata: JSON.stringify({ rewardId, pointsCost }),
         createdAt: new Date()
       });
     } catch (error) {
@@ -167,7 +137,6 @@ export class NotificationService {
       throw error;
     }
   }
-
   static async notifyReferralCommission(userId: number, referredUserId: number, points: number, level: number) {
     try {
       return await this.createNotification({
@@ -184,7 +153,7 @@ export class NotificationService {
       throw error;
     }
   }
-  static async notifyPointsUpdate(userId: number, points: number, description: string, senderId?: number) {
+  static async notifyPointsUpdate(userId: number, points: number, description: string) {
     try {
       console.log('Creating points notification:', { userId, points, description });
 
@@ -193,7 +162,6 @@ export class NotificationService {
         type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
         title: points >= 0 ? `Earned ${points} points` : `Deducted ${Math.abs(points)} points`,
         message: description,
-        senderId,
         isRead: false,
         metadata: JSON.stringify({ points }),
         createdAt: new Date()
