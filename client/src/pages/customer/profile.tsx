@@ -305,8 +305,8 @@ export default function ProfilePage() {
   const newPackage = packages.find(pkg => pkg.name === selectedPackage);
 
   return (
-    <div className="w-full">
-      <div className="space-y-0.5 px-4 sm:px-6">
+    <div className="w-full min-h-full">
+      <div className="space-y-0.5 px-4 sm:px-6 mb-4">
         <h2 className="text-2xl font-bold tracking-tight">Profile Settings</h2>
         <p className="text-muted-foreground">
           Manage your account settings and set your personal preferences.
@@ -315,7 +315,7 @@ export default function ProfilePage() {
 
       <Separator className="my-4" />
 
-      <div className="px-4 sm:px-6 space-y-4">
+      <div className="px-4 sm:px-6 space-y-4 pb-20 lg:pb-6">
         <Card>
           <CardHeader>
             <CardTitle>Package Selection</CardTitle>

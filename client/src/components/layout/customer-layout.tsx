@@ -30,7 +30,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   ];
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
+    <div className="flex h-screen w-full">
       {/* Header with Notification Bell */}
       <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-2">
         <NotificationBell />
@@ -107,8 +107,8 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="h-full p-4 lg:p-8 mt-16">
+      <main className="flex-1 w-0 lg:w-auto">
+        <div className="min-h-screen pt-16">
           {children}
         </div>
       </main>
