@@ -633,15 +633,16 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/customer/referral", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+  app.get("/api/customer/referrals", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      console.log('Unauthorized referrals request - no session');
+      return res.status(401).json({ error: "Please log in to access this resource" });
     }
 
     const connection = await createConnection();
     try {
-      console.log('Fetching referral info for user:', req.user.id);
-
+      console.log('Fetching referrals for user:', req.user?.id);
+      
       // First get user's referral code
       const [userInfo] = await connection.execute(
         `SELECT referral_code, first_name, last_name 
@@ -664,7 +665,7 @@ export function registerRoutes(app: Express): Server {
         );
       }
 
-      // Get direct referrals with their package info and nested referrals count
+      // Get direct referrals with their package info
       const [referrals] = await connection.execute(
         `WITH RECURSIVE referral_tree AS (
           -- Base case: direct referrals (level 1)
@@ -735,7 +736,6 @@ export function registerRoutes(app: Express): Server {
 
       // Transform referrals data with commission calculations
       const transformedReferrals = referrals.map((referral: any) => {
-        // Calculate commission based on level
         const commissionPercentage = 
           referral.level === 1 ? 0.15 : // 15% for level 1
           referral.level === 2 ? 0.10 : // 10% for level 2
@@ -746,7 +746,6 @@ export function registerRoutes(app: Express): Server {
         const randValue = packageAmount * commissionPercentage;
         const points = Math.floor(randValue * 100);
 
-        // Parse referral package stats
         const packageStats = referral.referral_package_stats 
           ? JSON.parse(referral.referral_package_stats)
           : [];
@@ -762,7 +761,7 @@ export function registerRoutes(app: Express): Server {
           directReferralCount: referral.direct_referral_count,
           referralPackageStats: packageStats,
           commission: {
-            percentage: commissionPercentage * 100, // Convert to percentage
+            percentage: commissionPercentage * 100,
             randValue: randValue.toFixed(2),
             points: points
           }
@@ -804,8 +803,8 @@ export function registerRoutes(app: Express): Server {
           return acc;
         }, {});
 
-      // Group all referrals by level for the full tree view
-      const groupedReferrals = transformedReferrals.reduce((acc: any, ref: any) => {
+      // Group referrals by level
+      const referralsByLevel = transformedReferrals.reduce((acc: any, ref: any) => {
         if (!acc[ref.level]) {
           acc[ref.level] = [];
         }
@@ -813,16 +812,21 @@ export function registerRoutes(app: Express): Server {
         return acc;
       }, {});
 
+      // Send response
       res.json({
         referralCode,
         referralCount: referrals.length,
         packagePrices: packagePriceMap,
         directReferralsByPackage: directReferrals,
-        referralsByLevel: groupedReferrals
+        referralsByLevel
       });
+
     } catch (error) {
       console.error('Error fetching referral data:', error);
-      res.status(500).json({ error: 'Failed to fetch referral data' });
+      res.status(500).json({
+        error: 'Failed to fetch referral data',
+        details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+      });
     } finally {
       await connection.end();
     }

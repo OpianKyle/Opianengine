@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { AchievementBadges, referralBadges } from "@/components/ui/badges";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
   FaXTwitter as TwitterIcon,
@@ -94,12 +94,12 @@ const PackageEmblem = ({ type, count, totalReferrals, level }: {
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
 
   // Redirect if not authenticated
   if (!user) {
-    navigate('/auth');
+    setLocation('/auth');
     return null;
   }
 
@@ -115,15 +115,12 @@ export default function ReferralsPage() {
           }
         });
 
-        if (response.status === 401) {
-          console.log('Unauthorized - redirecting to login');
-          navigate('/auth');
-          throw new Error('Please log in to view referrals');
-        }
-
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error('Referral fetch error:', { status: response.status, error: errorData });
+          console.error('Referral fetch error:', { 
+            status: response.status, 
+            error: errorData 
+          });
           throw new Error(errorData.error || "Failed to fetch referral data");
         }
 
@@ -142,6 +139,7 @@ export default function ReferralsPage() {
     },
     retry: (failureCount, error) => {
       if (error instanceof Error && error.message.includes('Please log in')) {
+        setLocation('/auth');
         return false;
       }
       return failureCount < 2;
