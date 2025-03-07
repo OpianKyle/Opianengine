@@ -4,7 +4,7 @@ import { type Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { db } from "@db"; // Assuming this import is correct and available
+import { db } from "@db";
 import mysql from 'mysql2/promise';
 import { JWT_SECRET } from './config';
 import jwt from 'jsonwebtoken';
@@ -17,19 +17,11 @@ const crypto = {
   async hashPassword(password: string) {
     const salt = randomBytes(16).toString('hex');
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`; // hash.salt format
+    return `${buf.toString("hex")}.${salt}`;
   },
 
   async verifyPassword(password: string, storedHash: string) {
     try {
-      // If using default password '123456', compare directly with default hash
-      const defaultHash = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS';
-      if (storedHash === defaultHash && password === '123456') {
-        console.log('Using default password verification');
-        return true;
-      }
-
-      // Otherwise do normal verification
       const [hash, salt] = storedHash.split('.');
       if (!salt || !hash) return false;
       const hashBuffer = Buffer.from(hash, 'hex');
@@ -43,169 +35,96 @@ const crypto = {
 };
 
 export function setupAuth(app: Express) {
-  // Configure session middleware with debug logging
-  const sessionConfig = {
-    secret: process.env.SESSION_SECRET!,
-    cookie: {
-      maxAge: 86400000,
-      secure: process.env.NODE_ENV === 'production',
+  // Configure session middleware
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'development-secret',
+    cookie: { 
+      maxAge: 86400000, // 24 hours
+      secure: false, // Set to false to allow non-HTTPS in development
       sameSite: 'lax',
       path: '/'
     },
     store: new MemoryStore({
-      checkPeriod: 86400000
+      checkPeriod: 86400000 // prune expired entries every 24h
     }),
-    resave: true,
+    resave: false,
     saveUninitialized: false,
     name: 'session'
-  };
+  }));
 
-  console.log('Setting up session with config:', {
-    ...sessionConfig,
-    secret: '[REDACTED]',
-    store: 'MemoryStore'
-  });
-
-  app.use(session(sessionConfig));
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Add session debug middleware
-  app.use((req, res, next) => {
-    console.log('Session debug:', {
-      hasSession: !!req.session,
-      sessionID: req.sessionID,
-      isAuthenticated: req.isAuthenticated?.(),
-      user: req.user ? { id: (req.user as any).id } : null,
-      cookies: req.headers.cookie
-    });
-    next();
-  });
-
   // Configure authentication strategy
-  passport.use(
-    new LocalStrategy(
-      { usernameField: 'email', passwordField: 'password' },
-      async (email, password, done) => {
-        console.log('Login attempt:', { email });
-        const connection = await createConnection();
-        try {
-          // Get user with all roles
-          const [users] = await connection.execute(
-            `SELECT u.*, 
-             CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-             CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
-             FROM users u
-             LEFT JOIN admin_users au ON u.id = au.user_id
-             WHERE u.email = ?`,
-            [email]
-          );
+  passport.use(new LocalStrategy(
+    { usernameField: 'email', passwordField: 'password' },
+    async (email, password, done) => {
+      console.log('Login attempt:', { email });
+      const connection = await createConnection();
 
-          if (!users || users.length === 0) {
-            console.log('User not found:', { email });
-            return done(null, false, { message: 'Invalid email or password' });
-          }
+      try {
+        const [users] = await connection.execute(
+          'SELECT * FROM users WHERE email = ?',
+          [email]
+        );
 
-          const user = users[0];
-          console.log('Found user:', {
-            id: user.id,
-            email: user.email,
-            isAdmin: user.is_admin,
-            isSuperAdmin: user.is_super_admin
-          });
-
-          // Verify password
-          const isValid = await crypto.verifyPassword(password, user.password);
-          if (!isValid) {
-            console.log('Invalid password for user:', { id: user.id, email });
-            return done(null, false, { message: 'Invalid email or password' });
-          }
-
-          if (!user.is_enabled) {
-            console.log('Account disabled:', { id: user.id, email });
-            return done(null, false, { message: 'Account is disabled' });
-          }
-
-          // Transform user object
-          const { password: _, ...safeUser } = user;
-          const transformedUser = {
-            ...safeUser,
-            id: user.id,
-            email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            phoneNumber: user.phone_number,
-            is_admin: Boolean(user.is_admin),
-            is_super_admin: Boolean(user.is_super_admin),
-            is_agent: Boolean(user.is_agent),
-            is_enabled: Boolean(user.is_enabled)
-          };
-
-          console.log('Login successful:', {
-            id: transformedUser.id,
-            email: transformedUser.email,
-            isAdmin: transformedUser.is_admin,
-            isSuperAdmin: transformedUser.is_super_admin
-          });
-
-          return done(null, transformedUser);
-        } catch (error) {
-          console.error('Authentication error:', error);
-          return done(error);
-        } finally {
-          await connection.end();
+        if (!Array.isArray(users) || users.length === 0) {
+          console.log('User not found:', { email });
+          return done(null, false, { message: 'Invalid email or password' });
         }
+
+        const user = users[0];
+        const isValid = await crypto.verifyPassword(password, user.password);
+
+        if (!isValid) {
+          console.log('Invalid password for user:', { email });
+          return done(null, false, { message: 'Invalid email or password' });
+        }
+
+        if (!user.is_enabled) {
+          console.log('Account disabled:', { email });
+          return done(null, false, { message: 'Account is disabled' });
+        }
+
+        // Transform user object, excluding password
+        const { password: _, ...safeUser } = user;
+        console.log('Login successful:', { email });
+        return done(null, safeUser);
+
+      } catch (error) {
+        console.error('Authentication error:', error);
+        return done(error);
+      } finally {
+        await connection.end();
       }
-    )
-  );
+    }
+  ));
 
   passport.serializeUser((user: any, done) => {
-    console.log('Serializing user:', { id: user.id });
+    console.log('Serializing user:', { id: user.id, email: user.email });
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
     console.log('Deserializing user:', { id });
     const connection = await createConnection();
+
     try {
       const [users] = await connection.execute(
-        `SELECT u.*, 
-         CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
-         FROM users u
-         LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE u.id = ?`,
+        'SELECT * FROM users WHERE id = ?',
         [id]
       );
 
-      if (!users || users.length === 0) {
+      if (!Array.isArray(users) || users.length === 0) {
         console.log('User not found during deserialization:', { id });
         return done(null, false);
       }
 
       const user = users[0];
       const { password: _, ...safeUser } = user;
-      const transformedUser = {
-        ...safeUser,
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        phoneNumber: user.phone_number,
-        is_admin: Boolean(user.is_admin),
-        is_super_admin: Boolean(user.is_super_admin),
-        is_agent: Boolean(user.is_agent),
-        is_enabled: Boolean(user.is_enabled)
-      };
+      console.log('User deserialized:', { id, email: safeUser.email });
+      done(null, safeUser);
 
-      console.log('User deserialized:', {
-        id: transformedUser.id,
-        email: transformedUser.email,
-        isAdmin: transformedUser.is_admin,
-        isSuperAdmin: transformedUser.is_super_admin
-      });
-
-      done(null, transformedUser);
     } catch (error) {
       console.error('Deserialization error:', error);
       done(error);
@@ -215,28 +134,15 @@ export function setupAuth(app: Express) {
   });
 
   // Add API routes
-  app.get("/api/user", (req, res) => {
-    console.log('GET /api/user request:', {
-      isAuthenticated: req.isAuthenticated?.(),
-      user: req.user ? { id: (req.user as any).id } : null,
-      sessionID: req.sessionID,
-      cookies: req.headers.cookie
-    });
-
-    if (!req.isAuthenticated()) {
-      console.log('User not authenticated');
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    console.log('Returning user data:', req.user);
-    res.json(req.user);
-  });
-
-  // Login endpoint
   app.post("/api/login", (req, res, next) => {
     console.log('Login request received:', { email: req.body.email });
 
-    passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
+    if (!req.body.email || !req.body.password) {
+      console.log('Missing credentials');
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         console.error('Authentication error:', err);
         return res.status(500).json({ error: "Authentication error" });
@@ -254,9 +160,8 @@ export function setupAuth(app: Express) {
         }
 
         console.log('Login successful:', {
-          id: (user as any).id,
-          email: (user as any).email,
-          sessionID: req.sessionID
+          id: user.id,
+          email: user.email
         });
 
         res.json(user);
@@ -264,48 +169,42 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // Enhanced logout handling
   app.post("/api/logout", (req, res) => {
-    console.log('Logout request received:', {
-      sessionID: req.sessionID,
-      user: req.user ? { id: (req.user as any).id } : null
-    });
+    console.log('Logout request received');
 
-    // Clear all cookies
-    res.clearCookie('connect.sid', {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
-    });
-
+    // Clear session cookie
     res.clearCookie('session', {
       path: '/',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax'
     });
 
-    // Destroy the session
     if (req.session) {
       req.session.destroy((err) => {
         if (err) {
           console.error('Error destroying session:', err);
         }
-        console.log('Session destroyed successfully');
-
-        req.logout((err) => {
-          if (err) {
-            console.error('Error during passport logout:', err);
-          }
-          console.log('Passport logout successful');
+        req.logout(() => {
           res.status(200).json({ message: "Logged out successfully" });
         });
       });
     } else {
-      console.log('No session to destroy');
       res.status(200).json({ message: "Logged out successfully" });
     }
+  });
+
+  app.get("/api/user", (req, res) => {
+    console.log('GET /api/user request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, email: req.user.email } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    res.json(req.user);
   });
 
   // Register route 
@@ -539,45 +438,27 @@ export function setupAuth(app: Express) {
   }
 
 
-  // Enhanced logout handling with proper session destruction
   app.post("/api/logout", (req, res) => {
     console.log('Logout request received');
 
-    // Clear the session cookie
+    // Clear session cookie
     res.clearCookie('session', {
       path: '/',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax'
     });
 
-    // Clear the connect.sid cookie
-    res.clearCookie('connect.sid', {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
-    });
-
-    // Destroy the session
     if (req.session) {
       req.session.destroy((err) => {
         if (err) {
           console.error('Error destroying session:', err);
         }
-        console.log('Session destroyed successfully');
-
-        // Properly logout with passport
-        req.logout((err) => {
-          if (err) {
-            console.error('Error during passport logout:', err);
-          }
-          console.log('Passport logout successful');
+        req.logout(() => {
           res.status(200).json({ message: "Logged out successfully" });
         });
       });
     } else {
-      console.log('No session to destroy');
       res.status(200).json({ message: "Logged out successfully" });
     }
   });

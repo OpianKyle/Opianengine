@@ -26,6 +26,10 @@ app.use(cors({
   exposedHeaders: ['set-cookie']
 }));
 
+// Enable JSON and URL-encoded body parsing
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Configure file upload middleware
 app.use(fileUpload({
   createParentPath: true,
@@ -96,7 +100,7 @@ app.use((req, res, next) => {
       throw mariaDbError;
     }
 
-    // Setup authentication
+    // Setup authentication before routes
     console.log('Setting up authentication...');
     setupAuth(app);
     console.log('Authentication setup complete');
