@@ -203,4 +203,48 @@ export class NotificationService {
       throw error;
     }
   }
+  // Helper method to test notification creation and verification
+  static async createTestNotifications(userId: number) {
+    try {
+      console.log('Creating multiple test notifications for user:', userId);
+
+      const testNotifications = [
+        {
+          userId,
+          type: 'POINTS_AWARDED' as NotificationType,
+          title: 'Points Awarded',
+          message: 'You received 100 points for completing a task',
+          metadata: { points: 100, type: 'task_completion' }
+        },
+        {
+          userId,
+          type: 'SYSTEM_UPDATE' as NotificationType,
+          title: 'Welcome!',
+          message: 'Welcome to the rewards system',
+          metadata: { type: 'welcome' }
+        },
+        {
+          userId,
+          type: 'ADMIN_MESSAGE' as NotificationType,
+          title: 'Profile Update',
+          message: 'Please complete your profile information',
+          metadata: { type: 'profile_reminder' }
+        }
+      ];
+
+      const results = [];
+      for (const notification of testNotifications) {
+        console.log('Creating test notification:', notification);
+        const result = await this.createNotification(notification);
+        results.push(result);
+      }
+
+      console.log('Created test notifications:', results);
+      return results;
+    } catch (error) {
+      console.error('Error creating test notifications:', error);
+      throw error;
+    }
+  }
+
 }

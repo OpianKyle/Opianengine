@@ -514,7 +514,23 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add test endpoint for notifications database structure - no auth required
+  // Add test endpoints for notifications
+  app.post("/api/notifications/test-multiple", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      console.log('Creating multiple test notifications for user:', req.user.id);
+      const notifications = await NotificationService.createTestNotifications(req.user.id);
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error creating test notifications:', error);
+      res.status(500).json({ error: 'Failed to create test notifications' });
+    }
+  });
+
+  // Enhance the public test endpoint with more details
   app.get("/api/notifications/test-db-public", async (req, res) => {
     const connection = await createConnection();
     try {
@@ -539,11 +555,18 @@ export function registerRoutes(app: Express): Server {
       const [notifications] = await connection.execute(
         'SELECT * FROM notifications ORDER BY created_at DESC LIMIT 5'
       );
+
+      // Get total count of notifications
+      const [countResult] = await connection.execute(
+        'SELECT COUNT(*) as total FROM notifications'
+      );
       
       res.json({
         tableExists: true,
         tableStructure: columns,
-        sampleNotifications: notifications
+        sampleNotifications: notifications,
+        totalNotifications: countResult[0].total,
+        timestamp: new Date().toISOString()
       });
       
     } catch (error) {
