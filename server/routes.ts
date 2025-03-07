@@ -712,6 +712,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       const { userId, points, description } = req.body;
+      console.log('Points assignment request:', { userId, points, description });
 
       // Update user points
       await connection.execute(
@@ -726,23 +727,42 @@ export function registerRoutes(app: Express): Server {
         [userId, points, points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED', description]
       );
 
-      // Create notification
-      await NotificationService.createNotification({
-        userId,
-        type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
-        title: points >= 0 ? `Earned ${points} points` : `Deducted ${Math.abs(points)} points`,
-        message: description,
-        metadata: { points, adjustedBy: req.user.id }
-      });
+      // Get user details for notification
+      const [userDetails] = await connection.execute(
+        'SELECT first_name, last_name FROM users WHERE id = ?',
+        [userId]
+      );
+      const user = userDetails[0];
 
-      console.log('Points adjusted and notification sent:', {
-        userId,
-        points,
-        description,
-        adminId: req.user.id
-      });
+      // Create notification with proper structure
+      try {
+        const notificationData = {
+          userId,
+          type: points >= 0 ? 'POINTS_AWARDED' as const : 'POINTS_DEDUCTED' as const,
+          title: points >= 0 ? 
+            `Earned ${points} Points` : 
+            `Deducted ${Math.abs(points)} Points`,
+          message: description || (points >= 0 ? 
+            `${points} points have been added to your account` : 
+            `${Math.abs(points)} points have been deducted from your account`),
+          metadata: JSON.stringify({
+            points,
+            adjustedBy: req.user.id,
+            timestamp: new Date().toISOString()
+          })
+        };
 
-      res.json({ success: true });
+        console.log('Creating notification with data:', notificationData);
+        await NotificationService.createNotification(notificationData);
+      } catch (notificationError) {
+        console.error('Error creating notification:', notificationError);
+        // Continue execution even if notification fails
+      }
+
+      res.json({ 
+        success: true,
+        message: 'Points adjusted and notification sent successfully'
+      });
     } catch (error) {
       console.error('Error adjusting points:', error);
       res.status(500).json({ error: 'Failed to adjust points' });
