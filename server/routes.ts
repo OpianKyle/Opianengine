@@ -457,19 +457,67 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add test endpoints for notifications
-  app.post("/api/notifications/test", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
+  // Add test endpoints for notifications with detailed feedback
+  app.all("/api/notifications/test", async (req, res) => {
+    // Check authentication
+    const isAuthenticated = req.isAuthenticated();
+    const userId = req.user?.id;
+
+    // If not POST method, return instructions
+    if (req.method !== 'POST') {
+      return res.status(400).json({
+        error: "Invalid method",
+        message: "This endpoint requires a POST request",
+        currentStatus: {
+          isAuthenticated,
+          userId,
+          method: req.method
+        },
+        instructions: [
+          "1. Make sure you're logged in first",
+          "2. Use POST method to create a test notification",
+          "3. You can verify notifications at /api/notifications endpoint"
+        ]
+      });
+    }
+
+    // If not authenticated, return helpful message
+    if (!isAuthenticated) {
+      return res.status(401).json({
+        error: "Not authenticated",
+        message: "You need to be logged in to create test notifications",
+        instructions: [
+          "1. Log in to your account first",
+          "2. Try this request again after logging in"
+        ]
+      });
     }
 
     try {
-      console.log('Creating test notification for user:', req.user.id);
-      const notification = await NotificationService.createTestNotification(req.user.id);
-      res.json(notification);
+      console.log('Creating test notification for user:', userId);
+      const notification = await NotificationService.createTestNotification(userId);
+      
+      res.json({
+        success: true,
+        message: "Test notification created successfully",
+        notification,
+        instructions: [
+          "1. Check /api/notifications for your new notification",
+          "2. The notification should appear in real-time via SSE",
+          "3. You can create multiple test notifications using /api/notifications/test-multiple"
+        ]
+      });
     } catch (error) {
       console.error('Error creating test notification:', error);
-      res.status(500).json({ error: 'Failed to create test notification' });
+      res.status(500).json({
+        error: 'Failed to create test notification',
+        details: error.message,
+        instructions: [
+          "1. Check if the notifications table exists",
+          "2. Verify your user ID is valid",
+          "3. Try /api/notifications/test-db-public to check database status"
+        ]
+      });
     }
   });
 
