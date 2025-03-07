@@ -19,52 +19,60 @@ export function setupWebSocketServer(server: Server) {
   });
 
   wss.on('connection', async (ws: WebSocket) => {
-    try {
-      let authenticated = false;
+    console.log('[WebSocket] New connection received');
+    let authenticated = false;
 
-      // Set up message handler for authentication
-      ws.on('message', async (message: string) => {
-        try {
+    // Set up message handler for authentication
+    ws.on('message', async (message: string) => {
+      try {
+        const data = JSON.parse(message.toString());
+        console.log('[WebSocket] Received message:', { type: data.type, hasToken: !!data.token });
+
+        if (data.type === 'authenticate' && data.token) {
           if (authenticated) {
-            return; // Skip if already authenticated
+            console.log('[WebSocket] Client already authenticated');
+            return;
           }
 
-          const data = JSON.parse(message);
-          if (data.type === 'authenticate' && data.token) {
-            const user = await verifyToken(data.token);
-            if (!user) {
-              ws.close(1008, 'Authentication failed');
-              return;
-            }
+          console.log('[WebSocket] Verifying token');
+          const user = await verifyToken(data.token);
 
-            // Store user information
-            const userData = {
-              userId: user.id,
-              isAdmin: user.isAdmin || false
-            };
-            clients.set(ws, userData);
-            authenticated = true;
+          if (!user) {
+            console.log('[WebSocket] Authentication failed - invalid token');
+            ws.close(1008, 'Authentication failed');
+            return;
+          }
 
-            console.log('WebSocket client authenticated:', {
-              userId: userData.userId,
-              isAdmin: userData.isAdmin,
-              totalConnections: clients.size
-            });
+          // Store user information
+          const userData = {
+            userId: user.id,
+            isAdmin: user.isAdmin || false
+          };
+          clients.set(ws, userData);
+          authenticated = true;
 
-            // Send connection confirmation
-            ws.send(JSON.stringify({
-              type: 'auth_success',
-              message: 'Connected to notification system',
-              timestamp: new Date().toISOString()
-            }));
+          console.log('[WebSocket] Client authenticated:', {
+            userId: userData.userId,
+            isAdmin: userData.isAdmin,
+            totalConnections: clients.size
+          });
 
+          // Send connection confirmation
+          ws.send(JSON.stringify({
+            type: 'auth_success',
+            timestamp: new Date().toISOString()
+          }));
+
+          try {
             // Send unread notifications
-            const unreadNotifications = await db.query.notifications.findMany({
-              where: eq(notifications.userId, userData.userId),
-              orderBy: desc(notifications.createdAt),
-            });
+            const unreadNotifications = await db.select().from(notifications)
+              .where(eq(notifications.userId, userData.userId))
+              .orderBy(desc(notifications.createdAt));
 
-            console.log(`Sending ${unreadNotifications.length} unread notifications to user ${userData.userId}`);
+            console.log('[WebSocket] Sending unread notifications:', {
+              userId: userData.userId,
+              count: unreadNotifications.length
+            });
 
             for (const notification of unreadNotifications) {
               ws.send(JSON.stringify({
@@ -76,72 +84,92 @@ export function setupWebSocketServer(server: Server) {
                 id: notification.id.toString()
               }));
             }
+          } catch (error) {
+            console.error('[WebSocket] Error sending notifications:', error);
           }
-        } catch (error) {
-          console.error('Error processing WebSocket message:', error);
-          ws.close(1011, 'Internal Server Error');
         }
-      });
+      } catch (error) {
+        console.error('[WebSocket] Error processing message:', error);
+      }
+    });
 
-      // Set authentication timeout
-      const authTimeout = setTimeout(() => {
-        if (!authenticated) {
-          ws.close(1008, 'Authentication timeout');
-        }
-      }, 5000);
+    // Set authentication timeout
+    const authTimeout = setTimeout(() => {
+      if (!authenticated) {
+        console.log('[WebSocket] Authentication timeout - closing connection');
+        ws.close(1008, 'Authentication timeout');
+      }
+    }, 5000);
 
-      ws.on('close', () => {
-        clearTimeout(authTimeout);
-        const userData = clients.get(ws);
-        if (userData) {
-          console.log(`WebSocket client disconnected: User ${userData.userId}`);
-          clients.delete(ws);
-        }
-      });
+    ws.on('close', () => {
+      clearTimeout(authTimeout);
+      const userData = clients.get(ws);
+      if (userData) {
+        console.log('[WebSocket] Client disconnected:', { userId: userData.userId });
+        clients.delete(ws);
+      }
+    });
 
-    } catch (error) {
-      console.error('Error handling WebSocket connection:', error);
+    ws.on('error', (error) => {
+      console.error('[WebSocket] Error:', error);
       ws.close(1011, 'Internal Server Error');
-    }
+    });
   });
 
   return {
     notifyPointsUpdate: async (userId: number, points: number, description: string) => {
       try {
-        // Store notification
-        const [notification] = await db.insert(notifications).values({
-          userId,
-          type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
-          title: `${points >= 0 ? '+' : ''}${points} points`,
+        // Create notification record
+        await db.insert(notifications).values({
           message: description,
+          type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED' as const,
+          title: `${points >= 0 ? '+' : ''}${points} points`,
+          userId: userId,
           isRead: false,
           createdAt: new Date()
-        }).returning();
+        });
+
+        // Get the last inserted ID
+        const [idResult] = await db.select({ id: notifications.id })
+          .from(notifications)
+          .orderBy(desc(notifications.id))
+          .limit(1);
+
+        if (!idResult) {
+          console.error('[WebSocket] Failed to retrieve notification ID');
+          return;
+        }
 
         const message = {
           type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
           points: Math.abs(points),
           description,
-          timestamp: notification.createdAt.toISOString(),
-          id: notification.id.toString()
+          timestamp: new Date().toISOString(),
+          id: idResult.id.toString()
         };
 
-        console.log('Sending points notification:', {
+        console.log('[WebSocket] Sending points notification:', {
           userId,
           points,
-          type: message.type,
-          activeConnections: Array.from(clients.values())
-            .filter(client => client.userId === userId).length
+          type: message.type
         });
 
-        // Send to connected user
-        for (const [ws, client] of clients) {
+        // Send to all connected clients for this user
+        let sent = false;
+        for (const [ws, client] of Array.from(clients.entries())) {
           if (client.userId === userId && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify(message));
+            sent = true;
           }
         }
+
+        console.log('[WebSocket] Notification status:', {
+          userId,
+          sent,
+          activeConnections: clients.size
+        });
       } catch (error) {
-        console.error('Error sending points notification:', error);
+        console.error('[WebSocket] Error sending points notification:', error);
       }
     }
   };

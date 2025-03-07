@@ -44,57 +44,58 @@ export function useNotifications() {
   });
 
   const connectWebSocket = () => {
-    if (!user || !token) {
-      console.log('WebSocket setup skipped - no auth:', { hasUser: !!user, hasToken: !!token });
-      return;
-    }
-
-    // Skip if already connecting or connected
-    if (isConnectingRef.current || (socketRef.current?.readyState === WebSocket.OPEN)) {
+    if (!user || !token || isConnectingRef.current) {
+      console.log('[WebSocket] Connection attempt skipped:', { 
+        hasUser: !!user, 
+        hasToken: !!token, 
+        isConnecting: isConnectingRef.current 
+      });
       return;
     }
 
     try {
       isConnectingRef.current = true;
 
-      // Get the current host from window.location
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
+      // Close existing connection if any
+      if (socketRef.current) {
+        console.log('[WebSocket] Closing existing connection');
+        socketRef.current.close();
+        socketRef.current = null;
+      }
 
-      // Ensure we have a valid host
+      // Create WebSocket connection
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host || window.location.hostname;
+
       if (!host) {
-        console.error('Invalid host for WebSocket connection');
+        console.error('[WebSocket] Invalid host');
         return;
       }
 
-      // Get the session token from the cookies
-      const wsUrl = `${wsProtocol}//${host}/ws`;
-      console.log('Attempting WebSocket connection:', {
-        protocol: wsProtocol,
-        host,
-        hasToken: !!token,
-        wsUrl
-      });
+      const wsUrl = `${protocol}//${host}/ws`;
+      console.log('[WebSocket] Attempting connection:', { wsUrl, protocol, host });
 
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log('WebSocket connection established');
-        // Send authentication message immediately after connection
-        socket.send(JSON.stringify({ type: 'authenticate', token }));
-        setIsConnected(true);
-        setReconnectAttempts(0);
-        isConnectingRef.current = false;
+        console.log('[WebSocket] Connection opened, authenticating...');
+        socket.send(JSON.stringify({ 
+          type: 'authenticate', 
+          token: token.replace('Bearer ', '') 
+        }));
       };
 
       socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('Received WebSocket message:', data);
+          console.log('[WebSocket] Received message:', data);
 
           if (data.type === 'auth_success') {
-            console.log('WebSocket authentication successful');
+            console.log('[WebSocket] Authentication successful');
+            setIsConnected(true);
+            setReconnectAttempts(0);
+            isConnectingRef.current = false;
             return;
           }
 
@@ -104,27 +105,20 @@ export function useNotifications() {
           // Show toast notification for points
           if (data.type === 'POINTS_AWARDED' || data.type === 'POINTS_DEDUCTED') {
             const points = data.points || 0;
-            const sign = data.type === 'POINTS_AWARDED' ? '+' : '-';
             toast({
-              title: `${sign}${Math.abs(points)} Points`,
+              title: data.type === 'POINTS_AWARDED' ? `+${points} Points` : `-${points} Points`,
               description: data.description,
               duration: 5000,
               variant: data.type === 'POINTS_AWARDED' ? 'default' : 'destructive'
             });
           }
         } catch (error) {
-          console.error('Error processing WebSocket message:', error);
+          console.error('[WebSocket] Error processing message:', error);
         }
       };
 
-      socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setIsConnected(false);
-        isConnectingRef.current = false;
-      };
-
       socket.onclose = (event) => {
-        console.log('WebSocket connection closed:', {
+        console.log('[WebSocket] Connection closed:', {
           code: event.code,
           reason: event.reason,
           wasClean: event.wasClean
@@ -134,28 +128,27 @@ export function useNotifications() {
         socketRef.current = null;
         isConnectingRef.current = false;
 
-        // Clear any existing reconnect timeout
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = null;
         }
 
-        // Only attempt reconnection if:
-        // 1. Not a clean closure
-        // 2. Under max attempts
-        // 3. Have valid user and token
-        if (!event.wasClean && reconnectAttempts < maxReconnectAttempts && user && token) {
+        if (reconnectAttempts < maxReconnectAttempts && user && token) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts} in ${delay}ms`);
-
+          console.log(`[WebSocket] Scheduling reconnect attempt ${reconnectAttempts + 1}/${maxReconnectAttempts} in ${delay}ms`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             connectWebSocket();
           }, delay);
         }
       };
+
+      socket.onerror = (error) => {
+        console.error('[WebSocket] Error:', error);
+        socket.close();
+      };
+
     } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
+      console.error('[WebSocket] Error creating connection:', error);
       setIsConnected(false);
       isConnectingRef.current = false;
     }
