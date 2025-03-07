@@ -54,7 +54,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed lg:relative inset-y-0 left-0 z-50",
+        "fixed lg:fixed inset-y-0 left-0 z-50",
         "w-64 lg:w-72 bg-background border-r",
         "transform transition-transform duration-300 ease-in-out",
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -107,9 +107,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 w-0 lg:w-auto">
-        <div className="min-h-screen pt-16">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 w-0 lg:w-auto lg:pl-72">
+        <div className="min-h-screen pt-16 pb-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {children}
           </div>
         </div>
