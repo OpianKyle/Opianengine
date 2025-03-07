@@ -21,7 +21,6 @@ export function useNotifications() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const maxReconnectAttempts = 5;
-  const isConnectingRef = useRef(false);
 
   // Fetch notifications from API
   const { data: notifications = [] } = useQuery<PointsNotification[]>({
@@ -44,65 +43,40 @@ export function useNotifications() {
   });
 
   const connectWebSocket = () => {
-    if (!user || !token || isConnectingRef.current) {
-      console.log('[WebSocket] Connection attempt skipped:', { 
-        hasUser: !!user, 
-        hasToken: !!token, 
-        isConnecting: isConnectingRef.current 
-      });
+    if (!user || !token || socketRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
 
     try {
-      isConnectingRef.current = true;
-
-      // Close existing connection if any
+      // Clean up existing connection
       if (socketRef.current) {
-        console.log('[WebSocket] Closing existing connection');
         socketRef.current.close();
         socketRef.current = null;
       }
 
-      // Create WebSocket connection
+      // Get the current host and protocol
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host || window.location.hostname;
+      const host = window.location.host;
 
-      if (!host) {
-        console.error('[WebSocket] Invalid host');
-        return;
-      }
+      // Remove Bearer prefix if present
+      const cleanToken = token.replace('Bearer ', '');
 
-      const wsUrl = `${protocol}//${host}/ws`;
-      console.log('[WebSocket] Attempting connection:', { wsUrl, protocol, host });
+      // Create WebSocket URL with token
+      const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(cleanToken)}`;
 
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log('[WebSocket] Connection opened, authenticating...');
-        socket.send(JSON.stringify({ 
-          type: 'authenticate', 
-          token: token.replace('Bearer ', '') 
-        }));
+        setIsConnected(true);
+        setReconnectAttempts(0);
       };
 
       socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('[WebSocket] Received message:', data);
-
-          if (data.type === 'auth_success') {
-            console.log('[WebSocket] Authentication successful');
-            setIsConnected(true);
-            setReconnectAttempts(0);
-            isConnectingRef.current = false;
-            return;
-          }
-
-          // Refresh notifications list
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
-          // Show toast notification for points
           if (data.type === 'POINTS_AWARDED' || data.type === 'POINTS_DEDUCTED') {
             const points = data.points || 0;
             toast({
@@ -113,28 +87,20 @@ export function useNotifications() {
             });
           }
         } catch (error) {
-          console.error('[WebSocket] Error processing message:', error);
+          console.error('Failed to process notification:', error);
         }
       };
 
-      socket.onclose = (event) => {
-        console.log('[WebSocket] Connection closed:', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean
-        });
-
+      socket.onclose = () => {
         setIsConnected(false);
         socketRef.current = null;
-        isConnectingRef.current = false;
 
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
         }
 
-        if (reconnectAttempts < maxReconnectAttempts && user && token) {
+        if (reconnectAttempts < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-          console.log(`[WebSocket] Scheduling reconnect attempt ${reconnectAttempts + 1}/${maxReconnectAttempts} in ${delay}ms`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             connectWebSocket();
@@ -142,15 +108,13 @@ export function useNotifications() {
         }
       };
 
-      socket.onerror = (error) => {
-        console.error('[WebSocket] Error:', error);
+      socket.onerror = () => {
         socket.close();
       };
 
     } catch (error) {
-      console.error('[WebSocket] Error creating connection:', error);
+      console.error('WebSocket connection error:', error);
       setIsConnected(false);
-      isConnectingRef.current = false;
     }
   };
 
@@ -167,8 +131,6 @@ export function useNotifications() {
         socketRef.current.close();
         socketRef.current = null;
       }
-      isConnectingRef.current = false;
-      setIsConnected(false);
     };
   }, [user?.id, token]);
 
