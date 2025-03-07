@@ -59,7 +59,8 @@ export function setupWebSocketServer(server: Server) {
       });
 
       // Fetch and send unread notifications
-      const unreadNotifications = await db.select()
+      const unreadNotifications = await db
+        .select()
         .from(notifications)
         .where(eq(notifications.userId, user.id))
         .orderBy(desc(notifications.createdAt));
@@ -88,22 +89,32 @@ export function setupWebSocketServer(server: Server) {
   return {
     notifyPointsUpdate: async (userId: number, points: number, description: string) => {
       try {
-        // Create notification record
-        const [notification] = await db.insert(notifications).values({
+        // Insert notification using MariaDB syntax
+        const result = await db.insert(notifications).values({
           userId,
           type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED' as const,
           title: `${points >= 0 ? '+' : ''}${points} points`,
           message: description,
           isRead: false,
           createdAt: new Date()
-        }).returning();
+        });
 
-        if (!notification) return;
+        // Get the last inserted ID
+        const [notification] = await db
+          .select()
+          .from(notifications)
+          .where(eq(notifications.id, result.insertId))
+          .limit(1);
+
+        if (!notification) {
+          console.error('Failed to retrieve inserted notification');
+          return;
+        }
 
         const message = {
-          type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
+          type: notification.type,
           points: Math.abs(points),
-          description,
+          description: notification.message,
           timestamp: notification.createdAt.toISOString(),
           id: notification.id.toString()
         };
