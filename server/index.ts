@@ -11,10 +11,12 @@ import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
 import { setupWebSocketServer } from './websocket';
+import { createServer } from 'http';
 
 console.log('Starting server initialization...', new Date().toISOString());
 
 const app = express();
+const server = createServer(app);
 
 // Configure CORS with specific options
 app.use(cors({
@@ -39,25 +41,9 @@ app.use(fileUpload({
   },
 }));
 
-// Logging middleware
-app.use((req, res, next) => {
-  const start = Date.now();
-  console.log(`Incoming ${req.method} request to ${req.path}`, {
-    headers: req.headers,
-    sessionID: req.sessionID,
-    isAuthenticated: req.isAuthenticated?.()
-  });
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    console.log(`${req.method} ${req.path} completed with status ${res.statusCode} in ${duration}ms`);
-  });
-  next();
-});
-
 // Session configuration
 const sessionMiddleware = session({
-  secret: process.env.SESSION_SECRET!,
+  secret: process.env.SESSION_SECRET || 'development-secret',
   cookie: {
     maxAge: 86400000,
     secure: process.env.NODE_ENV === 'production',
@@ -67,7 +53,7 @@ const sessionMiddleware = session({
   store: new MemoryStore({
     checkPeriod: 86400000
   }),
-  resave: true,
+  resave: false,
   saveUninitialized: false,
   name: 'session'
 });
@@ -78,6 +64,8 @@ app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Setup WebSocket server with session support
+setupWebSocketServer(server, sessionMiddleware);
 
 (async () => {
   try {
@@ -103,19 +91,15 @@ app.use(passport.session());
       throw mariaDbError;
     }
 
-    // Setup authentication (before routes)
+    // Setup authentication
     console.log('Setting up authentication...');
     setupAuth(app);
     console.log('Authentication setup complete');
 
     // Register routes
     app.use('/api/agent', agentRouter);
-    const server = registerRoutes(app);
+    registerRoutes(app);
     console.log('Routes registered');
-
-    // Setup WebSocket server with session support
-    const wsServer = setupWebSocketServer(server, sessionMiddleware);
-    console.log('WebSocket server initialized');
 
     // Global error handler
     app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

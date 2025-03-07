@@ -12,36 +12,54 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
       try {
         // Skip Vite HMR connections
         if (info.req.headers['sec-websocket-protocol']?.includes('vite-hmr')) {
+          console.log('Allowing Vite HMR connection');
           return done(true);
         }
 
-        const url = new URL(info.req.url, `http://${info.req.headers.host}`);
-        const token = url.searchParams.get('token');
+        // Apply session middleware
+        await new Promise((resolve) => {
+          sessionMiddleware(info.req, {} as any, resolve);
+        });
 
-        console.log('WebSocket authentication attempt:', {
-          hasToken: !!token,
-          url: info.req.url,
+        // Check for authenticated session
+        if (info.req.session?.passport?.user) {
+          info.req.user = info.req.session.passport.user;
+          console.log('WebSocket authenticated via session:', {
+            userId: info.req.user.id,
+            isAuthenticated: true,
+            method: 'session'
+          });
+          return done(true);
+        }
+
+        console.log('Session authentication failed, trying token auth:', {
+          hasSession: !!info.req.session,
+          hasPassport: !!info.req.session?.passport,
           headers: info.req.headers
         });
 
+        // Token-based authentication as fallback
+        const url = new URL(info.req.url, `http://${info.req.headers.host}`);
+        const token = url.searchParams.get('token');
+
         if (!token) {
-          console.error('WebSocket authentication failed: No token provided');
+          console.error('WebSocket authentication failed: No authentication method available');
           return done(false, 401, 'Authentication required');
         }
 
         const user = await verifyToken(token);
-        console.log('Token verification result:', {
-          hasUser: !!user,
-          userId: user?.id,
-          tokenValid: !!token
-        });
-
         if (!user) {
-          console.error('WebSocket authentication failed: Invalid token');
+          console.error('WebSocket token authentication failed: Invalid token');
           return done(false, 401, 'Invalid token');
         }
 
         info.req.user = user;
+        console.log('WebSocket authenticated via token:', {
+          userId: user.id,
+          isAuthenticated: true,
+          method: 'token'
+        });
+
         return done(true);
       } catch (error) {
         console.error('WebSocket authentication error:', error);
@@ -82,9 +100,10 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
           }));
         }
       } catch (error) {
-        console.error('Error processing unread notifications:', error);
+        console.error('Error sending unread notifications:', error);
       }
 
+      // Handle client disconnection
       ws.on('close', () => {
         console.log('WebSocket client disconnected:', { 
           userId: user.id,
@@ -93,6 +112,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
         NotificationService.removeClient(user.id, ws);
       });
 
+      // Handle client errors
       ws.on('error', (error) => {
         console.error('WebSocket client error:', {
           userId: user.id,
@@ -106,7 +126,5 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
     }
   });
 
-  return {
-    notifyPointsUpdate: NotificationService.notifyPointsUpdate.bind(NotificationService)
-  };
+  return wss;
 }

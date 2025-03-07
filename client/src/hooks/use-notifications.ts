@@ -44,6 +44,7 @@ export function useNotifications() {
       if (!user || !token) return [];
 
       const response = await fetch('/api/notifications', {
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
@@ -72,18 +73,23 @@ export function useNotifications() {
         socketRef.current = null;
       }
 
-      // Get the current host and protocol
+      // Get current location details
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      // Default to port 5000 if not specified
-      const port = window.location.port || '5000';
-      const hostname = window.location.hostname;
-      const wsUrl = `${protocol}//${hostname}:${port}/ws?token=${encodeURIComponent(token)}`;
+      const host = window.location.host;
 
-      console.log('Connecting to WebSocket:', {
+      console.log('Location details:', {
         protocol,
-        hostname,
-        port,
-        wsUrl
+        host,
+        fullLocation: window.location.toString()
+      });
+
+      // Construct WebSocket URL with authentication
+      const wsUrl = `${protocol}//${host}/ws`;
+
+      console.log('Attempting WebSocket connection:', {
+        wsUrl,
+        hasUser: !!user,
+        userId: user?.id
       });
 
       const socket = new WebSocket(wsUrl);
@@ -167,6 +173,7 @@ export function useNotifications() {
 
       const response = await fetch('/api/notifications/mark-read', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -191,8 +198,12 @@ export function useNotifications() {
   });
 
   useEffect(() => {
+    // Only attempt connection if we have an authenticated user
     if (user?.id && token) {
-      console.log('Initializing WebSocket connection');
+      console.log('Initializing WebSocket connection:', {
+        userId: user.id,
+        hasToken: !!token
+      });
       connectWebSocket();
     }
 
