@@ -305,7 +305,7 @@ export default function ProfilePage() {
   const newPackage = packages.find(pkg => pkg.name === selectedPackage);
 
   return (
-    <div className="container px-4 sm:px-6 max-w-7xl mx-auto space-y-6">
+    <div className="container relative w-full max-w-7xl mx-auto space-y-6 px-4 sm:px-6 overflow-x-hidden">
       <div className="space-y-0.5">
         <h2 className="text-2xl font-bold tracking-tight">Profile Settings</h2>
         <p className="text-muted-foreground">
@@ -338,8 +338,10 @@ export default function ProfilePage() {
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="-left-2 sm:-left-12" />
-                <CarouselNext className="-right-2 sm:-right-12" />
+                <div className="hidden sm:block">
+                  <CarouselPrevious className="-left-2 sm:-left-12" />
+                  <CarouselNext className="-right-2 sm:-right-12" />
+                </div>
               </Carousel>
             </div>
           </CardContent>
@@ -353,7 +355,7 @@ export default function ProfilePage() {
                 <CardDescription>Update your personal and account information</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="first_name"
@@ -367,7 +369,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="last_name"
@@ -381,7 +382,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="email"
@@ -395,7 +395,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="phone_number"
@@ -413,7 +412,7 @@ export default function ProfilePage() {
 
                 <Separator className="my-6" />
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="id_number"
@@ -427,7 +426,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="date_of_birth"
@@ -441,7 +439,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="is_south_african"
@@ -464,7 +461,7 @@ export default function ProfilePage() {
 
                 <Separator className="my-6" />
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="address"
@@ -478,7 +475,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="city"
@@ -492,7 +488,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="postal_code"
@@ -510,7 +505,7 @@ export default function ProfilePage() {
 
                 <Separator className="my-6" />
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="industry"
@@ -524,7 +519,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="occupation"
@@ -542,7 +536,7 @@ export default function ProfilePage() {
 
                 <Separator className="my-6" />
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="bank_name"
@@ -556,7 +550,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="account_type"
@@ -584,7 +577,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="account_number"
@@ -598,7 +590,6 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="has_credit_card"
