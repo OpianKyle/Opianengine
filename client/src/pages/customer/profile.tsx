@@ -305,8 +305,8 @@ export default function ProfilePage() {
   const newPackage = packages.find(pkg => pkg.name === selectedPackage);
 
   return (
-    <div className="container relative w-full max-w-7xl mx-auto space-y-6 px-4 sm:px-6 overflow-x-hidden">
-      <div className="space-y-0.5">
+    <div className="w-full space-y-6 pb-8">
+      <div className="space-y-0.5 px-4 sm:px-6">
         <h2 className="text-2xl font-bold tracking-tight">Profile Settings</h2>
         <p className="text-muted-foreground">
           Manage your account settings and set your personal preferences.
@@ -315,7 +315,7 @@ export default function ProfilePage() {
 
       <Separator />
 
-      <div className="grid gap-6">
+      <div className="grid gap-6 px-4 sm:px-6">
         <Card>
           <CardHeader>
             <CardTitle>Package Selection</CardTitle>
@@ -323,9 +323,9 @@ export default function ProfilePage() {
               Your current package: {currentPackage ? `${currentPackage.display} (R${currentPackage.price}/month)` : 'No package selected'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-2 sm:px-6">
+          <CardContent className="p-2 sm:p-6">
             <div className="relative w-full">
-              <Carousel className="w-full max-w-full">
+              <Carousel className="w-full">
                 <CarouselContent className="-ml-2 sm:-ml-4">
                   {packages.map((pkg) => (
                     <CarouselItem key={pkg.name} className="pl-2 sm:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
@@ -339,8 +339,8 @@ export default function ProfilePage() {
                   ))}
                 </CarouselContent>
                 <div className="hidden sm:block">
-                  <CarouselPrevious className="-left-2 sm:-left-12" />
-                  <CarouselNext className="-right-2 sm:-right-12" />
+                  <CarouselPrevious className="-left-4 sm:-left-12" />
+                  <CarouselNext className="-right-4 sm:-right-12" />
                 </div>
               </Carousel>
             </div>
@@ -354,7 +354,7 @@ export default function ProfilePage() {
                 <CardTitle>Personal Information</CardTitle>
                 <CardDescription>Update your personal and account information</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6">
                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -649,50 +649,50 @@ export default function ProfilePage() {
             </Card>
           </form>
         </Form>
-
-        <Dialog open={showPackageDialog} onOpenChange={setShowPackageDialog}>
-          <DialogContent className="max-w-[95vw] sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Confirm Package Change</DialogTitle>
-              <DialogDescription>
-                {currentPackage && newPackage ? (
-                  <>
-                    You are about to change your package from {currentPackage.display} (R{currentPackage.price}/month) to {newPackage.display} (R{newPackage.price}/month).
-                    <br /><br />
-                    {newPackage.price > currentPackage.price ? (
-                      <>
-                        This will increase your monthly payment by R{newPackage.price - currentPackage.price}.
-                        <br /><br />
-                      </>
-                    ) : newPackage.price < currentPackage.price ? (
-                      <>
-                        This will decrease your monthly payment by R{currentPackage.price - newPackage.price}.
-                        <br /><br />
-                      </>
-                    ) : null}
-                    This change will update your monthly debit order mandate. A new mandate agreement will be sent to you via email.
-                  </>
-                ) : (
-                  'Package information not available'
-                )}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={() => setShowPackageDialog(false)} className="w-full sm:w-auto">Cancel</Button>
-              <Button onClick={confirmPackageChange} disabled={updateProfileMutation.isPending} className="w-full sm:w-auto">
-                {updateProfileMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Updating...
-                  </>
-                ) : (
-                  'Confirm Change'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
+
+      <Dialog open={showPackageDialog} onOpenChange={setShowPackageDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Confirm Package Change</DialogTitle>
+            <DialogDescription>
+              {currentPackage && newPackage ? (
+                <>
+                  You are about to change your package from {currentPackage.display} (R{currentPackage.price}/month) to {newPackage.display} (R{newPackage.price}/month).
+                  <br /><br />
+                  {newPackage.price > currentPackage.price ? (
+                    <>
+                      This will increase your monthly payment by R{newPackage.price - currentPackage.price}.
+                      <br /><br />
+                    </>
+                  ) : newPackage.price < currentPackage.price ? (
+                    <>
+                      This will decrease your monthly payment by R{currentPackage.price - newPackage.price}.
+                      <br /><br />
+                    </>
+                  ) : null}
+                  This change will update your monthly debit order mandate. A new mandate agreement will be sent to you via email.
+                </>
+              ) : (
+                'Package information not available'
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowPackageDialog(false)} className="w-full sm:w-auto">Cancel</Button>
+            <Button onClick={confirmPackageChange} disabled={updateProfileMutation.isPending} className="w-full sm:w-auto">
+              {updateProfileMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Updating...
+                </>
+              ) : (
+                'Confirm Change'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
