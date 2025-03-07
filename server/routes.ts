@@ -661,6 +661,35 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add GET endpoint for easier browser-based notification testing
+  app.get("/api/notifications/test-create", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({
+        error: "Not authenticated",
+        message: "You need to be logged in to create test notifications",
+        howToTest: "Please log in first, then visit this URL again"
+      });
+    }
+
+    try {
+      console.log('Creating test notification for user:', req.user.id);
+      const notification = await NotificationService.createTestNotification(req.user.id);
+      
+      res.json({
+        success: true,
+        message: "Test notification created successfully",
+        notification,
+        nextSteps: "Check your notifications page to see the test notification"
+      });
+    } catch (error) {
+      console.error('Error creating test notification:', error);
+      res.status(500).json({ 
+        error: 'Failed to create test notification',
+        details: error.message
+      });
+    }
+  });
+
   // Mount referral routes
   app.use('/api/customer', referralRouter);
 
