@@ -15,115 +15,88 @@ const clients = new Map<WebSocket, {
 export function setupWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ 
     server,
-    path: '/ws',
-    verifyClient: async (info: any, done) => {
-      try {
-        // Log connection attempt details
-        console.log('WebSocket connection attempt:', {
-          url: info.req.url,
-          headers: {
-            protocol: info.req.headers['sec-websocket-protocol'],
-            upgrade: info.req.headers.upgrade,
-            connection: info.req.headers.connection
-          }
-        });
-
-        // Check for Vite HMR connection
-        if (info.req.headers['sec-websocket-protocol']?.includes('vite-hmr')) {
-          console.log('Allowing Vite HMR WebSocket connection');
-          return done(true);
-        }
-
-        // Extract and verify token
-        const url = new URL(info.req.url, `http://${info.req.headers.host}`);
-        const token = url.searchParams.get('token');
-
-        console.log('Token verification:', {
-          hasToken: !!token,
-          tokenLength: token?.length,
-          urlPath: url.pathname,
-          urlParams: Array.from(url.searchParams.keys())
-        });
-
-        if (!token) {
-          console.log('WebSocket connection rejected: No token provided');
-          return done(false, 401, 'Authentication required');
-        }
-
-        // Verify token
-        try {
-          const user = await verifyToken(token);
-          if (user) {
-            console.log('WebSocket authenticated for user:', {
-              userId: user.id,
-              isAdmin: user.isAdmin
-            });
-            info.req.user = user;
-            return done(true);
-          }
-        } catch (error) {
-          console.error('Token verification failed:', error);
-          return done(false, 401, 'Invalid token');
-        }
-
-        return done(false, 401, 'Authentication failed');
-      } catch (error) {
-        console.error('WebSocket verification error:', error);
-        return done(false, 500, 'Internal Server Error');
-      }
-    }
+    path: '/ws'
   });
 
-  wss.on('connection', async (ws: WebSocket, req: any) => {
+  wss.on('connection', async (ws: WebSocket) => {
     try {
-      if (!req.user) {
-        console.log('Rejecting WebSocket connection: No user in request');
-        ws.close(1008, 'Authentication required');
-        return;
-      }
+      let authenticated = false;
 
-      // Store user information
-      const userData = {
-        userId: req.user.id,
-        isAdmin: req.user.isAdmin || false
-      };
-      clients.set(ws, userData);
+      // Set up message handler for authentication
+      ws.on('message', async (message: string) => {
+        try {
+          if (authenticated) {
+            return; // Skip if already authenticated
+          }
 
-      console.log('WebSocket client connected:', {
-        userId: userData.userId,
-        isAdmin: userData.isAdmin,
-        totalConnections: clients.size
+          const data = JSON.parse(message);
+          if (data.type === 'authenticate' && data.token) {
+            const user = await verifyToken(data.token);
+            if (!user) {
+              ws.close(1008, 'Authentication failed');
+              return;
+            }
+
+            // Store user information
+            const userData = {
+              userId: user.id,
+              isAdmin: user.isAdmin || false
+            };
+            clients.set(ws, userData);
+            authenticated = true;
+
+            console.log('WebSocket client authenticated:', {
+              userId: userData.userId,
+              isAdmin: userData.isAdmin,
+              totalConnections: clients.size
+            });
+
+            // Send connection confirmation
+            ws.send(JSON.stringify({
+              type: 'auth_success',
+              message: 'Connected to notification system',
+              timestamp: new Date().toISOString()
+            }));
+
+            // Send unread notifications
+            const unreadNotifications = await db.query.notifications.findMany({
+              where: eq(notifications.userId, userData.userId),
+              orderBy: desc(notifications.createdAt),
+            });
+
+            console.log(`Sending ${unreadNotifications.length} unread notifications to user ${userData.userId}`);
+
+            for (const notification of unreadNotifications) {
+              ws.send(JSON.stringify({
+                type: notification.type,
+                points: notification.type === 'POINTS_AWARDED' ? 
+                  parseInt(notification.title.match(/-?\d+/)?.[0] || '0') : undefined,
+                description: notification.message,
+                timestamp: notification.createdAt.toISOString(),
+                id: notification.id.toString()
+              }));
+            }
+          }
+        } catch (error) {
+          console.error('Error processing WebSocket message:', error);
+          ws.close(1011, 'Internal Server Error');
+        }
       });
 
-      // Send connection confirmation
-      ws.send(JSON.stringify({
-        type: 'auth_success',
-        message: 'Connected to notification system',
-        timestamp: new Date().toISOString()
-      }));
-
-      // Send unread notifications
-      const unreadNotifications = await db.query.notifications.findMany({
-        where: eq(notifications.userId, userData.userId),
-        orderBy: desc(notifications.createdAt),
-      });
-
-      console.log(`Sending ${unreadNotifications.length} unread notifications to user ${userData.userId}`);
-
-      for (const notification of unreadNotifications) {
-        ws.send(JSON.stringify({
-          type: notification.type,
-          points: notification.type === 'POINTS_AWARDED' ? 
-            parseInt(notification.title.match(/-?\d+/)?.[0] || '0') : undefined,
-          description: notification.message,
-          timestamp: notification.createdAt.toISOString(),
-          id: notification.id.toString()
-        }));
-      }
+      // Set authentication timeout
+      const authTimeout = setTimeout(() => {
+        if (!authenticated) {
+          ws.close(1008, 'Authentication timeout');
+        }
+      }, 5000);
 
       ws.on('close', () => {
-        console.log(`WebSocket client disconnected: User ${userData.userId}`);
-        clients.delete(ws);
+        clearTimeout(authTimeout);
+        const userData = clients.get(ws);
+        if (userData) {
+          console.log(`WebSocket client disconnected: User ${userData.userId}`);
+          clients.delete(ws);
+        }
       });
 
     } catch (error) {

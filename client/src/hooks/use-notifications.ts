@@ -57,24 +57,23 @@ export function useNotifications() {
     try {
       isConnectingRef.current = true;
 
-      // Get the current host and protocol
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      // Get the current host from window.location
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
 
-      // Ensure we have both protocol and host
-      if (!protocol || !host) {
-        console.error('Invalid WebSocket URL components:', { protocol, host });
+      // Ensure we have a valid host
+      if (!host) {
+        console.error('Invalid host for WebSocket connection');
         return;
       }
 
-      const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(token)}`;
-
-      console.log('Creating WebSocket connection:', {
-        protocol,
+      // Get the session token from the cookies
+      const wsUrl = `${wsProtocol}//${host}/ws`;
+      console.log('Attempting WebSocket connection:', {
+        protocol: wsProtocol,
         host,
         hasToken: !!token,
-        tokenLength: token?.length,
-        wsUrl: wsUrl.replace(token, '[REDACTED]')
+        wsUrl
       });
 
       const socket = new WebSocket(wsUrl);
@@ -82,6 +81,8 @@ export function useNotifications() {
 
       socket.onopen = () => {
         console.log('WebSocket connection established');
+        // Send authentication message immediately after connection
+        socket.send(JSON.stringify({ type: 'authenticate', token }));
         setIsConnected(true);
         setReconnectAttempts(0);
         isConnectingRef.current = false;
@@ -93,6 +94,7 @@ export function useNotifications() {
           console.log('Received WebSocket message:', data);
 
           if (data.type === 'auth_success') {
+            console.log('WebSocket authentication successful');
             return;
           }
 
@@ -159,7 +161,6 @@ export function useNotifications() {
     }
   };
 
-  // Set up WebSocket connection when user and token are available
   useEffect(() => {
     if (user && token) {
       connectWebSocket();
