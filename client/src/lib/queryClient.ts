@@ -38,7 +38,7 @@ export const queryClient = new QueryClient({
           const response = await apiRequest("GET", queryKey[0] as string);
           return response.json();
         } catch (error) {
-          // If we get a network error, retry up to 3 times
+          // Only retry network errors
           if (error instanceof TypeError && error.message.includes('network')) {
             return new Promise((resolve, reject) => {
               setTimeout(() => {
@@ -52,17 +52,20 @@ export const queryClient = new QueryClient({
           throw error;
         }
       },
+      // Improve caching and performance settings
+      staleTime: 1000 * 60 * 5, // Data stays fresh for 5 minutes
+      cacheTime: 1000 * 60 * 30, // Cache persists for 30 minutes
+      refetchOnMount: false, // Don't refetch on component mount
+      refetchOnWindowFocus: false, // Don't refetch when window gains focus
+      refetchOnReconnect: false, // Don't refetch on reconnection
       retry: (failureCount, error) => {
-        // Retry up to 3 times for network errors
+        // Only retry network errors, max 2 retries
         if (error instanceof TypeError && error.message.includes('network')) {
-          return failureCount < 3;
+          return failureCount < 2;
         }
-        // Don't retry for other errors
         return false;
       },
-      retryDelay: attemptIndex => Math.min(1000 * (2 ** attemptIndex), 30000),
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000 // Data remains fresh for 5 minutes
+      retryDelay: attemptIndex => Math.min(1000 * (2 ** attemptIndex), 5000), // Exponential backoff capped at 5s
     },
     mutations: {
       retry: false,
