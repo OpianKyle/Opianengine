@@ -634,6 +634,15 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/customer/referrals", async (req, res) => {
+    // Add detailed session debugging
+    console.log('Session debug:', {
+      hasSession: !!req.session,
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user,
+      cookies: req.headers.cookie
+    });
+
     if (!req.isAuthenticated()) {
       console.log('Unauthorized referrals request - no session');
       return res.status(401).json({ error: "Please log in to access this resource" });

@@ -1,0 +1,29 @@
+
+use-auth.tsx:182 Uncaught Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:182:11)
+    at ReferralsPage (referrals.tsx:98:20)
+chunk-276SZO74.js?v=efe12b65:14032 The above error occurred in the <ReferralsPage> component:
+
+    at ReferralsPage (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/customer/referrals.tsx:90:31)
+    at ProtectedRoute (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/App.tsx?v=6TIhqnJm_ql_kF6t1wOqu:49:38)
+    at div
+    at div
+    at main
+    at div
+    at CustomerLayout (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/layout/customer-layout.tsx:26:42)
+    at Route (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.repli…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=efe12b65:323:16)
+    at Switch (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.repli…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=efe12b65:379:17)
+    at div
+    at Provider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.repli…unner/workspace/node_modules/.vite/deps/chunk-T4GFO2ST.js?v=efe12b65:48:15)
+    at TooltipProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.repli…rkspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=efe12b65:61:5)
+    at https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/ui/sidebar.tsx:54:7
+    at Router
+    at div
+    at QueryClientProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.repli…rkspace/node_modules/.vite/deps/@tanstack_react-query.js?v=efe12b65:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+chunk-276SZO74.js?v=efe12b65:9129 Uncaught Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:182:11)
+    at ReferralsPage (referrals.tsx:98:20)
