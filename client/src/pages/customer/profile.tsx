@@ -305,7 +305,7 @@ export default function ProfilePage() {
   const newPackage = packages.find(pkg => pkg.name === selectedPackage);
 
   return (
-    <div className="w-full space-y-6 pb-8">
+    <div className="w-full">
       <div className="space-y-0.5 px-4 sm:px-6">
         <h2 className="text-2xl font-bold tracking-tight">Profile Settings</h2>
         <p className="text-muted-foreground">
@@ -313,9 +313,9 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      <Separator />
+      <Separator className="my-4" />
 
-      <div className="px-4 sm:px-6 space-y-6">
+      <div className="px-4 sm:px-6 space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Package Selection</CardTitle>

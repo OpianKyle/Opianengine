@@ -107,7 +107,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+      <main className="flex-1 overflow-y-auto">
         <div className="h-full p-4 lg:p-8 mt-16">
           {children}
         </div>
