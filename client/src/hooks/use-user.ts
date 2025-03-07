@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from "zod";
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { cleanupWebSockets } from "@/lib/utils";
+//import { cleanupWebSockets } from "@/lib/utils";
 
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
 
@@ -57,48 +57,6 @@ export type AccountType = typeof accountTypes[number];
 
 const TOKEN_STORAGE_KEY = 'auth_token';
 
-// Helper function to safely parse JSON responses
-async function parseResponse(response: Response) {
-  const contentType = response.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    return response.json();
-  }
-  return null;
-}
-
-// Helper function for making API requests with retries
-async function fetchWithRetry(url: string, options: RequestInit, retries = 3, delay = 1000) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await fetch(url, options);
-
-      // For logout, we don't care about the response content
-      if (url.includes('/api/logout')) {
-        return true;
-      }
-
-      // Handle 401 specifically
-      if (response.status === 401) {
-        return null;
-      }
-
-      if (!response.ok) {
-        const data = await parseResponse(response);
-        throw new Error(data?.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await parseResponse(response);
-      if (!data && !url.includes('/api/logout')) {
-        throw new Error('Invalid response format');
-      }
-
-      return data;
-    } catch (error) {
-      if (i === retries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
-    }
-  }
-}
 
 export function useUser() {
   const queryClient = useQueryClient();
@@ -128,7 +86,7 @@ export function useUser() {
     queryKey: ['/api/user'],
     queryFn: async () => {
       try {
-        const data = await fetchWithRetry('/api/user', {
+        const response = await fetch('/api/user', {
           credentials: 'include',
           headers: {
             'Accept': 'application/json',
@@ -137,11 +95,15 @@ export function useUser() {
           },
         });
 
-        if (data === null) {
-          setToken(null);
-          return null;
+        if (!response.ok) {
+          if (response.status === 401) {
+            setToken(null);
+            return null;
+          }
+          throw new Error('Failed to fetch user data');
         }
 
+        const data = await response.json();
         return userSchema.parse(data);
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -164,22 +126,28 @@ export function useUser() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
-      const data = await fetchWithRetry('/api/login', {
+      const response = await fetch('/api/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         credentials: 'include',
+        body: JSON.stringify(credentials),
       });
 
-      if (!data) {
-        throw new Error('Login failed');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Login failed' }));
+        throw new Error(errorData.error || 'Login failed');
       }
+
+      const data = await response.json();
 
       if (data.token) {
         setToken(data.token);
       }
 
-      return userSchema.parse(data.user || data);
+      return userSchema.parse(data);
     },
     onSuccess: (user) => {
       queryClient.setQueryData(['/api/user'], user);
@@ -189,6 +157,7 @@ export function useUser() {
       });
     },
     onError: (error: Error) => {
+      console.error('Login error:', error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -199,31 +168,19 @@ export function useUser() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      // First show loading state
-      toast({
-        title: "Logging out",
-        description: "Please wait...",
-      });
-
       try {
-        // Always cleanup before making the request
-        cleanupWebSockets();
+        // Always cleanup state first
         queryClient.clear();
         queryClient.setQueryData(['/api/user'], null);
         setToken(null);
 
         // Make the logout request - don't wait for it
-        await fetchWithRetry('/api/logout', {
+        await fetch('/api/logout', {
           method: 'POST',
           credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` })
-          },
         });
       } catch (error) {
-        console.error('Logout request failed:', error);
-        // Continue with client-side cleanup even if server request fails
+        console.error('Logout error:', error);
       }
 
       // Force a page reload to clear all state
@@ -236,14 +193,11 @@ export function useUser() {
       });
     },
     onError: (error: Error) => {
-      // Only show error if it's not related to session expiry
-      if (!error.message.includes('401') && !error.message.includes('Invalid response format')) {
-        toast({
-          variant: "destructive",
-          title: "Warning",
-          description: "Some cleanup operations failed, but you have been logged out.",
-        });
-      }
+      toast({
+        variant: "destructive",
+        title: "Warning",
+        description: "Some cleanup operations failed, but you have been logged out.",
+      });
     },
   });
 
