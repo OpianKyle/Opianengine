@@ -58,6 +58,11 @@ export function useNotifications() {
 
   const connectWebSocket = () => {
     if (!user || !token || socketRef.current?.readyState === WebSocket.OPEN) {
+      console.log('Skipping WebSocket connection:', {
+        hasUser: !!user,
+        hasToken: !!token,
+        isConnected: socketRef.current?.readyState === WebSocket.OPEN
+      });
       return;
     }
 
@@ -67,10 +72,20 @@ export function useNotifications() {
         socketRef.current = null;
       }
 
+      // Get the current host and protocol
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
+      console.log('WebSocket connection details:', { protocol, host });
+
+      if (!host) {
+        console.error('Invalid host');
+        return;
+      }
+
+      // Clean and encode the token
       const cleanToken = token.replace('Bearer ', '');
       const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(cleanToken)}`;
+      console.log('Connecting to WebSocket:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
@@ -89,7 +104,7 @@ export function useNotifications() {
           // Refresh notifications list
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
-          // Show toast notification based on type
+          // Show toast notification
           const toastConfig = {
             title: notification.title,
             description: notification.message,
@@ -140,9 +155,7 @@ export function useNotifications() {
 
       socket.onerror = (error) => {
         console.error('WebSocket error:', error);
-        socket.close();
       };
-
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
       setIsConnected(false);
@@ -180,6 +193,7 @@ export function useNotifications() {
 
   useEffect(() => {
     if (user?.id && token) {
+      console.log('Initializing WebSocket connection');
       connectWebSocket();
     }
 

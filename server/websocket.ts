@@ -18,12 +18,22 @@ export function setupWebSocketServer(server: Server) {
         const url = new URL(info.req.url, `http://${info.req.headers.host}`);
         const token = url.searchParams.get('token');
 
+        console.log('WebSocket authentication attempt:', {
+          hasToken: !!token,
+          url: info.req.url
+        });
+
         if (!token) {
           console.error('WebSocket authentication failed: No token provided');
           return done(false, 401, 'Authentication required');
         }
 
         const user = await verifyToken(token);
+        console.log('Token verification result:', {
+          hasUser: !!user,
+          userId: user?.id
+        });
+
         if (!user) {
           console.error('WebSocket authentication failed: Invalid token');
           return done(false, 401, 'Invalid token');
@@ -48,6 +58,11 @@ export function setupWebSocketServer(server: Server) {
 
       // Send unread notifications
       const unreadNotifications = await NotificationService.getUnreadNotifications(user.id);
+      console.log('Sending unread notifications:', {
+        userId: user.id,
+        count: unreadNotifications.length
+      });
+
       for (const notification of unreadNotifications) {
         ws.send(JSON.stringify({
           id: notification.id.toString(),

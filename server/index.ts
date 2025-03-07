@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, serveStatic } from "./vite";
 import cors from "cors";
 import fileUpload from 'express-fileupload';
 import { setupAuth } from "./auth";
@@ -10,13 +10,9 @@ import agentRouter from './routes/agent';
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
+import { setupWebSocketServer } from './websocket';
 
 console.log('Starting server initialization...', new Date().toISOString());
-console.log('Environment:', {
-  NODE_ENV: process.env.NODE_ENV,
-  PORT: process.env.PORT || 5000,
-  hasSessionSecret: !!process.env.SESSION_SECRET,
-});
 
 const app = express();
 
@@ -28,8 +24,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['set-cookie']
 }));
-
-console.log('CORS middleware configured');
 
 // trust first proxy for secure cookies
 app.set('trust proxy', 1);
@@ -44,8 +38,6 @@ app.use(fileUpload({
     fileSize: 5 * 1024 * 1024 // 5MB max file size
   },
 }));
-
-console.log('Basic middleware setup complete');
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -63,8 +55,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Update session configuration
-app.use(session({
+// Session configuration
+const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET!,
   cookie: {
     maxAge: 86400000,
@@ -78,22 +70,14 @@ app.use(session({
   resave: true,
   saveUninitialized: false,
   name: 'session'
-}));
+});
+
+app.use(sessionMiddleware);
 
 // Initialize passport after session
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Add session debug middleware
-app.use((req, res, next) => {
-  console.log('Session debug:', {
-    hasSession: !!req.session,
-    sessionID: req.sessionID,
-    isAuthenticated: req.isAuthenticated?.(),
-    user: req.user ? { id: (req.user as any).id, isAgent: (req.user as any).is_agent } : null
-  });
-  next();
-});
 
 (async () => {
   try {
@@ -128,6 +112,10 @@ app.use((req, res, next) => {
     app.use('/api/agent', agentRouter);
     const server = registerRoutes(app);
     console.log('Routes registered');
+
+    // Setup WebSocket server with session support
+    const wsServer = setupWebSocketServer(server, sessionMiddleware);
+    console.log('WebSocket server initialized');
 
     // Global error handler
     app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
