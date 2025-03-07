@@ -1,12 +1,51 @@
-import { db } from "@db";
-import { notifications, type InsertNotification } from "@db/schema";
-import { eq, desc } from "drizzle-orm";
 import { createConnection } from '../db';
 
 type NotificationCallback = (notification: any) => void;
+type NotificationType = 
+  | 'POINTS_AWARDED'
+  | 'POINTS_DEDUCTED'
+  | 'ADMIN_MESSAGE'
+  | 'SYSTEM_UPDATE';
 
 export class NotificationService {
   private static clients = new Map<number, Set<NotificationCallback>>();
+
+  private static async ensureNotificationsTable() {
+    const connection = await createConnection();
+    try {
+      console.log('Attempting to create/verify notifications table...');
+
+      // First check if table exists
+      const [tables] = await connection.execute(
+        'SHOW TABLES LIKE "notifications"'
+      );
+
+      if (Array.isArray(tables) && tables.length === 0) {
+        console.log('Notifications table does not exist, creating...');
+        await connection.execute(`
+          CREATE TABLE IF NOT EXISTS notifications (
+            id BIGINT PRIMARY KEY AUTO_INCREMENT,
+            user_id BIGINT NOT NULL,
+            type VARCHAR(50) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            message TEXT NOT NULL,
+            is_read BOOLEAN DEFAULT FALSE,
+            metadata TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+          );
+        `);
+        console.log('Notifications table created successfully');
+      } else {
+        console.log('Notifications table already exists');
+      }
+    } catch (error) {
+      console.error('Error in ensureNotificationsTable:', error);
+      throw error;
+    } finally {
+      await connection.end();
+    }
+  }
 
   static addClient(userId: number, callback: NotificationCallback) {
     const userCallbacks = this.clients.get(userId) || new Set();
@@ -26,38 +65,49 @@ export class NotificationService {
     }
   }
 
-  static async createNotification(data: InsertNotification) {
+  static async createNotification(data: {
+    userId: number;
+    type: NotificationType;
+    title: string;
+    message: string;
+    metadata?: any;
+  }) {
+    await this.ensureNotificationsTable();
     const connection = await createConnection();
-    try {
-      console.log('Creating notification:', data);
 
-      // Insert notification into MariaDB
+    try {
+      console.log('Creating notification:', {
+        ...data,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : null
+      });
+
+      // Insert notification
       const [result] = await connection.execute(
         `INSERT INTO notifications (
           user_id, type, title, message, is_read, metadata, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
         [
           data.userId,
           data.type,
           data.title,
           data.message,
-          data.isRead ? 1 : 0,
-          data.metadata || null,
-          new Date()
+          false,
+          data.metadata ? JSON.stringify(data.metadata) : null
         ]
       );
+
+      console.log('Notification inserted, retrieving created notification...');
 
       // Get the created notification
       const [notifications] = await connection.execute(
         'SELECT * FROM notifications WHERE id = LAST_INSERT_ID()'
       );
 
-      const newNotification = Array.isArray(notifications) ? notifications[0] : null;
-
-      if (!newNotification) {
-        throw new Error('Failed to create notification');
+      if (!Array.isArray(notifications) || notifications.length === 0) {
+        throw new Error('Failed to create notification: could not retrieve created record');
       }
 
+      const newNotification = notifications[0];
       console.log('Successfully created notification:', newNotification);
 
       // Send to connected clients
@@ -66,13 +116,16 @@ export class NotificationService {
         const notificationEvent = {
           ...newNotification,
           isRead: Boolean(newNotification.is_read),
-          createdAt: newNotification.created_at
+          createdAt: newNotification.created_at,
+          metadata: newNotification.metadata ? JSON.parse(newNotification.metadata) : null
         };
         console.log('Sending notification to clients:', notificationEvent);
         userCallbacks.forEach(callback => callback(notificationEvent));
+      } else {
+        console.log('No connected clients found for user:', data.userId);
       }
 
-      return newNotification;
+      return notificationEvent;
     } catch (error) {
       console.error('Error creating notification:', error);
       throw error;
@@ -82,21 +135,24 @@ export class NotificationService {
   }
 
   static async getUnreadNotifications(userId: number) {
+    await this.ensureNotificationsTable();
     const connection = await createConnection();
+
     try {
       console.log('Fetching unread notifications for user:', userId);
       const [notifications] = await connection.execute(
-        'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC',
+        'SELECT * FROM notifications WHERE user_id = ? AND is_read = false ORDER BY created_at DESC',
         [userId]
       );
 
       const transformedNotifications = Array.isArray(notifications) ? notifications.map(n => ({
         ...n,
         isRead: Boolean(n.is_read),
-        createdAt: n.created_at
+        createdAt: n.created_at,
+        metadata: n.metadata ? JSON.parse(n.metadata) : null
       })) : [];
 
-      console.log(`Found ${transformedNotifications.length} notifications for user ${userId}`);
+      console.log(`Found ${transformedNotifications.length} unread notifications for user ${userId}`);
       return transformedNotifications;
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -107,17 +163,20 @@ export class NotificationService {
   }
 
   static async markAsRead(userId: number, notificationId?: number) {
+    await this.ensureNotificationsTable();
     const connection = await createConnection();
+
     try {
       const query = notificationId 
-        ? 'UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?'
-        : 'UPDATE notifications SET is_read = 1 WHERE user_id = ?';
+        ? 'UPDATE notifications SET is_read = true WHERE id = ? AND user_id = ?'
+        : 'UPDATE notifications SET is_read = true WHERE user_id = ?';
 
       const params = notificationId ? [notificationId, userId] : [userId];
 
-      await connection.execute(query, params);
-
+      const [result] = await connection.execute(query, params);
       console.log(`Marked notifications as read for user ${userId}${notificationId ? ` notification ${notificationId}` : ''}`);
+
+      return result;
     } catch (error) {
       console.error('Error marking notification as read:', error);
       throw error;
@@ -126,37 +185,21 @@ export class NotificationService {
     }
   }
 
-  static async notifyPointsUpdate(userId: number, points: number, description: string) {
+  // Helper method to test notification creation
+  static async createTestNotification(userId: number) {
     try {
-      console.log('Creating points notification:', { userId, points, description });
-
-      return await this.createNotification({
-        userId,
-        type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
-        title: points >= 0 ? `Earned ${points} points` : `Deducted ${Math.abs(points)} points`,
-        message: description,
-        isRead: false,
-        metadata: JSON.stringify({ points }),
-        createdAt: new Date()
-      });
-    } catch (error) {
-      console.error('Error creating points notification:', error);
-      throw error;
-    }
-  }
-
-  static async sendSystemUpdate(userId: number, title: string, message: string) {
-    try {
-      return await this.createNotification({
+      console.log('Creating test notification for user:', userId);
+      const notification = await this.createNotification({
         userId,
         type: 'SYSTEM_UPDATE',
-        title,
-        message,
-        isRead: false,
-        createdAt: new Date()
+        title: 'Test Notification',
+        message: 'This is a test notification.',
+        metadata: { test: true, timestamp: new Date().toISOString() }
       });
+      console.log('Test notification created:', notification);
+      return notification;
     } catch (error) {
-      console.error('Error sending system update:', error);
+      console.error('Error creating test notification:', error);
       throw error;
     }
   }

@@ -457,6 +457,22 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add this endpoint after your existing notification endpoints
+  app.post("/api/notifications/test", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      console.log('Creating test notification for user:', req.user.id);
+      const notification = await NotificationService.createTestNotification(req.user.id);
+      res.json(notification);
+    } catch (error) {
+      console.error('Error creating test notification:', error);
+      res.status(500).json({ error: 'Failed to create test notification' });
+    }
+  });
+
   // Mount referral routes
   app.use('/api/customer', referralRouter);
 
