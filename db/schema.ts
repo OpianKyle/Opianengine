@@ -62,11 +62,17 @@ const ADMIN_ACTION_TYPES = [
 
 const QUOTE_REQUEST_STATUS = ["PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED"] as const;
 
+// Define enum values for notifications
 const NOTIFICATION_TYPES = [
-  "QUOTE_STATUS_CHANGE",
   "POINTS_AWARDED",
+  "POINTS_DEDUCTED",
   "ADMIN_MESSAGE",
-  "SYSTEM_UPDATE"
+  "SYSTEM_UPDATE",
+  "QUOTE_STATUS_CHANGE",
+  "CUSTOMER_ASSIGNED",
+  "CUSTOMER_REMOVED",
+  "PRODUCT_ASSIGNED",
+  "PRODUCT_REMOVED"
 ] as const;
 
 // Table Definitions
@@ -176,6 +182,7 @@ export const quoteRequests = mysqlTable("quote_requests", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Existing notifications table definition update
 export const notifications = mysqlTable("notifications", {
   id: int("id").primaryKey().autoincrement(),
   userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
@@ -184,6 +191,8 @@ export const notifications = mysqlTable("notifications", {
   message: text("message").notNull(),
   isRead: boolean("is_read").default(false).notNull(),
   relatedId: int("related_id"),
+  senderId: int("sender_id").references(() => users.id),
+  metadata: text("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -6,20 +6,26 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 interface BaseNotification {
   id: string;
   title: string;
-  description: string;
+  message: string;
   timestamp: string;
   read: boolean;
+  metadata?: string;
 }
 
-interface PointsNotification extends BaseNotification {
-  type: 'POINTS_AWARDED';
-}
+type NotificationType = 
+  | 'POINTS_AWARDED'
+  | 'POINTS_DEDUCTED'
+  | 'ADMIN_MESSAGE'
+  | 'SYSTEM_UPDATE'
+  | 'QUOTE_STATUS_CHANGE'
+  | 'CUSTOMER_ASSIGNED'
+  | 'CUSTOMER_REMOVED'
+  | 'PRODUCT_ASSIGNED'
+  | 'PRODUCT_REMOVED';
 
-interface SystemNotification extends BaseNotification {
-  type: 'QUOTE_STATUS_CHANGE' | 'ADMIN_MESSAGE' | 'SYSTEM_UPDATE';
+interface Notification extends BaseNotification {
+  type: NotificationType;
 }
-
-type Notification = PointsNotification | SystemNotification;
 
 export function useNotifications() {
   const { user, token } = useUser();
@@ -38,10 +44,9 @@ export function useNotifications() {
       if (!user || !token) return [];
 
       const response = await fetch('/api/notifications', {
-        credentials: 'include',
         headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
         }
       });
 
@@ -53,30 +58,20 @@ export function useNotifications() {
 
   const connectWebSocket = () => {
     if (!user || !token || socketRef.current?.readyState === WebSocket.OPEN) {
-      console.log('WebSocket connection skipped:', {
-        hasUser: !!user,
-        hasToken: !!token,
-        hasActiveConnection: socketRef.current?.readyState === WebSocket.OPEN
-      });
       return;
     }
 
     try {
-      console.log('Initializing WebSocket connection');
-
-      // Clean up existing connection
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
       }
 
-      // Create WebSocket URL with authentication token
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
       const cleanToken = token.replace('Bearer ', '');
       const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(cleanToken)}`;
 
-      console.log('Connecting to WebSocket:', { wsUrl });
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
@@ -88,45 +83,54 @@ export function useNotifications() {
 
       socket.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data) as Notification;
-          console.log('Received WebSocket message:', data);
+          const notification = JSON.parse(event.data) as Notification;
+          console.log('Received notification:', notification);
 
           // Refresh notifications list
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
-          // Show toast for points notifications
-          if (data.type === 'POINTS_AWARDED') {
-            toast({
-              title: data.title,
-              description: data.description,
-              duration: 5000,
-              variant: data.title.toLowerCase().includes('deducted') ? 'destructive' : 'default'
-            });
+          // Show toast notification based on type
+          const toastConfig = {
+            title: notification.title,
+            description: notification.message,
+            duration: 5000
+          };
+
+          switch (notification.type) {
+            case 'POINTS_AWARDED':
+              toast({ ...toastConfig, variant: 'default' });
+              break;
+            case 'POINTS_DEDUCTED':
+              toast({ ...toastConfig, variant: 'destructive' });
+              break;
+            case 'QUOTE_STATUS_CHANGE':
+            case 'CUSTOMER_ASSIGNED':
+            case 'PRODUCT_ASSIGNED':
+              toast({ ...toastConfig, variant: 'default' });
+              break;
+            case 'CUSTOMER_REMOVED':
+            case 'PRODUCT_REMOVED':
+              toast({ ...toastConfig, variant: 'destructive' });
+              break;
+            default:
+              toast(toastConfig);
           }
         } catch (error) {
-          console.error('Failed to process WebSocket message:', error);
+          console.error('Failed to process notification:', error);
         }
       };
 
       socket.onclose = (event) => {
-        console.log('WebSocket connection closed:', {
-          code: event.code,
-          reason: event.reason
-        });
-
+        console.log('WebSocket connection closed:', event);
         setIsConnected(false);
         socketRef.current = null;
 
-        // Clear any existing reconnect timeout
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
         }
 
-        // Attempt reconnection if not at max attempts
         if (reconnectAttempts < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-          console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts} in ${delay}ms`);
-          
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             connectWebSocket();
@@ -145,29 +149,12 @@ export function useNotifications() {
     }
   };
 
-  useEffect(() => {
-    if (user?.id && token) {
-      connectWebSocket();
-    }
-
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (socketRef.current) {
-        socketRef.current.close();
-        socketRef.current = null;
-      }
-    };
-  }, [user?.id, token]);
-
   const markAsRead = useMutation({
     mutationFn: async (notificationId?: string) => {
       if (!token) throw new Error('No authentication token');
 
       const response = await fetch('/api/notifications/mark-read', {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -190,6 +177,22 @@ export function useNotifications() {
       });
     }
   });
+
+  useEffect(() => {
+    if (user?.id && token) {
+      connectWebSocket();
+    }
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+    };
+  }, [user?.id, token]);
 
   return {
     notifications,
