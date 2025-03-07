@@ -67,11 +67,12 @@ export function useNotifications() {
 
       // Enhanced logging for WebSocket URL construction
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(token)}`;
 
       console.log('WebSocket setup:', {
         protocol,
-        host: window.location.host,
+        host,
         hasToken: !!token,
         tokenLength: token?.length,
         userId: user.id,
@@ -86,12 +87,6 @@ export function useNotifications() {
         setIsConnected(true);
         setReconnectAttempts(0);
         isConnectingRef.current = false;
-
-        toast({
-          title: "Connected",
-          description: "Successfully connected to notification service",
-          duration: 3000,
-        });
       };
 
       socket.onmessage = (event) => {
@@ -196,7 +191,7 @@ export function useNotifications() {
       isConnectingRef.current = false;
       setIsConnected(false);
     };
-  }, [user?.id, token]); // Only depend on user ID and token to prevent unnecessary reconnections
+  }, [user?.id, token]);
 
   const markAsRead = useMutation({
     mutationFn: async (notificationId?: string) => {
@@ -231,6 +226,7 @@ export function useNotifications() {
   return {
     notifications,
     isConnected,
-    markAsRead
+    markAsRead,
+    unreadCount: notifications.filter(n => !n.read).length
   };
 }
