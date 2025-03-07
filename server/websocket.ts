@@ -4,7 +4,7 @@ import { type User } from '@db/schema';
 import { verifyToken } from './auth';
 import { NotificationService } from './services/notification-service';
 
-export function setupWebSocketServer(server: Server) {
+export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
   const wss = new WebSocketServer({ 
     server,
     path: '/ws',
@@ -20,7 +20,8 @@ export function setupWebSocketServer(server: Server) {
 
         console.log('WebSocket authentication attempt:', {
           hasToken: !!token,
-          url: info.req.url
+          url: info.req.url,
+          headers: info.req.headers
         });
 
         if (!token) {
@@ -31,7 +32,8 @@ export function setupWebSocketServer(server: Server) {
         const user = await verifyToken(token);
         console.log('Token verification result:', {
           hasUser: !!user,
-          userId: user?.id
+          userId: user?.id,
+          tokenValid: !!token
         });
 
         if (!user) {
@@ -51,33 +53,51 @@ export function setupWebSocketServer(server: Server) {
   wss.on('connection', async (ws: WebSocket, req: any) => {
     try {
       const user = req.user as User;
-      console.log('WebSocket client connected:', { userId: user.id });
+      console.log('WebSocket client connected:', {
+        userId: user.id,
+        timestamp: new Date().toISOString()
+      });
 
       // Add client to notification service
       NotificationService.addClient(user.id, ws);
 
       // Send unread notifications
-      const unreadNotifications = await NotificationService.getUnreadNotifications(user.id);
-      console.log('Sending unread notifications:', {
-        userId: user.id,
-        count: unreadNotifications.length
-      });
+      try {
+        const unreadNotifications = await NotificationService.getUnreadNotifications(user.id);
+        console.log('Sending unread notifications:', {
+          userId: user.id,
+          count: unreadNotifications.length,
+          notifications: unreadNotifications
+        });
 
-      for (const notification of unreadNotifications) {
-        ws.send(JSON.stringify({
-          id: notification.id.toString(),
-          type: notification.type,
-          title: notification.title,
-          message: notification.message,
-          metadata: notification.metadata,
-          timestamp: notification.createdAt.toISOString(),
-          read: notification.isRead
-        }));
+        for (const notification of unreadNotifications) {
+          ws.send(JSON.stringify({
+            id: notification.id.toString(),
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            metadata: notification.metadata,
+            timestamp: notification.createdAt.toISOString(),
+            read: notification.isRead
+          }));
+        }
+      } catch (error) {
+        console.error('Error processing unread notifications:', error);
       }
 
       ws.on('close', () => {
-        console.log('WebSocket client disconnected:', { userId: user.id });
+        console.log('WebSocket client disconnected:', { 
+          userId: user.id,
+          timestamp: new Date().toISOString()
+        });
         NotificationService.removeClient(user.id, ws);
+      });
+
+      ws.on('error', (error) => {
+        console.error('WebSocket client error:', {
+          userId: user.id,
+          error: error.message
+        });
       });
 
     } catch (error) {

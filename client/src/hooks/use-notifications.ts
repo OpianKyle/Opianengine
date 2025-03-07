@@ -74,18 +74,17 @@ export function useNotifications() {
 
       // Get the current host and protocol
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      console.log('WebSocket connection details:', { protocol, host });
+      // Default to port 5000 if not specified
+      const port = window.location.port || '5000';
+      const hostname = window.location.hostname;
+      const wsUrl = `${protocol}//${hostname}:${port}/ws?token=${encodeURIComponent(token)}`;
 
-      if (!host) {
-        console.error('Invalid host');
-        return;
-      }
-
-      // Clean and encode the token
-      const cleanToken = token.replace('Bearer ', '');
-      const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(cleanToken)}`;
-      console.log('Connecting to WebSocket:', wsUrl);
+      console.log('Connecting to WebSocket:', {
+        protocol,
+        hostname,
+        port,
+        wsUrl
+      });
 
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
