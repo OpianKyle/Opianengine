@@ -110,15 +110,17 @@ export class NotificationService {
       const newNotification = notifications[0];
       console.log('Successfully created notification:', newNotification);
 
-      // Send to connected clients
+      // Transform notification for response
+      const notificationEvent = {
+        ...newNotification,
+        isRead: Boolean(newNotification.is_read),
+        createdAt: newNotification.created_at,
+        metadata: newNotification.metadata ? JSON.parse(newNotification.metadata) : null
+      };
+
+      // Send to connected clients if any exist
       const userCallbacks = this.clients.get(data.userId);
       if (userCallbacks) {
-        const notificationEvent = {
-          ...newNotification,
-          isRead: Boolean(newNotification.is_read),
-          createdAt: newNotification.created_at,
-          metadata: newNotification.metadata ? JSON.parse(newNotification.metadata) : null
-        };
         console.log('Sending notification to clients:', notificationEvent);
         userCallbacks.forEach(callback => callback(notificationEvent));
       } else {
@@ -203,6 +205,7 @@ export class NotificationService {
       throw error;
     }
   }
+
   // Helper method to test notification creation and verification
   static async createTestNotifications(userId: number) {
     try {
@@ -246,5 +249,4 @@ export class NotificationService {
       throw error;
     }
   }
-
 }
