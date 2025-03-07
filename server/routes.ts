@@ -457,7 +457,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add this endpoint after your existing notification endpoints
+  // Add test endpoints for notifications
   app.post("/api/notifications/test", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
@@ -470,6 +470,22 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error creating test notification:', error);
       res.status(500).json({ error: 'Failed to create test notification' });
+    }
+  });
+
+  // Add test endpoints for multiple notifications
+  app.post("/api/notifications/test-multiple", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      console.log('Creating multiple test notifications for user:', req.user.id);
+      const notifications = await NotificationService.createTestNotifications(req.user.id);
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error creating test notifications:', error);
+      res.status(500).json({ error: 'Failed to create test notifications' });
     }
   });
 
@@ -514,21 +530,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add test endpoints for notifications
-  app.post("/api/notifications/test-multiple", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
 
-    try {
-      console.log('Creating multiple test notifications for user:', req.user.id);
-      const notifications = await NotificationService.createTestNotifications(req.user.id);
-      res.json(notifications);
-    } catch (error) {
-      console.error('Error creating test notifications:', error);
-      res.status(500).json({ error: 'Failed to create test notifications' });
-    }
-  });
 
   // Enhance the public test endpoint with more details
   app.get("/api/notifications/test-db-public", async (req, res) => {
