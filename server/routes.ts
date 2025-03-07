@@ -514,6 +514,46 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add test endpoint for notifications database structure - no auth required
+  app.get("/api/notifications/test-db-public", async (req, res) => {
+    const connection = await createConnection();
+    try {
+      console.log('Testing notifications database setup...');
+      
+      // Check if table exists
+      const [tables] = await connection.execute(
+        'SHOW TABLES LIKE "notifications"'
+      );
+      
+      if (!Array.isArray(tables) || tables.length === 0) {
+        console.log('Notifications table not found');
+        return res.status(500).json({ error: "Notifications table does not exist" });
+      }
+
+      // Check table structure
+      const [columns] = await connection.execute(
+        'DESCRIBE notifications'
+      );
+      
+      // Get sample notifications if any exist
+      const [notifications] = await connection.execute(
+        'SELECT * FROM notifications ORDER BY created_at DESC LIMIT 5'
+      );
+      
+      res.json({
+        tableExists: true,
+        tableStructure: columns,
+        sampleNotifications: notifications
+      });
+      
+    } catch (error) {
+      console.error('Error testing notifications:', error);
+      res.status(500).json({ error: 'Failed to test notifications system' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   // Mount referral routes
   app.use('/api/customer', referralRouter);
 
