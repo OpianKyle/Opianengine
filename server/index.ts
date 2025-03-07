@@ -44,14 +44,14 @@ app.use(fileUpload({
 // Session configuration
 const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'development-secret',
-  cookie: {
-    maxAge: 86400000,
-    secure: process.env.NODE_ENV === 'production',
+  cookie: { 
+    maxAge: 86400000, // 24 hours
+    secure: false, // Set to false to allow non-HTTPS in development
     sameSite: 'lax',
     path: '/'
   },
   store: new MemoryStore({
-    checkPeriod: 86400000
+    checkPeriod: 86400000 // prune expired entries every 24h
   }),
   resave: false,
   saveUninitialized: false,
@@ -63,6 +63,21 @@ app.use(sessionMiddleware);
 // Initialize passport after session
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Add session debug middleware
+app.use((req, res, next) => {
+  console.log('Session debug:', {
+    hasSession: !!req.session,
+    sessionID: req.sessionID,
+    isAuthenticated: req.isAuthenticated(),
+    user: req.user ? {
+      id: req.user.id,
+      email: req.user.email
+    } : null,
+    cookies: req.headers.cookie
+  });
+  next();
+});
 
 // Setup WebSocket server with session support
 setupWebSocketServer(server, sessionMiddleware);

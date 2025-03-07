@@ -12,7 +12,7 @@ interface BaseNotification {
   metadata?: string;
 }
 
-type NotificationType = 
+type NotificationType =
   | 'POINTS_AWARDED'
   | 'POINTS_DEDUCTED'
   | 'ADMIN_MESSAGE'
@@ -21,14 +21,17 @@ type NotificationType =
   | 'CUSTOMER_ASSIGNED'
   | 'CUSTOMER_REMOVED'
   | 'PRODUCT_ASSIGNED'
-  | 'PRODUCT_REMOVED';
+  | 'PRODUCT_REMOVED'
+  | 'PRODUCT_ACTIVITY'
+  | 'REWARD_REDEMPTION'
+  | 'REFERRAL_COMMISSION';
 
 interface Notification extends BaseNotification {
   type: NotificationType;
 }
 
 export function useNotifications() {
-  const { user, token } = useUser();
+  const { user } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const socketRef = useRef<WebSocket | null>(null);
@@ -41,55 +44,44 @@ export function useNotifications() {
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ['notifications'],
     queryFn: async () => {
-      if (!user || !token) return [];
+      if (!user) return [];
 
       const response = await fetch('/api/notifications', {
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
+        credentials: 'include' // Important: include credentials
       });
 
       if (!response.ok) throw new Error('Failed to fetch notifications');
       return response.json();
     },
-    enabled: !!user && !!token
+    enabled: !!user
   });
 
   const connectWebSocket = () => {
-    if (!user || !token || socketRef.current?.readyState === WebSocket.OPEN) {
+    if (!user || socketRef.current?.readyState === WebSocket.OPEN) {
       console.log('Skipping WebSocket connection:', {
         hasUser: !!user,
-        hasToken: !!token,
         isConnected: socketRef.current?.readyState === WebSocket.OPEN
       });
       return;
     }
 
     try {
+      // Close existing connection if any
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
       }
 
-      // Get current location details
+      // Construct WebSocket URL using current window location
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
-
-      console.log('Location details:', {
-        protocol,
-        host,
-        fullLocation: window.location.toString()
-      });
-
-      // Construct WebSocket URL with authentication
       const wsUrl = `${protocol}//${host}/ws`;
 
-      console.log('Attempting WebSocket connection:', {
+      console.log('Connecting to WebSocket:', {
+        protocol,
+        host,
         wsUrl,
-        hasUser: !!user,
-        userId: user?.id
+        userId: user.id
       });
 
       const socket = new WebSocket(wsUrl);
@@ -106,8 +98,10 @@ export function useNotifications() {
           const notification = JSON.parse(event.data) as Notification;
           console.log('Received notification:', notification);
 
-          // Refresh notifications list
-          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          // Update notifications cache
+          queryClient.setQueryData(['notifications'], (old: Notification[] = []) => {
+            return [notification, ...old];
+          });
 
           // Show toast notification
           const toastConfig = {
@@ -118,18 +112,12 @@ export function useNotifications() {
 
           switch (notification.type) {
             case 'POINTS_AWARDED':
+            case 'PRODUCT_ACTIVITY':
+            case 'REWARD_REDEMPTION':
+            case 'REFERRAL_COMMISSION':
               toast({ ...toastConfig, variant: 'default' });
               break;
             case 'POINTS_DEDUCTED':
-              toast({ ...toastConfig, variant: 'destructive' });
-              break;
-            case 'QUOTE_STATUS_CHANGE':
-            case 'CUSTOMER_ASSIGNED':
-            case 'PRODUCT_ASSIGNED':
-              toast({ ...toastConfig, variant: 'default' });
-              break;
-            case 'CUSTOMER_REMOVED':
-            case 'PRODUCT_REMOVED':
               toast({ ...toastConfig, variant: 'destructive' });
               break;
             default:
@@ -151,32 +139,39 @@ export function useNotifications() {
 
         if (reconnectAttempts < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+          console.log(`Attempting reconnect in ${delay}ms (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             connectWebSocket();
           }, delay);
+        } else {
+          console.log('Max reconnection attempts reached');
+          toast({
+            title: 'Connection Lost',
+            description: 'Unable to receive real-time notifications. Please refresh the page.',
+            variant: 'destructive'
+          });
         }
       };
 
       socket.onerror = (error) => {
         console.error('WebSocket error:', error);
       };
+
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
       setIsConnected(false);
     }
   };
 
+  // Mutation for marking notifications as read
   const markAsRead = useMutation({
     mutationFn: async (notificationId?: string) => {
-      if (!token) throw new Error('No authentication token');
-
       const response = await fetch('/api/notifications/mark-read', {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ notificationId })
       });
@@ -198,11 +193,9 @@ export function useNotifications() {
   });
 
   useEffect(() => {
-    // Only attempt connection if we have an authenticated user
-    if (user?.id && token) {
+    if (user?.id) {
       console.log('Initializing WebSocket connection:', {
-        userId: user.id,
-        hasToken: !!token
+        userId: user.id
       });
       connectWebSocket();
     }
@@ -216,7 +209,7 @@ export function useNotifications() {
         socketRef.current = null;
       }
     };
-  }, [user?.id, token]);
+  }, [user?.id]);
 
   return {
     notifications,

@@ -1,7 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { type User } from '@db/schema';
-import { verifyToken } from './auth';
 import { NotificationService } from './services/notification-service';
 
 export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
@@ -16,51 +15,44 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
           return done(true);
         }
 
-        // Apply session middleware
+        // Apply session middleware to get session data
         await new Promise((resolve) => {
           sessionMiddleware(info.req, {} as any, resolve);
+        });
+
+        console.log('WebSocket connection attempt:', {
+          hasSession: !!info.req.session,
+          sessionID: info.req.sessionID,
+          hasPassport: !!info.req.session?.passport,
+          cookies: info.req.headers.cookie,
+          headers: info.req.headers
         });
 
         // Check for authenticated session
         if (info.req.session?.passport?.user) {
           info.req.user = info.req.session.passport.user;
+          console.log('WebSocket authenticated via passport:', {
+            userId: info.req.user.id,
+            email: info.req.user.email,
+            method: 'passport'
+          });
+          return done(true);
+        }
+
+        // Fallback to session user if available
+        if (info.req.session?.user) {
+          info.req.user = info.req.session.user;
           console.log('WebSocket authenticated via session:', {
             userId: info.req.user.id,
-            isAuthenticated: true,
+            email: info.req.user.email,
             method: 'session'
           });
           return done(true);
         }
 
-        console.log('Session authentication failed, trying token auth:', {
-          hasSession: !!info.req.session,
-          hasPassport: !!info.req.session?.passport,
-          headers: info.req.headers
-        });
+        console.error('WebSocket authentication failed: No valid session');
+        return done(false, 401, 'Authentication required');
 
-        // Token-based authentication as fallback
-        const url = new URL(info.req.url, `http://${info.req.headers.host}`);
-        const token = url.searchParams.get('token');
-
-        if (!token) {
-          console.error('WebSocket authentication failed: No authentication method available');
-          return done(false, 401, 'Authentication required');
-        }
-
-        const user = await verifyToken(token);
-        if (!user) {
-          console.error('WebSocket token authentication failed: Invalid token');
-          return done(false, 401, 'Invalid token');
-        }
-
-        info.req.user = user;
-        console.log('WebSocket authenticated via token:', {
-          userId: user.id,
-          isAuthenticated: true,
-          method: 'token'
-        });
-
-        return done(true);
       } catch (error) {
         console.error('WebSocket authentication error:', error);
         return done(false, 500, 'Internal Server Error');
@@ -73,6 +65,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
       const user = req.user as User;
       console.log('WebSocket client connected:', {
         userId: user.id,
+        email: user.email,
         timestamp: new Date().toISOString()
       });
 
@@ -84,8 +77,7 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
         const unreadNotifications = await NotificationService.getUnreadNotifications(user.id);
         console.log('Sending unread notifications:', {
           userId: user.id,
-          count: unreadNotifications.length,
-          notifications: unreadNotifications
+          count: unreadNotifications.length
         });
 
         for (const notification of unreadNotifications) {

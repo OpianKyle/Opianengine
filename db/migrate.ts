@@ -26,12 +26,6 @@ async function runMigration() {
 
     // Migration SQL queries
     const migrationQueries = [
-      // Add new columns first
-      `ALTER TABLE notifications
-       ADD COLUMN sender_id INT,
-       ADD COLUMN metadata TEXT,
-       ADD FOREIGN KEY (sender_id) REFERENCES users(id);`,
-
       // Update enum type with new values
       `ALTER TABLE notifications 
        MODIFY COLUMN type ENUM(
@@ -43,7 +37,10 @@ async function runMigration() {
          'CUSTOMER_ASSIGNED',
          'CUSTOMER_REMOVED',
          'PRODUCT_ASSIGNED',
-         'PRODUCT_REMOVED'
+         'PRODUCT_REMOVED',
+         'PRODUCT_ACTIVITY',
+         'REWARD_REDEMPTION',
+         'REFERRAL_COMMISSION'
        ) NOT NULL;`
     ];
 
