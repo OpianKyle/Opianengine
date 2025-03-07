@@ -182,7 +182,7 @@ export const quoteRequests = mysqlTable("quote_requests", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Existing notifications table definition update
+// Notifications table definition
 export const notifications = mysqlTable("notifications", {
   id: int("id").primaryKey().autoincrement(),
   userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),

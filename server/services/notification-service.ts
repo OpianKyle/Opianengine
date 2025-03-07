@@ -1,6 +1,7 @@
 import { db } from "@db";
 import { notifications, type InsertNotification } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
+import { WebSocket } from 'ws';
 
 export class NotificationService {
   private static clients = new Map<number, WebSocket[]>();
@@ -27,18 +28,50 @@ export class NotificationService {
 
   static async createNotification(data: InsertNotification) {
     try {
-      const [notification] = await db.insert(notifications)
-        .values(data)
-        .returning();
+      console.log('Creating notification:', data);
 
-      if (!notification) {
-        throw new Error('Failed to create notification');
+      // Insert notification and get the result
+      const result = await db.insert(notifications).values(data);
+
+      if (!result || typeof result.insertId !== 'number') {
+        throw new Error('Failed to insert notification - invalid result');
       }
 
-      await this.sendNotificationToUser(notification.userId, notification);
-      return notification;
+      // Fetch the inserted notification using the insertId
+      const [newNotification] = await db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.id, result.insertId));
+
+      if (!newNotification) {
+        throw new Error('Failed to retrieve inserted notification');
+      }
+
+      console.log('Successfully created notification:', newNotification);
+
+      // Send to connected clients
+      await this.sendNotificationToUser(data.userId, newNotification);
+
+      return newNotification;
     } catch (error) {
       console.error('Error creating notification:', error);
+      throw error;
+    }
+  }
+
+  static async getUnreadNotifications(userId: number) {
+    try {
+      console.log('Fetching unread notifications for user:', userId);
+      const notifications = await db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, userId))
+        .orderBy(desc(notifications.createdAt));
+
+      console.log(`Found ${notifications.length} notifications for user ${userId}`);
+      return notifications;
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
       throw error;
     }
   }
@@ -49,142 +82,97 @@ export class NotificationService {
         ? eq(notifications.id, notificationId)
         : eq(notifications.userId, userId);
 
-      await db.update(notifications)
+      await db
+        .update(notifications)
         .set({ isRead: true })
         .where(query);
+
+      console.log(`Marked notifications as read for user ${userId}${notificationId ? ` notification ${notificationId}` : ''}`);
     } catch (error) {
       console.error('Error marking notification as read:', error);
       throw error;
     }
   }
 
-  static async getUnreadNotifications(userId: number) {
+  private static async sendNotificationToUser(userId: number, notification: any) {
     try {
-      return await db.select()
-        .from(notifications)
-        .where(eq(notifications.userId, userId))
-        .orderBy(desc(notifications.createdAt));
+      const userClients = this.clients.get(userId) || [];
+      const message = JSON.stringify({
+        id: notification.id.toString(),
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        metadata: notification.metadata,
+        timestamp: notification.createdAt.toISOString(),
+        read: notification.isRead
+      });
+
+      console.log(`Attempting to send notification to ${userClients.length} clients for user ${userId}`);
+
+      let sentCount = 0;
+      for (const client of userClients) {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message);
+          sentCount++;
+        }
+      }
+
+      console.log(`Successfully sent notification to ${sentCount}/${userClients.length} clients`);
     } catch (error) {
-      console.error('Error fetching unread notifications:', error);
+      console.error('Error sending notification to user:', error);
+    }
+  }
+
+  static async notifyPointsUpdate(userId: number, points: number, description: string, senderId?: number) {
+    try {
+      console.log('Creating points notification:', { userId, points, description });
+
+      return await this.createNotification({
+        userId,
+        type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
+        title: points >= 0 ? `Earned ${points} points` : `Deducted ${Math.abs(points)} points`,
+        message: description,
+        senderId,
+        isRead: false,
+        metadata: JSON.stringify({ points }),
+        createdAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error creating points notification:', error);
       throw error;
     }
   }
 
-  private static async sendNotificationToUser(userId: number, notification: any) {
-    const userClients = this.clients.get(userId) || [];
-    const message = JSON.stringify({
-      id: notification.id.toString(),
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      metadata: notification.metadata,
-      timestamp: notification.createdAt.toISOString(),
-      read: notification.isRead
-    });
-
-    for (const client of userClients) {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
+  static async sendAdminMessage(userId: number, title: string, message: string, senderId: number) {
+    try {
+      return await this.createNotification({
+        userId,
+        type: 'ADMIN_MESSAGE',
+        title,
+        message,
+        senderId,
+        isRead: false,
+        createdAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error sending admin message:', error);
+      throw error;
     }
   }
 
-  // Helper methods for specific notification types
-  static async notifyPointsUpdate(userId: number, points: number, description: string, senderId?: number) {
-    return this.createNotification({
-      userId,
-      type: points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED',
-      title: points >= 0 ? `Earned ${points} points` : `Deducted ${Math.abs(points)} points`,
-      message: description,
-      senderId,
-      isRead: false,
-      metadata: JSON.stringify({ points }),
-      createdAt: new Date()
-    });
-  }
-
-  static async notifyQuoteStatusChange(userId: number, quoteId: number, status: string, senderId: number) {
-    return this.createNotification({
-      userId,
-      type: 'QUOTE_STATUS_CHANGE',
-      title: `Quote Status Updated`,
-      message: `Your quote request status has been changed to ${status}`,
-      senderId,
-      relatedId: quoteId,
-      isRead: false,
-      metadata: JSON.stringify({ status }),
-      createdAt: new Date()
-    });
-  }
-
-  static async notifyCustomerAssignment(agentId: number, customerId: number, customerName: string) {
-    return this.createNotification({
-      userId: agentId,
-      type: 'CUSTOMER_ASSIGNED',
-      title: 'New Customer Assigned',
-      message: `${customerName} has been assigned to you`,
-      relatedId: customerId,
-      isRead: false,
-      createdAt: new Date()
-    });
-  }
-
-  static async notifyCustomerRemoval(agentId: number, customerId: number, customerName: string) {
-    return this.createNotification({
-      userId: agentId,
-      type: 'CUSTOMER_REMOVED',
-      title: 'Customer Removed',
-      message: `${customerName} has been removed from your assignments`,
-      relatedId: customerId,
-      isRead: false,
-      createdAt: new Date()
-    });
-  }
-
-  static async notifyProductAssignment(userId: number, productId: number, productName: string) {
-    return this.createNotification({
-      userId,
-      type: 'PRODUCT_ASSIGNED',
-      title: 'New Product Assigned',
-      message: `${productName} has been assigned to you`,
-      relatedId: productId,
-      isRead: false,
-      createdAt: new Date()
-    });
-  }
-
-  static async notifyProductRemoval(userId: number, productId: number, productName: string) {
-    return this.createNotification({
-      userId,
-      type: 'PRODUCT_REMOVED',
-      title: 'Product Removed',
-      message: `${productName} has been removed from your assignments`,
-      relatedId: productId,
-      isRead: false,
-      createdAt: new Date()
-    });
-  }
-
-  static async sendAdminMessage(userId: number, title: string, message: string, senderId: number) {
-    return this.createNotification({
-      userId,
-      type: 'ADMIN_MESSAGE',
-      title,
-      message,
-      senderId,
-      isRead: false,
-      createdAt: new Date()
-    });
-  }
-
   static async sendSystemUpdate(userId: number, title: string, message: string) {
-    return this.createNotification({
-      userId,
-      type: 'SYSTEM_UPDATE',
-      title,
-      message,
-      isRead: false,
-      createdAt: new Date()
-    });
+    try {
+      return await this.createNotification({
+        userId,
+        type: 'SYSTEM_UPDATE',
+        title,
+        message,
+        isRead: false,
+        createdAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error sending system update:', error);
+      throw error;
+    }
   }
 }

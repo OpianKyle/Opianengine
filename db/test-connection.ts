@@ -2,7 +2,7 @@ import mysql from 'mysql2/promise';
 
 async function testConnection() {
   console.log('Testing database connection...');
-  
+
   const config = {
     host: 'dedi1350.jnb1.host-h.net',
     user: 'admin',
@@ -19,14 +19,21 @@ async function testConnection() {
       ...config,
       password: '[REDACTED]'
     });
-    
+
     const connection = await mysql.createConnection(config);
     console.log('Successfully connected to database');
-    
-    // Test a simple query
-    const [result] = await connection.execute('SHOW TABLES');
-    console.log('Current tables in database:', result);
-    
+
+    // Test notifications table
+    const [tables] = await connection.execute('SHOW TABLES');
+    console.log('Current tables in database:', tables);
+
+    const [notificationsSchema] = await connection.execute('DESCRIBE notifications');
+    console.log('Notifications table schema:', notificationsSchema);
+
+    // Test a simple query to check notifications
+    const [notifications] = await connection.execute('SELECT COUNT(*) as count FROM notifications');
+    console.log('Total notifications in database:', notifications[0].count);
+
     await connection.end();
     console.log('Connection closed successfully');
     return true;
