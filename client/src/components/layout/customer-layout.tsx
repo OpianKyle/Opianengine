@@ -109,7 +109,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       {/* Main content */}
       <main className="flex-1 w-0 lg:w-auto lg:pl-72">
         <div className="min-h-screen pt-16 pb-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: "100rem" }}>
             {children}
           </div>
         </div>
