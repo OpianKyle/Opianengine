@@ -26,19 +26,23 @@ export function useWebSocket(path: string = '/ws') {
         ws.current = null;
       }
 
-      // Determine WebSocket URL based on current environment
+      // Get the current host from window.location
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}${path}`;
+      const host = window.location.host;
+
+      // Ensure we have both protocol and host before creating WebSocket
+      if (!protocol || !host) {
+        console.error('Invalid WebSocket URL components:', { protocol, host });
+        setStatus('error');
+        return;
+      }
+
+      const wsUrl = `${protocol}//${host}${path}`;
+      console.log('Connecting WebSocket to:', wsUrl);
 
       const socket = new WebSocket(wsUrl);
       ws.current = socket;
       setStatus('connecting');
-
-      // Mark the WebSocket element for cleanup
-      if (socket instanceof EventTarget) {
-        const element = socket as unknown as HTMLElement;
-        element.setAttribute('data-ws-connection', 'true');
-      }
 
       socket.onopen = () => {
         console.log('WebSocket connected');
@@ -49,11 +53,13 @@ export function useWebSocket(path: string = '/ws') {
       socket.onclose = () => {
         console.log('WebSocket disconnected');
         setStatus('disconnected');
+        ws.current = null;
 
         // Only attempt reconnection if still authenticated
         if (user && reconnectAttempts.current < maxReconnectAttempts) {
           reconnectAttempts.current += 1;
-          setTimeout(connect, 1000 * Math.min(reconnectAttempts.current, 5));
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+          setTimeout(connect, delay);
         }
       };
 
@@ -72,7 +78,6 @@ export function useWebSocket(path: string = '/ws') {
     connect();
 
     return () => {
-      // Cleanup on unmount or when user changes
       if (ws.current) {
         ws.current.close();
         ws.current = null;

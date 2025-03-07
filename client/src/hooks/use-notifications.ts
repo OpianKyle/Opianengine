@@ -45,37 +45,35 @@ export function useNotifications() {
 
   const connectWebSocket = () => {
     if (!user || !token) {
-      console.log('WebSocket setup skipped - no auth:', {
-        hasUser: !!user,
-        hasToken: !!token,
-        userId: user?.id
-      });
+      console.log('WebSocket setup skipped - no auth:', { hasUser: !!user, hasToken: !!token });
       return;
     }
 
     // Skip if already connecting or connected
     if (isConnectingRef.current || (socketRef.current?.readyState === WebSocket.OPEN)) {
-      console.log('WebSocket connection skipped - already connected:', {
-        isConnecting: isConnectingRef.current,
-        readyState: socketRef.current?.readyState
-      });
       return;
     }
 
     try {
       isConnectingRef.current = true;
 
-      // Enhanced logging for WebSocket URL construction
+      // Get the current host and protocol
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
+
+      // Ensure we have both protocol and host
+      if (!protocol || !host) {
+        console.error('Invalid WebSocket URL components:', { protocol, host });
+        return;
+      }
+
       const wsUrl = `${protocol}//${host}/ws?token=${encodeURIComponent(token)}`;
 
-      console.log('WebSocket setup:', {
+      console.log('Creating WebSocket connection:', {
         protocol,
         host,
         hasToken: !!token,
         tokenLength: token?.length,
-        userId: user.id,
         wsUrl: wsUrl.replace(token, '[REDACTED]')
       });
 
@@ -90,8 +88,6 @@ export function useNotifications() {
       };
 
       socket.onmessage = (event) => {
-        if (!socketRef.current) return;
-
         try {
           const data = JSON.parse(event.data);
           console.log('Received WebSocket message:', data);
@@ -149,18 +145,11 @@ export function useNotifications() {
         if (!event.wasClean && reconnectAttempts < maxReconnectAttempts && user && token) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
           console.log(`Scheduling reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts} in ${delay}ms`);
+
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             connectWebSocket();
           }, delay);
-        } else if (reconnectAttempts >= maxReconnectAttempts) {
-          console.log('Max reconnection attempts reached');
-          toast({
-            title: "Connection Lost",
-            description: "Unable to reconnect to notification service. Please refresh the page.",
-            variant: "destructive",
-            duration: 0,
-          });
         }
       };
     } catch (error) {
@@ -179,15 +168,11 @@ export function useNotifications() {
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
       }
-
       if (socketRef.current) {
-        console.log('Cleaning up WebSocket connection');
         socketRef.current.close();
         socketRef.current = null;
       }
-
       isConnectingRef.current = false;
       setIsConnected(false);
     };
