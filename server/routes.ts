@@ -793,27 +793,21 @@ export function registerRoutes(app: Express): Server {
       const [customers] = await connection.execute(
         `SELECT 
           u.*,
-          COALESCE(pa.assignment_count, 0) as assignment_count,
           COALESCE(
-            GROUP_CONCAT(
-              DISTINCT 
+            JSON_ARRAYAGG(
               JSON_OBJECT(
                 'id', p.id,
                 'name', p.name,
                 'description', p.description
-              ) SEPARATOR ','
+              )
             ),
             '[]'
           ) as assigned_products,
+          COUNT(DISTINCT pa2.id) as assignment_count,
           COALESCE(tr.last_transaction, NULL) as last_transaction,
           COALESCE(tr.transaction_type, NULL) as last_transaction_type,
           COALESCE(tr.transaction_points, NULL) as last_transaction_points
          FROM users u
-         LEFT JOIN (
-           SELECT user_id, COUNT(*) as assignment_count 
-           FROM product_assignments 
-           GROUP BY user_id
-         ) pa ON u.id = pa.user_id
          LEFT JOIN product_assignments pa2 ON u.id = pa2.user_id
          LEFT JOIN products p ON pa2.product_id = p.id
          LEFT JOIN (
@@ -843,26 +837,11 @@ export function registerRoutes(app: Express): Server {
         let assignedProducts = [];
         if (customer.assigned_products) {
           try {
-            console.log('Processing assigned products for customer:', customer.id);
-            console.log('Raw assigned_products string:', customer.assigned_products);
-            
-            // Handle both array and single object cases
-            if (customer.assigned_products === '[]') {
-              assignedProducts = [];
-            } else {
-              assignedProducts = customer.assigned_products.split(',').map(productStr => {
-                try {
-                  return JSON.parse(productStr);
-                } catch (e) {
-                  console.error('Error parsing product string:', productStr, e);
-                  return null;
-                }
-              }).filter(Boolean);
-            }
-            
-            console.log('Parsed assigned products:', assignedProducts);
+            assignedProducts = JSON.parse(customer.assigned_products);
+            // Filter out any null entries
+            assignedProducts = assignedProducts.filter(p => p && p.id && p.name);
           } catch (e) {
-            console.error('Error processing assigned products for customer:', customer.id, e);
+            console.error('Error parsing assigned products for customer:', customer.id, e);
           }
         }
 
