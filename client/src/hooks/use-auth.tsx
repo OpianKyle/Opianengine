@@ -7,7 +7,6 @@ import {
 } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { cleanupWebSockets } from "@/lib/utils";
 
 type User = {
   id: number;
@@ -72,9 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear storage
     sessionStorage.clear();
     localStorage.clear();
-
-    // Clean up connections
-    cleanupWebSockets();
   }, [queryClient]);
 
   const loginMutation = useMutation({
