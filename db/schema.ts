@@ -62,19 +62,6 @@ const ADMIN_ACTION_TYPES = [
 
 const QUOTE_REQUEST_STATUS = ["PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED"] as const;
 
-// Define enum values for notifications
-const NOTIFICATION_TYPES = [
-  "POINTS_AWARDED",
-  "POINTS_DEDUCTED",
-  "ADMIN_MESSAGE",
-  "SYSTEM_UPDATE",
-  "QUOTE_STATUS_CHANGE",
-  "CUSTOMER_ASSIGNED",
-  "CUSTOMER_REMOVED",
-  "PRODUCT_ASSIGNED",
-  "PRODUCT_REMOVED"
-] as const;
-
 // Table Definitions
 export const products = mysqlTable("products", {
   id: int("id").primaryKey().autoincrement(),
@@ -182,20 +169,6 @@ export const quoteRequests = mysqlTable("quote_requests", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Notifications table definition
-export const notifications = mysqlTable("notifications", {
-  id: int("id").primaryKey().autoincrement(),
-  userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  type: mysqlEnum("type", NOTIFICATION_TYPES).notNull(),
-  title: text("title").notNull(),
-  message: text("message").notNull(),
-  isRead: boolean("is_read").default(false).notNull(),
-  relatedId: int("related_id"),
-  senderId: int("sender_id").references(() => users.id),
-  metadata: text("metadata"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
 // Relations
 export const productRelations = relations(products, ({ many }) => ({
   activities: many(productActivities),
@@ -208,7 +181,6 @@ export const userRelations = relations(users, ({ many, one }) => ({
   adminLogsTarget: many(adminLogs, { relationName: 'adminLogsTarget' }),
   productAssignments: many(productAssignments),
   quoteRequests: many(quoteRequests),
-  notifications: many(notifications),
   agent: one(users, {
     fields: [users.agentId],
     references: [users.id],
@@ -237,8 +209,6 @@ export type ProductAssignment = typeof productAssignments.$inferSelect;
 export type InsertProductAssignment = typeof productAssignments.$inferInsert;
 export type QuoteRequest = typeof quoteRequests.$inferSelect;
 export type InsertQuoteRequest = typeof quoteRequests.$inferInsert;
-export type Notification = typeof notifications.$inferSelect;
-export type InsertNotification = typeof notifications.$inferInsert;
 
 // Schema exports
 export const insertProductSchema = createInsertSchema(products);
@@ -255,5 +225,3 @@ export const insertProductAssignmentSchema = createInsertSchema(productAssignmen
 export const selectProductAssignmentSchema = createSelectSchema(productAssignments);
 export const insertQuoteRequestSchema = createInsertSchema(quoteRequests);
 export const selectQuoteRequestSchema = createSelectSchema(quoteRequests);
-export const insertNotificationSchema = createInsertSchema(notifications);
-export const selectNotificationSchema = createSelectSchema(notifications);

@@ -5,7 +5,6 @@ import { useLocation } from "wouter";
 import { Home, Gift, Users, User, Menu, X, ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import NotificationBell from "@/components/NotificationBell";
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const { logoutMutation } = useUser();
@@ -31,9 +30,8 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen w-full">
-      {/* Header with Notification Bell */}
+      {/* Header */}
       <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-2">
-        <NotificationBell />
         <Button
           variant="outline"
           size="icon"

@@ -2,9 +2,8 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
 import { setupAuth, checkAgent } from "./auth";
-import { setupWebSocketServer } from "./websocket";
 import { db } from "@db";
-import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, quoteRequests, notifications } from "@db/schema";
+import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, quoteRequests } from "@db/schema";
 import { and, eq, desc, sql } from "drizzle-orm";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -17,7 +16,6 @@ import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
 import { createConnection } from './db';
-import { NotificationService } from './services/notification-service';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -397,303 +395,12 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Notification endpoints
-  app.get("/api/notifications/stream", (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
 
-    // Set headers for SSE
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
-    });
-
-    // Send initial connection success
-    res.write('event: connected\n');
-    res.write(`data: ${JSON.stringify({ userId: req.user.id })}\n\n`);
-
-    // Add this client to notification service
-    const sendNotification = (notification) => {
-      res.write('event: notification\n');
-      res.write(`data: ${JSON.stringify(notification)}\n\n`);
-    };
-
-    NotificationService.addClient(req.user.id, sendNotification);
-
-    // Remove client on connection close
-    req.on('close', () => {
-      NotificationService.removeClient(req.user.id, sendNotification);
-    });
-  });
-
-  app.get("/api/notifications", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    try {
-      const notifications = await NotificationService.getUnreadNotifications(req.user.id);
-      res.json(notifications);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      res.status(500).json({ error: 'Failed to fetch notifications' });
-    }
-  });
-
-  app.post("/api/notifications/mark-read", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    try {
-      const { notificationId } = req.body;
-      await NotificationService.markAsRead(req.user.id, notificationId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      res.status(500).json({ error: 'Failed to mark notification as read' });
-    }
-  });
-
-  // Add test endpoints for notifications with detailed feedback
-  app.all("/api/notifications/test", async (req, res) => {
-    // Check authentication
-    const isAuthenticated = req.isAuthenticated();
-    const userId = req.user?.id;
-
-    // If not POST method, return instructions
-    if (req.method !== 'POST') {
-      return res.status(400).json({
-        error: "Invalid method",
-        message: "This endpoint requires a POST request",
-        currentStatus: {
-          isAuthenticated,
-          userId,
-          method: req.method
-        },
-        instructions: [
-          "1. Make sure you're logged in first",
-          "2. Use POST method to create a test notification",
-          "3. You can verify notifications at /api/notifications endpoint"
-        ]
-      });
-    }
-
-    // If not authenticated, return helpful message
-    if (!isAuthenticated) {
-      return res.status(401).json({
-        error: "Not authenticated",
-        message: "You need to be logged in to create test notifications",
-        instructions: [
-          "1. Log in to your account first",
-          "2. Try this request again after logging in"
-        ]
-      });
-    }
-
-    try {
-      console.log('Creating test notification for user:', userId);
-      const notification = await NotificationService.createTestNotification(userId);
-      
-      res.json({
-        success: true,
-        message: "Test notification created successfully",
-        notification,
-        instructions: [
-          "1. Check /api/notifications for your new notification",
-          "2. The notification should appear in real-time via SSE",
-          "3. You can create multiple test notifications using /api/notifications/test-multiple"
-        ]
-      });
-    } catch (error) {
-      console.error('Error creating test notification:', error);
-      res.status(500).json({
-        error: 'Failed to create test notification',
-        details: error.message,
-        instructions: [
-          "1. Check if the notifications table exists",
-          "2. Verify your user ID is valid",
-          "3. Try /api/notifications/test-db-public to check database status"
-        ]
-      });
-    }
-  });
-
-  // Add test endpoints for multiple notifications
-  app.post("/api/notifications/test-multiple", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    try {
-      console.log('Creating multiple test notifications for user:', req.user.id);
-      const notifications = await NotificationService.createTestNotifications(req.user.id);
-      res.json(notifications);
-    } catch (error) {
-      console.error('Error creating test notifications:', error);
-      res.status(500).json({ error: 'Failed to create test notifications' });
-    }
-  });
-
-  // Add test endpoint for notifications database structure
-  app.get("/api/notifications/test-db", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    const connection = await createConnection();
-    try {
-      console.log('Testing notifications database setup...');
-      
-      // Check if table exists
-      const [tables] = await connection.execute(
-        'SHOW TABLES LIKE "notifications"'
-      );
-      
-      if (!Array.isArray(tables) || tables.length === 0) {
-        return res.status(500).json({ error: "Notifications table does not exist" });
-      }
-
-      // Check table structure
-      const [columns] = await connection.execute(
-        'DESCRIBE notifications'
-      );
-      
-      // Create a test notification
-      const notification = await NotificationService.createTestNotification(req.user.id);
-      
-      res.json({
-        tableExists: true,
-        tableStructure: columns,
-        testNotification: notification
-      });
-      
-    } catch (error) {
-      console.error('Error testing notifications:', error);
-      res.status(500).json({ error: 'Failed to test notifications system' });
-    } finally {
-      await connection.end();
-    }
-  });
-
-
-
-  // Enhance the public test endpoint with more details
-  app.get("/api/notifications/test-db-public", async (req, res) => {
-    const connection = await createConnection();
-    try {
-      console.log('Testing notifications database setup...');
-      
-      // Check if table exists
-      const [tables] = await connection.execute(
-        'SHOW TABLES LIKE "notifications"'
-      );
-      
-      if (!Array.isArray(tables) || tables.length === 0) {
-        console.log('Notifications table not found');
-        return res.status(500).json({ error: "Notifications table does not exist" });
-      }
-
-      // Check table structure
-      const [columns] = await connection.execute(
-        'DESCRIBE notifications'
-      );
-      
-      // Get sample notifications if any exist
-      const [notifications] = await connection.execute(
-        'SELECT * FROM notifications ORDER BY created_at DESC LIMIT 5'
-      );
-
-      // Get total count of notifications
-      const [countResult] = await connection.execute(
-        'SELECT COUNT(*) as total FROM notifications'
-      );
-
-      // Test creating a notification
-      const testData = {
-        user_id: 1, // Using a test user ID
-        type: 'SYSTEM_UPDATE',
-        title: 'Database Test',
-        message: 'Testing database connectivity',
-        is_read: false,
-        metadata: JSON.stringify({ test: true, time: new Date().toISOString() }),
-        created_at: new Date()
-      };
-
-      const [insertResult] = await connection.execute(
-        `INSERT INTO notifications (
-          user_id, type, title, message, is_read, metadata, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          testData.user_id,
-          testData.type,
-          testData.title,
-          testData.message,
-          testData.is_read,
-          testData.metadata,
-          testData.created_at
-        ]
-      );
-      
-      res.json({
-        tableExists: true,
-        tableStructure: columns,
-        sampleNotifications: notifications,
-        totalNotifications: countResult[0].total,
-        timestamp: new Date().toISOString(),
-        testInsert: {
-          success: true,
-          insertId: insertResult.insertId,
-          testData
-        }
-      });
-      
-    } catch (error) {
-      console.error('Error testing notifications:', error);
-      res.status(500).json({ 
-        error: 'Failed to test notifications system',
-        details: error.message
-      });
-    } finally {
-      await connection.end();
-    }
-  });
-
-  // Add GET endpoint for easier browser-based notification testing
-  app.get("/api/notifications/test-create", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({
-        error: "Not authenticated",
-        message: "You need to be logged in to create test notifications",
-        howToTest: "Please log in first, then visit this URL again"
-      });
-    }
-
-    try {
-      console.log('Creating test notification for user:', req.user.id);
-      const notification = await NotificationService.createTestNotification(req.user.id);
-      
-      res.json({
-        success: true,
-        message: "Test notification created successfully",
-        notification,
-        nextSteps: "Check your notifications page to see the test notification"
-      });
-    } catch (error) {
-      console.error('Error creating test notification:', error);
-      res.status(500).json({ 
-        error: 'Failed to create test notification',
-        details: error.message
-      });
-    }
-  });
 
   // Mount referral routes
   app.use('/api/customer', referralRouter);
 
-  // Points adjustment endpoint with notifications
+  // Points adjustment endpoint
   app.post("/api/admin/points/adjust", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
@@ -712,7 +419,6 @@ export function registerRoutes(app: Express): Server {
       }
 
       const { userId, points, description } = req.body;
-      console.log('Points assignment request:', { userId, points, description });
 
       // Update user points
       await connection.execute(
@@ -727,41 +433,9 @@ export function registerRoutes(app: Express): Server {
         [userId, points, points >= 0 ? 'POINTS_AWARDED' : 'POINTS_DEDUCTED', description]
       );
 
-      // Get user details for notification
-      const [userDetails] = await connection.execute(
-        'SELECT first_name, last_name FROM users WHERE id = ?',
-        [userId]
-      );
-      const user = userDetails[0];
-
-      // Create notification with proper structure
-      try {
-        const notificationData = {
-          userId,
-          type: points >= 0 ? 'POINTS_AWARDED' as const : 'POINTS_DEDUCTED' as const,
-          title: points >= 0 ? 
-            `Earned ${points} Points` : 
-            `Deducted ${Math.abs(points)} Points`,
-          message: description || (points >= 0 ? 
-            `${points} points have been added to your account` : 
-            `${Math.abs(points)} points have been deducted from your account`),
-          metadata: JSON.stringify({
-            points,
-            adjustedBy: req.user.id,
-            timestamp: new Date().toISOString()
-          })
-        };
-
-        console.log('Creating notification with data:', notificationData);
-        await NotificationService.createNotification(notificationData);
-      } catch (notificationError) {
-        console.error('Error creating notification:', notificationError);
-        // Continue execution even if notification fails
-      }
-
       res.json({ 
         success: true,
-        message: 'Points adjusted and notification sent successfully'
+        message: 'Points adjusted successfully'
       });
     } catch (error) {
       console.error('Error adjusting points:', error);
@@ -874,7 +548,6 @@ export function registerRoutes(app: Express): Server {
   });
 
   const httpServer = createServer(app);
-  const wsServer = setupWebSocketServer(httpServer, sessionMiddleware);
 
   // Add agent customer management endpoints
   app.get("/api/agent/customers", checkAgent, async (req, res) => {
