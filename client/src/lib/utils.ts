@@ -11,6 +11,23 @@ export function formatTransactionType(type: string): string {
   ).join(' ');
 }
 
+// Helper to clean up WebSocket connections
+export function cleanupWebSockets() {
+  // Close and cleanup any existing WebSocket connections
+  if (typeof window !== 'undefined') {
+    const ws = window.WebSocket;
+    if (ws) {
+      // Remove any script tags that might be trying to establish WS connections
+      const wsScripts = document.querySelectorAll('script[src*="ws"]');
+      wsScripts.forEach(script => script.remove());
+
+      // Force close any open WebSocket connections
+      const wsInstances = Array.from(document.querySelectorAll('[data-ws-connection]'));
+      wsInstances.forEach(ws => ws.remove());
+    }
+  }
+}
+
 // Helper to handle page transitions
 export function handlePageTransition(callback?: () => void) {
   // Prevent any ongoing network requests
@@ -21,6 +38,9 @@ export function handlePageTransition(callback?: () => void) {
   for (let i = 0; i < highestTimeoutId; i++) {
     window.clearTimeout(i);
   }
+
+  // Clean up WebSocket connections
+  cleanupWebSockets();
 
   // Execute any additional cleanup
   if (callback) {
