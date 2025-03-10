@@ -793,29 +793,27 @@ export function registerRoutes(app: Express): Server {
       const [customers] = await connection.execute(
         `SELECT 
           u.*,
-          COALESCE(
-            JSON_ARRAYAGG(
-              JSON_OBJECT(
-                'id', p.id,
-                'name', p.name,
-                'description', p.description,
-                'activities', (
-                  SELECT JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                      'id', pa.id,
-                      'type', pa.type,
-                      'pointsValue', pa.points_value,
-                      'isEnabled', pa.is_enabled
-                    )
-                  )
-                  FROM product_activities pa
-                  WHERE pa.product_id = p.id AND pa.is_enabled = 1
-                )
-              )
-            ),
-            '[]'
-          ) as assigned_products,
           COUNT(DISTINCT pa2.id) as assignment_count,
+          GROUP_CONCAT(
+            DISTINCT 
+            JSON_OBJECT(
+              'id', p.id,
+              'name', p.name,
+              'description', p.description,
+              'activities', (
+                SELECT GROUP_CONCAT(
+                  JSON_OBJECT(
+                    'id', pa.id,
+                    'type', pa.type,
+                    'pointsValue', pa.points_value,
+                    'isEnabled', pa.is_enabled
+                  )
+                )
+                FROM product_activities pa
+                WHERE pa.product_id = p.id
+              )
+            )
+          ) as assigned_products,
           COALESCE(tr.last_transaction, NULL) as last_transaction,
           COALESCE(tr.transaction_type, NULL) as last_transaction_type,
           COALESCE(tr.transaction_points, NULL) as last_transaction_points
@@ -839,7 +837,7 @@ export function registerRoutes(app: Express): Server {
          WHERE au.user_id IS NULL 
          AND u.is_agent = 0
          GROUP BY u.id
-         ORDER BY u.created_at DESC`
+         ORDER BY u.created_at DESC`,
       );
 
       console.log('Raw customer data sample:', customers[0]);
@@ -849,9 +847,22 @@ export function registerRoutes(app: Express): Server {
         let assignedProducts = [];
         if (customer.assigned_products) {
           try {
-            assignedProducts = JSON.parse(customer.assigned_products);
-            // Filter out any null entries
-            assignedProducts = assignedProducts.filter(p => p && p.id && p.name);
+            // Split the GROUP_CONCAT result and parse each product
+            assignedProducts = customer.assigned_products.split(',').map((productStr: string) => {
+              try {
+                const product = JSON.parse(productStr);
+                // Parse the activities string into an array if it exists
+                if (product.activities) {
+                  product.activities = product.activities.split(',').map((activityStr: string) => JSON.parse(activityStr));
+                } else {
+                  product.activities = [];
+                }
+                return product;
+              } catch (e) {
+                console.error('Error parsing product:', productStr, e);
+                return null;
+              }
+            }).filter(Boolean);
           } catch (e) {
             console.error('Error parsing assigned products for customer:', customer.id, e);
           }
