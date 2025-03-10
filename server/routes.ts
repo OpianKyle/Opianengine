@@ -793,32 +793,17 @@ export function registerRoutes(app: Express): Server {
       const [customers] = await connection.execute(
         `SELECT 
           u.*,
-          COUNT(DISTINCT pa2.id) as assignment_count,
-          GROUP_CONCAT(
-            DISTINCT
-            CONCAT(
-              p.id, ':',
-              p.name, ':',
-              p.description, ':',
-              COALESCE(
-                (
-                  SELECT GROUP_CONCAT(
-                    CONCAT(
-                      pa.id, ',',
-                      pa.type, ',',
-                      pa.points_value, ',',
-                      pa.is_enabled
-                    )
-                    SEPARATOR '|'
-                  )
-                  FROM product_activities pa
-                  WHERE pa.product_id = p.id AND pa.is_enabled = 1
-                ),
-                ''
+          COALESCE(
+            JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'id', p.id,
+                'name', p.name,
+                'description', p.description
               )
-            )
-            SEPARATOR ';'
+            ),
+            '[]'
           ) as assigned_products,
+          COUNT(DISTINCT pa2.id) as assignment_count,
           COALESCE(tr.last_transaction, NULL) as last_transaction,
           COALESCE(tr.transaction_type, NULL) as last_transaction_type,
           COALESCE(tr.transaction_points, NULL) as last_transaction_points
@@ -852,39 +837,11 @@ export function registerRoutes(app: Express): Server {
         let assignedProducts = [];
         if (customer.assigned_products) {
           try {
-            // Parse the concatenated string into product objects with activities
-            assignedProducts = customer.assigned_products.split(';')
-              .filter(Boolean)
-              .map(productStr => {
-                const [id, name, description, activitiesStr] = productStr.split(':');
-                
-                let activities = [];
-                if (activitiesStr) {
-                  activities = activitiesStr.split('|')
-                    .filter(Boolean)
-                    .map(activityStr => {
-                      const [id, type, pointsValue, isEnabled] = activityStr.split(',');
-                      return {
-                        id: parseInt(id),
-                        type,
-                        pointsValue: parseInt(pointsValue),
-                        isEnabled: Boolean(parseInt(isEnabled))
-                      };
-                    });
-                }
-
-                return {
-                  id: parseInt(id),
-                  name,
-                  description,
-                  activities
-                };
-              });
-
-            console.log('Parsed assigned products:', assignedProducts);
+            assignedProducts = JSON.parse(customer.assigned_products);
+            // Filter out any null entries
+            assignedProducts = assignedProducts.filter(p => p && p.id && p.name);
           } catch (e) {
             console.error('Error parsing assigned products for customer:', customer.id, e);
-            console.error('Raw assigned_products string:', customer.assigned_products);
           }
         }
 
