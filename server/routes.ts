@@ -789,12 +789,19 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get regular customers with transactions and assignments
+      // Get regular customers with transactions, assignments and product details
       const [customers] = await connection.execute(
         `SELECT 
           u.*,
           COALESCE(pa.assignment_count, 0) as assignment_count,
-          GROUP_CONCAT(DISTINCT pa2.product_id) as assigned_products,
+          GROUP_CONCAT(
+            DISTINCT 
+            JSON_OBJECT(
+              'id', p.id,
+              'name', p.name,
+              'description', p.description
+            )
+          ) as assigned_products,
           COALESCE(tr.last_transaction, NULL) as last_transaction,
           COALESCE(tr.transaction_type, NULL) as last_transaction_type,
           COALESCE(tr.transaction_points, NULL) as last_transaction_points
@@ -805,6 +812,7 @@ export function registerRoutes(app: Express): Server {
            GROUP BY user_id
          ) pa ON u.id = pa.user_id
          LEFT JOIN product_assignments pa2 ON u.id = pa2.user_id
+         LEFT JOIN products p ON pa2.product_id = p.id
          LEFT JOIN (
            SELECT 
              user_id,
@@ -825,44 +833,61 @@ export function registerRoutes(app: Express): Server {
          ORDER BY u.created_at DESC`
       );
 
-      // Transform the data with explicit field mapping
-      const transformedCustomers = customers.map((customer: any) => ({
-        id: customer.id,
-        email: customer.email,
-        firstName: customer.first_name,
-        lastName: customer.last_name,
-        phoneNumber: customer.phone_number,
-        isEnabled: Boolean(customer.is_enabled),
-        points: customer.points,
-        createdAt: customer.created_at,
-        selectedPackage: customer.selected_package,
-        assignmentCount: customer.assignment_count,
-        assignedProducts: customer.assigned_products ? 
-          customer.assigned_products.split(',').map(Number) : [],
-        lastActivity: customer.last_transaction ? {
-          date: customer.last_transaction,
-          type: customer.transaction_type,
-          points: customer.transaction_points
-        } : null,
-        // Explicitly map all customer fields
-        idNumber: customer.id_number || '',
-        dateOfBirth: customer.date_of_birth || '',
-        gender: customer.gender || '',
-        occupation: customer.occupation || '',
-        industry: customer.industry || '',
-        address: customer.address || '',
-        city: customer.city || '',
-        postalCode: customer.postal_code || '',
-        bankName: customer.bank_name || '',
-        accountType: customer.account_type || '',
-        accountNumber: customer.account_number || '',
-        accountHolderName: customer.account_holder_name || '',
-        branchCode: customer.branch_code || '',
-        hasCreditCard: Boolean(customer.has_credit_card),
-        isSouthAfrican: Boolean(customer.is_south_african),
-        // Include agent relationship 
-        agentId: customer.agent_id || null
-      }));
+      // Transform the data with proper assigned products parsing
+      const transformedCustomers = customers.map((customer: any) => {
+        let assignedProducts = [];
+        if (customer.assigned_products) {
+          try {
+            // Parse each product object from the GROUP_CONCAT result
+            assignedProducts = customer.assigned_products.split('},{').map(productStr => {
+              // Clean up the string and parse it
+              const cleanStr = productStr
+                .replace(/^\[/, '')
+                .replace(/\]$/, '')
+                .replace(/^{/, '')
+                .replace(/}$/, '');
+              return JSON.parse(`{${cleanStr}}`);
+            });
+          } catch (e) {
+            console.error('Error parsing assigned products:', e);
+          }
+        }
+
+        return {
+          id: customer.id,
+          email: customer.email,
+          firstName: customer.first_name,
+          lastName: customer.last_name,
+          phoneNumber: customer.phone_number,
+          isEnabled: Boolean(customer.is_enabled),
+          points: customer.points,
+          createdAt: customer.created_at,
+          selectedPackage: customer.selected_package,
+          assignmentCount: customer.assignment_count,
+          assignedProducts: assignedProducts,
+          lastActivity: customer.last_transaction ? {
+            date: customer.last_transaction,
+            type: customer.transaction_type,
+            points: customer.transaction_points
+          } : null,
+          idNumber: customer.id_number || '',
+          dateOfBirth: customer.date_of_birth || '',
+          gender: customer.gender || '',
+          occupation: customer.occupation || '',
+          industry: customer.industry || '',
+          address: customer.address || '',
+          city: customer.city || '',
+          postalCode: customer.postal_code || '',
+          bankName: customer.bank_name || '',
+          accountType: customer.account_type || '',
+          accountNumber: customer.account_number || '',
+          accountHolderName: customer.account_holder_name || '',
+          branchCode: customer.branch_code || '',
+          hasCreditCard: Boolean(customer.has_credit_card),
+          isSouthAfrican: Boolean(customer.is_south_african),
+          agentId: customer.agent_id || null
+        };
+      });
 
       res.json(transformedCustomers);
     } catch (error) {
