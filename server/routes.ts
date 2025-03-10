@@ -798,7 +798,18 @@ export function registerRoutes(app: Express): Server {
               JSON_OBJECT(
                 'id', p.id,
                 'name', p.name,
-                'description', p.description
+                'description', p.description,
+                'activities', (
+                  SELECT JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                      'id', pa.id,
+                      'type', pa.type,
+                      'pointsValue', pa.points_value
+                    )
+                  )
+                  FROM product_activities pa
+                  WHERE pa.product_id = p.id
+                )
               )
             ),
             '[]'
@@ -838,8 +849,11 @@ export function registerRoutes(app: Express): Server {
         if (customer.assigned_products) {
           try {
             assignedProducts = JSON.parse(customer.assigned_products);
-            // Filter out any null entries
-            assignedProducts = assignedProducts.filter(p => p && p.id && p.name);
+            // Filter out any null entries and ensure activities array exists
+            assignedProducts = assignedProducts.filter(p => p && p.id && p.name).map(p => ({
+              ...p,
+              activities: p.activities || []
+            }));
           } catch (e) {
             console.error('Error parsing assigned products for customer:', customer.id, e);
           }
