@@ -798,7 +798,19 @@ export function registerRoutes(app: Express): Server {
               JSON_OBJECT(
                 'id', p.id,
                 'name', p.name,
-                'description', p.description
+                'description', p.description,
+                'activities', (
+                  SELECT JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                      'id', pa.id,
+                      'type', pa.type,
+                      'pointsValue', pa.points_value,
+                      'isEnabled', pa.is_enabled
+                    )
+                  )
+                  FROM product_activities pa
+                  WHERE pa.product_id = p.id AND pa.is_enabled = 1
+                )
               )
             ),
             '[]'
