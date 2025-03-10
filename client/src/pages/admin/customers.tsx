@@ -23,7 +23,6 @@ import {
   AccordionItem, 
   AccordionTrigger 
 } from "@/components/ui/accordion";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const genderEnum = ["male", "female", "other"] as const;
 
@@ -106,8 +105,6 @@ const getPointsMultiplier = (points: number, type: 'premium' | 'card' | 'pos'): 
 export default function AdminCustomers() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  const [assignProductDialogOpen, setAssignProductDialogOpen] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const { data: customers } = useQuery({
     queryKey: ["/api/admin/customers"],
     queryFn: async () => {
@@ -263,8 +260,6 @@ export default function AdminCustomers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
       toast({ title: "Success", description: "Product assigned successfully" });
-      setAssignProductDialogOpen(false);
-      setSelectedProductId(null);
     },
     onError: (error: Error) => {
       toast({
@@ -356,13 +351,16 @@ export default function AdminCustomers() {
 
   const assignPointsMutation = useMutation({
     mutationFn: async ({ userId, data }: { userId: number, data: PointsFormData }) => {
+      // Calculate total points from selected activities
       const activityPoints = data.selectedActivities?.reduce((sum, activityId) => {
         const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
         return sum + (activity?.pointsValue || 0);
       }, 0) || 0;
 
+      // Add POS points
       const totalPoints = activityPoints + (data.posPoints || 0);
 
+      // Create description including selected activities and POS points
       const activityDescriptions = data.selectedActivities?.map(activityId => {
         const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
         return activity?.type;
@@ -575,6 +573,7 @@ export default function AdminCustomers() {
                                   updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
                                 )}>
                                   <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-4">
+                                    {/* Personal Information */}
                                     <div className="col-span-2">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
                                     </div>
@@ -703,6 +702,7 @@ export default function AdminCustomers() {
                                       )}
                                     />
 
+                                    {/* Address Information */}
                                     <div className="col-span-2 mt-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Address Information</h3>
                                     </div>
@@ -763,6 +763,7 @@ export default function AdminCustomers() {
                                       )}
                                     />
 
+                                    {/* Employment Information */}
                                     <div className="col-span-2 mt-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Employment Information</h3>
                                     </div>
@@ -793,6 +794,7 @@ export default function AdminCustomers() {
                                       )}
                                     />
 
+                                    {/* Banking Information */}
                                     <div className="col-span-2 mt-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Banking Information</h3>
                                     </div>
@@ -907,90 +909,318 @@ export default function AdminCustomers() {
                             )}
                             <span>{customer.isEnabled ? 'Disable' : 'Enable'} User</span>
                           </DropdownMenuItem>
-                          <Dialog open={assignProductDialogOpen} onOpenChange={setAssignProductDialogOpen}>
+                          <Dialog>
                             <DialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => {
-                                e.preventDefault();
-                                setSelectedCustomer(customer);
-                                setAssignProductDialogOpen(true);
-                              }}>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                 <Package className="mr-2 h-4 w-4" />
                                 Assign Product
                               </DropdownMenuItem>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="bg-[#011d3d] border-[#022b5c] text-white">
                               <DialogHeader>
-                                <DialogTitle>Assign Product to {customer.firstName} {customer.lastName}</DialogTitle>
+                                <DialogTitle className="text-[#43EB3E]">Assign Products to {customer.firstName}</DialogTitle>
                               </DialogHeader>
-                              <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                  <label className="text-sm font-medium">Select Product</label>
-                                  <Select
-                                    value={selectedProductId?.toString() || ""}
-                                    onValueChange={(value) => setSelectedProductId(parseInt(value))}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select a product" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {products?.map((product: any) => (
-                                        <SelectItem key={product.id} value={product.id.toString()}>
-                                          {product.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
+                              <div className="grid gap-4">
+                                {products?.map((product: any) => {
+                                  const isAssigned = customer.productAssignments?.some(
+                                    (a: any) => a.product.id === product.id
+                                  );
+                                  return (
+                                    <div
+                                      key={product.id}
+                                      className="flex items-center justify-between p-4 rounded-lg border border-[#043875]"
+                                    >
+                                      <div>
+                                        <h3 className="font-medium">{product.name}</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                          {product.description}
+                                        </p>
+                                      </div>
+                                      <Button
+                                        variant={isAssigned ? "secondary" : "default"}
+                                        onClick={() => {
+                                          if (isAssigned) {
+                                            if (confirm('Are you sure you want to unassign this product?')) {
+                                              unassignProductMutation.mutate({
+                                                productId: product.id,
+                                                userId: customer.id
+                                              });
+                                            }
+                                          } else {
+                                            assignProductMutation.mutate({
+                                              productId: product.id,
+                                              userId: customer.id
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        {isAssigned ? 'Unassign' : 'Assign'}
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
                               </div>
-                              <DialogFooter>
-                                <Button
-                                  type="submit"
-                                  onClick={() => {
-                                    if (selectedProductId && selectedCustomer) {
-                                      assignProductMutation.mutate({
-                                        productId: selectedProductId,
-                                        userId: selectedCustomer.id
-                                      });
-                                      setAssignProductDialogOpen(false);
-                                      setSelectedProductId(null);
-                                    }
-                                  }}
-                                  disabled={!selectedProductId || assignProductMutation.isPending}
-                                >
-                                  {assignProductMutation.isPending ? (
-                                    <>
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      Assigning...
-                                    </>
-                                  ) : (
-                                    "Assign Product"
-                                  )}
-                                </Button>
-                              </DialogFooter>
                             </DialogContent>
                           </Dialog>
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to ${customer.isEnabled ? 'disable' : 'enable'} this user?`)) {
-                                toggleUserStatusMutation.mutate({
-                                  userId: customer.id,
-                                  enabled: !customer.isEnabled
-                                });
-                              }
-                            }}
-                          >
-                            {customer.isEnabled ? (
-                              <>
-                                <PowerOff className="mr-2 h-4 w-4" />
-                                Disable Account
-                              </>
-                            ) : (
-                              <>
-                                <Power className="mr-2 h-4 w-4" />
-                                Enable Account
-                              </>
-                            )}
-                          </DropdownMenuItem>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <TrendingUp className="mr-2 h-4 w-4" />
+                                Assign Points
+                              </DropdownMenuItem>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl bg-[#011d3d] border-[#022b5c] text-white">
+                              <DialogHeader>
+                                <DialogTitle className="text-[#43EB3E]">
+                                  Assign Points - {customer.firstName} {customer.lastName}
+                                </DialogTitle>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className="text-sm text-muted-foreground">Current Tier:</span>
+                                  <Badge className={`${getTierInfo(customer.points).color}`}>
+                                    {getTierInfo(customer.points).name}
+                                  </Badge>
+                                  {getTierInfo(customer.points).nextTier && (
+                                    <span className="text-xs text-muted-foreground">
+                                      ({getTierInfo(customer.points).nextTier?.pointsNeeded.toLocaleString()} points to {getTierInfo(customer.points).nextTier?.name})
+                                    </span>
+                                  )}
+                                </div>
+                              </DialogHeader>
+                              <Form {...pointsForm}>
+                                <form
+                                  onSubmit={pointsForm.handleSubmit((data) =>
+                                    assignPointsMutation.mutate({ userId: customer.id, data })
+                                  )}
+                                  className="space-y-4"
+                                >
+                                  <div className="grid grid-cols-2 gap-6">
+                                    {/* Left Column - Product Activities and POS Points */}
+                                    <div className="space-y-6">
+                                      <h3 className="text-lg font-semibold">Product Activities</h3>
+                                      <ScrollArea className="h-[400px] pr-4">
+                                        <div className="space-y-4">
+                                          {customer.productAssignments?.map((assignment: any) => (
+                                            <Accordion type="single" collapsible key={assignment.id}>
+                                              <AccordionItem value="activities">
+                                                <AccordionTrigger className="p-3 bg-accent/50 rounded-lg hover:no-underline">
+                                                  <div className="flex justify-between items-center w-full pr-4">
+                                                    <div className="text-left">
+                                                      <p className="font-medium">{assignment.product.name}</p>
+                                                      <p className="text-sm text-muted-foreground">
+                                                        {assignment.product.description}
+                                                      </p>
+                                                    </div>
+                                                    {pointsForm.watch("selectedActivities")?.some(id =>
+                                                      assignment.product.activities?.some((a: any) => a.id === id)
+                                                    ) && (
+                                                      <Badge variant="secondary" className="ml-2">
+                                                        {assignment.product.activities?.filter((a: any) =>
+                                                          pointsForm.watch("selectedActivities")?.includes(a.id)
+                                                        ).length} selected
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                  <div className="space-y-2 pt-2">
+                                                    {assignment.product.activities?.map((activity: any) => {
+                                                      const isSystemActivity = activity.type === "SYSTEM_ACTIVATION";
+                                                      if (isSystemActivity) return null;
+
+                                                      const isPremiumOrCard = activity.type === "PREMIUM_PAYMENT" || activity.type === "CARD_BALANCE";
+                                                      const multiplierType = activity.type === "PREMIUM_PAYMENT" ? 'premium' : 'card';
+                                                      const pointsMultiplier = getPointsMultiplier(customer.points, multiplierType);
+
+                                                      return (
+                                                        <div
+                                                          key={activity.id}
+                                                          className="flex items-center justify-between p-2 pl-6 border rounded-lg"
+                                                        >
+                                                          <div className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                              id={`activity-${activity.id}`}
+                                                              checked={pointsForm.watch("selectedActivities")?.includes(activity.id)}
+                                                              onCheckedChange={(checked) => {
+                                                                const currentSelected = pointsForm.getValues("selectedActivities") || [];
+                                                                const currentPoints = pointsForm.getValues("points") || 0;
+
+                                                                if (checked) {
+                                                                  pointsForm.setValue("selectedActivities", [...currentSelected, activity.id]);
+                                                                  if (!isPremiumOrCard) {
+                                                                    pointsForm.setValue("points", currentPoints + activity.pointsValue);
+                                                                  }
+                                                                  const description = `Points for ${activity.type.toLowerCase().replace('_', ' ')} activity`;
+                                                                  if (!pointsForm.getValues("description")) {
+                                                                    pointsForm.setValue("description", description);
+                                                                  }
+                                                                } else {
+                                                                  pointsForm.setValue(
+                                                                    "selectedActivities",
+                                                                    currentSelected.filter(id => id !== activity.id)
+                                                                  );
+                                                                  if (!isPremiumOrCard) {
+                                                                    pointsForm.setValue("points", currentPoints - activity.pointsValue);
+                                                                  } else {
+                                                                    const oldValue = activity.currentValue || 0;
+                                                                    pointsForm.setValue("points", currentPoints - oldValue);
+                                                                    activity.currentValue = 0;
+                                                                    activity.baseValue = 0;
+                                                                  }
+                                                                }
+                                                              }}
+                                                            />
+                                                            <label
+                                                              htmlFor={`activity-${activity.id}`}
+                                                              className="text-sm font-medium"
+                                                            >
+                                                              {activity.type.replace('_', ' ')}
+                                                              {isPremiumOrCard && pointsMultiplier > 0 && (
+                                                                <span className="ml-2 text-xs text-muted-foreground">
+                                                                  (×{pointsMultiplier})
+                                                                </span>
+                                                              )}
+                                                            </label>
+                                                          </div>
+                                                          {isPremiumOrCard ? (
+                                                            <div className="flex items-center space-x-2">
+                                                              <Input
+                                                                type="number"
+                                                                className="w-32"
+                                                                placeholder="Enter points"
+                                                                disabled={!pointsForm.watch("selectedActivities")?.includes(activity.id)}
+                                                                onChange={(e) => {
+                                                                  const baseValue = parseInt(e.target.value) || 0;
+                                                                  const multipliedValue = Math.floor(baseValue * pointsMultiplier);
+                                                                  const currentPoints = pointsForm.getValues("points") || 0;
+                                                                  const oldValue = activity.currentValue || 0;
+                                                                  pointsForm.setValue("points", currentPoints - oldValue + multipliedValue);
+                                                                  activity.currentValue = multipliedValue;
+                                                                  activity.baseValue = baseValue;
+                                                                }}
+                                                              />
+                                                              {pointsMultiplier > 0 && (
+                                                                <span className="text-sm text-muted-foreground">
+                                                                  = {activity.currentValue || 0} points
+                                                                </span>
+                                                              )}
+                                                            </div>
+                                                          ) : (
+                                                            <span className="text-sm font-semibold">
+                                                              {activity.pointsValue} points
+                                                            </span>
+                                                          )}
+                                                        </div>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                </AccordionContent>
+                                              </AccordionItem>
+                                            </Accordion>
+                                          ))}
+                                        </div>
+                                      </ScrollArea>
+
+                                      <div className="space-y-4 pt-4 border-t border-[#043875]">
+                                        <h3 className="font-medium">POS Points</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <FormField
+                                            control={pointsForm.control}
+                                            name="posBaseValue"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">Base Value (R)</FormLabel>
+                                                <FormControl>
+                                                  <Input
+                                                    type="number"
+                                                    {...field}
+                                                    onChange={(e) => {
+                                                      const baseValue = Number(e.target.value);
+                                                      field.onChange(baseValue);
+                                                      const posMultiplier = getPointsMultiplier(customer.points, 'pos');
+                                                      pointsForm.setValue("posPoints", Math.floor(baseValue * posMultiplier));
+                                                    }}
+                                                    className="bg-[#022b5c] border-[#043875] text-white"
+                                                  />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <div className="flex items-end">
+                                            <span className="text-sm text-muted-foreground">
+                                              × {getPointsMultiplier(customer.points, 'pos')} = {pointsForm.watch("posPoints")} points
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Right Column - Points Summary */}
+                                    <div className="space-y-4">
+                                      <h3 className="text-lg font-semibold">Points Summary</h3>
+                                      <div className="rounded-lg border border-[#043875] p-4 space-y-2">
+                                        {pointsForm.watch('selectedActivities')?.map((activityId) => {
+                                          const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
+                                          if (!activity) return null;
+                                          return (
+                                            <div key={activity.id} className="flex justify-between">
+                                              <span>{activity.type}</span>
+                                              <span>{activity.currentValue || activity.pointsValue} points</span>
+                                            </div>
+                                          );
+                                        })}
+                                        {pointsForm.watch('posPoints') > 0 && (
+                                          <div className="flex justify-between">
+                                            <span>POS Points (R{pointsForm.watch('posBaseValue')})</span>
+                                            <span>{pointsForm.watch('posPoints')} points</span>
+                                          </div>
+                                        )}
+                                        <div className="pt-2 border-t border-[#043875] flex justify-between font-medium">
+                                          <span>Total</span>
+                                          <span>
+                                            {(pointsForm.watch('selectedActivities')?.reduce((sum, activityId) => {
+                                              const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
+                                              return sum + (activity?.currentValue || activity?.pointsValue || 0);
+                                            }, 0) || 0) + (pointsForm.watch('posPoints') || 0)} points
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <FormField
+                                        control={pointsForm.control}
+                                        name="description"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel className="text-white">Description</FormLabel>
+                                            <FormControl>
+                                              <Input
+                                                {...field}
+                                                className="bg-[#022b5c] border-[#043875] text-white"
+                                              />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <DialogFooter>
+                                    <Button
+                                      type="submit"
+                                      disabled={assignPointsMutation.isPending}
+                                      className="bg-[#43EB3E] text-black hover:bg-[#43EB3E]/90"
+                                    >
+                                      {assignPointsMutation.isPending && (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      )}
+                                      Assign Points
+                                    </Button>
+                                  </DialogFooter>
+                                </form>
+                              </Form>
+                            </DialogContent>
+                          </Dialog>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
