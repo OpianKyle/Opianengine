@@ -522,24 +522,25 @@ export default function AdminCustomers() {
                     <TableCell>
                       <ScrollArea className="h-[100px]">
                         <div className="space-x-1">
-                          {customer.productAssignments?.map((assignment: any) => (
-                            <Badge
-                              key={assignment.id}
-                              variant="secondary"
-                              className="cursor-pointer hover:bg-destructive/20"
-                              onClick={() => {
-                                if (confirm('Are you sure you want to unassign this product?')) {
-                                  unassignProductMutation.mutate({
-                                    productId: assignment.product.id,
-                                    userId: customer.id
-                                  });
-                                }
-                              }}
-                            >
-                              {assignment.product.name} ×
-                            </Badge>
-                          ))}
-                          {(!customer.productAssignments || customer.productAssignments.length === 0) && (
+                          {customer.assignedProducts?.length > 0 ? (
+                            customer.assignedProducts.map((product: any) => (
+                              <Badge
+                                key={product.id}
+                                variant="secondary"
+                                className="cursor-pointer hover:bg-destructive/20"
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to unassign this product?')) {
+                                    unassignProductMutation.mutate({
+                                      productId: product.id,
+                                      userId: customer.id
+                                    });
+                                  }
+                                }}
+                              >
+                                {product.name} ×
+                              </Badge>
+                            ))
+                          ) : (
                             <span className="text-sm text-muted-foreground">No products assigned</span>
                           )}
                         </div>
@@ -854,7 +855,7 @@ export default function AdminCustomers() {
                                       name="branchCode"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Branch Code</FormLabel>
+                                                                         <FormLabel className="text-white">Branch Code</FormLabel>
                                           <FormControl>
                                             <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
                                           </FormControl>
