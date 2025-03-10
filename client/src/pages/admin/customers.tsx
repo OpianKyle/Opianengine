@@ -662,6 +662,12 @@ export default function AdminCustomers() {
                             <DialogContent className="max-w-2xl">
                               <DialogHeader>
                                 <DialogTitle>Assign Points - {selectedCustomer?.firstName} {selectedCustomer?.lastName}</DialogTitle>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className="text-sm text-muted-foreground">Current Tier:</span>
+                                  <Badge className={`${getTierInfo(selectedCustomer?.points || 0).color}`}>
+                                    {getTierInfo(selectedCustomer?.points || 0).name}
+                                  </Badge>
+                                </div>
                               </DialogHeader>
                               <Form {...pointsForm}>
                                 <form onSubmit={pointsForm.handleSubmit((data) =>
@@ -670,42 +676,46 @@ export default function AdminCustomers() {
                                   <div className="space-y-4">
                                     <div>
                                       <h3 className="text-lg font-semibold mb-2">Product Activities</h3>
-                                      {products?.map((product) => (
-                                        <div key={product.id} className="mb-4">
-                                          <h4 className="font-medium mb-2">{product.name}</h4>
-                                          {product.activities?.length > 0 ? (
-                                            <div className="space-y-2">
-                                              {product.activities.map((activity) => (
-                                                <div key={activity.id} className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id={`activity-${activity.id}`}
-                                                    checked={pointsForm.watch("selectedActivities")?.includes(activity.id)}
-                                                    onCheckedChange={(checked) => {
-                                                      const currentActivities = pointsForm.watch("selectedActivities") || [];
-                                                      if (checked) {
-                                                        pointsForm.setValue("selectedActivities", [...currentActivities, activity.id]);
-                                                      } else {
-                                                        pointsForm.setValue(
-                                                          "selectedActivities",
-                                                          currentActivities.filter((id) => id !== activity.id)
-                                                        );
-                                                      }
-                                                    }}
-                                                  />
-                                                  <label
-                                                    htmlFor={`activity-${activity.id}`}
-                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                                  >
-                                                    {activity.type} ({activity.pointsValue} points)
-                                                  </label>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          ) : (
-                                            <p className="text-sm text-muted-foreground">No activities available</p>
-                                          )}
-                                        </div>
-                                      ))}
+                                      {selectedCustomer?.assignedProducts?.length > 0 ? (
+                                        selectedCustomer.assignedProducts.map((product: any) => (
+                                          <div key={product.id} className="mb-4">
+                                            <h4 className="font-medium mb-2">{product.name}</h4>
+                                            {product.activities?.length > 0 ? (
+                                              <div className="space-y-2">
+                                                {product.activities.map((activity: any) => (
+                                                  <div key={activity.id} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                      id={`activity-${activity.id}`}
+                                                      checked={pointsForm.watch("selectedActivities")?.includes(activity.id)}
+                                                      onCheckedChange={(checked) => {
+                                                        const currentActivities = pointsForm.watch("selectedActivities") || [];
+                                                        if (checked) {
+                                                          pointsForm.setValue("selectedActivities", [...currentActivities, activity.id]);
+                                                        } else {
+                                                          pointsForm.setValue(
+                                                            "selectedActivities",
+                                                            currentActivities.filter((id) => id !== activity.id)
+                                                          );
+                                                        }
+                                                      }}
+                                                    />
+                                                    <label
+                                                      htmlFor={`activity-${activity.id}`}
+                                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                    >
+                                                      {activity.type} ({activity.pointsValue} points)
+                                                    </label>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            ) : (
+                                              <p className="text-sm text-muted-foreground">No activities available</p>
+                                            )}
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">No products assigned to this customer</p>
+                                      )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -757,7 +767,7 @@ export default function AdminCustomers() {
                                         <FormItem>
                                           <FormLabel>Description</FormLabel>
                                           <FormControl>
-                                            <Input {...field} placeholder="Enter reason for points assignment" />
+                                            <Input {...field} placeholder="Enter description for points assignment" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -766,18 +776,11 @@ export default function AdminCustomers() {
                                   </div>
 
                                   <DialogFooter className="mt-4">
-                                    <Button
-                                      type="submit"
-                                      disabled={assignPointsMutation.isPending}
-                                    >
-                                      {assignPointsMutation.isPending ? (
-                                        <>
-                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                          Assigning Points...
-                                        </>
-                                      ) : (
-                                        "Assign Points"
+                                    <Button type="submit" disabled={assignPointsMutation.isPending}>
+                                      {assignPointsMutation.isPending && (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                       )}
+                                      Assign Points
                                     </Button>
                                   </DialogFooter>
                                 </form>
