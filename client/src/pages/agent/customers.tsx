@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus } from "lucide-react";
+import { Search, UserPlus, MoreHorizontal, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,21 +12,82 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import CreateCustomerDialog from "@/components/agent/create-customer-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 export default function AgentCustomers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: customers, isLoading } = useQuery({
     queryKey: ["/api/agent/customers"],
     queryFn: async () => {
       const response = await fetch("/api/agent/customers", {
-        credentials: 'include'  // Add credentials to include session cookie
+        credentials: 'include'
       });
       if (!response.ok) throw new Error("Failed to fetch customers");
       return response.json();
     },
+  });
+
+  const toggleCustomerStatusMutation = useMutation({
+    mutationFn: async ({ customerId, enabled }: { customerId: number; enabled: boolean }) => {
+      const response = await fetch(`/api/agent/customers/${customerId}/toggle-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agent/customers"] });
+      toast({ 
+        title: "Success", 
+        description: "Customer status updated successfully" 
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message
+      });
+    }
+  });
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: async (customerId: number) => {
+      const response = await fetch(`/api/agent/customers/${customerId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agent/customers"] });
+      toast({ 
+        title: "Success", 
+        description: "Customer deleted successfully" 
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message
+      });
+    }
   });
 
   const filteredCustomers = customers?.filter((customer: any) =>
@@ -72,6 +133,7 @@ export default function AgentCustomers() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Points</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -93,6 +155,61 @@ export default function AgentCustomers() {
                       >
                         {customer.isEnabled ? "Active" : "Disabled"}
                       </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              // TODO: Implement edit functionality
+                              toast({
+                                title: "Info",
+                                description: "Edit functionality coming soon"
+                              });
+                            }}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (confirm(
+                                customer.isEnabled
+                                  ? "Are you sure you want to disable this customer?"
+                                  : "Are you sure you want to enable this customer?"
+                              )) {
+                                toggleCustomerStatusMutation.mutate({
+                                  customerId: customer.id,
+                                  enabled: !customer.isEnabled
+                                });
+                              }
+                            }}
+                          >
+                            {customer.isEnabled ? (
+                              <PowerOff className="mr-2 h-4 w-4" />
+                            ) : (
+                              <Power className="mr-2 h-4 w-4" />
+                            )}
+                            {customer.isEnabled ? "Disable" : "Enable"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => {
+                              if (confirm("Are you sure you want to delete this customer? This action cannot be undone.")) {
+                                deleteCustomerMutation.mutate(customer.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
