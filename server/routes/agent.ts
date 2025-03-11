@@ -70,6 +70,7 @@ router.get('/customers', async (req: any, res) => {
         accountHolderName: customer.account_holder_name,
         branchCode: customer.branch_code,
         createdAt: customer.created_at,
+        isEnabled: Boolean(customer.is_enabled),
         products: products
       };
     });
@@ -111,7 +112,7 @@ router.post('/customers/create', async (req: any, res) => {
         [email]
       );
 
-      if (existingUsers.length > 0) {
+      if (Array.isArray(existingUsers) && existingUsers.length > 0) {
         return res.status(400).json({ error: "Email already exists" });
       }
 
@@ -137,8 +138,8 @@ router.post('/customers/create', async (req: any, res) => {
           selected_package, bank_name, account_type,
           account_number, account_holder_name, branch_code,
           is_south_african, has_credit_card, is_enabled, points,
-          agent_id, is_agent
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0)`,
+          agent_id, is_agent, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0, NOW())`,
         [
           email, defaultPassword, firstName, lastName, mobileNumber,
           dateOfBirth, gender, idNumber, occupation,
@@ -146,7 +147,7 @@ router.post('/customers/create', async (req: any, res) => {
           selectedPackage, bankName, accountType,
           accountNumber, accountHolderName, branchCode,
           isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0, initialPoints,
-          req.user.id 
+          req.user.id
         ]
       );
 
@@ -159,8 +160,9 @@ router.post('/customers/create', async (req: any, res) => {
         lastName,
         points: initialPoints,
         selectedPackage,
-        temporaryPassword: '123456', 
-        agentId: req.user.id 
+        temporaryPassword: '123456',
+        agentId: req.user.id,
+        isEnabled: true
       });
     } catch (error) {
       await connection.rollback();
@@ -196,9 +198,9 @@ router.put('/customers/:id/update', async (req: any, res) => {
     }
 
     const { 
-      email, firstName, lastName, mobileNumber, dateOfBirth,
-      gender, idNumber, occupation, industry, addressLine1,
-      suburb, postalCode, selectedPackage, bankName,
+      email, firstName, lastName, phoneNumber, dateOfBirth,
+      gender, idNumber, occupation, industry, address,
+      city, postalCode, selectedPackage, bankName,
       accountType, accountNumber, accountHolderName,
       branchCode, isSouthAfrican, hasCreditCard
     } = req.body;
@@ -217,9 +219,9 @@ router.put('/customers/:id/update', async (req: any, res) => {
           is_south_african = ?, has_credit_card = ?
         WHERE id = ? AND agent_id = ?`,
         [
-          email, firstName, lastName, mobileNumber,
+          email, firstName, lastName, phoneNumber,
           dateOfBirth, gender, idNumber, occupation,
-          industry, addressLine1, suburb, postalCode,
+          industry, address, city, postalCode,
           selectedPackage, bankName, accountType,
           accountNumber, accountHolderName, branchCode,
           isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0,
