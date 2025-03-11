@@ -15,7 +15,8 @@ import {
   LogOut,
   Menu,
   X,
-  UserPlus
+  UserPlus,
+  UserCheck
 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -36,6 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const menuItems = [
     { label: "Dashboard", href: "/admin", icon: <LayoutDashboard className="h-4 w-4 mr-2" /> },
     { label: "User Management", href: "/admin/manage-users", icon: <UserPlus className="h-4 w-4 mr-2" /> },
+    { label: "Agents", href: "/admin/agents", icon: <UserCheck className="h-4 w-4 mr-2" /> },
     { label: "Customers", href: "/admin/customers", icon: <Users className="h-4 w-4 mr-2" /> },
     { label: "Products", href: "/admin/products", icon: <Package className="h-4 w-4 mr-2" /> },
     { label: "Quote Requests", href: "/admin/quote-requests", icon: <FileText className="h-4 w-4 mr-2" /> },
