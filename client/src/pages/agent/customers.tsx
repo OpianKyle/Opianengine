@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import CreateCustomerDialog from "@/components/agent/create-customer-dialog";
+import EditCustomerDialog from "@/components/agent/edit-customer-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 
@@ -44,6 +45,8 @@ function getPackageColor(packageName: string) {
 export default function AgentCustomers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const { toast } = useToast();
 
   const { data: customers, isLoading } = useQuery({
@@ -195,11 +198,8 @@ export default function AgentCustomers() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() => {
-                              // TODO: Implement edit functionality
-                              toast({
-                                title: "Info",
-                                description: "Edit functionality coming soon"
-                              });
+                              setSelectedCustomer(customer);
+                              setIsEditDialogOpen(true);
                             }}
                           >
                             <Pencil className="mr-2 h-4 w-4" />
@@ -250,6 +250,11 @@ export default function AgentCustomers() {
       <CreateCustomerDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
+      />
+      <EditCustomerDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        customer={selectedCustomer}
       />
     </div>
   );
