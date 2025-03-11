@@ -9,6 +9,9 @@ import mysql from 'mysql2/promise';
 import { JWT_SECRET } from './config';
 import { createConnection } from './db';
 import { MemoryStore } from 'express-session';
+import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
+
 
 const scryptAsync = promisify(scrypt);
 
@@ -707,8 +710,16 @@ export async function verifySession(req: Request): Promise<any> {
   }
 }
 
+// Add checkAdmin middleware function
 export async function checkAdmin(req: Request, res: Response, next: NextFunction) {
   try {
+    console.log('Running admin check middleware:', {
+      hasSession: !!req.session,
+      hasUser: !!req.user,
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated?.()
+    });
+
     if (!req.session || !req.session.passport || !req.session.passport.user) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -721,8 +732,17 @@ export async function checkAdmin(req: Request, res: Response, next: NextFunction
     await connection.end();
 
     if (!adminCheck || (adminCheck as any[]).length === 0) {
+      console.log('Admin access denied:', {
+        userId: req.session.passport.user,
+        foundAdmin: false
+      });
       return res.status(403).json({ error: "Admin access required" });
     }
+
+    console.log('Admin access granted:', {
+      userId: req.session.passport.user,
+      roleType: adminCheck[0].role_type
+    });
 
     next();
   } catch (error) {

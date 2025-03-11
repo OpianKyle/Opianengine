@@ -1,0 +1,124 @@
+import { Router } from 'express';
+import { createConnection } from '../db';
+import { checkAdmin } from '../auth';
+
+const router = Router();
+
+// Middleware to check if user is an admin
+router.use(checkAdmin);
+
+// Get agent statistics
+router.get('/agents/stats', async (req: any, res) => {
+  const connection = await createConnection();
+  try {
+    console.log('Fetching agent statistics');
+
+    // Get total number of agents
+    const [agentsCount] = await connection.execute(
+      'SELECT COUNT(*) as count FROM users WHERE is_agent = 1'
+    );
+
+    // Get total number of customers
+    const [customersCount] = await connection.execute(
+      'SELECT COUNT(*) as count FROM users WHERE is_agent = 0'
+    );
+
+    // Get today's sign-ups
+    const today = new Date().toISOString().split('T')[0];
+    const [todaySignups] = await connection.execute(
+      'SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = ? AND is_agent = 0',
+      [today]
+    );
+
+    // Get all agents with their statistics
+    const [agents] = await connection.execute(
+      `SELECT 
+        a.id, a.first_name as firstName, a.last_name as lastName, 
+        a.email, a.is_enabled as isEnabled,
+        COUNT(c.id) as totalCustomers,
+        SUM(CASE WHEN DATE(c.created_at) = ? THEN 1 ELSE 0 END) as todaySignups
+       FROM users a
+       LEFT JOIN users c ON c.agent_id = a.id
+       WHERE a.is_agent = 1
+       GROUP BY a.id
+       ORDER BY totalCustomers DESC`,
+      [today]
+    );
+
+    console.log('Agent statistics:', {
+      totalAgents: agentsCount[0].count,
+      totalCustomers: customersCount[0].count,
+      todaySignups: todaySignups[0].count,
+      agentsCount: Array.isArray(agents) ? agents.length : 0
+    });
+
+    res.json({
+      totalAgents: agentsCount[0].count,
+      totalCustomers: customersCount[0].count,
+      todaySignups: todaySignups[0].count,
+      agents: agents,
+    });
+  } catch (error) {
+    console.error('Error fetching agent statistics:', error);
+    res.status(500).json({ error: 'Failed to fetch agent statistics' });
+  } finally {
+    await connection.end();
+  }
+});
+
+// Get agent details with their customers
+router.get('/agents/:id/customers', async (req: any, res) => {
+  const connection = await createConnection();
+  try {
+    console.log('Fetching customers for agent:', req.params.id);
+
+    const [customers] = await connection.execute(
+      `SELECT 
+        u.*, 
+        COALESCE(
+          GROUP_CONCAT(
+            JSON_OBJECT(
+              'id', p.id,
+              'name', p.name,
+              'description', p.description
+            )
+          ),
+          '[]'
+        ) as products
+       FROM users u
+       LEFT JOIN product_assignments pa ON u.id = pa.user_id
+       LEFT JOIN products p ON pa.product_id = p.id
+       WHERE u.agent_id = ?
+       GROUP BY u.id
+       ORDER BY u.created_at DESC`,
+      [req.params.id]
+    );
+
+    const transformedCustomers = customers?.map((customer: any) => ({
+      id: customer.id,
+      email: customer.email,
+      firstName: customer.first_name,
+      lastName: customer.last_name,
+      phoneNumber: customer.phone_number,
+      selectedPackage: customer.selected_package,
+      points: customer.points,
+      createdAt: customer.created_at,
+      isEnabled: Boolean(customer.is_enabled),
+      products: JSON.parse(customer.products || '[]')
+    }));
+
+    console.log('Found customers for agent:', {
+      agentId: req.params.id,
+      customerCount: transformedCustomers.length
+    });
+
+    res.json(transformedCustomers);
+  } catch (error) {
+    console.error('Error fetching agent customers:', error);
+    res.status(500).json({ error: 'Failed to fetch agent customers' });
+  } finally {
+    await connection.end();
+  }
+});
+
+export default router;
