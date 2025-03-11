@@ -14,12 +14,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 
 export default function AdminAgents() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const [location, navigate] = useLocation();
 
   const { data: agentStats, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/agents/stats"],
@@ -196,9 +197,7 @@ export default function AdminAgents() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          window.location.href = `/admin/agents/${agent.id}/customers`;
-                        }}
+                        onClick={() => navigate(`/admin/agents/${agent.id}/customers`)}
                       >
                         View Customers
                       </Button>
