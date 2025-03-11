@@ -22,6 +22,8 @@ import AdminLogs from "@/pages/admin/logs";
 import AdminProducts from "@/pages/admin/products";
 import CashRedemptions from "@/pages/admin/cash-redemptions";
 import AdminQuoteRequests from "@/pages/admin/quote-requests";
+import AdminAgents from "@/pages/admin/agents";
+import AgentCustomers from "@/pages/admin/agent-customers";
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -34,7 +36,6 @@ import CustomerProducts from "@/pages/customer/products";
 // Agent pages
 import AgentDashboard from "@/pages/agent";
 import AgentLayout from "@/components/layout/agent-layout";
-import AgentCustomers from "@/pages/agent/customers";
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
   const { user, isLoading } = useUser();
@@ -110,6 +111,16 @@ function Router() {
         <Route path="/admin/customers">
           <AdminLayout>
             <ProtectedRoute component={AdminCustomers} admin />
+          </AdminLayout>
+        </Route>
+        <Route path="/admin/agents">
+          <AdminLayout>
+            <ProtectedRoute component={AdminAgents} admin />
+          </AdminLayout>
+        </Route>
+        <Route path="/admin/agents/:id/customers">
+          <AdminLayout>
+            <ProtectedRoute component={AgentCustomers} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/products">
