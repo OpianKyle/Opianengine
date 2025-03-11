@@ -35,11 +35,11 @@ router.get('/agents/stats', async (req: any, res) => {
       `SELECT 
         a.id, a.first_name as firstName, a.last_name as lastName, 
         a.email, a.is_enabled as isEnabled, a.created_at as joinDate,
-        COUNT(c.id) as totalCustomers,
-        SUM(CASE WHEN DATE(c.created_at) = ? THEN 1 ELSE 0 END) as todaySignups,
-        SUM(c.points) as totalCustomerPoints
+        COUNT(DISTINCT c.id) as totalCustomers,
+        COALESCE(SUM(CASE WHEN DATE(c.created_at) = ? THEN 1 ELSE 0 END), 0) as todaySignups,
+        COALESCE(SUM(c.points), 0) as totalCustomerPoints
        FROM users a
-       LEFT JOIN users c ON c.agent_id = a.id
+       LEFT JOIN users c ON c.agent_id = a.id AND c.is_agent = 0
        WHERE a.is_agent = 1
        GROUP BY a.id
        ORDER BY totalCustomers DESC`,
@@ -50,7 +50,8 @@ router.get('/agents/stats', async (req: any, res) => {
       totalAgents: agentsCount[0].count,
       totalCustomers: customersCount[0].count,
       todaySignups: todaySignups[0].count,
-      agentsCount: Array.isArray(agents) ? agents.length : 0
+      agentsCount: Array.isArray(agents) ? agents.length : 0,
+      totalPoints: agents.reduce((sum: number, agent: any) => sum + Number(agent.totalCustomerPoints || 0), 0)
     });
 
     res.json({
