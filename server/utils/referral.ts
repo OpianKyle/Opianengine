@@ -1,64 +1,48 @@
 import { randomBytes } from 'crypto';
-import { db } from '@db';
-import { users } from '@db/schema';
-import { eq } from 'drizzle-orm';
+import { createConnection } from '../db';
 
-// Generate a unique referral code for agents
-export async function generateUniqueReferralCode(userId: number): Promise<string> {
-  const prefix = 'AG';
-  let isUnique = false;
-  let referralCode = '';
-  
-  while (!isUnique) {
-    // Generate 6 random bytes and convert to hex
-    const randomPart = randomBytes(3).toString('hex').toUpperCase();
-    referralCode = `${prefix}${randomPart}`;
-    
-    // Check if code already exists
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.referral_code, referralCode))
-      .limit(1);
-    
-    if (!existingUser) {
-      isUnique = true;
-    }
-  }
-  
-  // Update the user with the new referral code
-  await db
-    .update(users)
-    .set({ referral_code: referralCode })
-    .where(eq(users.id, userId));
-  
-  return referralCode;
+export function generateReferralCode(): string {
+  // Generate 6 random bytes and convert to hex
+  const prefix = 'CUS'; // Customer prefix
+  const randomPart = randomBytes(3).toString('hex').toUpperCase();
+  return `${prefix}${randomPart}`;
+}
+
+// Export other utility functions if needed
+export function formatReferralCode(code: string): string {
+  return code.toUpperCase();
 }
 
 // Verify if a referral code is valid and belongs to an active agent
 export async function verifyReferralCode(code: string): Promise<boolean> {
-  const [agent] = await db
-    .select()
-    .from(users)
-    .where(eq(users.referral_code, code))
-    .limit(1);
-  
-  return Boolean(agent && agent.isAgent && agent.isEnabled);
+  const connection = await createConnection();
+  try {
+    const [agents] = await connection.execute(
+      'SELECT id, is_agent, is_enabled FROM users WHERE referral_code = ?',
+      [code]
+    );
+
+    const agent = Array.isArray(agents) && agents.length > 0 ? agents[0] : null;
+    return Boolean(agent && agent.is_agent && agent.is_enabled);
+  } finally {
+    await connection.end();
+  }
 }
 
 // Get agent details by referral code
 export async function getAgentByReferralCode(code: string) {
-  const [agent] = await db
-    .select({
-      id: users.id,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      email: users.email,
-      isEnabled: users.isEnabled,
-    })
-    .from(users)
-    .where(eq(users.referral_code, code))
-    .limit(1);
-  
-  return agent;
+  const connection = await createConnection();
+  try {
+    const [agents] = await connection.execute(
+      `SELECT id, first_name as firstName, last_name as lastName, 
+       email, is_enabled as isEnabled
+       FROM users 
+       WHERE referral_code = ?`,
+      [code]
+    );
+
+    return Array.isArray(agents) && agents.length > 0 ? agents[0] : null;
+  } finally {
+    await connection.end();
+  }
 }

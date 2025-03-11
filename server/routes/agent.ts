@@ -1,11 +1,29 @@
 import { Router } from 'express';
 import { createConnection } from '../db';
 import { checkAgent } from '../auth';
+import { generateReferralCode } from '../utils/referral';
 
 const router = Router();
 
 // Middleware to check if user is an agent
 router.use(checkAgent);
+
+// Helper function to generate a unique referral code
+async function generateUniqueReferralCode(connection: any): Promise<string> {
+  let isUnique = false;
+  let referralCode = '';
+
+  while (!isUnique) {
+    referralCode = generateReferralCode();
+    const [existing] = await connection.execute(
+      'SELECT id FROM users WHERE referral_code = ?',
+      [referralCode]
+    );
+    isUnique = !existing || (Array.isArray(existing) && existing.length === 0);
+  }
+
+  return referralCode;
+}
 
 // Get agent's customers
 router.get('/customers', async (req: any, res) => {
@@ -15,7 +33,6 @@ router.get('/customers', async (req: any, res) => {
 
   const connection = await createConnection();
   try {
-    // Fetch customers created by this agent with all fields
     const [customers] = await connection.execute(
       `SELECT u.*, 
        COALESCE(
@@ -37,7 +54,6 @@ router.get('/customers', async (req: any, res) => {
       [req.user.id]
     );
 
-    // Transform the customer data to match frontend expectations
     const transformedCustomers = customers?.map((customer: any) => {
       let products = [];
       try {
@@ -71,6 +87,7 @@ router.get('/customers', async (req: any, res) => {
         branchCode: customer.branch_code,
         createdAt: customer.created_at,
         isEnabled: Boolean(customer.is_enabled),
+        referralCode: customer.referral_code,
         products: products
       };
     });
@@ -116,6 +133,9 @@ router.post('/customers/create', async (req: any, res) => {
         return res.status(400).json({ error: "Email already exists" });
       }
 
+      // Generate a unique referral code
+      const referralCode = await generateUniqueReferralCode(connection);
+
       // Generate a temporary password
       const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
 
@@ -136,7 +156,8 @@ router.post('/customers/create', async (req: any, res) => {
         phoneNumber: mobileNumber,
         selectedPackage,
         initialPoints,
-        accountType
+        accountType,
+        referralCode
       });
 
       // Create user with all fields and agent_id
@@ -148,8 +169,8 @@ router.post('/customers/create', async (req: any, res) => {
           selected_package, bank_name, account_type,
           account_number, account_holder_name, branch_code,
           is_south_african, has_credit_card, is_enabled, points,
-          agent_id, is_agent, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0, NOW())`,
+          agent_id, is_agent, referral_code, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0, ?, NOW())`,
         [
           email, defaultPassword, firstName, lastName, mobileNumber,
           dateOfBirth, gender, idNumber, occupation,
@@ -157,7 +178,7 @@ router.post('/customers/create', async (req: any, res) => {
           selectedPackage, bankName, accountType,
           accountNumber, accountHolderName, branchCode,
           isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0, initialPoints,
-          req.user.id
+          req.user.id, referralCode
         ]
       );
 
@@ -174,7 +195,8 @@ router.post('/customers/create', async (req: any, res) => {
         selectedPackage,
         temporaryPassword: '123456',
         agentId: req.user.id,
-        isEnabled: true
+        isEnabled: true,
+        referralCode
       });
     } catch (error) {
       await connection.rollback();
