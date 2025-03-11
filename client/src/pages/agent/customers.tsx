@@ -18,9 +18,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import CreateCustomerDialog from "@/components/agent/create-customer-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+
+// Helper function to get package color
+function getPackageColor(packageName: string) {
+  switch (packageName?.toUpperCase()) {
+    case 'BEGINNER':
+      return 'bg-blue-100 text-blue-800';
+    case 'NOVICE':
+      return 'bg-green-100 text-green-800';
+    case 'ACTIVE':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'PROFESSIONAL':
+      return 'bg-purple-100 text-purple-800';
+    case 'EXPERT':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+}
 
 export default function AgentCustomers() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -131,6 +150,7 @@ export default function AgentCustomers() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
+                  <TableHead>Package</TableHead>
                   <TableHead>Points</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -144,6 +164,15 @@ export default function AgentCustomers() {
                     </TableCell>
                     <TableCell>{customer.email}</TableCell>
                     <TableCell>{customer.phoneNumber}</TableCell>
+                    <TableCell>
+                      {customer.selectedPackage ? (
+                        <Badge className={`${getPackageColor(customer.selectedPackage)}`}>
+                          {customer.selectedPackage}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400">No Package</span>
+                      )}
+                    </TableCell>
                     <TableCell>{customer.points}</TableCell>
                     <TableCell>
                       <span
