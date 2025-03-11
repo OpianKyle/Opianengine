@@ -129,7 +129,17 @@ router.post('/customers/create', async (req: any, res) => {
         case 'EXPERT': initialPoints = 25000; break;
       }
 
-      // Create user with all fields and agent_id, explicitly setting is_enabled to 1
+      console.log('Inserting customer with data:', {
+        email,
+        firstName,
+        lastName,
+        phoneNumber: mobileNumber,
+        selectedPackage,
+        initialPoints,
+        accountType
+      });
+
+      // Create user with all fields and agent_id
       const [userResult] = await connection.execute(
         `INSERT INTO users (
           email, password, first_name, last_name, phone_number,
@@ -152,6 +162,8 @@ router.post('/customers/create', async (req: any, res) => {
       );
 
       await connection.commit();
+
+      console.log('Customer created successfully:', userResult);
 
       res.status(201).json({
         id: userResult.insertId,
