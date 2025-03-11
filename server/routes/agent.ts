@@ -128,7 +128,7 @@ router.post('/customers/create', async (req: any, res) => {
         case 'EXPERT': initialPoints = 25000; break;
       }
 
-      // Create user with all fields and agent_id
+      // Create user with all fields and agent_id, explicitly setting is_enabled to 1
       const [userResult] = await connection.execute(
         `INSERT INTO users (
           email, password, first_name, last_name, phone_number,
@@ -146,7 +146,7 @@ router.post('/customers/create', async (req: any, res) => {
           selectedPackage, bankName, accountType,
           accountNumber, accountHolderName, branchCode,
           isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0, initialPoints,
-          req.user.id // Set the agent_id to the current agent's ID
+          req.user.id 
         ]
       );
 
@@ -159,8 +159,8 @@ router.post('/customers/create', async (req: any, res) => {
         lastName,
         points: initialPoints,
         selectedPackage,
-        temporaryPassword: '123456', // Default password for all customers
-        agentId: req.user.id // Include the agent_id in the response
+        temporaryPassword: '123456', 
+        agentId: req.user.id 
       });
     } catch (error) {
       await connection.rollback();
