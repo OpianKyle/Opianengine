@@ -38,21 +38,19 @@ export default function AgentCustomers() {
   ) ?? [];
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setLocation("/admin/agents")}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-2xl md:text-3xl font-bold">Agent's Customers</h1>
-        </div>
+    <div className="flex flex-col h-full space-y-6">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setLocation("/admin/agents")}
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <h1 className="text-2xl md:text-3xl font-bold">Agent's Customers</h1>
       </div>
 
-      <Card>
+      <Card className="flex-1">
         <CardHeader>
           <CardTitle>All Customers</CardTitle>
           <div className="mt-4">
@@ -67,7 +65,7 @@ export default function AgentCustomers() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="h-[calc(100%-8rem)] overflow-auto">
           {isLoading ? (
             <div className="text-center py-4">Loading customers...</div>
           ) : (
