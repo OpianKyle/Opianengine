@@ -50,7 +50,7 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
 
   if (!user) {
     console.log('No user found, redirecting to login');
-    return <Redirect to="/login" />;  // Changed from '/' to '/login'
+    return <Redirect to="/login" />;
   }
 
   // Handle routing based on user role
@@ -70,7 +70,16 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     return <Redirect to="/dashboard" />;
   }
 
-  // Return the protected component
+  // Redirect regular customers if they try to access admin or agent routes
+  if (!admin && !agent && (user.is_admin || user.is_agent)) {
+    if (user.is_admin || user.is_super_admin) {
+      return <Redirect to="/admin" />;
+    }
+    if (user.is_agent) {
+      return <Redirect to="/agent" />;
+    }
+  }
+
   return <Component {...rest} />;
 }
 
