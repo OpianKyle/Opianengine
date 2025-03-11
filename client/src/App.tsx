@@ -32,8 +32,8 @@ import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
 
 // Agent pages
-import AgentDashboard from "@/pages/agent"; //This file needs to be created
-import AgentLayout from "@/components/layout/agent-layout"; //This file needs to be created or adjusted
+import AgentDashboard from "@/pages/agent";
+import AgentLayout from "@/components/layout/agent-layout";
 import AgentCustomers from "@/pages/agent/customers";
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
@@ -49,8 +49,8 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (!user) {
-    console.log('No user found, redirecting to home');
-    return <Redirect to="/" />;
+    console.log('No user found, redirecting to login');
+    return <Redirect to="/login" />;  // Changed from '/' to '/login'
   }
 
   // Handle routing based on user role
@@ -70,16 +70,7 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     return <Redirect to="/dashboard" />;
   }
 
-  // Redirect users to their appropriate dashboards
-  if (!admin && !agent) {
-    if (user.is_admin || user.is_super_admin) {
-      return <Redirect to="/admin" />;
-    }
-    if (user.is_agent) {
-      return <Redirect to="/agent" />;
-    }
-  }
-
+  // Return the protected component
   return <Component {...rest} />;
 }
 
@@ -88,7 +79,7 @@ function Router() {
     <SidebarProvider>
       <Switch>
         {/* Public Routes */}
-        <Route path="/">
+        <Route path="/" >
           <Home />
         </Route>
         <Route path="/login">
