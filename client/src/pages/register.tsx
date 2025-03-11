@@ -199,7 +199,7 @@ export default function RegisterPage() {
     bankName: "",
     branchCode: "",
     accountNumber: "",
-    accountType: "",
+    accountType: "SAVINGS", // Set default value to SAVINGS
     acceptMandate: false,
     referralCode: ""
   });
@@ -303,6 +303,12 @@ export default function RegisterPage() {
       return;
     }
 
+    // Validate account type
+    if (!formData.accountType || !accountTypes.includes(formData.accountType)) {
+      setError("Please select a valid account type");
+      return;
+    }
+
     // Get activation points for selected package
     const selectedPackageData = packages.find(pkg => pkg.id === formData.selectedPackage);
     if (!selectedPackageData) {
@@ -370,7 +376,8 @@ export default function RegisterPage() {
         selectedPackage: formData.selectedPackage,
         points: selectedPackageData.activationPoints,
         referralCode: formData.referralCode,
-        gender: formData.gender
+        gender: formData.gender,
+        account_type: formData.accountType // Ensure account_type is explicitly set
       };
 
       console.log('Submitting registration data:', { ...registrationData, password: '[REDACTED]' });
