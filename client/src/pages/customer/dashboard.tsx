@@ -29,37 +29,37 @@ interface Transaction {
 }
 
 const getTierInfo = (points: number): { name: string; color: string; nextTier?: { name: string; pointsNeeded: number } } => {
-  if (points >= 150000) {
+  if (points >= 15000) {
     return {
-      name: "Platinum",
+      name: "Pinnacle",
       color: "bg-gradient-to-r from-purple-400 to-gray-300 text-white",
     };
   }
-  if (points >= 100000) {
+  if (points >= 12500) {
     return {
-      name: "Gold",
-      color: "bg-yellow-500 text-white",
-      nextTier: { name: "Platinum", pointsNeeded: 150000 - points },
-    };
-  }
-  if (points >= 50000) {
-    return {
-      name: "Purple",
+      name: "Prestige",
       color: "bg-purple-500 text-white",
-      nextTier: { name: "Gold", pointsNeeded: 100000 - points },
+      nextTier: { name: "Pinnacle", pointsNeeded: 15000 - points },
     };
   }
   if (points >= 10000) {
     return {
-      name: "Silver",
-      color: "bg-gray-400 text-white",
-      nextTier: { name: "Purple", pointsNeeded: 50000 - points },
+      name: "Prosper",
+      color: "bg-yellow-500 text-white",
+      nextTier: { name: "Prestige", pointsNeeded: 12500 - points },
+    };
+  }
+  if (points >= 7500) {
+    return {
+      name: "Momentum",
+      color: "bg-green-500 text-white",
+      nextTier: { name: "Prosper", pointsNeeded: 10000 - points },
     };
   }
   return {
-    name: "Bronze",
-    color: "bg-amber-600 text-white",
-    nextTier: { name: "Silver", pointsNeeded: 10000 - points },
+    name: "Opportunity",
+    color: "bg-blue-500 text-white",
+    nextTier: { name: "Momentum", pointsNeeded: 7500 - points },
   };
 };
 
