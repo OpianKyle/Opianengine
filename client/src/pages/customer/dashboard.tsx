@@ -30,41 +30,41 @@ interface Transaction {
 }
 
 const getTierInfo = (points: number): { name: string; color: string; nextTier?: { name: string; pointsNeeded: number } } => {
-  if (points >= 15000) {
+  if (points >= 150000) {
     return {
-      name: "Pinnacle",
-      color: "bg-gradient-to-r from-purple-400 to-gray-300 text-white",
+      name: "Platinum",
+      color: "bg-gradient-to-r from-purple-400 to-gray-300 text-white"
     };
   }
-  if (points >= 12500) {
+  if (points >= 100000) {
     return {
-      name: "Prestige",
+      name: "Gold",
+      color: "bg-yellow-500 text-white",
+      nextTier: { name: "Platinum", pointsNeeded: 150000 - points }
+    };
+  }
+  if (points >= 50000) {
+    return {
+      name: "Purple",
       color: "bg-purple-500 text-white",
-      nextTier: { name: "Pinnacle", pointsNeeded: 15000 - points },
+      nextTier: { name: "Gold", pointsNeeded: 100000 - points }
     };
   }
   if (points >= 10000) {
     return {
-      name: "Prosper",
-      color: "bg-yellow-500 text-white",
-      nextTier: { name: "Prestige", pointsNeeded: 12500 - points },
-    };
-  }
-  if (points >= 7500) {
-    return {
-      name: "Momentum",
-      color: "bg-green-500 text-white",
-      nextTier: { name: "Prosper", pointsNeeded: 10000 - points },
+      name: "Silver",
+      color: "bg-gray-400 text-white",
+      nextTier: { name: "Purple", pointsNeeded: 50000 - points }
     };
   }
   return {
-    name: "Opportunity",
-    color: "bg-blue-500 text-white",
-    nextTier: { name: "Momentum", pointsNeeded: 7500 - points },
+    name: "Bronze",
+    color: "bg-amber-600 text-white",
+    nextTier: { name: "Silver", pointsNeeded: 10000 - points }
   };
 };
 
-// Package information
+// Package information updated with new names and points
 const getPackageColor = (packageName: string) => {
   switch (packageName?.toUpperCase()) {
     case 'OPPORTUNITY':
