@@ -19,6 +19,13 @@ import {
 } from "react-icons/fa6";
 import { PackageIcon as LucidePackageIcon } from "lucide-react";
 
+const packageDisplayNames = {
+  OPPORTUNITY: "Opportunity",
+  MOMENTUM: "Momentum",
+  PROSPER: "Prosper",
+  PRESTIGE: "Prestige",
+  PINNACLE: "Pinnacle"
+};
 
 interface ReferralStats {
   referralCode: string;
@@ -80,7 +87,7 @@ const PackageEmblem = ({ type, count, totalReferrals, level }: {
       <LucidePackageIcon className="h-6 w-6 text-white" />
     </div>
     <div className="text-center">
-      <div className="font-semibold">{type}</div>
+      <div className="font-semibold">{packageDisplayNames[type as keyof typeof packageDisplayNames] || type}</div>
       <div className="text-sm text-muted-foreground">{count} level {level} referrals</div>
       <div className="text-xs text-muted-foreground">
         ({totalReferrals} sub-referrals)
@@ -289,7 +296,7 @@ export default function ReferralsPage() {
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <Badge variant="outline" className={packageColors[referral.selectedPackage as keyof typeof packageColors]}>
-                      Package: {referral.selectedPackage || 'None'}
+                      Package: {packageDisplayNames[referral.selectedPackage as keyof typeof packageDisplayNames] || 'None'}
                     </Badge>
                     <Badge className="bg-primary text-white">
                       Commission: R{referral.commission.randValue}
