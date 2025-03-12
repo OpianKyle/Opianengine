@@ -30,12 +30,12 @@ import { Label } from "@/components/ui/label";
 
 const packages = [
   {
-    id: "BEGINNER",
-    display: "Beginner",
+    id: "OPPORTUNITY",
+    display: "Opportunity",
     price: 350,
-    activationPoints: 5000,
+    activationPoints: 2500,
     perks: [
-      "Activation Points: 5,000",
+      "Activation Points: 2,500",
       "EMS Assist",
       "Legal Assist",
       "Repatriation Cover",
@@ -44,12 +44,12 @@ const packages = [
     ]
   },
   {
-    id: "NOVICE",
-    display: "Novice",
+    id: "MOMENTUM",
+    display: "Momentum",
     price: 450,
-    activationPoints: 10000,
+    activationPoints: 5000,
     perks: [
-      "Activation Points: 10,000",
+      "Activation Points: 5,000",
       "Funeral Cover: R5,000",
       "Funeral Assist",
       "EMS Assist",
@@ -60,12 +60,12 @@ const packages = [
     ]
   },
   {
-    id: "ACTIVE",
-    display: "Active",
+    id: "PROSPER",
+    display: "Prosper",
     price: 550,
-    activationPoints: 15000,
+    activationPoints: 7500,
     perks: [
-      "Activation Points: 15,000",
+      "Activation Points: 7,500",
       "Funeral Cover: R10,000",
       "Accidental Death Cover: R20,000",
       "Funeral Assist",
@@ -80,12 +80,12 @@ const packages = [
     ]
   },
   {
-    id: "PROFESSIONAL",
-    display: "Professional",
+    id: "PRESTIGE",
+    display: "Prestige",
     price: 695,
-    activationPoints: 20000,
+    activationPoints: 10000,
     perks: [
-      "Activation Points: 20,000",
+      "Activation Points: 10,000",
       "Funeral Cover: R15,000",
       "Accidental Death Cover: R50,000",
       "Funeral Assist",
@@ -103,12 +103,12 @@ const packages = [
     ]
   },
   {
-    id: "EXPERT",
-    display: "Expert",
+    id: "PINNACLE",
+    display: "Pinnacle",
     price: 825,
-    activationPoints: 25000,
+    activationPoints: 12500,
     perks: [
-      "Activation Points: 25,000",
+      "Activation Points: 12,500",
       "Funeral Cover: R20,000",
       "Accidental Death Cover: R100,000",
       "Funeral Assist",
@@ -194,7 +194,7 @@ export default function RegisterPage() {
     suburb: "",
     postalCode: "",
     hasCreditCard: false,
-    selectedPackage: "BEGINNER" as string,
+    selectedPackage: "OPPORTUNITY" as string,
     accountHolderName: "",
     bankName: "",
     branchCode: "",
