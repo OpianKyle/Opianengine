@@ -162,9 +162,7 @@ export default function AgentCustomers() {
               <TableBody>
                 {filteredCustomers.map((customer: any) => (
                   <TableRow key={customer.id}>
-                    <TableCell>
-                      {customer.firstName} {customer.lastName}
-                    </TableCell>
+                    <TableCell>{customer.firstName} {customer.lastName}</TableCell>
                     <TableCell>{customer.email}</TableCell>
                     <TableCell>{customer.phoneNumber}</TableCell>
                     <TableCell>

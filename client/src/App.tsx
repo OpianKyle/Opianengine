@@ -23,7 +23,7 @@ import AdminProducts from "@/pages/admin/products";
 import CashRedemptions from "@/pages/admin/cash-redemptions";
 import AdminQuoteRequests from "@/pages/admin/quote-requests";
 import AdminAgents from "@/pages/admin/agents";
-import AgentCustomers from "@/pages/admin/agent-customers";
+import AgentCustomers from "@/pages/agent/customers"; // Update import path
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
