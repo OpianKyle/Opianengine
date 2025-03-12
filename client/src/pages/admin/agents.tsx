@@ -83,7 +83,6 @@ export default function AdminAgents() {
     agent.email?.toLowerCase().includes(searchTerm.toLowerCase())
   ) ?? [];
 
-  // Calculate total points properly by summing up all agents' total customer points
   const totalPointsManaged = filteredAgents.reduce((sum: number, agent: any) => {
     return sum + (parseInt(agent.totalCustomerPoints) || 0);
   }, 0);
@@ -234,48 +233,55 @@ export default function AdminAgents() {
       </Card>
 
       <Dialog open={!!selectedAgentId} onOpenChange={() => setSelectedAgentId(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
           <DialogHeader className="mb-4">
-            <DialogTitle>Customer Details</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              {selectedAgent?.firstName} {selectedAgent?.lastName}'s Customers ({agentCustomers?.length || 0})
+            <DialogTitle className="text-xl font-semibold text-white">
+              {selectedAgent?.firstName} {selectedAgent?.lastName}'s Customers
+            </DialogTitle>
+            <p className="text-sm text-gray-300">
+              Total Customers: {agentCustomers?.length || 0}
             </p>
           </DialogHeader>
 
           {isLoadingCustomers ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
             </div>
           ) : (
             <div className="relative">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Package</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created At</TableHead>
+                  <TableRow className="border-[#022b5c]">
+                    <TableHead className="text-gray-300">Name</TableHead>
+                    <TableHead className="text-gray-300">Email</TableHead>
+                    <TableHead className="text-gray-300">Package</TableHead>
+                    <TableHead className="text-gray-300">Points</TableHead>
+                    <TableHead className="text-gray-300">Status</TableHead>
+                    <TableHead className="text-gray-300">Created At</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {agentCustomers?.map((customer: any) => (
-                    <TableRow key={customer.id}>
-                      <TableCell>{customer.firstName} {customer.lastName}</TableCell>
-                      <TableCell>{customer.email}</TableCell>
+                    <TableRow key={customer.id} className="border-[#022b5c] hover:bg-[#022b5c]/50">
+                      <TableCell className="text-white">{customer.firstName} {customer.lastName}</TableCell>
+                      <TableCell className="text-white">{customer.email}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="border-[#022b5c] text-white">
                           {customer.selectedPackage || 'None'}
                         </Badge>
                       </TableCell>
-                      <TableCell>{customer.points?.toLocaleString() || 0}</TableCell>
+                      <TableCell className="text-white">{customer.points?.toLocaleString() || 0}</TableCell>
                       <TableCell>
-                        <Badge variant={customer.isEnabled ? "default" : "destructive"}>
+                        <Badge
+                          variant={customer.isEnabled ? "default" : "destructive"}
+                          className={customer.isEnabled ? "bg-green-600 hover:bg-green-700" : ""}
+                        >
                           {customer.isEnabled ? "Active" : "Disabled"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{new Date(customer.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-gray-300">
+                        {new Date(customer.createdAt).toLocaleDateString()}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
