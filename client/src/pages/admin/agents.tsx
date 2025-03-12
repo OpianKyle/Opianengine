@@ -14,14 +14,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
-import React from "react";
 
 export default function AdminAgents() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
-  const [location, navigate] = useLocation();
 
   const { data: agentStats, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/agents/stats"],
@@ -59,13 +57,6 @@ export default function AdminAgents() {
       });
     }
   });
-
-  const totalPointsManaged = React.useMemo(() => {
-    if (!agentStats?.agents) return 0;
-    return agentStats.agents.reduce((sum: number, agent: any) => 
-      sum + Number(agent.totalCustomerPoints || 0), 0
-    );
-  }, [agentStats?.agents]);
 
   const filteredAgents = agentStats?.agents?.filter((agent: any) =>
     agent.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -125,7 +116,7 @@ export default function AdminAgents() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {totalPointsManaged.toLocaleString()}
+              {filteredAgents.reduce((sum: number, agent: any) => sum + (agent.totalCustomerPoints || 0), 0).toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -205,7 +196,9 @@ export default function AdminAgents() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/admin/agents/${agent.id}/customers`)}
+                        onClick={() => {
+                          window.location.href = `/admin/agents/${agent.id}/customers`;
+                        }}
                       >
                         View Customers
                       </Button>
