@@ -30,11 +30,11 @@ interface ReferralStats {
         count: number;
         totalReferrals: number;
         referralsByPackage: {
-          OPPORTUNITY: number;
-          MOMENTUM: number;
-          PROSPER: number;
-          PRESTIGE: number;
-          PINNACLE: number;
+          BEGINNER: number;
+          NOVICE: number;
+          ACTIVE: number;
+          PROFESSIONAL: number;
+          EXPERT: number;
         };
         commission: {
           percentage: number;
@@ -62,11 +62,11 @@ interface ReferralStats {
 }
 
 const packageColors = {
-  OPPORTUNITY: "bg-blue-400",
-  MOMENTUM: "bg-green-400",
-  PROSPER: "bg-yellow-400",
-  PRESTIGE: "bg-purple-400",
-  PINNACLE: "bg-amber-400"
+  BEGINNER: "bg-zinc-400",
+  NOVICE: "bg-blue-400",
+  ACTIVE: "bg-green-400",
+  PROFESSIONAL: "bg-purple-400",
+  EXPERT: "bg-amber-400"
 };
 
 const PackageEmblem = ({ type, count, totalReferrals, level }: {

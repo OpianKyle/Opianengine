@@ -43,7 +43,7 @@ const userSchema = z.object({
   accountNumber: z.string().optional(),
   accountHolderName: z.string().optional(),
   branchCode: z.string().optional(),
-  selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]).optional(),
+  selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]).optional(),
   gender: z.enum(genderEnum).nullable(),
   hasCreditCard: z.boolean().optional(),
   isSouthAfrican: z.boolean().optional(),
@@ -102,24 +102,6 @@ const getPointsMultiplier = (points: number, type: 'premium' | 'card' | 'pos'): 
   return type === 'pos' ? 0 : 0; // Bronze
 };
 
-// Helper function to get package color
-function getPackageColor(packageName: string) {
-  switch (packageName?.toUpperCase()) {
-    case 'OPPORTUNITY':
-      return 'bg-blue-100 text-blue-800';
-    case 'MOMENTUM':
-      return 'bg-green-100 text-green-800';
-    case 'PROSPER':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'PRESTIGE':
-      return 'bg-purple-100 text-purple-800';
-    case 'PINNACLE':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-}
-
 export default function AdminCustomers() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
@@ -177,7 +159,7 @@ export default function AdminCustomers() {
       accountNumber: "",
       accountHolderName: "",
       branchCode: "",
-      selectedPackage: "OPPORTUNITY",
+      selectedPackage: "BEGINNER",
       gender: null,
       hasCreditCard: false,
       isSouthAfrican: false,
@@ -206,7 +188,7 @@ export default function AdminCustomers() {
       accountNumber: customer.accountNumber || "",
       accountHolderName: customer.accountHolderName || "",
       branchCode: customer.branchCode || "",
-      selectedPackage: (customer.selectedPackage?.toUpperCase() as "OPPORTUNITY" | "MOMENTUM" | "PROSPER" | "PRESTIGE" | "PINNACLE") || "OPPORTUNITY",
+      selectedPackage: (customer.selectedPackage?.toUpperCase() as "BEGINNER" | "NOVICE" | "ACTIVE" | "PROFESSIONAL" | "EXPERT") || "BEGINNER",
       gender: (customer.gender as typeof genderEnum[number]) || null,
       hasCreditCard: Boolean(customer.hasCreditCard),
       isSouthAfrican: Boolean(customer.isSouthAfrican),
@@ -517,7 +499,7 @@ export default function AdminCustomers() {
                     <TableCell>{customer.email}</TableCell>
                     <TableCell>{customer.phoneNumber}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className={getPackageColor(customer.selectedPackage)}>
+                      <Badge variant="secondary">
                         {customer.selectedPackage || 'No Package'}
                       </Badge>
                     </TableCell>
@@ -611,11 +593,11 @@ export default function AdminCustomers() {
                                               {...field}
                                               className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
                                             >
-                                              <option value="OPPORTUNITY">OPPORTUNITY - R350/month (5,000 points)</option>
-                                              <option value="MOMENTUM">MOMENTUM - R450/month (7,500 points)</option>
-                                              <option value="PROSPER">PROSPER - R550/month (10,000 points)</option>
-                                              <option value="PRESTIGE">PRESTIGE - R695/month (12,500 points)</option>
-                                              <option value="PINNACLE">PINNACLE - R825/month (15,000 points)</option>
+                                              <option value="BEGINNER">BEGINNER</option>
+                                              <option value="NOVICE">NOVICE</option>
+                                              <option value="ACTIVE">ACTIVE</option>
+                                              <option value="PROFESSIONAL">PROFESSIONAL</option>
+                                              <option value="EXPERT">EXPERT</option>
                                             </select>
                                           </FormControl>
                                           <FormMessage />
@@ -869,7 +851,7 @@ export default function AdminCustomers() {
                                           <FormControl>
                                             <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
                                           </FormControl>
-                                          <FormMessage />
+                                                                         <FormMessage />
                                         </FormItem>
                                       )}
                                     />

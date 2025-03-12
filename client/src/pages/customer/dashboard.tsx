@@ -18,7 +18,6 @@ interface User {
   firstName: string;
   lastName: string;
   points: number;
-  selectedPackage?: string; // Added selectedPackage to User interface
 }
 
 interface Transaction {
@@ -33,70 +32,35 @@ const getTierInfo = (points: number): { name: string; color: string; nextTier?: 
   if (points >= 150000) {
     return {
       name: "Platinum",
-      color: "bg-gradient-to-r from-purple-400 to-gray-300 text-white"
+      color: "bg-gradient-to-r from-purple-400 to-gray-300 text-white",
     };
   }
   if (points >= 100000) {
     return {
       name: "Gold",
       color: "bg-yellow-500 text-white",
-      nextTier: { name: "Platinum", pointsNeeded: 150000 - points }
+      nextTier: { name: "Platinum", pointsNeeded: 150000 - points },
     };
   }
   if (points >= 50000) {
     return {
       name: "Purple",
       color: "bg-purple-500 text-white",
-      nextTier: { name: "Gold", pointsNeeded: 100000 - points }
+      nextTier: { name: "Gold", pointsNeeded: 100000 - points },
     };
   }
   if (points >= 10000) {
     return {
       name: "Silver",
       color: "bg-gray-400 text-white",
-      nextTier: { name: "Purple", pointsNeeded: 50000 - points }
+      nextTier: { name: "Purple", pointsNeeded: 50000 - points },
     };
   }
   return {
     name: "Bronze",
     color: "bg-amber-600 text-white",
-    nextTier: { name: "Silver", pointsNeeded: 10000 - points }
+    nextTier: { name: "Silver", pointsNeeded: 10000 - points },
   };
-};
-
-// Package information updated with new names and points
-const getPackageColor = (packageName: string) => {
-  switch (packageName?.toUpperCase()) {
-    case 'OPPORTUNITY':
-      return 'bg-blue-100 text-blue-800';
-    case 'MOMENTUM':
-      return 'bg-green-100 text-green-800';
-    case 'PROSPER':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'PRESTIGE':
-      return 'bg-purple-100 text-purple-800';
-    case 'PINNACLE':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const getPackagePoints = (packageName: string): number => {
-  switch (packageName?.toUpperCase()) {
-    case 'OPPORTUNITY':
-      return 5000;
-    case 'MOMENTUM':
-      return 7500;
-    case 'PROSPER':
-      return 10000;
-    case 'PRESTIGE':
-      return 12500;
-    case 'PINNACLE':
-      return 15000;
-    default:
-      return 0;
-  }
 };
 
 export default function CustomerDashboard() {
@@ -198,14 +162,6 @@ export default function CustomerDashboard() {
                   </p>
                 </div>
               )}
-              {user?.selectedPackage && (
-                <Badge className={`${getPackageColor(user.selectedPackage)} text-lg px-4 py-2`}>
-                  {user.selectedPackage} Package
-                </Badge>
-              )}
-              <div className="text-sm text-muted-foreground">
-                Package Activation Points: {getPackagePoints(user?.selectedPackage || '')}
-              </div>
             </div>
           </CardContent>
         </Card>
