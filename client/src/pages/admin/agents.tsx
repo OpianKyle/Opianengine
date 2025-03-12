@@ -14,11 +14,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function AdminAgents() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const { toast } = useToast();
 
   const { data: agentStats, isLoading, refetch } = useQuery({
@@ -30,6 +36,19 @@ export default function AdminAgents() {
       if (!response.ok) throw new Error("Failed to fetch agent statistics");
       return response.json();
     },
+  });
+
+  const { data: agentCustomers, isLoading: isLoadingCustomers } = useQuery({
+    queryKey: [`/api/admin/agents/${selectedAgentId}/customers`],
+    queryFn: async () => {
+      if (!selectedAgentId) return null;
+      const response = await fetch(`/api/admin/agents/${selectedAgentId}/customers`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error("Failed to fetch agent customers");
+      return response.json();
+    },
+    enabled: !!selectedAgentId,
   });
 
   const toggleAgentStatus = useMutation({
@@ -63,6 +82,11 @@ export default function AdminAgents() {
     agent.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     agent.email?.toLowerCase().includes(searchTerm.toLowerCase())
   ) ?? [];
+
+  // Calculate total points properly by summing up all agents' total customer points
+  const totalPointsManaged = filteredAgents.reduce((sum: number, agent: any) => {
+    return sum + (parseInt(agent.totalCustomerPoints) || 0);
+  }, 0);
 
   return (
     <div className="space-y-6">
@@ -116,7 +140,7 @@ export default function AdminAgents() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {filteredAgents.reduce((sum: number, agent: any) => sum + (agent.totalCustomerPoints || 0), 0).toLocaleString()}
+              {totalPointsManaged.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -158,9 +182,7 @@ export default function AdminAgents() {
               <TableBody>
                 {filteredAgents.map((agent: any) => (
                   <TableRow key={agent.id}>
-                    <TableCell>
-                      {agent.firstName} {agent.lastName}
-                    </TableCell>
+                    <TableCell>{agent.firstName} {agent.lastName}</TableCell>
                     <TableCell>{agent.email}</TableCell>
                     <TableCell>{agent.totalCustomers}</TableCell>
                     <TableCell>{agent.todaySignups}</TableCell>
@@ -196,9 +218,7 @@ export default function AdminAgents() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          window.location.href = `/admin/agents/${agent.id}/customers`;
-                        }}
+                        onClick={() => setSelectedAgentId(agent.id)}
                       >
                         View Customers
                       </Button>
@@ -210,6 +230,46 @@ export default function AdminAgents() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!selectedAgentId} onOpenChange={() => setSelectedAgentId(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Agent's Customers</DialogTitle>
+          </DialogHeader>
+          {isLoadingCustomers ? (
+            <div className="text-center py-4">Loading customers...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Package</TableHead>
+                  <TableHead>Points</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created At</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {agentCustomers?.map((customer: any) => (
+                  <TableRow key={customer.id}>
+                    <TableCell>{customer.firstName} {customer.lastName}</TableCell>
+                    <TableCell>{customer.email}</TableCell>
+                    <TableCell>{customer.selectedPackage || 'None'}</TableCell>
+                    <TableCell>{customer.points?.toLocaleString() || 0}</TableCell>
+                    <TableCell>
+                      <Badge variant={customer.isEnabled ? "default" : "destructive"}>
+                        {customer.isEnabled ? "Active" : "Disabled"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(customer.createdAt).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
