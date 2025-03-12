@@ -38,8 +38,8 @@ export default function AgentCustomers() {
   ) ?? [];
 
   return (
-    <div className="flex flex-col h-full min-h-screen w-full">
-      <div className="flex items-center gap-2 mb-6">
+    <div className="flex flex-col h-full space-y-6">
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
           size="icon"
@@ -50,7 +50,7 @@ export default function AgentCustomers() {
         <h1 className="text-2xl md:text-3xl font-bold">Agent's Customers</h1>
       </div>
 
-      <Card className="flex-1 w-full">
+      <Card className="flex-1">
         <CardHeader>
           <CardTitle>All Customers</CardTitle>
           <div className="mt-4">
@@ -66,40 +66,38 @@ export default function AgentCustomers() {
           </div>
         </CardHeader>
         <CardContent className="h-[calc(100%-8rem)] overflow-auto">
-          <div className="w-full overflow-x-auto">
-            {isLoading ? (
-              <div className="text-center py-4">Loading customers...</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Package</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created At</TableHead>
+          {isLoading ? (
+            <div className="text-center py-4">Loading customers...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Package</TableHead>
+                  <TableHead>Points</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created At</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCustomers.map((customer: any) => (
+                  <TableRow key={customer.id}>
+                    <TableCell>{customer.firstName} {customer.lastName}</TableCell>
+                    <TableCell>{customer.email}</TableCell>
+                    <TableCell>{customer.selectedPackage || 'None'}</TableCell>
+                    <TableCell>{customer.points}</TableCell>
+                    <TableCell>
+                      <Badge variant={customer.isEnabled ? "default" : "destructive"}>
+                        {customer.isEnabled ? "Active" : "Disabled"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(customer.createdAt).toLocaleDateString()}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCustomers.map((customer: any) => (
-                    <TableRow key={customer.id}>
-                      <TableCell>{customer.firstName} {customer.lastName}</TableCell>
-                      <TableCell>{customer.email}</TableCell>
-                      <TableCell>{customer.selectedPackage || 'None'}</TableCell>
-                      <TableCell>{customer.points}</TableCell>
-                      <TableCell>
-                        <Badge variant={customer.isEnabled ? "default" : "destructive"}>
-                          {customer.isEnabled ? "Active" : "Disabled"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{new Date(customer.createdAt).toLocaleDateString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
