@@ -234,52 +234,48 @@ export default function AdminAgents() {
       </Card>
 
       <Dialog open={!!selectedAgentId} onOpenChange={() => setSelectedAgentId(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader className="border-b pb-4">
-            <DialogTitle className="text-[#1b75bc] text-xl">
-              Customers of {selectedAgent?.firstName} {selectedAgent?.lastName}
-            </DialogTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Total Customers: {agentCustomers?.length || 0}
+        <DialogContent className="max-w-4xl">
+          <DialogHeader className="mb-4">
+            <DialogTitle>Customer Details</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              {selectedAgent?.firstName} {selectedAgent?.lastName}'s Customers ({agentCustomers?.length || 0})
             </p>
           </DialogHeader>
+
           {isLoadingCustomers ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1b75bc] mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">Loading customers...</p>
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="mt-4">
+            <div className="relative">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="font-semibold">Name</TableHead>
-                    <TableHead className="font-semibold">Email</TableHead>
-                    <TableHead className="font-semibold">Package</TableHead>
-                    <TableHead className="font-semibold">Points</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold">Created At</TableHead>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Package</TableHead>
+                    <TableHead>Points</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created At</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {agentCustomers?.map((customer: any) => (
-                    <TableRow key={customer.id} className="hover:bg-muted/50 transition-colors">
-                      <TableCell className="font-medium">{customer.firstName} {customer.lastName}</TableCell>
+                    <TableRow key={customer.id}>
+                      <TableCell>{customer.firstName} {customer.lastName}</TableCell>
                       <TableCell>{customer.email}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="bg-muted/30">
+                        <Badge variant="outline">
                           {customer.selectedPackage || 'None'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-medium">{customer.points?.toLocaleString() || 0}</TableCell>
+                      <TableCell>{customer.points?.toLocaleString() || 0}</TableCell>
                       <TableCell>
                         <Badge variant={customer.isEnabled ? "default" : "destructive"}>
                           {customer.isEnabled ? "Active" : "Disabled"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(customer.createdAt).toLocaleDateString()}
-                      </TableCell>
+                      <TableCell>{new Date(customer.createdAt).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
