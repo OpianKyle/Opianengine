@@ -354,20 +354,29 @@ export default function RegisterPage() {
 
     try {
       const registrationData = {
-        ...formData,
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         phoneNumber: formData.mobileNumber,
         address: formData.addressLine1,
         city: formData.suburb,
-        employerName: formData.industry,
-        jobTitle: formData.occupation,
-        signature: signatureData,
-        points: selectedPackageData.activationPoints, // Include activation points
-        referralCode: formData.referralCode,
+        postalCode: formData.postalCode,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
+        occupation: formData.occupation,
+        industry: formData.industry,
+        signature: signatureData,
         isSouthAfrican: formData.isSouthAfrican,
         hasCreditCard: formData.hasCreditCard,
         selectedPackage: formData.selectedPackage.toUpperCase(),
-        account_type: formData.accountType,
+        bankName: formData.bankName,
+        accountType: formData.accountType.toUpperCase(),
+        accountNumber: formData.accountNumber,
+        accountHolderName: formData.accountHolderName,
+        branchCode: formData.branchCode,
+        referralCode: formData.referralCode || undefined
       };
 
       console.log('Submitting registration data:', {
