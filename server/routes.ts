@@ -159,6 +159,11 @@ export function registerRoutes(app: Express): Server {
           initialPoints = 0;
       }
 
+      console.log('Package points calculation:', {
+        package: selectedPackage,
+        points: initialPoints
+      });
+
       await connection.beginTransaction();
 
       try {

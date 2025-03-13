@@ -30,8 +30,8 @@ import { Label } from "@/components/ui/label";
 
 const packages = [
   {
-    id: "BEGINNER",
-    display: "Beginner",
+    id: "OPPORTUNITY",
+    display: "OPPORTUNITY",
     price: 350,
     activationPoints: 2500,
     perks: [
@@ -44,8 +44,8 @@ const packages = [
     ]
   },
   {
-    id: "NOVICE",
-    display: "Novice",
+    id: "MOMENTUM",
+    display: "MOMENTUM",
     price: 450,
     activationPoints: 5000,
     perks: [
@@ -60,8 +60,8 @@ const packages = [
     ]
   },
   {
-    id: "ACTIVE",
-    display: "Active",
+    id: "PROSPER",
+    display: "PROSPER",
     price: 550,
     activationPoints: 7500,
     perks: [
@@ -80,8 +80,8 @@ const packages = [
     ]
   },
   {
-    id: "PROFESSIONAL",
-    display: "Professional",
+    id: "PRESTIGE",
+    display: "PRESTIGE",
     price: 695,
     activationPoints: 10000,
     perks: [
@@ -103,8 +103,8 @@ const packages = [
     ]
   },
   {
-    id: "EXPERT",
-    display: "Expert",
+    id: "PINNACLE",
+    display: "PINNACLE",
     price: 825,
     activationPoints: 12500,
     perks: [
