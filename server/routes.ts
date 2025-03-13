@@ -110,15 +110,27 @@ export function registerRoutes(app: Express): Server {
 
 
 
-// Registration endpoint with proper null handling
+// Registration endpoint with proper null handling and validation
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
-      console.log('Registration attempt with data:', {
+      // Log complete request data for debugging
+      console.log('Registration request data:', {
         ...req.body,
         password: '[REDACTED]',
         signature: req.body.signature ? 'SIGNATURE_PROVIDED' : 'NO_SIGNATURE'
       });
+
+      // Validate required fields
+      const requiredFields = ['email', 'password', 'firstName', 'lastName', 'phoneNumber', 'selectedPackage'];
+      const missingFields = requiredFields.filter(field => !req.body[field]);
+      
+      if (missingFields.length > 0) {
+        console.error('Missing required fields:', missingFields);
+        return res.status(400).json({
+          error: `Missing required fields: ${missingFields.join(', ')}`
+        });
+      }
 
       // Check for existing user
       const [existingUsers] = await connection.execute(
@@ -159,7 +171,7 @@ export function registerRoutes(app: Express): Server {
       await connection.beginTransaction();
 
       try {
-        // Create new user with all fields
+        // Create new user with all fields and explicit null handling
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, 
@@ -172,16 +184,16 @@ export function registerRoutes(app: Express): Server {
             account_holder_name, branch_code
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            req.body.email || null,
+            req.body.email,
             hashedPassword,
-            req.body.firstName || null,
-            req.body.lastName || null,
-            req.body.phoneNumber || null,
+            req.body.firstName,
+            req.body.lastName,
+            req.body.phoneNumber,
             1, // is_enabled
-            initialPoints || 0,
-            newReferralCode || null,
+            initialPoints,
+            newReferralCode,
             req.body.referralCode || null,
-            selectedPackage || null, // Ensure we use the validated and uppercase package name
+            selectedPackage,
             req.body.signature || null,
             req.body.isSouthAfrican || false,
             req.body.hasCreditCard || false,
