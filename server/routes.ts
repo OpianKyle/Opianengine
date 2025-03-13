@@ -59,13 +59,13 @@ async function calculateCommissionPoints(connection: any, packageName: string, l
   let commissionPercentage = 0;
   switch (level) {
     case 1: // Direct referral
-      commissionPercentage = 0.075; // 15%
+      commissionPercentage = 0.15; // 15%
       break;
     case 2:
-      commissionPercentage = 0.05; // 10%
+      commissionPercentage = 0.10; // 10%
       break;
     case 3:
-      commissionPercentage = 0.025; // 5%
+      commissionPercentage = 0.05; // 5%
       break;
     default:
       commissionPercentage = 0;
@@ -110,27 +110,14 @@ export function registerRoutes(app: Express): Server {
 
 
 
-// Registration endpoint with proper null handling and validation
+  // Registration endpoint with referral commission handling
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
-      // Log complete request data for debugging
-      console.log('Registration request data:', {
+      console.log('Registration attempt with data:', {
         ...req.body,
-        password: '[REDACTED]',
-        signature: req.body.signature ? 'SIGNATURE_PROVIDED' : 'NO_SIGNATURE'
+        password: '[REDACTED]'
       });
-
-      // Validate required fields
-      const requiredFields = ['email', 'password', 'firstName', 'lastName', 'phoneNumber', 'selectedPackage'];
-      const missingFields = requiredFields.filter(field => !req.body[field]);
-      
-      if (missingFields.length > 0) {
-        console.error('Missing required fields:', missingFields);
-        return res.status(400).json({
-          error: `Missing required fields: ${missingFields.join(', ')}`
-        });
-      }
 
       // Check for existing user
       const [existingUsers] = await connection.execute(
@@ -147,79 +134,127 @@ export function registerRoutes(app: Express): Server {
       const hashedPassword = await crypto.hash(req.body.password);
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
+      // Calculate initial points based on selected package
+      let initialPoints = 0;
       const selectedPackage = req.body.selectedPackage?.toUpperCase();
-      console.log('Selected package before validation:', selectedPackage);
+      console.log('Processing package activation:', { selectedPackage });
 
-      // Validate package type and get initial points
-      const packageConfig = {
-        'OPPORTUNITY': 5000,
-        'MOMENTUM': 7500,
-        'PROSPER': 10000,
-        'PRESTIGE': 12500,
-        'PINNACLE': 15000
-      };
-
-      if (!packageConfig[selectedPackage]) {
-        return res.status(400).json({
-          error: "Invalid package selected"
-        });
+      switch (selectedPackage) {
+        case 'BEGINNER':
+          initialPoints = 5000;
+          break;
+        case 'NOVICE':
+          initialPoints = 10000;
+          break;
+        case 'ACTIVE':
+          initialPoints = 15000;
+          break;
+        case 'PROFESSIONAL':
+          initialPoints = 20000;
+          break;
+        case 'EXPERT':
+          initialPoints = 25000;
+          break;
+        default:
+          initialPoints = 0;
       }
-
-      const initialPoints = packageConfig[selectedPackage];
-      console.log('Package activation details:', { selectedPackage, initialPoints });
 
       await connection.beginTransaction();
 
       try {
-        // Create new user with all fields and explicit null handling
+        // Create new user
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, 
             phone_number, is_enabled, points, referral_code, 
-            referred_by, selected_package, signature,
-            is_south_african, has_credit_card, id_number,
-            date_of_birth, gender, occupation, industry,
-            address, city, postal_code,
-            bank_name, account_type, account_number,
-            account_holder_name, branch_code
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            referred_by, selected_package
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             req.body.email,
             hashedPassword,
             req.body.firstName,
             req.body.lastName,
-            req.body.phoneNumber,
+            req.body.mobileNumber,
             1, // is_enabled
             initialPoints,
             newReferralCode,
             req.body.referralCode || null,
-            selectedPackage,
-            req.body.signature || null,
-            req.body.isSouthAfrican || false,
-            req.body.hasCreditCard || false,
-            req.body.idNumber || null,
-            req.body.dateOfBirth || null,
-            req.body.gender || null,
-            req.body.occupation || null,
-            req.body.industry || null,
-            req.body.address || null,
-            req.body.city || null,
-            req.body.postalCode || null,
-            req.body.bankName || null,
-            req.body.accountType || null,
-            req.body.accountNumber || null,
-            req.body.accountHolderName || null,
-            req.body.branchCode || null
+            selectedPackage
           ]
         );
 
         const userId = (userResult as any).insertId;
-        console.log('User created with details:', {
-          userId,
-          package: selectedPackage,
-          points: initialPoints,
-          signature: req.body.signature ? 'signature provided' : 'no signature'
-        });
+
+        // Handle referral commissions if user was referred
+        if (req.body.referralCode) {
+          // Get referrer chain (up to 3 levels)
+          const [referrers] = await connection.execute(
+            `WITH RECURSIVE referral_chain AS (
+              -- Base case: direct referrer (level 1)
+              SELECT 
+                id, 
+                referred_by,
+                1 as level
+              FROM users 
+              WHERE referral_code = ?
+              
+              UNION ALL
+              
+              -- Recursive case: find higher level referrers
+              SELECT 
+                u.id,
+                u.referred_by,
+                rc.level + 1
+              FROM users u
+              INNER JOIN referral_chain rc ON u.referral_code = rc.referred_by
+              WHERE rc.level < 3
+            )
+            SELECT 
+              rc.*,
+              u.email,
+              u.first_name,
+              u.last_name
+            FROM referral_chain rc
+            JOIN users u ON rc.id = u.id
+            ORDER BY rc.level`,
+            [req.body.referralCode]
+          );
+
+          // Process commission for each referrer
+          for (const referrer of referrers) {
+            const commission = await calculateCommissionPoints(connection, selectedPackage, referrer.level);
+            
+            if (commission.points > 0) {
+              // Update referrer's points
+              await connection.execute(
+                'UPDATE users SET points = points + ? WHERE id = ?',
+                [commission.points, referrer.id]
+              );
+
+              // Record commission transaction
+              await connection.execute(
+                `INSERT INTO transactions (
+                  user_id, points, type, description
+                ) VALUES (?, ?, ?, ?)`,
+                [
+                  referrer.id,
+                  commission.points,
+                  'REFERRAL_COMMISSION',
+                  `Level ${referrer.level} referral commission (R${commission.randValue.toFixed(2)}) from ${req.body.email} (${selectedPackage} package)`
+                ]
+              );
+
+              console.log('Referral commission processed:', {
+                referrerId: referrer.id,
+                referrerEmail: referrer.email,
+                level: referrer.level,
+                points: commission.points,
+                randValue: commission.randValue,
+                package: selectedPackage
+              });
+            }
+          }
+        }
 
         // Record the initial points transaction
         if (initialPoints > 0) {
@@ -231,43 +266,44 @@ export function registerRoutes(app: Express): Server {
               userId,
               initialPoints,
               'WELCOME_BONUS',
-              `Welcome bonus points for ${selectedPackage} package activation`
+              `Welcome bonus points for ${selectedPackage} package`
             ]
           );
-          
-          console.log('Initial points transaction recorded:', {
-            userId,
-            points: initialPoints,
-            package: selectedPackage
-          });
         }
 
         await connection.commit();
 
-        // Login the user after successful registration
-        req.login({
-          id: userId,
-          email: req.body.email,
-          firstName: req.body.firstName,
-          lastName: req.body.lastName,
-          isEnabled: true,
-          points: initialPoints,
-          selectedPackage: selectedPackage
-        }, (err) => {
+        // Fetch complete user data
+        const [newUserCheck] = await connection.execute(
+          'SELECT * FROM users WHERE id = ?',
+          [userId]
+        );
+
+        const newUser = newUserCheck[0];
+        if (!newUser) {
+          throw new Error("Failed to retrieve created user");
+        }
+
+        const adminStatus = await checkUserAdminStatus(userId);
+        const { password: _, ...safeUser } = newUser;
+
+        const transformedUser = {
+          ...safeUser,
+          is_admin: adminStatus.isAdmin,
+          is_super_admin: adminStatus.isSuperAdmin,
+          is_enabled: Boolean(safeUser.is_enabled),
+          is_south_african: Boolean(safeUser.is_south_african),
+          has_credit_card: Boolean(safeUser.has_credit_card)
+        };
+
+        // Log the user in after successful registration
+        req.login(transformedUser, (err) => {
           if (err) {
             console.error('Login error after registration:', err);
             return res.status(500).json({ error: "Registration successful but login failed" });
           }
 
-          res.status(201).json({
-            id: userId,
-            email: req.body.email,
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
-            isEnabled: true,
-            points: initialPoints,
-            selectedPackage: selectedPackage
-          });
+          res.status(201).json(transformedUser);
         });
 
       } catch (error) {

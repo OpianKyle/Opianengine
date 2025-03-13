@@ -302,6 +302,12 @@ export default function RegisterPage() {
       return;
     }
 
+    // Validate account type
+    if (!formData.accountType || !accountTypes.includes(formData.accountType)) {
+      setError("Please select a valid account type");
+      return;
+    }
+
     // Get activation points for selected package
     const selectedPackageData = packages.find(pkg => pkg.id === formData.selectedPackage);
     if (!selectedPackageData) {
@@ -340,8 +346,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!signature || signature.isEmpty()) {
-      setError("Please provide your digital signature");
+    if (!formData.gender) {
+      setError("Please select a gender");
       return;
     }
 
@@ -350,41 +356,30 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!signature || signature.isEmpty()) {
+      setError("Please provide your digital signature");
+      return;
+    }
+
     const signatureData = signature.toDataURL();
 
     try {
       const registrationData = {
-        email: formData.email || null,
-        password: formData.password,
-        firstName: formData.firstName || null,
-        lastName: formData.lastName || null,
-        phoneNumber: formData.mobileNumber || null,
-        address: formData.addressLine1 || null,
-        city: formData.suburb || null,
-        postalCode: formData.postalCode || null,
-        idNumber: formData.idNumber || null,
-        dateOfBirth: formData.dateOfBirth || null,
-        gender: formData.gender || null,
-        occupation: formData.occupation || null,
-        industry: formData.industry || null,
-        signature: signatureData || null,
-        isSouthAfrican: formData.isSouthAfrican || false,
-        hasCreditCard: formData.hasCreditCard || false,
-        selectedPackage: formData.selectedPackage.toUpperCase(),
-        bankName: formData.bankName || null,
-        accountType: formData.accountType.toUpperCase(),
-        accountNumber: formData.accountNumber || null,
-        accountHolderName: formData.accountHolderName || null,
-        branchCode: formData.branchCode || null,
-        referralCode: formData.referralCode || null
+        ...formData,
+        phoneNumber: formData.mobileNumber,
+        address: formData.addressLine1,
+        city: formData.suburb,
+        employerName: formData.industry,
+        jobTitle: formData.occupation,
+        signature: signatureData,
+        selectedPackage: formData.selectedPackage,
+        points: selectedPackageData.activationPoints,
+        referralCode: formData.referralCode,
+        gender: formData.gender,
+        account_type: formData.accountType // Ensure account_type is explicitly set
       };
 
-      console.log('Submitting registration data:', {
-        ...registrationData,
-        signature: 'DATA_URL_HIDDEN',
-        password: '[REDACTED]'
-      });
-
+      console.log('Submitting registration data:', { ...registrationData, password: '[REDACTED]' });
       const user = await registerMutation.mutateAsync(registrationData);
 
       toast({
