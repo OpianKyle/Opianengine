@@ -141,19 +141,19 @@ export function registerRoutes(app: Express): Server {
 
       switch (selectedPackage) {
         case 'BEGINNER':
-          initialPoints = 5000;
+          initialPoints = 2500;
           break;
         case 'NOVICE':
-          initialPoints = 10000;
+          initialPoints = 5000;
           break;
         case 'ACTIVE':
-          initialPoints = 15000;
+          initialPoints = 7500;
           break;
         case 'PROFESSIONAL':
-          initialPoints = 20000;
+          initialPoints = 10000;
           break;
         case 'EXPERT':
-          initialPoints = 25000;
+          initialPoints = 12500;
           break;
         default:
           initialPoints = 0;
