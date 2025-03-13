@@ -189,6 +189,7 @@ export function registerRoutes(app: Express): Server {
         );
 
         const userId = (userResult as any).insertId;
+        console.log('User created successfully:', { id: userId, package: selectedPackage, points: initialPoints });
 
         // Handle referral commissions if user was referred
         if (req.body.referralCode) {
