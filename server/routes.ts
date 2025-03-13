@@ -140,19 +140,19 @@ export function registerRoutes(app: Express): Server {
       console.log('Processing package activation:', { selectedPackage });
 
       switch (selectedPackage) {
-        case 'BEGINNER':
+        case 'OPPORTUNITY':
           initialPoints = 2500;
           break;
-        case 'NOVICE':
+        case 'MOMENTUM':
           initialPoints = 5000;
           break;
-        case 'ACTIVE':
+        case 'PROSPER':
           initialPoints = 7500;
           break;
-        case 'PROFESSIONAL':
+        case 'PRESTIGE':
           initialPoints = 10000;
           break;
-        case 'EXPERT':
+        case 'PINNACLE':
           initialPoints = 12500;
           break;
         default:
@@ -956,11 +956,11 @@ export function registerRoutes(app: Express): Server {
       // Calculate initial points based on selected package
       let initialPoints = 0;
       switch (selectedPackage) {
-        case 'BEGINNER': initialPoints = 5000; break;
-        case 'NOVICE': initialPoints = 10000; break;
-        case 'ACTIVE': initialPoints = 15000; break;
-        case 'PROFESSIONAL': initialPoints = 20000; break;
-        case 'EXPERT': initialPoints = 25000; break;
+        case 'OPPORTUNITY': initialPoints = 2500; break;
+        case 'MOMENTUM': initialPoints = 5000; break;
+        case 'PROSPER': initialPoints = 7500; break;
+        case 'PRESTIGE': initialPoints = 10000; break;
+        case 'PINNACLE': initialPoints = 12500; break;
       }
 
       await connection.beginTransaction();
@@ -1140,9 +1140,9 @@ export function registerRoutes(app: Express): Server {
       const transformedReferrals = referrals.map((referral: any) => {
         // Calculate commission based on level
         const commissionPercentage = 
-          referral.level === 1 ? 0.15 : // 15% for level 1
-          referral.level === 2 ? 0.10 : // 10% for level 2
-          referral.level === 3 ? 0.05 : // 5% for level 3
+          referral.level === 1 ? 0.075 : // 15% for level 1
+          referral.level === 2 ? 0.05 : // 10% for level 2
+          referral.level === 3 ? 0.025 : // 5% for level 3
           0;
         
         const packageAmount = referral.package_amount || 0;
@@ -1182,14 +1182,14 @@ export function registerRoutes(app: Express): Server {
               count: 0,
               totalReferrals: 0,
               referralsByPackage: {
-                BEGINNER: 0,
-                NOVICE: 0,
-                ACTIVE: 0,
-                PROFESSIONAL: 0,
-                EXPERT: 0
+                OPPORTUNITY: 0,
+                MOMENTUM: 0,
+                PROSPER: 0,
+                PRESTIGE: 0,
+                PINNACLE: 0
               },
               commission: {
-                percentage: 15,
+                percentage: 7.5,
                 baseAmount: packagePriceMap[packageType] || 0
               }
             };
@@ -4397,11 +4397,11 @@ export function registerRoutes(app: Express): Server {
       // Calculate initial points based on selected package
       let initialPoints = 0;
       switch (selectedPackage) {
-        case 'BEGINNER': initialPoints = 5000; break;
-        case 'NOVICE': initialPoints = 10000; break;
-        case 'ACTIVE': initialPoints = 15000; break;
-        case 'PROFESSIONAL': initialPoints = 20000; break;
-        case 'EXPERT': initialPoints = 25000; break;
+        case 'OPPORTUNITY': initialPoints = 2500; break;
+        case 'MOMENTUM': initialPoints = 5000; break;
+        case 'PROSPER': initialPoints = 7500; break;
+        case 'PRESTIGE': initialPoints = 10000; break;
+        case 'PINNACLE': initialPoints = 12500; break;
       }
 
       await connection.beginTransaction();
@@ -4547,11 +4547,11 @@ export function registerRoutes(app: Express): Server {
       // Calculate initial points based on selected package
       let initialPoints = 0;
       switch (selectedPackage) {
-        case 'BEGINNER': initialPoints = 5000; break;
-        case 'NOVICE': initialPoints = 10000; break;
-        case 'ACTIVE': initialPoints = 15000; break;
-        case 'PROFESSIONAL': initialPoints = 20000; break;
-        case 'EXPERT': initialPoints = 25000; break;
+        case 'OPPORTUNITY': initialPoints = 2500; break;
+        case 'MOMENTUM': initialPoints = 5000; break;
+        case 'PROSPER': initialPoints = 7500; break;
+        case 'PRESTIGE': initialPoints = 10000; break;
+        case 'PINNACLE': initialPoints = 12500; break;
       }
 
       await connection.beginTransaction();
