@@ -45,8 +45,8 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 
 const packages = [
   {
-    name: "BEGINNER",
-    display: "Beginner",
+    name: "OPPORTUNITY",
+    display: "Opportunity",
     price: 350,
     points: 2500,
     perks: [
@@ -59,8 +59,8 @@ const packages = [
     ]
   },
   {
-    name: "NOVICE",
-    display: "Novice",
+    name: "MOMENTUM",
+    display: "Momentum",
     price: 450,
     points: 5000,
     perks: [
@@ -75,8 +75,8 @@ const packages = [
     ]
   },
   {
-    name: "ACTIVE",
-    display: "Active",
+    name: "PROSPER",
+    display: "Prosper",
     price: 550,
     points: 7500,
     perks: [
@@ -95,8 +95,8 @@ const packages = [
     ]
   },
   {
-    name: "PROFESSIONAL",
-    display: "Professional",
+    name: "PRESTIGE",
+    display: "Prestige",
     price: 695,
     points: 10000,
     perks: [
@@ -118,8 +118,8 @@ const packages = [
     ]
   },
   {
-    name: "EXPERT",
-    display: "Expert",
+    name: "PINNACLE",
+    display: "Pinnacle",
     price: 825,
     points: 12500,
     perks: [
