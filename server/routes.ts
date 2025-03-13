@@ -137,37 +137,23 @@ export function registerRoutes(app: Express): Server {
       const selectedPackage = req.body.selectedPackage?.toUpperCase();
       console.log('Selected package before validation:', selectedPackage);
 
-      // Validate package type
-      const validPackages = ['OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'];
-      if (!validPackages.includes(selectedPackage)) {
+      // Validate package type and get initial points
+      const packageConfig = {
+        'OPPORTUNITY': 5000,
+        'MOMENTUM': 7500,
+        'PROSPER': 10000,
+        'PRESTIGE': 12500,
+        'PINNACLE': 15000
+      };
+
+      if (!packageConfig[selectedPackage]) {
         return res.status(400).json({
           error: "Invalid package selected"
         });
       }
 
-      // Calculate initial points based on selected package
-      let initialPoints = 0;
-      console.log('Processing package activation:', { selectedPackage });
-
-      switch (selectedPackage) {
-        case 'OPPORTUNITY':
-          initialPoints = 5000;
-          break;
-        case 'MOMENTUM':
-          initialPoints = 7500;
-          break;
-        case 'PROSPER':
-          initialPoints = 10000;
-          break;
-        case 'PRESTIGE':
-          initialPoints = 12500;
-          break;
-        case 'PINNACLE':
-          initialPoints = 15000;
-          break;
-        default:
-          initialPoints = 0;
-      }
+      const initialPoints = packageConfig[selectedPackage];
+      console.log('Package activation details:', { selectedPackage, initialPoints });
 
       await connection.beginTransaction();
 
@@ -194,6 +180,11 @@ export function registerRoutes(app: Express): Server {
         );
 
         const userId = (userResult as any).insertId;
+        console.log('User created with details:', {
+          userId,
+          package: selectedPackage,
+          points: initialPoints
+        });
 
         // Handle referral commissions if user was referred
         if (req.body.referralCode) {
@@ -276,9 +267,15 @@ export function registerRoutes(app: Express): Server {
               userId,
               initialPoints,
               'WELCOME_BONUS',
-              `Welcome bonus points for ${selectedPackage} package`
+              `Welcome bonus points for ${selectedPackage} package activation`
             ]
           );
+          
+          console.log('Initial points transaction recorded:', {
+            userId,
+            points: initialPoints,
+            package: selectedPackage
+          });
         }
 
         await connection.commit();
