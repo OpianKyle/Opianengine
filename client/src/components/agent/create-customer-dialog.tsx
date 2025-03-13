@@ -28,11 +28,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 
 const packages = [
-  { id: 'OPPORTUNITY', name: 'Opportunity', price: 550, points: 2500 },
-  { id: 'MOMENTUM', name: 'Momentum', price: 750, points: 5000 },
-  { id: 'PROSPER', name: 'Prosper', price: 950, points: 7500 },
-  { id: 'PRESTIGE', name: 'Prestige', price: 1150, points: 10000 },
-  { id: 'PINNACLE', name: 'Pinnacle', price: 1350, points: 12500 },
+  { id: 'BEGINNER', name: 'Beginner', price: 550 },
+  { id: 'NOVICE', name: 'Novice', price: 750 },
+  { id: 'ACTIVE', name: 'Active', price: 950 },
+  { id: 'PROFESSIONAL', name: 'Professional', price: 1150 },
+  { id: 'EXPERT', name: 'Expert', price: 1350 },
 ];
 
 const customerSchema = z.object({
@@ -50,7 +50,7 @@ const customerSchema = z.object({
   suburb: z.string().min(1, "Suburb is required"),
   postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
   hasCreditCard: z.boolean(),
-  selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]),
+  selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]),
   accountHolderName: z.string().min(1, "Account holder name is required"),
   bankName: z.string().min(1, "Bank name is required"),
   branchCode: z.string().min(1, "Branch code is required"),
@@ -105,7 +105,7 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
       suburb: "",
       postalCode: "",
       hasCreditCard: false,
-      selectedPackage: "OPPORTUNITY",
+      selectedPackage: "BEGINNER",
       accountHolderName: "",
       bankName: "",
       branchCode: "",
@@ -409,11 +409,11 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="OPPORTUNITY">Opportunity - R550/month (2,500 points)</SelectItem>
-                          <SelectItem value="MOMENTUM">Momentum - R750/month (5,000 points)</SelectItem>
-                          <SelectItem value="PROSPER">Prosper - R950/month (7,500 points)</SelectItem>
-                          <SelectItem value="PRESTIGE">Prestige - R1150/month (10,000 points)</SelectItem>
-                          <SelectItem value="PINNACLE">Pinnacle - R1350/month (12,500 points)</SelectItem>
+                          <SelectItem value="BEGINNER">Beginner - R550/month</SelectItem>
+                          <SelectItem value="NOVICE">Novice - R750/month</SelectItem>
+                          <SelectItem value="ACTIVE">Active - R950/month</SelectItem>
+                          <SelectItem value="PROFESSIONAL">Professional - R1150/month</SelectItem>
+                          <SelectItem value="EXPERT">Expert - R1350/month</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

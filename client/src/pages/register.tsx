@@ -30,99 +30,100 @@ import { Label } from "@/components/ui/label";
 
 const packages = [
   {
-    id: "OPPORTUNITY",
-    display: "Opportunity",
+    id: "BEGINNER",
+    display: "Beginner",
     price: 350,
     activationPoints: 5000,
     perks: [
       "Activation Points: 5,000",
-      "Emergency Medical Services",
-      "Legal Assist: Level 1",
-      "Repatriation Cover (RSA only)",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
       "Celebrate Life",
       "24/7 Nurse On-Call"
     ]
   },
   {
-    id: "MOMENTUM",
-    display: "Momentum",
+    id: "NOVICE",
+    display: "Novice",
     price: 450,
-    activationPoints: 7500,
-    perks: [
-      "Activation Points: 7,500",
-      "Funeral Cover: R5,000",
-      "Emergency Medical Services",
-      "Legal Assist: Level 2",
-      "Repatriation Cover (RSA only)",
-      "Funeral Assist",
-      "Celebrate Life",
-      "24/7 Nurse On-Call"
-    ]
-  },
-  {
-    id: "PROSPER",
-    display: "Prosper",
-    price: 550,
     activationPoints: 10000,
     perks: [
       "Activation Points: 10,000",
-      "Funeral Cover: R7,500",
-      "Accidental Death Cover: R20,000",
-      "Family Income Benefit: R5,000 x6",
-      "Trauma & Assault Assist",
-      "Emergency Medical Services",
-      "Legal Assist: Level 2",
-      "Repatriation Cover (RSA only)",
+      "Funeral Cover: R5,000",
       "Funeral Assist",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
       "Celebrate Life",
-      "24/7 Nurse On-Call",
-      "Medical Second Opinion"
+      "24/7 Nurse On-Call"
     ]
   },
   {
-    id: "PRESTIGE",
-    display: "Prestige",
-    price: 695,
-    activationPoints: 12500,
-    perks: [
-      "Activation Points: 12,500",
-      "Funeral Cover: R10,000",
-      "Accidental Death Cover: R30,000",
-      "Family Income Benefit: R5,000 x6",
-      "Crime Victim Assist",
-      "Trauma & Assault Assist",
-      "HIV Assist",
-      "Emergency Medical Services",
-      "Legal Assist: Level 3",
-      "Repatriation Cover (RSA only & SADEC)",
-      "Funeral Assist",
-      "Celebrate Life",
-      "Virtual GP Consultations",
-      "24/7 Nurse On-Call",
-      "Medical Second Opinion"
-    ]
-  },
-  {
-    id: "PINNACLE",
-    display: "Pinnacle",
-    price: 825,
+    id: "ACTIVE",
+    display: "Active",
+    price: 550,
     activationPoints: 15000,
     perks: [
       "Activation Points: 15,000",
-      "Funeral Cover: R12,000",
-      "Accidental Death Cover: R50,000",
-      "Family Income Benefit: R10,000 x6",
-      "Crime Victim Assist",
-      "Trauma & Assault Assist",
-      "HIV Assist",
-      "Emergency Medical Services",
-      "Legal Assist: Level 3",
-      "Repatriation Cover (RSA only & SADEC)",
+      "Funeral Cover: R10,000",
+      "Accidental Death Cover: R20,000",
       "Funeral Assist",
+      "Family Income Benefit: R5,000 x6",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
       "Celebrate Life",
-      "Virtual GP Consultations",
       "24/7 Nurse On-Call",
+      "Virtual GP Assistant",
       "Medical Second Opinion"
+    ]
+  },
+  {
+    id: "PROFESSIONAL",
+    display: "Professional",
+    price: 695,
+    activationPoints: 20000,
+    perks: [
+      "Activation Points: 20,000",
+      "Funeral Cover: R15,000",
+      "Accidental Death Cover: R50,000",
+      "Funeral Assist",
+      "Family Income Benefit: R5,000 x6",
+      "EMS Assist",
+      "Legal Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call",
+      "Virtual GP Assistant",
+      "Medical Second Opinion",
+      "Crime Victim Assist",
+      "Assault & Trauma Assist",
+      "Emergency Medical Services"
+    ]
+  },
+  {
+    id: "EXPERT",
+    display: "Expert",
+    price: 825,
+    activationPoints: 25000,
+    perks: [
+      "Activation Points: 25,000",
+      "Funeral Cover: R20,000",
+      "Accidental Death Cover: R100,000",
+      "Funeral Assist",
+      "Family Income Benefit: R5,000 x6",
+      "EMS Assist",
+      "Legal Assist",
+      "Lawyer Assist",
+      "Repatriation Cover",
+      "Celebrate Life",
+      "24/7 Nurse On-Call",
+      "Virtual GP Assistant",
+      "Medical Second Opinion",
+      "Crime Victim Assist",
+      "Assault & Trauma Assist",
+      "Emergency Medical Services"
     ]
   }
 ];
@@ -193,7 +194,7 @@ export default function RegisterPage() {
     suburb: "",
     postalCode: "",
     hasCreditCard: false,
-    selectedPackage: "OPPORTUNITY" as string,
+    selectedPackage: "BEGINNER" as string,
     accountHolderName: "",
     bankName: "",
     branchCode: "",
