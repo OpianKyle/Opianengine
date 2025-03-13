@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
     address TEXT,
     city VARCHAR(255),
     postal_code VARCHAR(50),
-    selected_package ENUM('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'),
+    selected_package ENUM('BEGINNER', 'NOVICE', 'ACTIVE', 'PROFESSIONAL', 'EXPERT'),
     bank_name VARCHAR(255),
     account_type ENUM('CHEQUE', 'SAVINGS', 'CURRENT'),
     account_number VARCHAR(50),
@@ -136,17 +136,17 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE TABLE IF NOT EXISTS package_premium_amounts (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    package_type ENUM('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE') NOT NULL,
+    package_type ENUM('BEGINNER', 'NOVICE', 'ACTIVE', 'PROFESSIONAL', 'EXPERT') NOT NULL,
     premium_amount DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
 ) ENGINE=InnoDB;
 
--- Insert default package premium amounts with new values
+-- Insert default package premium amounts
 INSERT INTO package_premium_amounts (package_type, premium_amount) VALUES 
-    ('OPPORTUNITY', 350.00),
-    ('MOMENTUM', 450.00),
-    ('PROSPER', 550.00),
-    ('PRESTIGE', 695.00),
-    ('PINNACLE', 825.00)
+    ('BEGINNER', 275.00),
+    ('NOVICE', 385.00),
+    ('ACTIVE', 495.00),
+    ('PROFESSIONAL', 660.00),
+    ('EXPERT', 825.00)
 ON DUPLICATE KEY UPDATE premium_amount = VALUES(premium_amount);

@@ -140,20 +140,20 @@ export function registerRoutes(app: Express): Server {
       console.log('Processing package activation:', { selectedPackage });
 
       switch (selectedPackage) {
-        case 'OPPORTUNITY':
+        case 'BEGINNER':
           initialPoints = 5000;
           break;
-        case 'MOMENTUM':
-          initialPoints = 7500;
-          break;
-        case 'PROSPER':
+        case 'NOVICE':
           initialPoints = 10000;
           break;
-        case 'PRESTIGE':
-          initialPoints = 12500;
-          break;
-        case 'PINNACLE':
+        case 'ACTIVE':
           initialPoints = 15000;
+          break;
+        case 'PROFESSIONAL':
+          initialPoints = 20000;
+          break;
+        case 'EXPERT':
+          initialPoints = 25000;
           break;
         default:
           initialPoints = 0;
@@ -162,7 +162,7 @@ export function registerRoutes(app: Express): Server {
       await connection.beginTransaction();
 
       try {
-        // Create new user with selected package
+        // Create new user
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, 
@@ -179,11 +179,82 @@ export function registerRoutes(app: Express): Server {
             initialPoints,
             newReferralCode,
             req.body.referralCode || null,
-            selectedPackage // Ensure selected package is stored
+            selectedPackage
           ]
         );
 
         const userId = (userResult as any).insertId;
+
+        // Handle referral commissions if user was referred
+        if (req.body.referralCode) {
+          // Get referrer chain (up to 3 levels)
+          const [referrers] = await connection.execute(
+            `WITH RECURSIVE referral_chain AS (
+              -- Base case: direct referrer (level 1)
+              SELECT 
+                id, 
+                referred_by,
+                1 as level
+              FROM users 
+              WHERE referral_code = ?
+              
+              UNION ALL
+              
+              -- Recursive case: find higher level referrers
+              SELECT 
+                u.id,
+                u.referred_by,
+                rc.level + 1
+              FROM users u
+              INNER JOIN referral_chain rc ON u.referral_code = rc.referred_by
+              WHERE rc.level < 3
+            )
+            SELECT 
+              rc.*,
+              u.email,
+              u.first_name,
+              u.last_name
+            FROM referral_chain rc
+            JOIN users u ON rc.id = u.id
+            ORDER BY rc.level`,
+            [req.body.referralCode]
+          );
+
+          // Process commission for each referrer
+          for (const referrer of referrers) {
+            const commission = await calculateCommissionPoints(connection, selectedPackage, referrer.level);
+            
+            if (commission.points > 0) {
+              // Update referrer's points
+              await connection.execute(
+                'UPDATE users SET points = points + ? WHERE id = ?',
+                [commission.points, referrer.id]
+              );
+
+              // Record commission transaction
+              await connection.execute(
+                `INSERT INTO transactions (
+                  user_id, points, type, description
+                ) VALUES (?, ?, ?, ?)`,
+                [
+                  referrer.id,
+                  commission.points,
+                  'REFERRAL_COMMISSION',
+                  `Level ${referrer.level} referral commission (R${commission.randValue.toFixed(2)}) from ${req.body.email} (${selectedPackage} package)`
+                ]
+              );
+
+              console.log('Referral commission processed:', {
+                referrerId: referrer.id,
+                referrerEmail: referrer.email,
+                level: referrer.level,
+                points: commission.points,
+                randValue: commission.randValue,
+                package: selectedPackage
+              });
+            }
+          }
+        }
 
         // Record the initial points transaction
         if (initialPoints > 0) {
@@ -195,20 +266,7 @@ export function registerRoutes(app: Express): Server {
               userId,
               initialPoints,
               'WELCOME_BONUS',
-              `Welcome bonus points for ${selectedPackage} package activation`
-            ]
-          );
-
-          // Log points allocation
-          await connection.execute(
-            `INSERT INTO points_log (
-              user_id, points, action_type, description
-            ) VALUES (?, ?, ?, ?)`,
-            [
-              userId,
-              initialPoints,
-              'PACKAGE_ACTIVATION',
-              `Initial points allocation for ${selectedPackage} package`
+              `Welcome bonus points for ${selectedPackage} package`
             ]
           );
         }
@@ -226,16 +284,16 @@ export function registerRoutes(app: Express): Server {
           throw new Error("Failed to retrieve created user");
         }
 
+        const adminStatus = await checkUserAdminStatus(userId);
         const { password: _, ...safeUser } = newUser;
 
-        // Transform user data for response
         const transformedUser = {
           ...safeUser,
+          is_admin: adminStatus.isAdmin,
+          is_super_admin: adminStatus.isSuperAdmin,
           is_enabled: Boolean(safeUser.is_enabled),
           is_south_african: Boolean(safeUser.is_south_african),
-          has_credit_card: Boolean(safeUser.has_credit_card),
-          points: initialPoints,
-          selected_package: selectedPackage
+          has_credit_card: Boolean(safeUser.has_credit_card)
         };
 
         // Log the user in after successful registration
@@ -244,6 +302,7 @@ export function registerRoutes(app: Express): Server {
             console.error('Login error after registration:', err);
             return res.status(500).json({ error: "Registration successful but login failed" });
           }
+
           res.status(201).json(transformedUser);
         });
 
