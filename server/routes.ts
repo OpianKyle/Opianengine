@@ -110,7 +110,7 @@ export function registerRoutes(app: Express): Server {
 
 
 
-  // Registration endpoint with referral commission handling
+// Registration endpoint with proper null handling
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
@@ -172,16 +172,16 @@ export function registerRoutes(app: Express): Server {
             account_holder_name, branch_code
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            req.body.email,
+            req.body.email || null,
             hashedPassword,
-            req.body.firstName,
-            req.body.lastName,
+            req.body.firstName || null,
+            req.body.lastName || null,
             req.body.phoneNumber || null,
             1, // is_enabled
-            initialPoints,
-            newReferralCode,
+            initialPoints || 0,
+            newReferralCode || null,
             req.body.referralCode || null,
-            selectedPackage, // Ensure we use the validated and uppercase package name
+            selectedPackage || null, // Ensure we use the validated and uppercase package name
             req.body.signature || null,
             req.body.isSouthAfrican || false,
             req.body.hasCreditCard || false,
