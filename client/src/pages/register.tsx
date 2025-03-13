@@ -302,12 +302,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // Validate account type
-    if (!formData.accountType || !accountTypes.includes(formData.accountType)) {
-      setError("Please select a valid account type");
-      return;
-    }
-
     // Get activation points for selected package
     const selectedPackageData = packages.find(pkg => pkg.id === formData.selectedPackage);
     if (!selectedPackageData) {
@@ -346,18 +340,13 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!formData.gender) {
-      setError("Please select a gender");
+    if (!signature || signature.isEmpty()) {
+      setError("Please provide your digital signature");
       return;
     }
 
     if (!formData.acceptMandate) {
       setError("Please accept the mandate agreement");
-      return;
-    }
-
-    if (!signature || signature.isEmpty()) {
-      setError("Please provide your digital signature");
       return;
     }
 
@@ -372,14 +361,21 @@ export default function RegisterPage() {
         employerName: formData.industry,
         jobTitle: formData.occupation,
         signature: signatureData,
-        selectedPackage: formData.selectedPackage,
-        points: selectedPackageData.activationPoints,
+        points: selectedPackageData.activationPoints, // Include activation points
         referralCode: formData.referralCode,
         gender: formData.gender,
-        account_type: formData.accountType // Ensure account_type is explicitly set
+        isSouthAfrican: formData.isSouthAfrican,
+        hasCreditCard: formData.hasCreditCard,
+        selectedPackage: formData.selectedPackage.toUpperCase(),
+        account_type: formData.accountType,
       };
 
-      console.log('Submitting registration data:', { ...registrationData, password: '[REDACTED]' });
+      console.log('Submitting registration data:', {
+        ...registrationData,
+        signature: 'DATA_URL_HIDDEN',
+        password: '[REDACTED]'
+      });
+
       const user = await registerMutation.mutateAsync(registrationData);
 
       toast({

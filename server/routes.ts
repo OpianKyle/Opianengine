@@ -59,13 +59,13 @@ async function calculateCommissionPoints(connection: any, packageName: string, l
   let commissionPercentage = 0;
   switch (level) {
     case 1: // Direct referral
-      commissionPercentage = 0.15; // 15%
+      commissionPercentage = 0.075; // 15%
       break;
     case 2:
-      commissionPercentage = 0.10; // 10%
+      commissionPercentage = 0.05; // 10%
       break;
     case 3:
-      commissionPercentage = 0.05; // 5%
+      commissionPercentage = 0.025; // 5%
       break;
     default:
       commissionPercentage = 0;
@@ -163,8 +163,13 @@ export function registerRoutes(app: Express): Server {
           `INSERT INTO users (
             email, password, first_name, last_name, 
             phone_number, is_enabled, points, referral_code, 
-            referred_by, selected_package
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            referred_by, selected_package, signature,
+            is_south_african, has_credit_card, id_number,
+            date_of_birth, gender, occupation, industry,
+            address, city, postal_code,
+            bank_name, account_type, account_number,
+            account_holder_name, branch_code
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             req.body.email,
             hashedPassword,
@@ -175,7 +180,23 @@ export function registerRoutes(app: Express): Server {
             initialPoints,
             newReferralCode,
             req.body.referralCode || null,
-            selectedPackage // Ensure we use the validated and uppercase package name
+            selectedPackage, // Ensure we use the validated and uppercase package name
+            req.body.signature || null,
+            req.body.isSouthAfrican || false,
+            req.body.hasCreditCard || false,
+            req.body.idNumber || null,
+            req.body.dateOfBirth || null,
+            req.body.gender || null,
+            req.body.occupation || null,
+            req.body.industry || null,
+            req.body.address || null,
+            req.body.city || null,
+            req.body.postalCode || null,
+            req.body.bankName || null,
+            req.body.accountType || null,
+            req.body.accountNumber || null,
+            req.body.accountHolderName || null,
+            req.body.branchCode || null
           ]
         );
 
@@ -183,7 +204,8 @@ export function registerRoutes(app: Express): Server {
         console.log('User created with details:', {
           userId,
           package: selectedPackage,
-          points: initialPoints
+          points: initialPoints,
+          signature: req.body.signature ? 'signature provided' : 'no signature'
         });
 
         // Handle referral commissions if user was referred
