@@ -176,7 +176,7 @@ export function registerRoutes(app: Express): Server {
             hashedPassword,
             req.body.firstName,
             req.body.lastName,
-            req.body.phoneNumber,
+            req.body.phoneNumber || null,
             1, // is_enabled
             initialPoints,
             newReferralCode,
