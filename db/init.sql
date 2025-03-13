@@ -144,9 +144,9 @@ CREATE TABLE IF NOT EXISTS package_premium_amounts (
 
 -- Insert default package premium amounts with new values
 INSERT INTO package_premium_amounts (package_type, premium_amount) VALUES 
-    ('OPPORTUNITY', 550.00),
-    ('MOMENTUM', 750.00),
-    ('PROSPER', 950.00),
-    ('PRESTIGE', 1150.00),
-    ('PINNACLE', 1350.00)
+    ('OPPORTUNITY', 350.00),
+    ('MOMENTUM', 450.00),
+    ('PROSPER', 550.00),
+    ('PRESTIGE', 695.00),
+    ('PINNACLE', 825.00)
 ON DUPLICATE KEY UPDATE premium_amount = VALUES(premium_amount);

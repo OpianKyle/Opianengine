@@ -32,7 +32,7 @@ const packages = [
   {
     id: "OPPORTUNITY",
     display: "Opportunity",
-    price: 550,
+    price: 350,
     activationPoints: 5000,
     perks: [
       "Activation Points: 5,000",
@@ -46,7 +46,7 @@ const packages = [
   {
     id: "MOMENTUM",
     display: "Momentum",
-    price: 750,
+    price: 450,
     activationPoints: 7500,
     perks: [
       "Activation Points: 7,500",
@@ -62,7 +62,7 @@ const packages = [
   {
     id: "PROSPER",
     display: "Prosper",
-    price: 950,
+    price: 550,
     activationPoints: 10000,
     perks: [
       "Activation Points: 10,000",
@@ -70,7 +70,7 @@ const packages = [
       "Accidental Death Cover: R20,000",
       "Family Income Benefit: R5,000 X 6",
       "Trauma & Assault Assist",
-      "Emergency Medical Services",
+      "Emergency Medical Services", 
       "Legal Assist : level 2",
       "Repatriation Cover (RSA only)",
       "Funeral Assist",
@@ -81,8 +81,8 @@ const packages = [
   },
   {
     id: "PRESTIGE",
-    display: "Prestige",
-    price: 1150,
+    display: "Prestige", 
+    price: 695,
     activationPoints: 12500,
     perks: [
       "Activation Points: 12,500",
@@ -105,7 +105,7 @@ const packages = [
   {
     id: "PINNACLE",
     display: "Pinnacle",
-    price: 1350,
+    price: 825,
     activationPoints: 15000,
     perks: [
       "Activation Points: 15,000",
