@@ -134,9 +134,19 @@ export function registerRoutes(app: Express): Server {
       const hashedPassword = await crypto.hash(req.body.password);
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
+      const selectedPackage = req.body.selectedPackage?.toUpperCase();
+      console.log('Selected package before validation:', selectedPackage);
+
+      // Validate package type
+      const validPackages = ['OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'];
+      if (!validPackages.includes(selectedPackage)) {
+        return res.status(400).json({
+          error: "Invalid package selected"
+        });
+      }
+
       // Calculate initial points based on selected package
       let initialPoints = 0;
-      const selectedPackage = req.body.selectedPackage?.toUpperCase();
       console.log('Processing package activation:', { selectedPackage });
 
       switch (selectedPackage) {
@@ -179,7 +189,7 @@ export function registerRoutes(app: Express): Server {
             initialPoints,
             newReferralCode,
             req.body.referralCode || null,
-            selectedPackage
+            selectedPackage // Ensure we use the validated and uppercase package name
           ]
         );
 
