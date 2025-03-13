@@ -140,20 +140,20 @@ export function registerRoutes(app: Express): Server {
       console.log('Processing package activation:', { selectedPackage });
 
       switch (selectedPackage) {
-        case 'BEGINNER':
+        case 'OPPORTUNITY':
           initialPoints = 5000;
           break;
-        case 'NOVICE':
+        case 'MOMENTUM':
+          initialPoints = 7500;
+          break;
+        case 'PROSPER':
           initialPoints = 10000;
           break;
-        case 'ACTIVE':
+        case 'PRESTIGE':
+          initialPoints = 12500;
+          break;
+        case 'PINNACLE':
           initialPoints = 15000;
-          break;
-        case 'PROFESSIONAL':
-          initialPoints = 20000;
-          break;
-        case 'EXPERT':
-          initialPoints = 25000;
           break;
         default:
           initialPoints = 0;
