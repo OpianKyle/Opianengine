@@ -299,20 +299,17 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      // Validate all required fields
+      // Basic validation
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+
+      // Validate signature
       if (!signature || signature.isEmpty()) {
         setError("Please provide your digital signature");
         return;
       }
-
-      if (!formData.acceptMandate) {
-        setError("Please accept the mandate agreement");
-        return;
-      }
-
-      // Capture signature data
-      const signatureData = signature.toDataURL();
-      console.log('Captured signature data:', { hasSignature: !!signatureData });
 
       // Get package data
       const selectedPackageData = packages.find(pkg => pkg.id === formData.selectedPackage);
@@ -320,6 +317,13 @@ export default function RegisterPage() {
         setError("Invalid package selected");
         return;
       }
+
+      // Capture signature data
+      const signatureData = signature.toDataURL('image/png');
+      console.log('Signature data captured:', { 
+        hasSignature: true,
+        signatureLength: signatureData.length 
+      });
 
       // Prepare registration data
       const registrationData = {
@@ -333,10 +337,11 @@ export default function RegisterPage() {
         account_type: formData.accountType
       };
 
+      // Log registration attempt
       console.log('Submitting registration data:', {
         ...registrationData,
         password: '[REDACTED]',
-        hasSignature: !!signatureData,
+        signature: 'DATA_URL_CAPTURED',
         selectedPackage: registrationData.selectedPackage,
         points: registrationData.points
       });

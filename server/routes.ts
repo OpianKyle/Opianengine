@@ -119,6 +119,7 @@ export function registerRoutes(app: Express): Server {
         password: '[REDACTED]',
         selectedPackage: req.body.selectedPackage,
         hasSignature: !!req.body.signature,
+        signatureLength: req.body.signature?.length || 0
       });
 
       // Check for existing user
@@ -165,7 +166,7 @@ export function registerRoutes(app: Express): Server {
       await connection.beginTransaction();
 
       try {
-        // Create new user with points
+        // Create new user with points and signature
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, 
@@ -177,7 +178,7 @@ export function registerRoutes(app: Express): Server {
             hashedPassword,
             req.body.firstName,
             req.body.lastName,
-            req.body.mobileNumber,
+            req.body.phoneNumber,
             1, // is_enabled
             initialPoints,
             newReferralCode,
@@ -203,7 +204,8 @@ export function registerRoutes(app: Express): Server {
         console.log('User verification:', {
           userId,
           points: userCheck[0]?.points,
-          hasSignature: !!userCheck[0]?.signature
+          hasSignature: !!userCheck[0]?.signature,
+          signatureLength: userCheck[0]?.signature?.length || 0
         });
 
         // Record the initial points transaction if points > 0
@@ -229,7 +231,76 @@ export function registerRoutes(app: Express): Server {
           });
         }
 
-        // Handle referral commissions if user was referred
+        if (req.body.referralCode) {
+          // Get referrer chain (up to 3 levels)
+          const [referrers] = await connection.execute(
+            `WITH RECURSIVE referral_chain AS (
+              -- Base case: direct referrer (level 1)
+              SELECT 
+                id, 
+                referred_by,
+                1 as level
+              FROM users 
+              WHERE referral_code = ?
+              
+              UNION ALL
+              
+              -- Recursive case: find higher level referrers
+              SELECT 
+                u.id,
+                u.referred_by,
+                rc.level + 1
+              FROM users u
+              INNER JOIN referral_chain rc ON u.referral_code = rc.referred_by
+              WHERE rc.level < 3
+            )
+            SELECT 
+              rc.*,
+              u.email,
+              u.first_name,
+              u.last_name
+            FROM referral_chain rc
+            JOIN users u ON rc.id = u.id
+            ORDER BY rc.level`,
+            [req.body.referralCode]
+          );
+
+          // Process commission for each referrer
+          for (const referrer of referrers) {
+            const commission = await calculateCommissionPoints(connection, selectedPackage, referrer.level);
+            
+            if (commission.points > 0) {
+              // Update referrer's points
+              await connection.execute(
+                'UPDATE users SET points = points + ? WHERE id = ?',
+                [commission.points, referrer.id]
+              );
+
+              // Record commission transaction
+              await connection.execute(
+                `INSERT INTO transactions (
+                  user_id, points, type, description, status
+                ) VALUES (?, ?, ?, ?, ?)`,
+                [
+                  referrer.id,
+                  commission.points,
+                  'REFERRAL_COMMISSION',
+                  `Level ${referrer.level} referral commission (R${commission.randValue.toFixed(2)}) from ${req.body.email} (${selectedPackage} package)`,
+                  'PROCESSED'
+                ]
+              );
+
+              console.log('Referral commission processed:', {
+                referrerId: referrer.id,
+                referrerEmail: referrer.email,
+                level: referrer.level,
+                points: commission.points,
+                randValue: commission.randValue,
+                package: selectedPackage
+              });
+            }
+          }
+        }
         if (req.body.referralCode) {
           // Get referrer chain (up to 3 levels)
           const [referrers] = await connection.execute(
