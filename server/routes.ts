@@ -135,10 +135,11 @@ export function registerRoutes(app: Express): Server {
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       // Calculate initial points based on selected package
-      let initialPoints = 0;
       const selectedPackage = req.body.selectedPackage?.toUpperCase();
       console.log('Processing package activation:', { selectedPackage });
 
+      // Update package points mapping
+      let initialPoints = 0;
       switch (selectedPackage) {
         case 'OPPORTUNITY':
           initialPoints = 2500;
@@ -167,7 +168,7 @@ export function registerRoutes(app: Express): Server {
       await connection.beginTransaction();
 
       try {
-        // Create new user
+        // Create new user with points
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, 
@@ -181,7 +182,7 @@ export function registerRoutes(app: Express): Server {
             req.body.lastName,
             req.body.mobileNumber,
             1, // is_enabled
-            initialPoints,
+            initialPoints, // Set initial points based on package
             newReferralCode,
             req.body.referralCode || null,
             selectedPackage
@@ -189,7 +190,32 @@ export function registerRoutes(app: Express): Server {
         );
 
         const userId = (userResult as any).insertId;
-        console.log('User created successfully:', { id: userId, package: selectedPackage, points: initialPoints });
+        console.log('User created successfully:', { 
+          id: userId, 
+          package: selectedPackage, 
+          points: initialPoints 
+        });
+
+        // Record the initial points transaction
+        if (initialPoints > 0) {
+          await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description
+            ) VALUES (?, ?, ?, ?)`,
+            [
+              userId,
+              initialPoints,
+              'WELCOME_BONUS',
+              `Welcome bonus points for ${selectedPackage} package`
+            ]
+          );
+          
+          console.log('Points transaction recorded:', {
+            userId,
+            points: initialPoints,
+            type: 'WELCOME_BONUS'
+          });
+        }
 
         // Handle referral commissions if user was referred
         if (req.body.referralCode) {
@@ -275,6 +301,12 @@ export function registerRoutes(app: Express): Server {
               `Welcome bonus points for ${selectedPackage} package`
             ]
           );
+          
+          console.log('Points transaction recorded:', {
+            userId,
+            points: initialPoints,
+            type: 'WELCOME_BONUS'
+          });
         }
 
         await connection.commit();
