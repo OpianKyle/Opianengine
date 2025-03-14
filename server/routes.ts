@@ -190,15 +190,16 @@ export function registerRoutes(app: Express): Server {
         );
 
         const userId = (userResult as any).insertId;
-        console.log('User created successfully:', { 
-          id: userId, 
-          package: selectedPackage, 
-          points: initialPoints 
+        console.log('User creation result:', {
+          userResult,
+          userId,
+          package: selectedPackage,
+          initialPoints
         });
 
         // Record the initial points transaction
         if (initialPoints > 0) {
-          await connection.execute(
+          const [transactionResult] = await connection.execute(
             `INSERT INTO transactions (
               user_id, points, type, description
             ) VALUES (?, ?, ?, ?)`,
@@ -211,10 +212,18 @@ export function registerRoutes(app: Express): Server {
           );
           
           console.log('Points transaction recorded:', {
+            transactionResult,
             userId,
             points: initialPoints,
             type: 'WELCOME_BONUS'
           });
+
+          // Verify points were set correctly
+          const [pointsCheck] = await connection.execute(
+            'SELECT points FROM users WHERE id = ?',
+            [userId]
+          );
+          console.log('Points verification:', pointsCheck);
         }
 
         // Handle referral commissions if user was referred
@@ -286,27 +295,6 @@ export function registerRoutes(app: Express): Server {
               });
             }
           }
-        }
-
-        // Record the initial points transaction
-        if (initialPoints > 0) {
-          await connection.execute(
-            `INSERT INTO transactions (
-              user_id, points, type, description
-            ) VALUES (?, ?, ?, ?)`,
-            [
-              userId,
-              initialPoints,
-              'WELCOME_BONUS',
-              `Welcome bonus points for ${selectedPackage} package`
-            ]
-          );
-          
-          console.log('Points transaction recorded:', {
-            userId,
-            points: initialPoints,
-            type: 'WELCOME_BONUS'
-          });
         }
 
         await connection.commit();
