@@ -53,8 +53,8 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed lg:relative inset-y-0 left-0 z-50",
-          "w-64 bg-background border-r",
+          "fixed lg:sticky top-0 left-0 z-50 h-full w-64 shrink-0",
+          "bg-background border-r",
           "transform transition-transform duration-300 ease-in-out lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
@@ -119,8 +119,8 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto p-4 lg:p-8">
+      <main className="flex-1 overflow-y-auto min-h-screen w-full">
+        <div className="container mx-auto p-4 lg:p-8 h-full">
           {children}
         </div>
       </main>
