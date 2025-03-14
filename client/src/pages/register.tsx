@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { z } from "zod";
 
 const packages = [
   {
@@ -194,7 +195,7 @@ export default function RegisterPage() {
     suburb: "",
     postalCode: "",
     hasCreditCard: false,
-    selectedPackage: "BEGINNER" as string,
+    selectedPackage: "OPPORTUNITY" as string,
     accountHolderName: "",
     bankName: "",
     branchCode: "",
@@ -294,77 +295,76 @@ export default function RegisterPage() {
     }));
   };
 
+  const registerSchema = z.object({
+    email: z.string().email({ message: "Invalid email address" }),
+    password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+    confirmPassword: z.string().min(8, { message: "Password must be at least 8 characters" }),
+    firstName: z.string().min(1, { message: "First name is required" }),
+    lastName: z.string().min(1, { message: "Last name is required" }),
+    isSouthAfrican: z.boolean(),
+    idNumber: z.string().min(1, { message: "ID Number/Passport is required" }),
+    dateOfBirth: z.string().min(1, { message: "Date of birth is required" }),
+    gender: z.enum(["male", "female", "other"], { required_error: "Please select your gender" }),
+    mobileNumber: z.string().min(10, { message: "Mobile number must be at least 10 digits" }),
+    occupation: z.string().min(1, { message: "Occupation is required" }),
+    industry: z.string().min(1, { message: "Industry is required" }),
+    addressLine1: z.string().min(1, { message: "Address is required" }),
+    suburb: z.string().min(1, { message: "Suburb is required" }),
+    postalCode: z.string().min(1, { message: "Postal code is required" }),
+    hasCreditCard: z.boolean(),
+    selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"], {
+      required_error: "Please select a package"
+    }),
+    accountHolderName: z.string().min(1, { message: "Account holder name is required" }),
+    bankName: z.string().min(1, { message: "Bank name is required" }),
+    branchCode: z.string().min(1, { message: "Branch code is required" }),
+    accountNumber: z.string().min(1, { message: "Account number is required" }),
+    accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"], { required_error: "Please select an account type" }),
+    acceptMandate: z.boolean(),
+    referralCode: z.string().optional()
+  });
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    // Validate account type
-    if (!formData.accountType || !accountTypes.includes(formData.accountType)) {
-      setError("Please select a valid account type");
-      return;
-    }
-
-    // Get activation points for selected package
-    const selectedPackageData = packages.find(pkg => pkg.id === formData.selectedPackage);
-    if (!selectedPackageData) {
-      setError("Invalid package selected");
-      return;
-    }
-
-    const requiredFields = {
-      email: "Email",
-      password: "Password",
-      firstName: "First Name",
-      lastName: "Last Name",
-      idNumber: "ID Number",
-      dateOfBirth: "Date of Birth",
-      mobileNumber: "Mobile Number",
-      selectedPackage: "Package",
-      occupation: "Occupation",
-      industry: "Industry",
-      addressLine1: "Address",
-      suburb: "Suburb",
-      postalCode: "Postal Code",
-      accountHolderName: "Account Holder Name",
-      bankName: "Bank Name",
-      branchCode: "Branch Code",
-      accountNumber: "Account Number",
-      accountType: "Account Type",
-      gender: "Gender"
-    };
-
-    const missingFields = Object.entries(requiredFields)
-      .filter(([key]) => !formData[key as keyof typeof formData])
-      .map(([, label]) => label);
-
-    if (missingFields.length > 0) {
-      setError(`Please fill in the following required fields: ${missingFields.join(", ")}`);
-      return;
-    }
-
-    if (!formData.gender) {
-      setError("Please select a gender");
-      return;
-    }
-
-    if (!formData.acceptMandate) {
-      setError("Please accept the mandate agreement");
-      return;
-    }
-
-    if (!signature || signature.isEmpty()) {
-      setError("Please provide your digital signature");
-      return;
-    }
-
-    const signatureData = signature.toDataURL();
-
     try {
+      const validation = registerSchema.safeParse(formData);
+      if (!validation.success) {
+        setError(validation.error.errors.map(err => err.message).join(', '));
+        return;
+      }
+      
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+
+
+      // Get activation points for selected package
+      const selectedPackageData = packages.find(pkg => pkg.id === formData.selectedPackage);
+      if (!selectedPackageData) {
+        setError("Invalid package selected");
+        return;
+      }
+
+      if (!formData.gender) {
+        setError("Please select a gender");
+        return;
+      }
+
+      if (!formData.acceptMandate) {
+        setError("Please accept the mandate agreement");
+        return;
+      }
+
+      if (!signature || signature.isEmpty()) {
+        setError("Please provide your digital signature");
+        return;
+      }
+
+      const signatureData = signature.toDataURL();
+
       const registrationData = {
         ...formData,
         phoneNumber: formData.mobileNumber,

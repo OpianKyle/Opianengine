@@ -13,11 +13,11 @@ const ACTIVITY_TYPES = [
 ] as const;
 
 const PACKAGE_TYPES = [
-  "BEGINNER",
-  "NOVICE",
-  "ACTIVE",
-  "PROFESSIONAL",
-  "EXPERT"
+  "OPPORTUNITY",
+  "MOMENTUM",
+  "PROSPER",
+  "PRESTIGE",
+  "PINNACLE"
 ] as const;
 
 const ACCOUNT_TYPES = [
