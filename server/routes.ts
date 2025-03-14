@@ -197,6 +197,25 @@ export function registerRoutes(app: Express): Server {
           points: initialPoints
         });
 
+        // Save signature if provided
+        if (req.body.signature) {
+          console.log('Saving signature for user:', userId);
+          await connection.execute(
+            'UPDATE users SET signature = ? WHERE id = ?',
+            [req.body.signature, userId]
+          );
+          
+          // Verify signature was saved
+          const [signatureCheck] = await connection.execute(
+            'SELECT signature FROM users WHERE id = ?',
+            [userId]
+          );
+          console.log('Signature verification:', {
+            userId,
+            hasSignature: !!signatureCheck[0]?.signature
+          });
+        }
+
         // Verify points were set correctly
         const [pointsCheck] = await connection.execute(
           'SELECT points FROM users WHERE id = ?',

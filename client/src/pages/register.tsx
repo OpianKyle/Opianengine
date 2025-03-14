@@ -334,12 +334,11 @@ export default function RegisterPage() {
         setError(validation.error.errors.map(err => err.message).join(', '));
         return;
       }
-      
+
       if (formData.password !== formData.confirmPassword) {
         setError("Passwords do not match");
         return;
       }
-
 
       // Get activation points for selected package
       const selectedPackageData = packages.find(pkg => pkg.id === formData.selectedPackage);
@@ -364,6 +363,7 @@ export default function RegisterPage() {
       }
 
       const signatureData = signature.toDataURL();
+      console.log('Captured signature data:', { hasSignature: !!signatureData });
 
       const registrationData = {
         ...formData,
@@ -377,10 +377,15 @@ export default function RegisterPage() {
         points: selectedPackageData.activationPoints,
         referralCode: formData.referralCode,
         gender: formData.gender,
-        account_type: formData.accountType // Ensure account_type is explicitly set
+        account_type: formData.accountType
       };
 
-      console.log('Submitting registration data:', { ...registrationData, password: '[REDACTED]' });
+      console.log('Submitting registration data:', { 
+        ...registrationData, 
+        password: '[REDACTED]',
+        hasSignature: !!registrationData.signature
+      });
+
       const user = await registerMutation.mutateAsync(registrationData);
 
       toast({
@@ -388,7 +393,7 @@ export default function RegisterPage() {
         description: "Registration successful",
       });
 
-      navigate(user.isAdmin ? '/admin' : '/dashboard');
+      navigate(user.isAdmin ? '/admin/dashboard' : '/dashboard');
     } catch (err: any) {
       const errorMessage = err?.response?.data?.error || "Registration failed. Please try again.";
       setError(errorMessage);
