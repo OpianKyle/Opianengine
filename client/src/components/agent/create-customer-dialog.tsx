@@ -35,8 +35,6 @@ const packages = [
   { id: 'PINNACLE', name: 'Pinnacle', price: 825 }
 ];
 
-const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
-
 const customerSchema = z.object({
   email: z.string().email("Invalid email address"),
   firstName: z.string().min(1, "First name is required"),
@@ -57,10 +55,7 @@ const customerSchema = z.object({
   bankName: z.string().min(1, "Bank name is required"),
   branchCode: z.string().min(1, "Branch code is required"),
   accountNumber: z.string().min(1, "Account number is required"),
-  accountType: z.enum(accountTypes, {
-    required_error: "Please select an account type",
-    invalid_type_error: "Please select a valid account type"
-  }),
+  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"], { required_error: "Please select an account type" }),
   mandateAgreement: z.literal(true, {
     errorMap: () => ({ message: "You must agree to the mandate terms" }),
   }),
@@ -72,6 +67,8 @@ interface CreateCustomerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"];
 
 const industries = [
   "Agriculture",
@@ -113,7 +110,7 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
       bankName: "",
       branchCode: "",
       accountNumber: "",
-      accountType: "SAVINGS" as const,
+      accountType: "SAVINGS",
       mandateAgreement: false,
     }
   });
