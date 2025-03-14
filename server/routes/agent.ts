@@ -107,107 +107,130 @@ router.post('/customers/create', async (req: any, res) => {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  console.log('Creating customer for agent:', req.user.id);
-  console.log('Customer data:', req.body);
-
-  const connection = await createConnection();
   try {
-    const { 
-      email, firstName, lastName, mobileNumber, dateOfBirth,
-      gender, idNumber, occupation, industry, addressLine1,
-      suburb, postalCode, selectedPackage, bankName,
-      accountType, accountNumber, accountHolderName,
-      branchCode, isSouthAfrican, hasCreditCard
-    } = req.body;
+    console.log('Creating customer for agent:', req.user.id);
+    console.log('Customer data:', req.body);
 
-    await connection.beginTransaction();
-
+    const connection = await createConnection();
     try {
-      // Check for existing user
-      const [existingUsers] = await connection.execute(
-        'SELECT id FROM users WHERE email = ?',
-        [email]
-      );
+      const { 
+        email, firstName, lastName, mobileNumber, dateOfBirth,
+        gender, idNumber, occupation, industry, addressLine1,
+        suburb, postalCode, selectedPackage, bankName,
+        accountType, accountNumber, accountHolderName,
+        branchCode, isSouthAfrican, hasCreditCard
+      } = req.body;
 
-      if (Array.isArray(existingUsers) && existingUsers.length > 0) {
-        return res.status(400).json({ error: "Email already exists" });
+      await connection.beginTransaction();
+
+      try {
+        // Check for existing user
+        const [existingUsers] = await connection.execute(
+          'SELECT id FROM users WHERE email = ?',
+          [email]
+        );
+
+        if (Array.isArray(existingUsers) && existingUsers.length > 0) {
+          return res.status(400).json({ error: "Email already exists" });
+        }
+
+        // Generate a unique referral code
+        const referralCode = await generateUniqueReferralCode(connection);
+
+        // Generate a temporary password
+        const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
+
+        // Calculate initial points based on selected package
+        let initialPoints = 0;
+        switch (selectedPackage?.toUpperCase()) {
+          case 'OPPORTUNITY': initialPoints = 2500; break;
+          case 'MOMENTUM': initialPoints = 5000; break;
+          case 'PROSPER': initialPoints = 7500; break;
+          case 'PRESTIGE': initialPoints = 10000; break;
+          case 'PINNACLE': initialPoints = 12500; break;
+          default: initialPoints = 0;
+        }
+
+        console.log('Points calculation:', {
+          package: selectedPackage,
+          initialPoints,
+          agent: req.user.id
+        });
+
+        // Create user with all fields and agent_id
+        const [userResult] = await connection.execute(
+          `INSERT INTO users (
+            email, password, first_name, last_name, phone_number,
+            date_of_birth, gender, id_number, occupation,
+            industry, address, city, postal_code,
+            selected_package, bank_name, account_type,
+            account_number, account_holder_name, branch_code,
+            is_south_african, has_credit_card, is_enabled, points,
+            agent_id, is_agent, referral_code, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0, ?, NOW())`,
+          [
+            email, defaultPassword, firstName, lastName, mobileNumber,
+            dateOfBirth, gender, idNumber, occupation,
+            industry, addressLine1, suburb, postalCode,
+            selectedPackage, bankName, accountType,
+            accountNumber, accountHolderName, branchCode,
+            isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0, initialPoints,
+            req.user.id, referralCode
+          ]
+        );
+
+        // Record the points transaction for the initial points
+        if (initialPoints > 0) {
+          await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description, status
+            ) VALUES (?, ?, ?, ?, ?)`,
+            [
+              (userResult as any).insertId,
+              initialPoints,
+              'WELCOME_BONUS',
+              `Initial points allocation for ${selectedPackage} package`,
+              'PROCESSED'
+            ]
+          );
+        }
+
+        await connection.commit();
+
+        console.log('Customer created successfully:', {
+          id: (userResult as any).insertId,
+          email,
+          points: initialPoints,
+          package: selectedPackage
+        });
+
+        res.status(201).json({
+          id: (userResult as any).insertId,
+          email,
+          firstName,
+          lastName,
+          points: initialPoints,
+          selectedPackage,
+          temporaryPassword: '123456',
+          agentId: req.user.id,
+          isEnabled: true,
+          referralCode
+        });
+
+      } catch (error) {
+        await connection.rollback();
+        console.error('Transaction failed:', error);
+        throw error;
       }
-
-      // Generate a unique referral code
-      const referralCode = await generateUniqueReferralCode(connection);
-
-      // Generate a temporary password
-      const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
-
-      // Calculate initial points based on selected package
-      let initialPoints = 0;
-      switch (selectedPackage?.toUpperCase()) {
-        case 'BEGINNER': initialPoints = 5000; break;
-        case 'NOVICE': initialPoints = 10000; break;
-        case 'ACTIVE': initialPoints = 15000; break;
-        case 'PROFESSIONAL': initialPoints = 20000; break;
-        case 'EXPERT': initialPoints = 25000; break;
-      }
-
-      console.log('Inserting customer with data:', {
-        email,
-        firstName,
-        lastName,
-        phoneNumber: mobileNumber,
-        selectedPackage,
-        initialPoints,
-        accountType,
-        referralCode
-      });
-
-      // Create user with all fields and agent_id
-      const [userResult] = await connection.execute(
-        `INSERT INTO users (
-          email, password, first_name, last_name, phone_number,
-          date_of_birth, gender, id_number, occupation,
-          industry, address, city, postal_code,
-          selected_package, bank_name, account_type,
-          account_number, account_holder_name, branch_code,
-          is_south_african, has_credit_card, is_enabled, points,
-          agent_id, is_agent, referral_code, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0, ?, NOW())`,
-        [
-          email, defaultPassword, firstName, lastName, mobileNumber,
-          dateOfBirth, gender, idNumber, occupation,
-          industry, addressLine1, suburb, postalCode,
-          selectedPackage, bankName, accountType,
-          accountNumber, accountHolderName, branchCode,
-          isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0, initialPoints,
-          req.user.id, referralCode
-        ]
-      );
-
-      await connection.commit();
-
-      console.log('Customer created successfully:', userResult);
-
-      res.status(201).json({
-        id: userResult.insertId,
-        email,
-        firstName,
-        lastName,
-        points: initialPoints,
-        selectedPackage,
-        temporaryPassword: '123456',
-        agentId: req.user.id,
-        isEnabled: true,
-        referralCode
-      });
-    } catch (error) {
-      await connection.rollback();
-      console.error('Transaction failed:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('Error creating customer:', error);
+      res.status(500).json({ error: 'Failed to create customer', details: error.message });
+    } finally {
+      await connection.end();
     }
   } catch (error: any) {
-    console.error('Error creating customer:', error);
-    res.status(500).json({ error: 'Failed to create customer', details: error.message });
-  } finally {
-    await connection.end();
+    console.error('Error in customer creation:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
