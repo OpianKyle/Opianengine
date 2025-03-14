@@ -25,7 +25,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { z } from "zod";
 
@@ -33,7 +32,7 @@ const packages = [
   {
     id: "OPPORTUNITY",
     display: "OPPORTUNITY",
-    price: 350,
+    price: 275,
     activationPoints: 2500,
     perks: [
       "Activation Points: 2,500",
@@ -47,7 +46,7 @@ const packages = [
   {
     id: "MOMENTUM",
     display: "MOMENTUM",
-    price: 450,
+    price: 385,
     activationPoints: 5000,
     perks: [
       "Activation Points: 5,000",
@@ -63,7 +62,7 @@ const packages = [
   {
     id: "PROSPER",
     display: "PROSPER",
-    price: 550,
+    price: 495,
     activationPoints: 7500,
     perks: [
       "Activation Points: 7,500",
@@ -83,7 +82,7 @@ const packages = [
   {
     id: "PRESTIGE",
     display: "PRESTIGE",
-    price: 695,
+    price: 660,
     activationPoints: 10000,
     perks: [
       "Activation Points: 10,000",
@@ -200,7 +199,7 @@ export default function RegisterPage() {
     bankName: "",
     branchCode: "",
     accountNumber: "",
-    accountType: "SAVINGS", // Set default value to SAVINGS
+    accountType: "SAVINGS",
     acceptMandate: false,
     referralCode: ""
   });
@@ -295,60 +294,14 @@ export default function RegisterPage() {
     }));
   };
 
-  const registerSchema = z.object({
-    email: z.string().email({ message: "Invalid email address" }),
-    password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-    confirmPassword: z.string().min(8, { message: "Password must be at least 8 characters" }),
-    firstName: z.string().min(1, { message: "First name is required" }),
-    lastName: z.string().min(1, { message: "Last name is required" }),
-    isSouthAfrican: z.boolean(),
-    idNumber: z.string().min(1, { message: "ID Number/Passport is required" }),
-    dateOfBirth: z.string().min(1, { message: "Date of birth is required" }),
-    gender: z.enum(["male", "female", "other"], { required_error: "Please select your gender" }),
-    mobileNumber: z.string().min(10, { message: "Mobile number must be at least 10 digits" }),
-    occupation: z.string().min(1, { message: "Occupation is required" }),
-    industry: z.string().min(1, { message: "Industry is required" }),
-    addressLine1: z.string().min(1, { message: "Address is required" }),
-    suburb: z.string().min(1, { message: "Suburb is required" }),
-    postalCode: z.string().min(1, { message: "Postal code is required" }),
-    hasCreditCard: z.boolean(),
-    selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"], {
-      required_error: "Please select a package"
-    }),
-    accountHolderName: z.string().min(1, { message: "Account holder name is required" }),
-    bankName: z.string().min(1, { message: "Bank name is required" }),
-    branchCode: z.string().min(1, { message: "Branch code is required" }),
-    accountNumber: z.string().min(1, { message: "Account number is required" }),
-    accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"], { required_error: "Please select an account type" }),
-    acceptMandate: z.boolean(),
-    referralCode: z.string().optional()
-  });
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     try {
-      const validation = registerSchema.safeParse(formData);
-      if (!validation.success) {
-        setError(validation.error.errors.map(err => err.message).join(', '));
-        return;
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        setError("Passwords do not match");
-        return;
-      }
-
-      // Get activation points for selected package
-      const selectedPackageData = packages.find(pkg => pkg.id === formData.selectedPackage);
-      if (!selectedPackageData) {
-        setError("Invalid package selected");
-        return;
-      }
-
-      if (!formData.gender) {
-        setError("Please select a gender");
+      // Validate all required fields
+      if (!signature || signature.isEmpty()) {
+        setError("Please provide your digital signature");
         return;
       }
 
@@ -357,33 +310,35 @@ export default function RegisterPage() {
         return;
       }
 
-      if (!signature || signature.isEmpty()) {
-        setError("Please provide your digital signature");
-        return;
-      }
-
+      // Capture signature data
       const signatureData = signature.toDataURL();
       console.log('Captured signature data:', { hasSignature: !!signatureData });
 
+      // Get package data
+      const selectedPackageData = packages.find(pkg => pkg.id === formData.selectedPackage);
+      if (!selectedPackageData) {
+        setError("Invalid package selected");
+        return;
+      }
+
+      // Prepare registration data
       const registrationData = {
         ...formData,
         phoneNumber: formData.mobileNumber,
         address: formData.addressLine1,
         city: formData.suburb,
-        employerName: formData.industry,
-        jobTitle: formData.occupation,
         signature: signatureData,
         selectedPackage: formData.selectedPackage,
         points: selectedPackageData.activationPoints,
-        referralCode: formData.referralCode,
-        gender: formData.gender,
         account_type: formData.accountType
       };
 
-      console.log('Submitting registration data:', { 
-        ...registrationData, 
+      console.log('Submitting registration data:', {
+        ...registrationData,
         password: '[REDACTED]',
-        hasSignature: !!registrationData.signature
+        hasSignature: !!signatureData,
+        selectedPackage: registrationData.selectedPackage,
+        points: registrationData.points
       });
 
       const user = await registerMutation.mutateAsync(registrationData);
@@ -393,7 +348,7 @@ export default function RegisterPage() {
         description: "Registration successful",
       });
 
-      navigate(user.isAdmin ? '/admin/dashboard' : '/dashboard');
+      navigate(user.is_admin ? '/admin/dashboard' : '/dashboard');
     } catch (err: any) {
       const errorMessage = err?.response?.data?.error || "Registration failed. Please try again.";
       setError(errorMessage);

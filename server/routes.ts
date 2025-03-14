@@ -117,7 +117,8 @@ export function registerRoutes(app: Express): Server {
       console.log('Registration attempt with data:', {
         ...req.body,
         password: '[REDACTED]',
-        selectedPackage: req.body.selectedPackage
+        selectedPackage: req.body.selectedPackage,
+        hasSignature: !!req.body.signature,
       });
 
       // Check for existing user
@@ -161,11 +162,6 @@ export function registerRoutes(app: Express): Server {
           initialPoints = 0;
       }
 
-      console.log('Package points calculation:', {
-        package: selectedPackage,
-        points: initialPoints
-      });
-
       await connection.beginTransaction();
 
       try {
@@ -174,8 +170,8 @@ export function registerRoutes(app: Express): Server {
           `INSERT INTO users (
             email, password, first_name, last_name, 
             phone_number, is_enabled, points, referral_code, 
-            referred_by, selected_package
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            referred_by, selected_package, signature
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             req.body.email,
             hashedPassword,
@@ -186,7 +182,8 @@ export function registerRoutes(app: Express): Server {
             initialPoints,
             newReferralCode,
             req.body.referralCode || null,
-            selectedPackage
+            selectedPackage,
+            req.body.signature || null
           ]
         );
 
@@ -194,34 +191,20 @@ export function registerRoutes(app: Express): Server {
         console.log('User creation result:', {
           userId,
           package: selectedPackage,
-          points: initialPoints
+          points: initialPoints,
+          hasSignature: !!req.body.signature
         });
 
-        // Save signature if provided
-        if (req.body.signature) {
-          console.log('Saving signature for user:', userId);
-          await connection.execute(
-            'UPDATE users SET signature = ? WHERE id = ?',
-            [req.body.signature, userId]
-          );
-          
-          // Verify signature was saved
-          const [signatureCheck] = await connection.execute(
-            'SELECT signature FROM users WHERE id = ?',
-            [userId]
-          );
-          console.log('Signature verification:', {
-            userId,
-            hasSignature: !!signatureCheck[0]?.signature
-          });
-        }
-
-        // Verify points were set correctly
-        const [pointsCheck] = await connection.execute(
-          'SELECT points FROM users WHERE id = ?',
+        // Verify signature and points were set correctly
+        const [userCheck] = await connection.execute(
+          'SELECT points, signature FROM users WHERE id = ?',
           [userId]
         );
-        console.log('Points verification after user creation:', pointsCheck);
+        console.log('User verification:', {
+          userId,
+          points: userCheck[0]?.points,
+          hasSignature: !!userCheck[0]?.signature
+        });
 
         // Record the initial points transaction if points > 0
         if (initialPoints > 0) {
@@ -244,19 +227,6 @@ export function registerRoutes(app: Express): Server {
             points: initialPoints,
             type: 'WELCOME_BONUS'
           });
-
-          // Update user points to ensure they're set
-          await connection.execute(
-            'UPDATE users SET points = ? WHERE id = ?',
-            [initialPoints, userId]
-          );
-
-          // Final points verification
-          const [finalPointsCheck] = await connection.execute(
-            'SELECT points FROM users WHERE id = ?',
-            [userId]
-          );
-          console.log('Final points verification:', finalPointsCheck);
         }
 
         // Handle referral commissions if user was referred
@@ -338,7 +308,9 @@ export function registerRoutes(app: Express): Server {
           id: userId,
           email: req.body.email,
           firstName: req.body.firstName,
-          lastName: req.body.lastName
+          lastName: req.body.lastName,
+          points: initialPoints,
+          selectedPackage
         }, (err) => {
           if (err) {
             console.error('Login error after registration:', err);
