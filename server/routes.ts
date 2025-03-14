@@ -116,7 +116,8 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('Registration attempt with data:', {
         ...req.body,
-        password: '[REDACTED]'
+        password: '[REDACTED]',
+        selectedPackage: req.body.selectedPackage
       });
 
       // Check for existing user
@@ -182,7 +183,7 @@ export function registerRoutes(app: Express): Server {
             req.body.lastName,
             req.body.mobileNumber,
             1, // is_enabled
-            initialPoints, // Set initial points based on package
+            initialPoints,
             newReferralCode,
             req.body.referralCode || null,
             selectedPackage
@@ -191,39 +192,52 @@ export function registerRoutes(app: Express): Server {
 
         const userId = (userResult as any).insertId;
         console.log('User creation result:', {
-          userResult,
           userId,
           package: selectedPackage,
-          initialPoints
+          points: initialPoints
         });
 
-        // Record the initial points transaction
+        // Verify points were set correctly
+        const [pointsCheck] = await connection.execute(
+          'SELECT points FROM users WHERE id = ?',
+          [userId]
+        );
+        console.log('Points verification after user creation:', pointsCheck);
+
+        // Record the initial points transaction if points > 0
         if (initialPoints > 0) {
           const [transactionResult] = await connection.execute(
             `INSERT INTO transactions (
-              user_id, points, type, description
-            ) VALUES (?, ?, ?, ?)`,
+              user_id, points, type, description, status
+            ) VALUES (?, ?, ?, ?, ?)`,
             [
               userId,
               initialPoints,
               'WELCOME_BONUS',
-              `Welcome bonus points for ${selectedPackage} package`
+              `Welcome bonus points for ${selectedPackage} package`,
+              'PROCESSED'
             ]
           );
           
           console.log('Points transaction recorded:', {
-            transactionResult,
+            transactionId: (transactionResult as any).insertId,
             userId,
             points: initialPoints,
             type: 'WELCOME_BONUS'
           });
 
-          // Verify points were set correctly
-          const [pointsCheck] = await connection.execute(
+          // Update user points to ensure they're set
+          await connection.execute(
+            'UPDATE users SET points = ? WHERE id = ?',
+            [initialPoints, userId]
+          );
+
+          // Final points verification
+          const [finalPointsCheck] = await connection.execute(
             'SELECT points FROM users WHERE id = ?',
             [userId]
           );
-          console.log('Points verification:', pointsCheck);
+          console.log('Final points verification:', finalPointsCheck);
         }
 
         // Handle referral commissions if user was referred
@@ -275,13 +289,14 @@ export function registerRoutes(app: Express): Server {
               // Record commission transaction
               await connection.execute(
                 `INSERT INTO transactions (
-                  user_id, points, type, description
-                ) VALUES (?, ?, ?, ?)`,
+                  user_id, points, type, description, status
+                ) VALUES (?, ?, ?, ?, ?)`,
                 [
                   referrer.id,
                   commission.points,
                   'REFERRAL_COMMISSION',
-                  `Level ${referrer.level} referral commission (R${commission.randValue.toFixed(2)}) from ${req.body.email} (${selectedPackage} package)`
+                  `Level ${referrer.level} referral commission (R${commission.randValue.toFixed(2)}) from ${req.body.email} (${selectedPackage} package)`,
+                  'PROCESSED'
                 ]
               );
 
@@ -299,37 +314,26 @@ export function registerRoutes(app: Express): Server {
 
         await connection.commit();
 
-        // Fetch complete user data
-        const [newUserCheck] = await connection.execute(
-          'SELECT * FROM users WHERE id = ?',
-          [userId]
-        );
-
-        const newUser = newUserCheck[0];
-        if (!newUser) {
-          throw new Error("Failed to retrieve created user");
-        }
-
-        const adminStatus = await checkUserAdminStatus(userId);
-        const { password: _, ...safeUser } = newUser;
-
-        const transformedUser = {
-          ...safeUser,
-          is_admin: adminStatus.isAdmin,
-          is_super_admin: adminStatus.isSuperAdmin,
-          is_enabled: Boolean(safeUser.is_enabled),
-          is_south_african: Boolean(safeUser.is_south_african),
-          has_credit_card: Boolean(safeUser.has_credit_card)
-        };
-
-        // Log the user in after successful registration
-        req.login(transformedUser, (err) => {
+        // Login the user after successful registration
+        req.login({
+          id: userId,
+          email: req.body.email,
+          firstName: req.body.firstName,
+          lastName: req.body.lastName
+        }, (err) => {
           if (err) {
             console.error('Login error after registration:', err);
             return res.status(500).json({ error: "Registration successful but login failed" });
           }
 
-          res.status(201).json(transformedUser);
+          res.status(201).json({
+            id: userId,
+            email: req.body.email,
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            points: initialPoints,
+            selectedPackage
+          });
         });
 
       } catch (error) {
