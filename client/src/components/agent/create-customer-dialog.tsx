@@ -28,10 +28,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 
 const packages = [
-  { id: 'OPPORTUNITY', name: 'Opportunity', price: 275 },
-  { id: 'MOMENTUM', name: 'Momentum', price: 385 },
-  { id: 'PROSPER', name: 'Prosper', price: 495 },
-  { id: 'PRESTIGE', name: 'Prestige', price: 660 },
+  { id: 'OPPORTUNITY', name: 'Opportunity', price: 350 },
+  { id: 'MOMENTUM', name: 'Momentum', price: 450 },
+  { id: 'PROSPER', name: 'Prosper', price: 550 },
+  { id: 'PRESTIGE', name: 'Prestige', price: 695 },
   { id: 'PINNACLE', name: 'Pinnacle', price: 825 }
 ];
 
@@ -409,10 +409,10 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="OPPORTUNITY">Opportunity - R275/month</SelectItem>
-                          <SelectItem value="MOMENTUM">Momentum - R385/month</SelectItem>
-                          <SelectItem value="PROSPER">Prosper - R495/month</SelectItem>
-                          <SelectItem value="PRESTIGE">Prestige - R660/month</SelectItem>
+                          <SelectItem value="OPPORTUNITY">Opportunity - R350/month</SelectItem>
+                          <SelectItem value="MOMENTUM">Momentum - R450/month</SelectItem>
+                          <SelectItem value="PROSPER">Prosper - R550/month</SelectItem>
+                          <SelectItem value="PRESTIGE">Prestige - R695/month</SelectItem>
                           <SelectItem value="PINNACLE">Pinnacle - R825/month</SelectItem>
                         </SelectContent>
                       </Select>

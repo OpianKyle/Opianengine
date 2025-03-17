@@ -32,7 +32,7 @@ const packages = [
   {
     id: "OPPORTUNITY",
     display: "OPPORTUNITY",
-    price: 275,
+    price: 350,
     activationPoints: 2500,
     perks: [
       "Activation Points: 2,500",
@@ -46,7 +46,7 @@ const packages = [
   {
     id: "MOMENTUM",
     display: "MOMENTUM",
-    price: 385,
+    price: 450,
     activationPoints: 5000,
     perks: [
       "Activation Points: 5,000",
@@ -62,7 +62,7 @@ const packages = [
   {
     id: "PROSPER",
     display: "PROSPER",
-    price: 495,
+    price: 550,
     activationPoints: 7500,
     perks: [
       "Activation Points: 7,500",
@@ -82,7 +82,7 @@ const packages = [
   {
     id: "PRESTIGE",
     display: "PRESTIGE",
-    price: 660,
+    price: 695,
     activationPoints: 10000,
     perks: [
       "Activation Points: 10,000",
@@ -320,9 +320,9 @@ export default function RegisterPage() {
 
       // Capture signature data
       const signatureData = signature.toDataURL('image/png');
-      console.log('Signature data captured:', { 
+      console.log('Signature data captured:', {
         hasSignature: true,
-        signatureLength: signatureData.length 
+        signatureLength: signatureData.length
       });
 
       // Prepare registration data
