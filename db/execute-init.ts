@@ -48,7 +48,7 @@ async function executeInitScript() {
         postal_code VARCHAR(50),
         selected_package ENUM('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'),
         bank_name VARCHAR(255),
-        account_type ENUM('CHEQUE', 'SAVINGS', 'CURRENT'),
+        account_type ENUM('CHEQUE', 'SAVINGS', 'CURRENT', 'CREDIT'),
         account_number VARCHAR(50),
         account_holder_name VARCHAR(255),
         branch_code VARCHAR(50),
@@ -64,8 +64,12 @@ async function executeInitScript() {
         referred_by VARCHAR(50),
         reset_token VARCHAR(255),
         reset_token_expiry TIMESTAMP NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        is_agent BOOLEAN DEFAULT FALSE NOT NULL,
+        agent_id INT,
+        FOREIGN KEY (agent_id) REFERENCES users(id)
       ) ENGINE=InnoDB;`,
+
       // Create dependent tables that reference the base tables
       `CREATE TABLE IF NOT EXISTS product_activities (
         id INT PRIMARY KEY AUTO_INCREMENT,
