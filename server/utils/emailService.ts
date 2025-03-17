@@ -164,7 +164,6 @@ export function formatRegistrationEmail(
   return { text, html };
 }
 
-// Add new email template for quote requests
 export function formatQuoteRequestEmail(
   customerName: string,
   productName: string
