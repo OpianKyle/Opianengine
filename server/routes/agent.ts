@@ -109,7 +109,10 @@ router.post('/customers/create', async (req: any, res) => {
 
   try {
     console.log('Creating customer for agent:', req.user.id);
-    console.log('Customer data:', req.body);
+    console.log('Customer data:', {
+      ...req.body,
+      password: '[REDACTED]'
+    });
 
     const connection = await createConnection();
     try {
@@ -166,8 +169,9 @@ router.post('/customers/create', async (req: any, res) => {
             selected_package, bank_name, account_type,
             account_number, account_holder_name, branch_code,
             is_south_african, has_credit_card, is_enabled, points,
-            agent_id, is_agent, referral_code, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0, ?, NOW())`,
+            agent_id, is_agent, referral_code, mandate_accepted,
+            mandate_accepted_at, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0, ?, 1, NOW(), NOW())`,
           [
             email, defaultPassword, firstName, lastName, mobileNumber,
             dateOfBirth, gender, idNumber, occupation,
@@ -201,7 +205,8 @@ router.post('/customers/create', async (req: any, res) => {
           id: (userResult as any).insertId,
           email,
           points: initialPoints,
-          package: selectedPackage
+          package: selectedPackage,
+          mandateAccepted: true
         });
 
         res.status(201).json({
@@ -214,6 +219,7 @@ router.post('/customers/create', async (req: any, res) => {
           temporaryPassword: '123456',
           agentId: req.user.id,
           isEnabled: true,
+          mandateAccepted: true,
           referralCode
         });
 

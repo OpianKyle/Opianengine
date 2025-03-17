@@ -109,6 +109,8 @@ export const users = mysqlTable("users", {
   branchCode: text("branch_code"),
   hasCreditCard: boolean("has_credit_card").default(false),
   signature: text("signature"),
+  mandateAccepted: boolean("mandate_accepted").default(false),
+  mandateAcceptedAt: timestamp("mandate_accepted_at"),
   isAdmin: boolean("is_admin").default(false).notNull(),
   isAgent: boolean("is_agent").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),

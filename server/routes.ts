@@ -119,7 +119,8 @@ export function registerRoutes(app: Express): Server {
         password: '[REDACTED]',
         selectedPackage: req.body.selectedPackage,
         hasSignature: !!req.body.signature,
-        signatureLength: req.body.signature?.length || 0
+        signatureLength: req.body.signature?.length || 0,
+        mandateAccepted: !!req.body.mandateAccepted
       });
 
       // Check for existing user
@@ -131,6 +132,13 @@ export function registerRoutes(app: Express): Server {
       if ((existingUsers as any[]).length > 0) {
         return res.status(400).json({
           error: "This email address is already registered"
+        });
+      }
+
+      // Validate mandate acceptance
+      if (!req.body.mandateAccepted) {
+        return res.status(400).json({
+          error: "You must accept the mandate agreement to register"
         });
       }
 
@@ -166,13 +174,14 @@ export function registerRoutes(app: Express): Server {
       await connection.beginTransaction();
 
       try {
-        // Create new user with points and signature
+        // Create new user with points, signature and mandate acceptance
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, 
             phone_number, is_enabled, points, referral_code, 
-            referred_by, selected_package, signature
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            referred_by, selected_package, signature,
+            mandate_accepted, mandate_accepted_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
           [
             req.body.email,
             hashedPassword,
@@ -184,7 +193,8 @@ export function registerRoutes(app: Express): Server {
             newReferralCode,
             req.body.referralCode || null,
             selectedPackage,
-            req.body.signature || null
+            req.body.signature || null,
+            req.body.mandateAccepted ? 1 : 0
           ]
         );
 
@@ -193,7 +203,8 @@ export function registerRoutes(app: Express): Server {
           userId,
           package: selectedPackage,
           points: initialPoints,
-          hasSignature: !!req.body.signature
+          hasSignature: !!req.body.signature,
+          mandateAccepted: !!req.body.mandateAccepted
         });
 
         // Verify signature and points were set correctly
