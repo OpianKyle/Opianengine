@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2 } from "lucide-react";
@@ -102,10 +102,103 @@ const getPointsMultiplier = (points: number, type: 'premium' | 'card' | 'pos'): 
   return type === 'pos' ? 0 : 0; // Bronze
 };
 
+const AssignProductsDialog = ({ customer, onClose }: { customer: any; onClose: () => void }) => {
+  const { data: availableProducts = [] } = useQuery({
+    queryKey: ["/api/admin/products/available"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/products/available", {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error("Failed to fetch available products");
+      return response.json();
+    }
+  });
+
+  const assignProductMutation = useMutation({
+    mutationFn: async ({ productId, userId }: { productId: number; userId: number }) => {
+      const res = await fetch(`/api/products/${productId}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
+      toast({ title: "Success", description: "Product assigned successfully" });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+
+  return (
+    <DialogContent
+      className="max-w-2xl bg-[#011d3d] border-[#022b5c] text-white"
+      aria-describedby="assign-products-description"
+    >
+      <DialogHeader>
+        <DialogTitle className="text-xl font-semibold text-[#43EB3E]">
+          Assign Products - {customer.firstName} {customer.lastName}
+        </DialogTitle>
+        <DialogDescription id="assign-products-description" className="text-gray-300">
+          Select products to assign to this customer. Assigned products will affect their points and rewards.
+        </DialogDescription>
+      </DialogHeader>
+
+      <ScrollArea className="h-[400px] pr-4">
+        <div className="space-y-4">
+          {availableProducts.map((product: any) => (
+            <div
+              key={product.id}
+              className="p-4 border border-[#022b5c] rounded-lg hover:bg-[#022b5c]/50 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{product.name}</h3>
+                  <p className="text-sm text-gray-300">{product.description}</p>
+                </div>
+                <Button
+                  onClick={() => assignProductMutation.mutate({ productId: product.id, userId: customer.id })}
+                  className="bg-[#43EB3E] hover:bg-[#3AD936] text-black"
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Assign
+                </Button>
+              </div>
+              {product.activities?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {product.activities.map((activity: any) => (
+                    <Badge
+                      key={activity.id}
+                      variant="outline"
+                      className="border-[#022b5c] text-white"
+                    >
+                      {activity.type}: {activity.pointsValue} points
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </DialogContent>
+  );
+};
+
 export default function AdminCustomers() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [pointsDialogOpen, setPointsDialogOpen] = useState(false);
+  const [showAssignProducts, setShowAssignProducts] = useState(false); // Added state for the new modal
   const { data: customers } = useQuery({
     queryKey: ["/api/admin/customers"],
     queryFn: async () => {
@@ -238,29 +331,6 @@ export default function AdminCustomers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
       toast({ title: "Success", description: "User status updated successfully" });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    },
-  });
-
-  const assignProductMutation = useMutation({
-    mutationFn: async ({ productId, userId }: { productId: number; userId: number }) => {
-      const res = await fetch(`/api/products/${productId}/assign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
-      toast({ title: "Success", description: "Product assigned successfully" });
     },
     onError: (error: Error) => {
       toast({
@@ -851,7 +921,7 @@ export default function AdminCustomers() {
                                           <FormControl>
                                             <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
                                           </FormControl>
-                                                                         <FormMessage />
+                                          <FormMessage />
                                         </FormItem>
                                       )}
                                     />
@@ -915,21 +985,13 @@ export default function AdminCustomers() {
                             )}
                             <span>{customer.isEnabled ? 'Disable' : 'Enable'} User</span>
                           </DropdownMenuItem>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                <Package className="mr-2 h-4 w-4" />
-                                Assign Product
-                              </DropdownMenuItem>
-                            </DialogTrigger>
-                            <DialogContent className="bg-[#011d3d] border-[#022b5c] text-white">
-                              <DialogHeader>
-                                <DialogTitle className="text-[#43EB3E]">Assign Products to {customer.firstName}</DialogTitle>
-                              </DialogHeader>
-                              <div className="grid gap-4">
-                                {/* ...rest of assignProduct dialog */}
-                              </div>
-                            </DialogContent>
+                          <Dialog open={showAssignProducts} onOpenChange={setShowAssignProducts}>
+                            {selectedCustomer && (
+                              <AssignProductsDialog
+                                customer={selectedCustomer}
+                                onClose={() => setShowAssignProducts(false)}
+                              />
+                            )}
                           </Dialog>
                           <Dialog open={pointsDialogOpen} onOpenChange={setPointsDialogOpen}>
                             <DialogTrigger asChild>
