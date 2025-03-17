@@ -138,6 +138,34 @@ const AssignProductsDialog = ({ customer, onClose }: { customer: any; onClose: (
     },
   });
 
+  const unassignProductMutation = useMutation({
+    mutationFn: async ({ productId, userId }: { productId: number; userId: number }) => {
+      const res = await fetch(`/api/products/${productId}/unassign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
+      toast({ title: "Success", description: "Product unassigned successfully" });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+  // Check if a product is assigned to the customer
+  const isProductAssigned = (productId: number) => {
+    return customer.assignedProducts?.some((p: any) => p.id === productId) ?? false;
+  };
+
   return (
     <DialogContent
       className="max-w-2xl bg-[#011d3d] border-[#022b5c] text-white"
@@ -154,49 +182,70 @@ const AssignProductsDialog = ({ customer, onClose }: { customer: any; onClose: (
 
       <ScrollArea className="h-[400px] pr-4">
         <div className="space-y-4">
-          {availableProducts.map((product: any) => (
-            <div
-              key={product.id}
-              className="p-4 border border-[#022b5c] rounded-lg hover:bg-[#022b5c]/50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">{product.name}</h3>
-                  <p className="text-sm text-gray-300">{product.description}</p>
+          {availableProducts.map((product: any) => {
+            const assigned = isProductAssigned(product.id);
+            const isPending = assignProductMutation.isPending || unassignProductMutation.isPending;
+
+            return (
+              <div
+                key={product.id}
+                className="p-4 border border-[#022b5c] rounded-lg hover:bg-[#022b5c]/50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">{product.name}</h3>
+                    <p className="text-sm text-gray-300">{product.description}</p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (assigned) {
+                        unassignProductMutation.mutate({ productId: product.id, userId: customer.id });
+                      } else {
+                        assignProductMutation.mutate({ productId: product.id, userId: customer.id });
+                      }
+                    }}
+                    className={cn(
+                      "relative group transition-all duration-200",
+                      assigned 
+                        ? "bg-green-600 hover:bg-red-500 text-white" 
+                        : "bg-[#43EB3E] hover:bg-[#3AD936] text-black"
+                    )}
+                    disabled={isPending}
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {assigned ? "Unassigning..." : "Assigning..."}
+                      </>
+                    ) : (
+                      <>
+                        <Package className="mr-2 h-4 w-4" />
+                        <span className="group-hover:hidden">
+                          {assigned ? "Assigned" : "Assign"}
+                        </span>
+                        <span className="hidden group-hover:inline">
+                          {assigned ? "Unassign" : "Assign"}
+                        </span>
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <Button
-                  onClick={() => assignProductMutation.mutate({ productId: product.id, userId: customer.id })}
-                  className="bg-[#43EB3E] hover:bg-[#3AD936] text-black transition-colors duration-200 relative"
-                  disabled={assignProductMutation.isPending}
-                >
-                  {assignProductMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Assigning...
-                    </>
-                  ) : (
-                    <>
-                      <Package className="mr-2 h-4 w-4" />
-                      Assign
-                    </>
-                  )}
-                </Button>
+                {product.activities?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {product.activities.map((activity: any) => (
+                      <Badge
+                        key={activity.id}
+                        variant="outline"
+                        className="border-[#022b5c] text-white"
+                      >
+                        {activity.type}: {activity.pointsValue} points
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
-              {product.activities?.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {product.activities.map((activity: any) => (
-                    <Badge
-                      key={activity.id}
-                      variant="outline"
-                      className="border-[#022b5c] text-white"
-                    >
-                      {activity.type}: {activity.pointsValue} points
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </ScrollArea>
     </DialogContent>
@@ -207,7 +256,7 @@ export default function AdminCustomers() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [pointsDialogOpen, setPointsDialogOpen] = useState(false);
-  const [showAssignProducts, setShowAssignProducts] = useState(false); // Added state for the new modal
+  const [showAssignProducts, setShowAssignProducts] = useState(false); 
   const { data: customers } = useQuery({
     queryKey: ["/api/admin/customers"],
     queryFn: async () => {
@@ -431,16 +480,13 @@ export default function AdminCustomers() {
 
   const assignPointsMutation = useMutation({
     mutationFn: async ({ userId, data }: { userId: number, data: PointsFormData }) => {
-      // Calculate total points from selected activities
       const activityPoints = data.selectedActivities?.reduce((sum, activityId) => {
         const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
         return sum + (activity?.pointsValue || 0);
       }, 0) || 0;
 
-      // Add POS points
       const totalPoints = activityPoints + (data.posPoints || 0);
 
-      // Create description including selected activities and POS points
       const activityDescriptions = data.selectedActivities?.map(activityId => {
         const activity = products?.flatMap(p => p.activities).find(a => a.id === activityId);
         return activity?.type;
@@ -657,7 +703,6 @@ export default function AdminCustomers() {
                                   updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
                                 )}>
                                   <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-4">
-                                    {/* Personal Information */}
                                     <div className="col-span-2">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
                                     </div>
@@ -786,7 +831,6 @@ export default function AdminCustomers() {
                                       )}
                                     />
 
-                                    {/* Address Information */}
                                     <div className="col-span-2 mt-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Address Information</h3>
                                     </div>
@@ -809,7 +853,7 @@ export default function AdminCustomers() {
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormLabel className="text-white">City</FormLabel>
-                                          <FormControl>
+                                                                         <FormControl>
                                             <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
                                           </FormControl>
                                           <FormMessage />
@@ -847,7 +891,6 @@ export default function AdminCustomers() {
                                       )}
                                     />
 
-                                    {/* Employment Information */}
                                     <div className="col-span-2 mt-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Employment Information</h3>
                                     </div>
@@ -878,7 +921,6 @@ export default function AdminCustomers() {
                                       )}
                                     />
 
-                                    {/* Banking Information */}
                                     <div className="col-span-2 mt-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Banking Information</h3>
                                     </div>
