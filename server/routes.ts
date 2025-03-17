@@ -237,6 +237,14 @@ export function registerRoutes(app: Express): Server {
           // Don't fail the registration if email fails
         }
 
+        // Get the complete user data for response
+        const [userData] = await connection.execute(
+          'SELECT * FROM users WHERE id = ?',
+          [userId]
+        );
+        
+        const user = userData[0];
+
         // Log the user in after successful registration
         req.login({
           id: userId,
@@ -252,14 +260,43 @@ export function registerRoutes(app: Express): Server {
             return res.status(500).json({ error: "Registration successful but login failed" });
           }
 
+          // Send response with all user fields
           res.status(201).json({
-            id: userId,
-            email: req.body.email,
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
-            points: initialPoints,
-            selectedPackage,
-            mandateAccepted: true
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            phone_number: user.phone_number,
+            is_south_african: Boolean(user.is_south_african),
+            id_number: user.id_number,
+            date_of_birth: user.date_of_birth,
+            gender: user.gender,
+            occupation: user.occupation,
+            industry: user.industry,
+            address: user.address,
+            city: user.city,
+            postal_code: user.postal_code,
+            selected_package: user.selected_package,
+            bank_name: user.bank_name,
+            account_type: user.account_type,
+            account_number: user.account_number,
+            account_holder_name: user.account_holder_name,
+            branch_code: user.branch_code,
+            has_credit_card: Boolean(user.has_credit_card),
+            signature: user.signature,
+            is_admin: Boolean(user.is_admin),
+            is_super_admin: Boolean(user.is_super_admin),
+            is_enabled: Boolean(user.is_enabled),
+            points: user.points,
+            referral_code: user.referral_code,
+            referred_by: user.referred_by,
+            reset_token: user.reset_token,
+            reset_token_expiry: user.reset_token_expiry,
+            created_at: user.created_at,
+            is_agent: Boolean(user.is_agent),
+            agent_id: user.agent_id,
+            mandate_accepted: Boolean(user.mandate_accepted),
+            mandate_accepted_at: user.mandate_accepted_at
           });
         });
 
