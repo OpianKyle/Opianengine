@@ -140,7 +140,7 @@ export function registerRoutes(app: Express): Server {
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       // Calculate initial points based on selected package
-      let initialPoints = 0;
+      let initialPoints = 2500;
       const selectedPackage = req.body.selectedPackage?.toUpperCase();
       switch (selectedPackage) {
         case 'OPPORTUNITY': initialPoints = 2500; break;
@@ -148,7 +148,7 @@ export function registerRoutes(app: Express): Server {
         case 'PROSPER': initialPoints = 7500; break;
         case 'PRESTIGE': initialPoints = 10000; break;
         case 'PINNACLE': initialPoints = 12500; break;
-        default: initialPoints = 0;
+        default: initialPoints = 2500;
       }
 
       console.log('Points calculation:', {
@@ -892,6 +892,141 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error fetching customers:', error);
       res.status(500).json({ error: 'Failed to fetch customers' });
+    } finally {
+      await connection.end();
+    }
+  });
+
+  // Add endpoints for product assignment management
+  app.get("/api/admin/products/available", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get all enabled products with their activities
+      const [products] = await connection.execute(
+        `SELECT 
+          p.*,
+          COALESCE(
+            JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'id', pa.id,
+                'type', pa.type,
+                'pointsValue', pa.points_value,
+                'createdAt', pa.created_at
+              )
+            ),
+            '[]'
+          ) as activities
+        FROM products p
+        LEFT JOIN product_activities pa ON p.id = pa.product_id
+        WHERE p.is_enabled = 1
+        GROUP BY p.id
+        ORDER BY p.created_at DESC`
+      );
+
+      console.log('Available products fetched:', {
+        count: products.length,
+        sample: products[0]
+      });
+
+      // Transform the data
+      const transformedProducts = products.map(product => ({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        isEnabled: Boolean(product.is_enabled),
+        createdAt: product.created_at,
+        updatedAt: product.updated_at,
+        activities: JSON.parse(product.activities || '[]')
+      }));
+
+      res.json(transformedProducts);
+    } catch (error) {
+      console.error('Error fetching available products:', error);
+      res.status(500).json({ error: 'Failed to fetch products' });
+    } finally {
+      await connection.end();
+    }
+  });
+
+  // Add endpoint to get assigned products for a specific user
+  app.get("/api/admin/users/:userId/products", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status  
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get assigned products with activities
+      const [assignments] = await connection.execute(
+        `SELECT 
+          p.*,
+          pa.id as assignment_id,
+          pa.created_at as assigned_at,
+          COALESCE(
+            JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'id', act.id,
+                'type', act.type,
+                'pointsValue', act.points_value,
+                'createdAt', act.created_at
+              )
+            ),
+            '[]'
+          ) as activities
+        FROM product_assignments pa
+        JOIN products p ON pa.product_id = p.id
+        LEFT JOIN product_activities act ON p.id = act.product_id
+        WHERE pa.user_id = ?
+        GROUP BY p.id, pa.id
+        ORDER BY pa.created_at DESC`,
+        [req.params.userId]
+      );
+
+      console.log('User product assignments fetched:', {
+        userId: req.params.userId,
+        count: assignments.length,
+        sample: assignments[0]
+      });
+
+      // Transform the data
+      const transformedAssignments = assignments.map(assignment => ({
+        id: assignment.id,
+        name: assignment.name,
+        description: assignment.description,
+        isEnabled: Boolean(assignment.is_enabled),
+        assignmentId: assignment.assignment_id,
+        assignedAt: assignment.assigned_at,
+        activities: JSON.parse(assignment.activities || '[]')
+      }));
+
+      res.json(transformedAssignments);
+    } catch (error) {
+      console.error('Error fetching user product assignments:', error);
+      res.status(500).json({ error: 'Failed to fetch product assignments' });
     } finally {
       await connection.end();
     }
