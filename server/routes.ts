@@ -121,7 +121,7 @@ export function registerRoutes(app: Express): Server {
         hasSignature: !!req.body.signature,
         signatureLength: req.body.signature?.length || 0,
         signatureType: typeof req.body.signature,
-        mandateAccepted: !!req.body.mandateAccepted
+        mandateAccepted: !!req.body.acceptMandate
       });
 
       // Check for existing user
@@ -137,7 +137,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Validate mandate acceptance
-      if (!req.body.mandateAccepted) {
+      if (!req.body.acceptMandate) {
         return res.status(400).json({
           error: "You must accept the mandate agreement to register"
         });
@@ -150,26 +150,15 @@ export function registerRoutes(app: Express): Server {
       const selectedPackage = req.body.selectedPackage?.toUpperCase();
       console.log('Processing package activation:', { selectedPackage });
 
-      // Update package points mapping
+      // Update package points mapping 
       let initialPoints = 0;
       switch (selectedPackage) {
-        case 'OPPORTUNITY':
-          initialPoints = 2500;
-          break;
-        case 'MOMENTUM':
-          initialPoints = 5000;
-          break;
-        case 'PROSPER':
-          initialPoints = 7500;
-          break;
-        case 'PRESTIGE':
-          initialPoints = 10000;
-          break;
-        case 'PINNACLE':
-          initialPoints = 12500;
-          break;
-        default:
-          initialPoints = 0;
+        case 'OPPORTUNITY': initialPoints = 2500; break;
+        case 'MOMENTUM': initialPoints = 5000; break;
+        case 'PROSPER': initialPoints = 7500; break;
+        case 'PRESTIGE': initialPoints = 10000; break;
+        case 'PINNACLE': initialPoints = 12500; break;
+        default: initialPoints = 0;
       }
 
       await connection.beginTransaction();
@@ -178,24 +167,42 @@ export function registerRoutes(app: Express): Server {
         // Create new user with points, signature and mandate acceptance
         const [userResult] = await connection.execute(
           `INSERT INTO users (
-            email, password, first_name, last_name, 
-            phone_number, is_enabled, points, referral_code, 
-            referred_by, selected_package, signature,
-            mandate_accepted, mandate_accepted_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            email, password, first_name, last_name, phone_number,
+            is_south_african, id_number, date_of_birth, gender,
+            occupation, industry, address, city, postal_code,
+            selected_package, bank_name, account_type, account_number,
+            account_holder_name, branch_code, has_credit_card,
+            signature, is_enabled, points, referral_code,
+            referred_by, mandate_accepted, mandate_accepted_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
           [
             req.body.email,
             hashedPassword,
             req.body.firstName,
             req.body.lastName,
-            req.body.phoneNumber,
+            req.body.mobileNumber || req.body.phoneNumber,
+            req.body.isSouthAfrican ? 1 : 0,
+            req.body.idNumber,
+            req.body.dateOfBirth,
+            req.body.gender,
+            req.body.occupation,
+            req.body.industry,
+            req.body.addressLine1 || req.body.address,
+            req.body.suburb || req.body.city,
+            req.body.postalCode,
+            selectedPackage,
+            req.body.bankName,
+            req.body.accountType,
+            req.body.accountNumber,
+            req.body.accountHolderName,
+            req.body.branchCode,
+            req.body.hasCreditCard ? 1 : 0,
+            req.body.signature,
             1, // is_enabled
             initialPoints,
             newReferralCode,
             req.body.referralCode || null,
-            selectedPackage,
-            req.body.signature || null,
-            req.body.mandateAccepted ? 1 : 0
+            req.body.acceptMandate ? 1 : 0
           ]
         );
 
@@ -205,24 +212,12 @@ export function registerRoutes(app: Express): Server {
           package: selectedPackage,
           points: initialPoints,
           hasSignature: !!req.body.signature,
-          mandateAccepted: !!req.body.mandateAccepted
-        });
-
-        // Verify signature and points were set correctly
-        const [userCheck] = await connection.execute(
-          'SELECT points, signature FROM users WHERE id = ?',
-          [userId]
-        );
-        console.log('User verification:', {
-          userId,
-          points: userCheck[0]?.points,
-          hasSignature: !!userCheck[0]?.signature,
-          signatureLength: userCheck[0]?.signature?.length || 0
+          mandateAccepted: !!req.body.acceptMandate
         });
 
         // Record the initial points transaction if points > 0
         if (initialPoints > 0) {
-          const [transactionResult] = await connection.execute(
+          await connection.execute(
             `INSERT INTO transactions (
               user_id, points, type, description, status
             ) VALUES (?, ?, ?, ?, ?)`,
@@ -234,13 +229,6 @@ export function registerRoutes(app: Express): Server {
               'PROCESSED'
             ]
           );
-          
-          console.log('Points transaction recorded:', {
-            transactionId: (transactionResult as any).insertId,
-            userId,
-            points: initialPoints,
-            type: 'WELCOME_BONUS'
-          });
         }
 
         if (req.body.referralCode) {
@@ -408,7 +396,9 @@ export function registerRoutes(app: Express): Server {
           firstName: req.body.firstName,
           lastName: req.body.lastName,
           points: initialPoints,
-          selectedPackage
+          selectedPackage,
+          signature: req.body.signature,
+          mandateAccepted: true
         }, (err) => {
           if (err) {
             console.error('Login error after registration:', err);
@@ -422,7 +412,8 @@ export function registerRoutes(app: Express): Server {
             lastName: req.body.lastName,
             points: initialPoints,
             selectedPackage,
-            signature: req.body.signature // Include signature in response
+            signature: req.body.signature,
+            mandateAccepted: true
           });
         });
 
