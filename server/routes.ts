@@ -326,25 +326,44 @@ export function registerRoutes(app: Express): Server {
     res.status(status).json({ error: message });
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    console.log('Login successful:', {
-      id: req.user?.id,
-      email: req.user?.email,
-      is_admin: req.user?.is_admin,
-      is_super_admin: req.user?.is_super_admin,
-      is_agent: req.user?.is_agent
-    });
+  app.post("/api/login", passport.authenticate("local"), async (req, res) => {
+    const connection = await createConnection();
+    try {
+      // Get complete user data including points
+      const [userData] = await connection.execute(
+        'SELECT id, email, first_name, last_name, points, is_admin, is_super_admin, is_agent FROM users WHERE id = ?',
+        [req.user?.id]
+      );
 
-    // Send only the user data without success message
-    res.json({
-      id: req.user?.id,
-      email: req.user?.email,
-      firstName: req.user?.firstName,
-      lastName: req.user?.lastName,
-      isAdmin: req.user?.is_admin,
-      isSuperAdmin: req.user?.is_super_admin,
-      isAgent: req.user?.is_agent
-    });
+      console.log('Login user data:', {
+        id: userData[0]?.id,
+        email: userData[0]?.email,
+        points: userData[0]?.points,
+        pointsType: typeof userData[0]?.points
+      });
+
+      // Parse points as number
+      const points = typeof userData[0]?.points === 'string' 
+        ? parseFloat(userData[0]?.points) 
+        : Number(userData[0]?.points || 0);
+
+      // Send user data with properly typed points
+      res.json({
+        id: userData[0]?.id,
+        email: userData[0]?.email,
+        firstName: userData[0]?.first_name,
+        lastName: userData[0]?.last_name,
+        points: points,
+        isAdmin: Boolean(userData[0]?.is_admin),
+        isSuperAdmin: Boolean(userData[0]?.is_super_admin),
+        isAgent: Boolean(userData[0]?.is_agent)
+      });
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      res.status(500).json({ error: 'Failed to fetch user data' });
+    } finally {
+      await connection.end();
+    }
   });
 
   // Enhanced logout handling 
