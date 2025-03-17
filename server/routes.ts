@@ -907,22 +907,20 @@ export function registerRoutes(app: Express): Server {
     try {
       // Check admin status using users table
       const [adminCheck] = await connection.execute(
-        'SELECT is_admin, is_super_admin FROM users WHERE id = ?',
+        'SELECT is_admin FROM users WHERE id = ?',
         [req.user.id]
       );
 
       console.log('Admin check result:', {
         userId: req.user.id,
-        adminCheck
+        adminCheck: adminCheck[0]
       });
 
       if (!adminCheck || !adminCheck[0]?.is_admin) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get all enabled products with detailed query logging
-      console.log('Fetching products for admin:', req.user.id);
-      
+      // Get all enabled products with their activities
       const [products] = await connection.execute(
         `SELECT 
           p.id,
@@ -931,13 +929,22 @@ export function registerRoutes(app: Express): Server {
           p.is_enabled,
           p.created_at,
           p.updated_at,
-          COUNT(pa.id) as activity_count
+          COALESCE(
+            JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'id', pa.id,
+                'type', pa.type,
+                'points_value', pa.points_value,
+                'created_at', pa.created_at
+              )
+            ),
+            '[]'
+          ) as activities
         FROM products p
         LEFT JOIN product_activities pa ON p.id = pa.product_id
-        WHERE p.is_enabled = true
-        GROUP BY p.id
-        ORDER BY p.created_at DESC`,
-        []
+        WHERE p.is_enabled = TRUE
+        GROUP BY p.id, p.name, p.description, p.is_enabled, p.created_at, p.updated_at
+        ORDER BY p.created_at DESC`
       );
 
       console.log('Products query result:', {
@@ -953,7 +960,7 @@ export function registerRoutes(app: Express): Server {
         isEnabled: Boolean(product.is_enabled),
         createdAt: product.created_at,
         updatedAt: product.updated_at,
-        activityCount: Number(product.activity_count)
+        activities: JSON.parse(product.activities || '[]')
       }));
 
       console.log('Sending transformed products:', {
