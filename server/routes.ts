@@ -329,23 +329,36 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/login", passport.authenticate("local"), async (req, res) => {
     const connection = await createConnection();
     try {
-      // Get complete user data including points
+      // Get complete user data including points with explicit numeric conversion
       const [userData] = await connection.execute(
-        'SELECT id, email, first_name, last_name, points, is_admin, is_super_admin, is_agent FROM users WHERE id = ?',
+        `SELECT 
+          id,
+          email, 
+          first_name,
+          last_name,
+          CAST(points as DECIMAL(10,2)) as points,
+          is_admin,
+          is_super_admin,
+          is_agent
+        FROM users
+        WHERE id = ?`,
         [req.user?.id]
       );
 
       console.log('Login user data:', {
         id: userData[0]?.id,
         email: userData[0]?.email,
-        points: userData[0]?.points,
+        rawPoints: userData[0]?.points,
         pointsType: typeof userData[0]?.points
       });
 
-      // Parse points as number
-      const points = typeof userData[0]?.points === 'string' 
-        ? parseFloat(userData[0]?.points) 
-        : Number(userData[0]?.points || 0);
+      // Ensure points is a number
+      const points = parseFloat(userData[0]?.points || '0');
+
+      console.log('Processed points:', {
+        points,
+        pointsType: typeof points
+      });
 
       // Send user data with properly typed points
       res.json({
@@ -358,6 +371,12 @@ export function registerRoutes(app: Express): Server {
         isSuperAdmin: Boolean(userData[0]?.is_super_admin),
         isAgent: Boolean(userData[0]?.is_agent)
       });
+
+      // Update session with points
+      if (req.session && req.user) {
+        req.session.points = points;
+      }
+
     } catch (error) {
       console.error('Error fetching user data:', error);
       res.status(500).json({ error: 'Failed to fetch user data' });
