@@ -823,7 +823,31 @@ export function registerRoutes(app: Express): Server {
       // Get regular customers with transactions, assignments and product details
       const [customers] = await connection.execute(
         `SELECT 
-          u.*,
+          u.id,
+          u.email,
+          u.first_name,
+          u.last_name,
+          u.phone_number,
+          u.is_south_african,
+          u.id_number,
+          u.date_of_birth,
+          u.gender,
+          u.occupation,
+          u.industry,
+          u.address,
+          u.city,
+          u.postal_code,
+          u.selected_package,
+          u.bank_name,
+          u.account_type,
+          u.account_number,
+          u.account_holder_name,
+          u.branch_code,
+          u.has_credit_card,
+          u.is_enabled,
+          CAST(u.points as DECIMAL(10,2)) as points,
+          u.created_at,
+          u.agent_id,
           COALESCE(
             JSON_ARRAYAGG(
               JSON_OBJECT(
@@ -848,8 +872,7 @@ export function registerRoutes(app: Express): Server {
           COUNT(DISTINCT pa2.id) as assignment_count,
           COALESCE(tr.last_transaction, NULL) as last_transaction,
           COALESCE(tr.transaction_type, NULL) as last_transaction_type,
-          COALESCE(tr.transaction_points, NULL) as last_transaction_points,
-          CAST(u.points as DECIMAL(10,2)) as points
+          COALESCE(tr.transaction_points, NULL) as last_transaction_points
          FROM users u
          LEFT JOIN product_assignments pa2 ON u.id = pa2.user_id
          LEFT JOIN products p ON pa2.product_id = p.id
@@ -869,7 +892,14 @@ export function registerRoutes(app: Express): Server {
          LEFT JOIN admin_users au ON u.id = au.user_id
          WHERE au.user_id IS NULL 
          AND u.is_agent = 0
-         GROUP BY u.id, u.points
+         GROUP BY 
+           u.id, u.email, u.first_name, u.last_name, u.phone_number,
+           u.is_south_african, u.id_number, u.date_of_birth, u.gender,
+           u.occupation, u.industry, u.address, u.city, u.postal_code,
+           u.selected_package, u.bank_name, u.account_type, u.account_number,
+           u.account_holder_name, u.branch_code, u.has_credit_card,
+           u.is_enabled, u.points, u.created_at, u.agent_id,
+           tr.last_transaction, tr.transaction_type, tr.transaction_points
          ORDER BY u.created_at DESC`
       );
 
@@ -880,7 +910,7 @@ export function registerRoutes(app: Express): Server {
         pointsType: typeof customers[0]?.points
       });
 
-      // Transform the data with proper points handling
+      // Transform the data
       const transformedCustomers = customers.map((customer: any) => {
         let assignedProducts = [];
         if (customer.assigned_products) {
@@ -956,7 +986,11 @@ export function registerRoutes(app: Express): Server {
         profile: {
           idNumber: transformedCustomers[0]?.idNumber,
           dateOfBirth: transformedCustomers[0]?.dateOfBirth,
-          occupation: transformedCustomers[0]?.occupation
+          occupation: transformedCustomers[0]?.occupation,
+          bankDetails: {
+            bankName: transformedCustomers[0]?.bankName,
+            accountType: transformedCustomers[0]?.accountType
+          }
         }
       });
 
