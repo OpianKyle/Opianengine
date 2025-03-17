@@ -985,11 +985,24 @@ export default function AdminCustomers() {
                             )}
                             <span>{customer.isEnabled ? 'Disable' : 'Enable'} User</span>
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              setSelectedCustomer(customer);
+                              setShowAssignProducts(true);
+                            }}
+                          >
+                            <Package className="mr-2 h-4 w-4" />
+                            Assign Product
+                          </DropdownMenuItem>
                           <Dialog open={showAssignProducts} onOpenChange={setShowAssignProducts}>
                             {selectedCustomer && (
                               <AssignProductsDialog
                                 customer={selectedCustomer}
-                                onClose={() => setShowAssignProducts(false)}
+                                onClose={() => {
+                                  setShowAssignProducts(false);
+                                  setSelectedCustomer(null);
+                                }}
                               />
                             )}
                           </Dialog>
