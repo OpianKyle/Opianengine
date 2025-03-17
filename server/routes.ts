@@ -2,13 +2,8 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
 import { setupAuth, checkAgent } from "./auth";
-import { setupWebSocketServer } from "./websocket";
-import { db } from "@db";
-import { rewards, transactions, users, products, productAssignments, product_activities, adminLogs, quoteRequests, notifications } from "@db/schema";
-import { and, eq, desc, sql } from "drizzle-orm";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
-import { logAdminAction } from "./admin-logger";
+import { setupWebSocketServer } from "./websocket"; 
+import { createConnection } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
@@ -16,8 +11,9 @@ import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
-import { createConnection } from './db';
 import { NotificationService } from './services/notification-service';
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -110,14 +106,20 @@ export function registerRoutes(app: Express): Server {
 
 
 
-  // Registration endpoint with points calculation
-  app.post("/api/register", async (req, res) => {
+  // Registration endpoint with enhanced validation and field handling
+  app.post("/api/register", async (req: Request, res: Response) => {
     const connection = await createConnection();
     try {
       console.log('Registration attempt with data:', {
         ...req.body,
-        password: '[REDACTED]'
+        password: '[REDACTED]',
+        signature: req.body.signature ? '[SIGNATURE_PRESENT]' : null
       });
+
+      // Input validation
+      if (!req.body.email || !req.body.password || !req.body.firstName || !req.body.lastName) {
+        return res.status(400).json({ error: "Required fields missing" });
+      }
 
       // Check for existing user
       const [existingUsers] = await connection.execute(
@@ -125,25 +127,21 @@ export function registerRoutes(app: Express): Server {
         [req.body.email]
       );
 
-      if ((existingUsers as any[]).length > 0) {
-        return res.status(400).json({
-          error: "This email address is already registered"
-        });
+      if (Array.isArray(existingUsers) && existingUsers.length > 0) {
+        return res.status(400).json({ error: "Email already exists" });
       }
 
       // Validate mandate acceptance
       if (!req.body.acceptMandate) {
-        return res.status(400).json({
-          error: "You must accept the mandate agreement to register"
-        });
+        return res.status(400).json({ error: "You must accept the mandate agreement to register" });
       }
 
       const hashedPassword = await crypto.hash(req.body.password);
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       // Calculate initial points based on selected package
-      const selectedPackage = req.body.selectedPackage?.toUpperCase();
       let initialPoints = 0;
+      const selectedPackage = req.body.selectedPackage?.toUpperCase();
       switch (selectedPackage) {
         case 'OPPORTUNITY': initialPoints = 2500; break;
         case 'MOMENTUM': initialPoints = 5000; break;
@@ -161,7 +159,7 @@ export function registerRoutes(app: Express): Server {
       await connection.beginTransaction();
 
       try {
-        // Create user with all fields from the form
+        // Create user with all form fields
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, phone_number,
@@ -169,10 +167,10 @@ export function registerRoutes(app: Express): Server {
             occupation, industry, address, city, postal_code,
             selected_package, bank_name, account_type, account_number,
             account_holder_name, branch_code, has_credit_card,
-            points, referral_code, referred_by,
+            signature, points, referral_code, referred_by,
             mandate_accepted, mandate_accepted_at, is_enabled,
             created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`,
           [
             req.body.email,
             hashedPassword,
@@ -195,10 +193,12 @@ export function registerRoutes(app: Express): Server {
             req.body.accountHolderName,
             req.body.branchCode,
             req.body.hasCreditCard ? 1 : 0,
+            req.body.signature,
             initialPoints,
             newReferralCode,
             req.body.referralCode || null,
-            req.body.acceptMandate ? 1 : 0
+            1, // mandate_accepted is true since we checked earlier
+            null // mandate_accepted_at will be set by NOW()
           ]
         );
 
@@ -237,7 +237,7 @@ export function registerRoutes(app: Express): Server {
           // Don't fail the registration if email fails
         }
 
-        // Get the complete user data for response
+        // Get complete user data for response
         const [userData] = await connection.execute(
           'SELECT * FROM users WHERE id = ?',
           [userId]
@@ -260,7 +260,7 @@ export function registerRoutes(app: Express): Server {
             return res.status(500).json({ error: "Registration successful but login failed" });
           }
 
-          // Send response with all user fields
+          // Send response with all user fields 
           res.status(201).json({
             id: user.id,
             email: user.email,
