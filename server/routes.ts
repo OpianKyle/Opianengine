@@ -110,14 +110,13 @@ export function registerRoutes(app: Express): Server {
 
 
 
-  // Registration endpoint with referral commission handling
+  // Registration endpoint with points calculation
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
       console.log('Registration attempt with data:', {
         ...req.body,
-        password: '[REDACTED]',
-        signature: req.body.signature ? '[SIGNATURE_PRESENT]' : null
+        password: '[REDACTED]'
       });
 
       // Check for existing user
@@ -144,9 +143,6 @@ export function registerRoutes(app: Express): Server {
 
       // Calculate initial points based on selected package
       const selectedPackage = req.body.selectedPackage?.toUpperCase();
-      console.log('Processing package activation:', { selectedPackage });
-
-      // Points calculation mapping
       let initialPoints = 0;
       switch (selectedPackage) {
         case 'OPPORTUNITY': initialPoints = 2500; break;
@@ -159,13 +155,13 @@ export function registerRoutes(app: Express): Server {
 
       console.log('Points calculation:', {
         package: selectedPackage,
-        points: initialPoints
+        initialPoints
       });
 
       await connection.beginTransaction();
 
       try {
-        // Create new user with all fields
+        // Create user with all fields from the form
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, phone_number,
@@ -173,33 +169,32 @@ export function registerRoutes(app: Express): Server {
             occupation, industry, address, city, postal_code,
             selected_package, bank_name, account_type, account_number,
             account_holder_name, branch_code, has_credit_card,
-            signature, points, referral_code, referred_by,
+            points, referral_code, referred_by,
             mandate_accepted, mandate_accepted_at, is_enabled,
             created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`,
           [
             req.body.email,
             hashedPassword,
             req.body.firstName,
             req.body.lastName,
-            req.body.mobileNumber || req.body.phoneNumber,
+            req.body.mobileNumber,
             req.body.isSouthAfrican ? 1 : 0,
             req.body.idNumber,
             req.body.dateOfBirth,
             req.body.gender,
             req.body.occupation,
             req.body.industry,
-            req.body.addressLine1 || req.body.address,
-            req.body.suburb || req.body.city,
+            req.body.addressLine1,
+            req.body.suburb,
             req.body.postalCode,
             selectedPackage,
             req.body.bankName,
-            req.body.accountType || 'CURRENT',
+            req.body.accountType,
             req.body.accountNumber,
             req.body.accountHolderName,
             req.body.branchCode,
             req.body.hasCreditCard ? 1 : 0,
-            req.body.signature,
             initialPoints,
             newReferralCode,
             req.body.referralCode || null,
@@ -250,7 +245,6 @@ export function registerRoutes(app: Express): Server {
           lastName: req.body.lastName,
           points: initialPoints,
           selectedPackage,
-          signature: req.body.signature,
           mandateAccepted: true
         }, (err) => {
           if (err) {
@@ -265,7 +259,6 @@ export function registerRoutes(app: Express): Server {
             lastName: req.body.lastName,
             points: initialPoints,
             selectedPackage,
-            signature: req.body.signature,
             mandateAccepted: true
           });
         });
