@@ -171,15 +171,15 @@ router.post('/customers/create', async (req: any, res) => {
             is_south_african, has_credit_card, is_enabled, points,
             agent_id, is_agent, referral_code, mandate_accepted,
             mandate_accepted_at, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0, ?, 1, NOW(), NOW())`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
           [
             email, defaultPassword, firstName, lastName, mobileNumber,
             dateOfBirth, gender, idNumber, occupation,
             industry, addressLine1, suburb, postalCode,
             selectedPackage, bankName, accountType,
             accountNumber, accountHolderName, branchCode,
-            isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0, initialPoints,
-            req.user.id, referralCode
+            isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0, 1, initialPoints,
+            req.user.id, 0, referralCode, 1, null
           ]
         );
 
