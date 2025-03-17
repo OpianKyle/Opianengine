@@ -654,8 +654,8 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                   <h3 className="text-lg font-semibold border-b pb-2">Mandate Agreement</h3>
                   <Card className="bg-muted/50">
                     <CardContent className="p-4">
-                      <ScrollArea className="h-[200px] w-full rounded-md">
-                        <div className="p-4 text-sm whitespace-pre-wrap">
+                      <ScrollArea className="h-[300px] w-full rounded-md">
+                        <div className="p-6 text-base leading-relaxed whitespace-pre-wrap">
                           {MandateText}
                         </div>
                       </ScrollArea>
