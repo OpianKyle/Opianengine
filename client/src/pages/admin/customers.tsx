@@ -138,7 +138,6 @@ const AssignProductsDialog = ({ customer, onClose }: { customer: any; onClose: (
     },
   });
 
-
   return (
     <DialogContent
       className="max-w-2xl bg-[#011d3d] border-[#022b5c] text-white"
@@ -167,10 +166,20 @@ const AssignProductsDialog = ({ customer, onClose }: { customer: any; onClose: (
                 </div>
                 <Button
                   onClick={() => assignProductMutation.mutate({ productId: product.id, userId: customer.id })}
-                  className="bg-[#43EB3E] hover:bg-[#3AD936] text-black"
+                  className="bg-[#43EB3E] hover:bg-[#3AD936] text-black transition-colors duration-200 relative"
+                  disabled={assignProductMutation.isPending}
                 >
-                  <Package className="mr-2 h-4 w-4" />
-                  Assign
+                  {assignProductMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Assigning...
+                    </>
+                  ) : (
+                    <>
+                      <Package className="mr-2 h-4 w-4" />
+                      Assign
+                    </>
+                  )}
                 </Button>
               </div>
               {product.activities?.length > 0 && (
