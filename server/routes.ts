@@ -117,11 +117,7 @@ export function registerRoutes(app: Express): Server {
       console.log('Registration attempt with data:', {
         ...req.body,
         password: '[REDACTED]',
-        selectedPackage: req.body.selectedPackage,
-        hasSignature: !!req.body.signature,
-        signatureLength: req.body.signature?.length || 0,
-        signatureType: typeof req.body.signature,
-        mandateAccepted: !!req.body.acceptMandate
+        signature: req.body.signature ? '[SIGNATURE_PRESENT]' : null
       });
 
       // Check for existing user
@@ -150,7 +146,7 @@ export function registerRoutes(app: Express): Server {
       const selectedPackage = req.body.selectedPackage?.toUpperCase();
       console.log('Processing package activation:', { selectedPackage });
 
-      // Update package points mapping 
+      // Points calculation mapping
       let initialPoints = 0;
       switch (selectedPackage) {
         case 'OPPORTUNITY': initialPoints = 2500; break;
@@ -161,10 +157,15 @@ export function registerRoutes(app: Express): Server {
         default: initialPoints = 0;
       }
 
+      console.log('Points calculation:', {
+        package: selectedPackage,
+        points: initialPoints
+      });
+
       await connection.beginTransaction();
 
       try {
-        // Create new user with points, signature and mandate acceptance
+        // Create new user with all fields
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, phone_number,
@@ -172,9 +173,10 @@ export function registerRoutes(app: Express): Server {
             occupation, industry, address, city, postal_code,
             selected_package, bank_name, account_type, account_number,
             account_holder_name, branch_code, has_credit_card,
-            signature, is_enabled, points, referral_code,
-            referred_by, mandate_accepted, mandate_accepted_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            signature, points, referral_code, referred_by,
+            mandate_accepted, mandate_accepted_at, is_enabled,
+            created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`,
           [
             req.body.email,
             hashedPassword,
@@ -192,13 +194,12 @@ export function registerRoutes(app: Express): Server {
             req.body.postalCode,
             selectedPackage,
             req.body.bankName,
-            req.body.accountType,
+            req.body.accountType || 'CURRENT',
             req.body.accountNumber,
             req.body.accountHolderName,
             req.body.branchCode,
             req.body.hasCreditCard ? 1 : 0,
             req.body.signature,
-            1, // is_enabled
             initialPoints,
             newReferralCode,
             req.body.referralCode || null,
@@ -207,15 +208,8 @@ export function registerRoutes(app: Express): Server {
         );
 
         const userId = (userResult as any).insertId;
-        console.log('User creation result:', {
-          userId,
-          package: selectedPackage,
-          points: initialPoints,
-          hasSignature: !!req.body.signature,
-          mandateAccepted: !!req.body.acceptMandate
-        });
 
-        // Record the initial points transaction if points > 0
+        // Record welcome bonus points transaction
         if (initialPoints > 0) {
           await connection.execute(
             `INSERT INTO transactions (
@@ -229,147 +223,6 @@ export function registerRoutes(app: Express): Server {
               'PROCESSED'
             ]
           );
-        }
-
-        if (req.body.referralCode) {
-          // Get referrer chain (up to 3 levels)
-          const [referrers] = await connection.execute(
-            `WITH RECURSIVE referral_chain AS (
-              -- Base case: direct referrer (level 1)
-              SELECT 
-                id, 
-                referred_by,
-                1 as level
-              FROM users 
-              WHERE referral_code = ?
-              
-              UNION ALL
-              
-              -- Recursive case: find higher level referrers
-              SELECT 
-                u.id,
-                u.referred_by,
-                rc.level + 1
-              FROM users u
-              INNER JOIN referral_chain rc ON u.referral_code = rc.referred_by
-              WHERE rc.level < 3
-            )
-            SELECT 
-              rc.*,
-              u.email,
-              u.first_name,
-              u.last_name
-            FROM referral_chain rc
-            JOIN users u ON rc.id = u.id
-            ORDER BY rc.level`,
-            [req.body.referralCode]
-          );
-
-          // Process commission for each referrer
-          for (const referrer of referrers) {
-            const commission = await calculateCommissionPoints(connection, selectedPackage, referrer.level);
-            
-            if (commission.points > 0) {
-              // Update referrer's points
-              await connection.execute(
-                'UPDATE users SET points = points + ? WHERE id = ?',
-                [commission.points, referrer.id]
-              );
-
-              // Record commission transaction
-              await connection.execute(
-                `INSERT INTO transactions (
-                  user_id, points, type, description, status
-                ) VALUES (?, ?, ?, ?, ?)`,
-                [
-                  referrer.id,
-                  commission.points,
-                  'REFERRAL_COMMISSION',
-                  `Level ${referrer.level} referral commission (R${commission.randValue.toFixed(2)}) from ${req.body.email} (${selectedPackage} package)`,
-                  'PROCESSED'
-                ]
-              );
-
-              console.log('Referral commission processed:', {
-                referrerId: referrer.id,
-                referrerEmail: referrer.email,
-                level: referrer.level,
-                points: commission.points,
-                randValue: commission.randValue,
-                package: selectedPackage
-              });
-            }
-          }
-        }
-        if (req.body.referralCode) {
-          // Get referrer chain (up to 3 levels)
-          const [referrers] = await connection.execute(
-            `WITH RECURSIVE referral_chain AS (
-              -- Base case: direct referrer (level 1)
-              SELECT 
-                id, 
-                referred_by,
-                1 as level
-              FROM users 
-              WHERE referral_code = ?
-              
-              UNION ALL
-              
-              -- Recursive case: find higher level referrers
-              SELECT 
-                u.id,
-                u.referred_by,
-                rc.level + 1
-              FROM users u
-              INNER JOIN referral_chain rc ON u.referral_code = rc.referred_by
-              WHERE rc.level < 3
-            )
-            SELECT 
-              rc.*,
-              u.email,
-              u.first_name,
-              u.last_name
-            FROM referral_chain rc
-            JOIN users u ON rc.id = u.id
-            ORDER BY rc.level`,
-            [req.body.referralCode]
-          );
-
-          // Process commission for each referrer
-          for (const referrer of referrers) {
-            const commission = await calculateCommissionPoints(connection, selectedPackage, referrer.level);
-            
-            if (commission.points > 0) {
-              // Update referrer's points
-              await connection.execute(
-                'UPDATE users SET points = points + ? WHERE id = ?',
-                [commission.points, referrer.id]
-              );
-
-              // Record commission transaction
-              await connection.execute(
-                `INSERT INTO transactions (
-                  user_id, points, type, description, status
-                ) VALUES (?, ?, ?, ?, ?)`,
-                [
-                  referrer.id,
-                  commission.points,
-                  'REFERRAL_COMMISSION',
-                  `Level ${referrer.level} referral commission (R${commission.randValue.toFixed(2)}) from ${req.body.email} (${selectedPackage} package)`,
-                  'PROCESSED'
-                ]
-              );
-
-              console.log('Referral commission processed:', {
-                referrerId: referrer.id,
-                referrerEmail: referrer.email,
-                level: referrer.level,
-                points: commission.points,
-                randValue: commission.randValue,
-                package: selectedPackage
-              });
-            }
-          }
         }
 
         await connection.commit();
@@ -389,7 +242,7 @@ export function registerRoutes(app: Express): Server {
           // Don't fail the registration if email fails
         }
 
-        // Login the user after successful registration
+        // Log the user in after successful registration
         req.login({
           id: userId,
           email: req.body.email,
@@ -421,7 +274,6 @@ export function registerRoutes(app: Express): Server {
         await connection.rollback();
         throw error;
       }
-
     } catch (error) {
       console.error('Registration error:', error);
       if (!res.headersSent) {
