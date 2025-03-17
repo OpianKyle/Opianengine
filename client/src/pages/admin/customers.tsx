@@ -52,37 +52,39 @@ const userSchema = z.object({
 type UserFormData = z.infer<typeof userSchema>;
 
 const getTierInfo = (points: number): { name: string; color: string; nextTier?: { name: string; pointsNeeded: number } } => {
-  if (points >= 150000) {
+  const numPoints = typeof points === 'number' ? points : Number(points || 0);
+
+  if (numPoints >= 150000) {
     return {
       name: 'Platinum',
       color: 'bg-gradient-to-r from-purple-400 to-gray-300 text-white'
     };
   }
-  if (points >= 100000) {
+  if (numPoints >= 100000) {
     return {
       name: 'Gold',
       color: 'bg-yellow-500 text-white',
-      nextTier: { name: 'Platinum', pointsNeeded: 150000 - points }
+      nextTier: { name: 'Platinum', pointsNeeded: 150000 - numPoints }
     };
   }
-  if (points >= 50000) {
+  if (numPoints >= 50000) {
     return {
       name: 'Purple',
       color: 'bg-purple-500 text-white',
-      nextTier: { name: 'Gold', pointsNeeded: 100000 - points }
+      nextTier: { name: 'Gold', pointsNeeded: 100000 - numPoints }
     };
   }
-  if (points >= 10000) {
+  if (numPoints >= 10000) {
     return {
       name: 'Silver',
       color: 'bg-gray-400 text-white',
-      nextTier: { name: 'Purple', pointsNeeded: 50000 - points }
+      nextTier: { name: 'Purple', pointsNeeded: 50000 - numPoints }
     };
   }
   return {
     name: 'Bronze',
     color: 'bg-amber-600 text-white',
-    nextTier: { name: 'Silver', pointsNeeded: 10000 - points }
+    nextTier: { name: 'Silver', pointsNeeded: 10000 - numPoints }
   };
 };
 
@@ -206,8 +208,8 @@ const AssignProductsDialog = ({ customer, onClose }: { customer: any; onClose: (
                     }}
                     className={cn(
                       "relative group transition-all duration-200",
-                      assigned 
-                        ? "bg-green-600 hover:bg-red-500 text-white" 
+                      assigned
+                        ? "bg-green-600 hover:bg-red-500 text-white"
                         : "bg-[#43EB3E] hover:bg-[#3AD936] text-black"
                     )}
                     disabled={isPending}
@@ -256,7 +258,7 @@ export default function AdminCustomers() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [pointsDialogOpen, setPointsDialogOpen] = useState(false);
-  const [showAssignProducts, setShowAssignProducts] = useState(false); 
+  const [showAssignProducts, setShowAssignProducts] = useState(false);
   const { data: customers } = useQuery({
     queryKey: ["/api/admin/customers"],
     queryFn: async () => {
@@ -640,7 +642,11 @@ export default function AdminCustomers() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{customer.points.toLocaleString()}</TableCell>
+                    <TableCell>
+                      {typeof customer.points === 'number'
+                        ? customer.points.toLocaleString()
+                        : Number(customer.points || 0).toLocaleString()}
+                    </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         customer.isEnabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -853,7 +859,7 @@ export default function AdminCustomers() {
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormLabel className="text-white">City</FormLabel>
-                                                                         <FormControl>
+                                          <FormControl>
                                             <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
                                           </FormControl>
                                           <FormMessage />

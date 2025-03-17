@@ -834,15 +834,18 @@ export function registerRoutes(app: Express): Server {
          ORDER BY u.created_at DESC`
       );
 
-      console.log('Raw customer data sample:', customers[0]);
+      console.log('Raw customer data sample:', {
+        firstCustomer: customers[0],
+        points: customers[0]?.points,
+        pointsType: typeof customers[0]?.points
+      });
 
-      // Transform the data with proper assigned products parsing
+      // Transform the data with proper points handling
       const transformedCustomers = customers.map((customer: any) => {
         let assignedProducts = [];
         if (customer.assigned_products) {
           try {
             assignedProducts = JSON.parse(customer.assigned_products);
-            // Filter out any null entries and ensure activities array exists
             assignedProducts = assignedProducts.filter(p => p && p.id && p.name).map(p => ({
               ...p,
               activities: p.activities || []
@@ -852,6 +855,19 @@ export function registerRoutes(app: Express): Server {
           }
         }
 
+        // Ensure points is properly converted to a number
+        const points = typeof customer.points === 'string' 
+          ? parseFloat(customer.points) 
+          : Number(customer.points || 0);
+
+        console.log('Customer points conversion:', {
+          customerId: customer.id,
+          originalPoints: customer.points,
+          convertedPoints: points,
+          originalType: typeof customer.points,
+          convertedType: typeof points
+        });
+
         return {
           id: customer.id,
           email: customer.email,
@@ -859,7 +875,7 @@ export function registerRoutes(app: Express): Server {
           lastName: customer.last_name,
           phoneNumber: customer.phone_number,
           isEnabled: Boolean(customer.is_enabled),
-          points: customer.points,
+          points,
           createdAt: customer.created_at,
           selectedPackage: customer.selected_package,
           assignmentCount: customer.assignment_count,
@@ -886,6 +902,12 @@ export function registerRoutes(app: Express): Server {
           isSouthAfrican: Boolean(customer.is_south_african),
           agentId: customer.agent_id || null
         };
+      });
+
+      console.log('First transformed customer:', {
+        id: transformedCustomers[0]?.id,
+        points: transformedCustomers[0]?.points,
+        pointsType: typeof transformedCustomers[0]?.points
       });
 
       res.json(transformedCustomers);
