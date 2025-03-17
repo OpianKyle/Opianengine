@@ -905,58 +905,69 @@ export function registerRoutes(app: Express): Server {
 
     const connection = await createConnection();
     try {
-      // Check admin status
+      // Check admin status using users table
       const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        'SELECT is_admin, is_super_admin FROM users WHERE id = ?',
         [req.user.id]
       );
 
-      if (!adminCheck || adminCheck.length === 0) {
+      console.log('Admin check result:', {
+        userId: req.user.id,
+        adminCheck
+      });
+
+      if (!adminCheck || !adminCheck[0]?.is_admin) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get all enabled products with their activities
+      // Get all enabled products with detailed query logging
+      console.log('Fetching products for admin:', req.user.id);
+      
       const [products] = await connection.execute(
         `SELECT 
-          p.*,
-          COALESCE(
-            JSON_ARRAYAGG(
-              JSON_OBJECT(
-                'id', pa.id,
-                'type', pa.type,
-                'pointsValue', pa.points_value,
-                'createdAt', pa.created_at
-              )
-            ),
-            '[]'
-          ) as activities
+          p.id,
+          p.name,
+          p.description,
+          p.is_enabled,
+          p.created_at,
+          p.updated_at,
+          COUNT(pa.id) as activity_count
         FROM products p
         LEFT JOIN product_activities pa ON p.id = pa.product_id
-        WHERE p.is_enabled = 1
+        WHERE p.is_enabled = true
         GROUP BY p.id
-        ORDER BY p.created_at DESC`
+        ORDER BY p.created_at DESC`,
+        []
       );
 
-      console.log('Available products fetched:', {
-        count: products.length,
-        sample: products[0]
+      console.log('Products query result:', {
+        count: products?.length || 0,
+        firstProduct: products?.[0] || null
       });
 
       // Transform the data
-      const transformedProducts = products.map(product => ({
+      const transformedProducts = (products || []).map(product => ({
         id: product.id,
         name: product.name,
         description: product.description,
         isEnabled: Boolean(product.is_enabled),
         createdAt: product.created_at,
         updatedAt: product.updated_at,
-        activities: JSON.parse(product.activities || '[]')
+        activityCount: Number(product.activity_count)
       }));
+
+      console.log('Sending transformed products:', {
+        count: transformedProducts.length,
+        sample: transformedProducts[0] || null
+      });
 
       res.json(transformedProducts);
     } catch (error) {
       console.error('Error fetching available products:', error);
-      res.status(500).json({ error: 'Failed to fetch products' });
+      res.status(500).json({ 
+        error: 'Failed to fetch products',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     } finally {
       await connection.end();
     }
