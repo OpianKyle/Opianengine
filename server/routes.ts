@@ -9,7 +9,7 @@ import { and, eq, desc, sql } from "drizzle-orm";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { logAdminAction } from "./admin-logger";
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail } from "./utils/emailService";
+import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
@@ -384,6 +384,21 @@ export function registerRoutes(app: Express): Server {
         }
 
         await connection.commit();
+
+        // Send welcome email
+        try {
+          const { text, html } = formatRegistrationEmail(req.body.firstName, newReferralCode);
+          await sendEmail({
+            to: req.body.email,
+            subject: "Welcome to OPIAN Rewards!",
+            text,
+            html
+          });
+          console.log('Welcome email sent successfully to:', req.body.email);
+        } catch (emailError) {
+          console.error('Failed to send welcome email:', emailError);
+          // Don't fail the registration if email fails
+        }
 
         // Login the user after successful registration
         req.login({

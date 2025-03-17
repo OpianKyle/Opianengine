@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createConnection } from '../db';
 import { checkAgent } from '../auth';
 import { generateReferralCode } from '../utils/referral';
+import { sendEmail, formatRegistrationEmail } from '../utils/emailService';
 
 const router = Router();
 
@@ -171,7 +172,7 @@ router.post('/customers/create', async (req: any, res) => {
             is_south_african, has_credit_card, is_enabled, points,
             agent_id, is_agent, referral_code, mandate_accepted,
             mandate_accepted_at, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
           [
             email, defaultPassword, firstName, lastName, mobileNumber,
             dateOfBirth, gender, idNumber, occupation,
@@ -183,7 +184,7 @@ router.post('/customers/create', async (req: any, res) => {
           ]
         );
 
-        // Record the points transaction for the initial points
+        // Record the points transaction if points were allocated
         if (initialPoints > 0) {
           await connection.execute(
             `INSERT INTO transactions (
@@ -200,6 +201,21 @@ router.post('/customers/create', async (req: any, res) => {
         }
 
         await connection.commit();
+
+        // Send welcome email
+        try {
+          const { text, html } = formatRegistrationEmail(firstName, referralCode);
+          await sendEmail({
+            to: email,
+            subject: "Welcome to OPIAN Rewards!",
+            text,
+            html
+          });
+          console.log('Welcome email sent successfully to:', email);
+        } catch (emailError) {
+          console.error('Failed to send welcome email:', emailError);
+          // Don't fail the registration if email fails
+        }
 
         console.log('Customer created successfully:', {
           id: (userResult as any).insertId,
