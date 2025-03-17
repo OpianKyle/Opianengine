@@ -336,7 +336,7 @@ export function registerRoutes(app: Express): Server {
           email, 
           first_name,
           last_name,
-          CAST(points as DECIMAL(10,2)) as points,
+          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
           is_admin,
           is_super_admin,
           is_agent
@@ -753,7 +753,7 @@ export function registerRoutes(app: Express): Server {
           account_holder_name,
           branch_code,
           has_credit_card,
-          CAST(points as DECIMAL(10,2)) as points,
+          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
           is_enabled,
           created_at,
           mandate_accepted,
@@ -769,8 +769,14 @@ export function registerRoutes(app: Express): Server {
 
       const user = userData[0];
       
+      console.log('Profile data retrieved:', {
+        userId: user.id,
+        rawPoints: user.points,
+        pointsType: typeof user.points
+      });
+
       // Transform data for frontend
-      res.json({
+      const transformedData = {
         id: user.id,
         email: user.email,
         firstName: user.first_name,
@@ -797,7 +803,15 @@ export function registerRoutes(app: Express): Server {
         createdAt: user.created_at,
         mandateAccepted: Boolean(user.mandate_accepted),
         mandateAcceptedAt: user.mandate_accepted_at
+      };
+
+      console.log('Transformed data:', {
+        userId: transformedData.id,
+        points: transformedData.points,
+        pointsType: typeof transformedData.points
       });
+
+      res.json(transformedData);
 
     } catch (error) {
       console.error('Error fetching user profile:', error);
