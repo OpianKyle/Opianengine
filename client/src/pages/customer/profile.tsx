@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -9,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -194,41 +193,80 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
 );
 
 export default function ProfilePage() {
-  const { user } = useUser();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [showPackageDialog, setShowPackageDialog] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
+  // Fetch user profile data
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ["/api/customer/profile"],
+    queryFn: async () => {
+      const response = await fetch("/api/customer/profile", {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch profile");
+      }
+      return response.json();
+    },
+  });
+
   useEffect(() => {
-    if (user?.selected_package) {
-      setSelectedPackage(user.selected_package);
+    if (profile?.selectedPackage) {
+      setSelectedPackage(profile.selectedPackage);
     }
-  }, [user]);
+  }, [profile]);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      email: user?.email || "",
-      first_name: user?.first_name || "",
-      last_name: user?.last_name || "",
-      phone_number: user?.phone_number || "",
-      address: user?.address || "",
-      city: user?.city || "",
-      postal_code: user?.postal_code || "",
-      id_number: user?.id_number || "",
-      date_of_birth: user?.date_of_birth || "",
-      industry: user?.industry || "",
-      occupation: user?.occupation || "",
-      is_south_african: user?.is_south_african || false,
-      selected_package: user?.selected_package || "BEGINNER",
-      bank_name: user?.bank_name || "",
-      account_type: user?.account_type as ProfileFormData['account_type'] || "SAVINGS",
-      account_number: user?.account_number || "",
-      has_credit_card: user?.has_credit_card || false,
+      email: profile?.email || "",
+      first_name: profile?.firstName || "",
+      last_name: profile?.lastName || "",
+      phone_number: profile?.phoneNumber || "",
+      address: profile?.address || "",
+      city: profile?.city || "",
+      postal_code: profile?.postalCode || "",
+      id_number: profile?.idNumber || "",
+      date_of_birth: profile?.dateOfBirth || "",
+      industry: profile?.industry || "",
+      occupation: profile?.occupation || "",
+      is_south_african: profile?.isSouthAfrican || false,
+      selected_package: profile?.selectedPackage || "BEGINNER",
+      bank_name: profile?.bankName || "",
+      account_type: profile?.accountType as ProfileFormData['account_type'] || "SAVINGS",
+      account_number: profile?.accountNumber || "",
+      has_credit_card: profile?.hasCreditCard || false,
       password: "",
     },
   });
+
+  // Reset form when profile data is loaded
+  useEffect(() => {
+    if (profile) {
+      form.reset({
+        email: profile.email,
+        first_name: profile.firstName,
+        last_name: profile.lastName,
+        phone_number: profile.phoneNumber,
+        address: profile.address,
+        city: profile.city,
+        postal_code: profile.postalCode,
+        id_number: profile.idNumber,
+        date_of_birth: profile.dateOfBirth,
+        industry: profile.industry,
+        occupation: profile.occupation,
+        is_south_african: profile.isSouthAfrican,
+        selected_package: profile.selectedPackage,
+        bank_name: profile.bankName,
+        account_type: profile.accountType as ProfileFormData['account_type'],
+        account_number: profile.accountNumber,
+        has_credit_card: profile.hasCreditCard,
+        password: "",
+      });
+    }
+  }, [profile, form]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
@@ -240,7 +278,6 @@ export default function ProfilePage() {
         credentials: 'include',
         body: JSON.stringify({
           ...data,
-          // Combine address lines -  No longer needed with address_line2 removed
           address: data.address,
         }),
       });
@@ -283,7 +320,7 @@ export default function ProfilePage() {
   });
 
   const handlePackageSelect = (packageName: string) => {
-    if (packageName !== user?.selected_package) {
+    if (packageName !== profile?.selectedPackage) {
       setSelectedPackage(packageName.toUpperCase());
       setShowPackageDialog(true);
     }
@@ -297,11 +334,15 @@ export default function ProfilePage() {
     });
   };
 
-  if (!user) {
-    return null;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
-  const currentPackage = packages.find(pkg => pkg.name === user?.selected_package);
+  const currentPackage = packages.find(pkg => pkg.name === profile?.selectedPackage);
   const newPackage = packages.find(pkg => pkg.name === selectedPackage);
 
   return (
@@ -331,8 +372,8 @@ export default function ProfilePage() {
                     <CarouselItem key={pkg.name} className="pl-2 sm:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
                       <PackageCard
                         pkg={pkg}
-                        isSelected={pkg.name === user?.selected_package}
-                        anySelected={!!user?.selected_package}
+                        isSelected={pkg.name === profile?.selectedPackage}
+                        anySelected={!!profile?.selectedPackage}
                         onSelect={() => handlePackageSelect(pkg.name)}
                       />
                     </CarouselItem>
