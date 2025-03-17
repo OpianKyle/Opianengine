@@ -848,7 +848,8 @@ export function registerRoutes(app: Express): Server {
           COUNT(DISTINCT pa2.id) as assignment_count,
           COALESCE(tr.last_transaction, NULL) as last_transaction,
           COALESCE(tr.transaction_type, NULL) as last_transaction_type,
-          COALESCE(tr.transaction_points, NULL) as last_transaction_points
+          COALESCE(tr.transaction_points, NULL) as last_transaction_points,
+          CAST(u.points as DECIMAL(10,2)) as points
          FROM users u
          LEFT JOIN product_assignments pa2 ON u.id = pa2.user_id
          LEFT JOIN products p ON pa2.product_id = p.id
@@ -868,12 +869,13 @@ export function registerRoutes(app: Express): Server {
          LEFT JOIN admin_users au ON u.id = au.user_id
          WHERE au.user_id IS NULL 
          AND u.is_agent = 0
-         GROUP BY u.id
+         GROUP BY u.id, u.points
          ORDER BY u.created_at DESC`
       );
 
       console.log('Raw customer data sample:', {
         firstCustomer: customers[0],
+        customerFields: Object.keys(customers[0] || {}),
         points: customers[0]?.points,
         pointsType: typeof customers[0]?.points
       });
@@ -898,12 +900,15 @@ export function registerRoutes(app: Express): Server {
           ? parseFloat(customer.points) 
           : Number(customer.points || 0);
 
-        console.log('Customer points conversion:', {
+        console.log('Customer details transformation:', {
           customerId: customer.id,
-          originalPoints: customer.points,
-          convertedPoints: points,
-          originalType: typeof customer.points,
-          convertedType: typeof points
+          firstName: customer.first_name,
+          lastName: customer.last_name,
+          email: customer.email,
+          phone: customer.phone_number,
+          idNumber: customer.id_number,
+          dateOfBirth: customer.date_of_birth,
+          occupation: customer.occupation
         });
 
         return {
@@ -944,8 +949,15 @@ export function registerRoutes(app: Express): Server {
 
       console.log('First transformed customer:', {
         id: transformedCustomers[0]?.id,
+        firstName: transformedCustomers[0]?.firstName,
+        lastName: transformedCustomers[0]?.lastName,
         points: transformedCustomers[0]?.points,
-        pointsType: typeof transformedCustomers[0]?.points
+        pointsType: typeof transformedCustomers[0]?.points,
+        profile: {
+          idNumber: transformedCustomers[0]?.idNumber,
+          dateOfBirth: transformedCustomers[0]?.dateOfBirth,
+          occupation: transformedCustomers[0]?.occupation
+        }
       });
 
       res.json(transformedCustomers);
