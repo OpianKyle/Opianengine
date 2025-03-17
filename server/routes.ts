@@ -120,6 +120,7 @@ export function registerRoutes(app: Express): Server {
         selectedPackage: req.body.selectedPackage,
         hasSignature: !!req.body.signature,
         signatureLength: req.body.signature?.length || 0,
+        signatureType: typeof req.body.signature,
         mandateAccepted: !!req.body.mandateAccepted
       });
 
@@ -420,7 +421,8 @@ export function registerRoutes(app: Express): Server {
             firstName: req.body.firstName,
             lastName: req.body.lastName,
             points: initialPoints,
-            selectedPackage
+            selectedPackage,
+            signature: req.body.signature // Include signature in response
           });
         });
 
