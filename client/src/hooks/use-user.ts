@@ -227,7 +227,7 @@ export function useUser() {
       }
 
       // Force a page reload to clear all state
-      window.location.href = '/auth';
+      window.location.href = '/';
     },
     onSuccess: () => {
       toast({
