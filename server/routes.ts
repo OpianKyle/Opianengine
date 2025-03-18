@@ -1,19 +1,38 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
+import path from "path";
+import { fileURLToPath } from 'url';
 import { setupAuth, checkAgent } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail } from "./utils/emailService";
-import { parse } from 'csv-parse';
-import { stringify } from 'csv-stringify';
-import { Readable } from 'stream';
+import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
 import { NotificationService } from './services/notification-service';
+import { parse } from 'csv-parse';
+import { stringify } from 'csv-stringify';
+import { Readable } from 'stream';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail } from "./utils/emailService";
+
+// ES Module path resolution
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const MemoryStoreSession = MemoryStore(session);
+const sessionStore = new MemoryStoreSession({ checkPeriod: 86400000 });
+
+// Create session middleware
+const sessionMiddleware = session({
+  cookie: { maxAge: 86400000, secure: false, sameSite: 'lax' },
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: false,
+  secret: process.env.SESSION_SECRET || 'development-secret'
+});
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -82,26 +101,49 @@ async function calculateCommissionPoints(connection: any, packageName: string, l
   return { points, randValue };
 }
 
-export function registerRoutes(app: Express): Server {
-  const MemoryStoreSession = MemoryStore(session);
-  const sessionMiddleware = session({
-    cookie: { 
-      maxAge: 86400000, // 24 hours
-      secure: false, // Set to true in production
-      sameSite: 'lax'
-    },
-    store: new MemoryStoreSession({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    }),
-    resave: false,
-    saveUninitialized: false,
-    secret: process.env.SESSION_SECRET || 'development-secret'
-  });
+// Types and interfaces
+interface SessionData {
+  points?: number;
+  userId?: number;
+}
 
-  app.use(sessionMiddleware);
-  // Move setupAuth before defining routes that use passport
+interface User {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  points: number;
+  selectedPackage?: string;
+  mandateAccepted?: boolean;
+  is_admin?: boolean;
+  is_super_admin?: boolean;
+  is_agent?: boolean;
+}
+
+interface ExtendedRequest extends Request {
+  user?: User;
+  session: session.Session & Partial<SessionData>;
+}
+
+// Using the sessionStore and sessionMiddleware defined above
+
+// Main export function to register routes
+export function registerRoutes(app: Express): Server {
+  // Set up core middleware
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  app.use(sessionMiddleware); 
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  // Setup authentication once
   setupAuth(app);
 
+  // Mount API routes first 
+  app.use('/api/customer', referralRouter);
+
+  // Register API endpoints
+  console.log('Registering API endpoints...');
 
 
 
@@ -318,14 +360,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Login endpoint uses imported passport instance
-  // Global error handler
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    console.error('Global error handler caught:', err);
-    const status = (err as any).status || (err as any).statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ error: message });
-  });
-
+  // Login endpoint uses imported passport instance
   app.post("/api/login", passport.authenticate("local"), async (req, res) => {
     const connection = await createConnection();
     try {
@@ -870,11 +905,52 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Mount referral routes
+  // Mount API routes first
   app.use('/api/customer', referralRouter);
 
-  // Points adjustment endpoint with notifications
-  app.post("/api/admin/points/adjust", async (req, res) => {
+  // API setup is complete, register catch-all error handler
+  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    console.error('Global error handler caught:', err);
+    const status = (err as any).status || (err as any).statusCode || 500;
+    const message = err.message || "Internal Server Error"; 
+    res.status(status).json({ error: message });
+  });
+  
+  // Finally serve static files and catch-all route
+  const clientDistPath = path.resolve(__dirname, '../client/dist');
+  console.log('Static files directory:', clientDistPath);
+  
+  app.use(express.static(clientDistPath));
+
+  // Catch-all route handler for client-side routing must be last
+  app.get('*', (req, res) => {
+    console.log('Catch-all route handling request:', req.url);
+    // Skip API routes  
+    if (req.url.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    
+    const indexPath = path.join(clientDistPath, 'index.html');
+    console.log('Serving index.html from:', indexPath);
+    
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err);
+        res.status(500).send('Error loading page'); 
+      } else {
+        console.log('Successfully served index.html for:', req.url);
+      }
+    });
+  });
+  
+  return httpServer;
+};
+
+// API Routes
+const router = express.Router();
+
+// Points adjustment endpoint with notifications
+router.post("/api/admin/points/adjust", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -1152,6 +1228,11 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+    // Remove any old server instances first
+  if (setupWebSocketServer) {
+    setupWebSocketServer(undefined);
+  }
+
   // Add endpoints for product assignment management
   app.get("/api/admin/products/available", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -1305,8 +1386,37 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  const httpServer = createServer(app);
-  const wsServer = setupWebSocketServer(httpServer, sessionMiddleware);
+  // Serve static files from the client/dist directory at the end of all routes
+  app.use(express.static(path.resolve(__dirname, '../client/dist')));
+
+  // Catch-all route handler for client-side routing
+  app.get('*', (req, res) => {
+    console.log('Catch-all route handling request:', req.url);
+    // Skip API routes
+    if (req.url.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    
+    const indexPath = path.join(__dirname, '../client/dist/index.html');
+    console.log('Serving index.html from:', indexPath);
+    
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err);
+        res.status(500).send('Error loading page');
+      } else {
+        console.log('Successfully served index.html for:', req.url);
+      }
+    });
+  });
+
+  // Create and return HTTP server
+  
+  // Setup WebSocket server with session support
+  setupWebSocketServer(httpServer, sessionMiddleware);
+  
+  // Return the configured HTTP server
+  return httpServer;
 
   // Add agent customer management endpoints
   app.get("/api/agent/customers", checkAgent, async (req, res) => {
@@ -5029,5 +5139,34 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  return httpServer;
+  // Serve static files from the client/dist directory
+  const clientDistPath = path.join(__dirname, '../client/dist');
+  console.log('Static files directory:', clientDistPath);
+  
+  app.use(express.static(clientDistPath));
+
+  // Catch-all route handler for client-side routing
+  app.get('*', (req, res) => {
+    console.log('Catch-all route handling request:', req.url);
+    // Skip API routes
+    if (req.url.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    
+    const indexPath = path.join(clientDistPath, 'index.html');
+    console.log('Serving index.html from:', indexPath);
+    
+    // For all other routes, serve the index.html
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err);
+        res.status(500).send('Error loading page');
+      } else {
+        console.log('Successfully served index.html for:', req.url);
+      }
+    });
+  });
+
+  // Create and return the HTTP server
+  return createServer(app);
 }
