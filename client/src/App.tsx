@@ -50,8 +50,8 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (!user) {
-    console.log('No user found, redirecting to login');
-    return <Redirect to="/login" />;
+    console.log('No user found, redirecting to home');
+    return <Redirect to="/" />;
   }
 
   // Handle routing based on user role
