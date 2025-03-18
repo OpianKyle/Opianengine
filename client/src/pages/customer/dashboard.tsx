@@ -29,37 +29,40 @@ interface Transaction {
 }
 
 const getTierInfo = (points: number): { name: string; color: string; nextTier?: { name: string; pointsNeeded: number } } => {
-  if (points >= 150000) {
+  // Ensure points is a number
+  const numPoints = typeof points === 'number' ? points : Number(points || 0);
+
+  if (numPoints >= 150000) {
     return {
       name: "Platinum",
       color: "bg-gradient-to-r from-purple-400 to-gray-300 text-white",
     };
   }
-  if (points >= 100000) {
+  if (numPoints >= 100000) {
     return {
       name: "Gold",
       color: "bg-yellow-500 text-white",
-      nextTier: { name: "Platinum", pointsNeeded: 150000 - points },
+      nextTier: { name: "Platinum", pointsNeeded: 150000 - numPoints },
     };
   }
-  if (points >= 50000) {
+  if (numPoints >= 50000) {
     return {
       name: "Purple",
       color: "bg-purple-500 text-white",
-      nextTier: { name: "Gold", pointsNeeded: 100000 - points },
+      nextTier: { name: "Gold", pointsNeeded: 100000 - numPoints },
     };
   }
-  if (points >= 10000) {
+  if (numPoints >= 10000) {
     return {
       name: "Silver",
       color: "bg-gray-400 text-white",
-      nextTier: { name: "Purple", pointsNeeded: 50000 - points },
+      nextTier: { name: "Purple", pointsNeeded: 50000 - numPoints },
     };
   }
   return {
     name: "Bronze",
     color: "bg-amber-600 text-white",
-    nextTier: { name: "Silver", pointsNeeded: 10000 - points },
+    nextTier: { name: "Silver", pointsNeeded: 10000 - numPoints },
   };
 };
 
@@ -73,7 +76,12 @@ export default function CustomerDashboard() {
       if (!response.ok) {
         throw new Error("Failed to fetch user points");
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Fetched user points:', {
+        points: data.points,
+        pointsType: typeof data.points
+      });
+      return data;
     }
   });
 
@@ -122,9 +130,10 @@ export default function CustomerDashboard() {
     },
   });
 
-  const tierInfo = getTierInfo(user?.points || 0);
+  const points = typeof user?.points === 'number' ? user.points : Number(user?.points || 0);
+  const tierInfo = getTierInfo(points);
   const randValue = (pointsToRedeem * 0.015).toFixed(2);
-  const canRedeem = pointsToRedeem > 0 && pointsToRedeem <= (user?.points || 0);
+  const canRedeem = pointsToRedeem > 0 && pointsToRedeem <= points;
 
   // Get current time of day
   const currentDate = new Date();
@@ -145,7 +154,7 @@ export default function CustomerDashboard() {
             <CardTitle>Current Points & Tier</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <PointsDisplay points={user?.points || 0} size="large" />
+            <PointsDisplay points={points} size="large" />
             <div className="space-y-4">
               <Badge className={`${tierInfo.color} text-lg px-4 py-2`}>
                 {tierInfo.name} Tier
@@ -153,7 +162,7 @@ export default function CustomerDashboard() {
               {tierInfo.nextTier && (
                 <div className="space-y-2">
                   <Progress
-                    value={((user?.points || 0) / tierInfo.nextTier.pointsNeeded) * 100}
+                    value={(points / tierInfo.nextTier.pointsNeeded) * 100}
                     className="h-2"
                   />
                   <p className="text-sm text-muted-foreground">
@@ -176,7 +185,7 @@ export default function CustomerDashboard() {
               <Input
                 type="number"
                 min="0"
-                max={user?.points || 0}
+                max={points}
                 value={pointsToRedeem}
                 onChange={(e) => setPointsToRedeem(Number(e.target.value))}
                 placeholder="Enter points amount"
@@ -201,61 +210,44 @@ export default function CustomerDashboard() {
         </Card>
 
         <ReferralSection />
-
-        <Card className="md:col-span-3">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[300px]">
-              <div className="space-y-4">
-                {transactions?.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between p-4 border rounded-lg transaction-item"
-                  >
-                    <div className="space-y-1 border-l-[3px] pl-3" style={{ borderColor: '#43eb3e' }}>
-                      <p className="font-medium">
-                        {transaction.type ? formatTransactionType(transaction.type) : ''} - {transaction.description}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(transaction.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <PointsDisplay
-                      points={transaction.points}
-                      showSign
-                      size="small"
-                    />
-                  </div>
-                ))}
-                {(!transactions || transactions.length === 0) && (
-                  <p className="text-center text-muted-foreground py-4">
-                    No recent activity
-                  </p>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Activity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[300px]">
+            <div className="space-y-4">
+              {transactions?.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {transaction.type ? formatTransactionType(transaction.type) : ''} - {transaction.description}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(transaction.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <PointsDisplay
+                    points={transaction.points}
+                    showSign
+                    size="small"
+                  />
+                </div>
+              ))}
+              {(!transactions || transactions.length === 0) && (
+                <p className="text-center text-muted-foreground py-4">
+                  No recent activity
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-<style jsx>{`
-  .transaction-item {
-    border-color: #43eb3e;
-    position: relative;
-  }
-  .transaction-item::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 1px;
-    background-color: #43eb3e;
-    opacity: 0.5;
-  }
-`}</style>

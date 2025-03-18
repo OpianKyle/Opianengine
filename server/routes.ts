@@ -821,6 +821,55 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get customer points endpoint
+  app.get("/api/customer/points", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      const [userData] = await connection.execute(
+        `SELECT 
+          id,
+          email,
+          first_name,
+          last_name,
+          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points
+        FROM users 
+        WHERE id = ?`,
+        [req.user?.id]
+      );
+
+      if (!userData || !userData[0]) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      console.log('Points data retrieved:', {
+        userId: userData[0].id,
+        rawPoints: userData[0].points,
+        pointsType: typeof userData[0].points
+      });
+
+      // Ensure points is properly converted to a number
+      const points = parseFloat(userData[0].points || '0');
+
+      res.json({
+        id: userData[0].id,
+        email: userData[0].email,
+        firstName: userData[0].first_name,
+        lastName: userData[0].last_name,
+        points: points
+      });
+
+    } catch (error) {
+      console.error('Error fetching user points:', error);
+      res.status(500).json({ error: 'Failed to fetch user points' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   // Mount referral routes
   app.use('/api/customer', referralRouter);
 
