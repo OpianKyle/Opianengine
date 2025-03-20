@@ -147,7 +147,7 @@ export function registerRoutes(app: Express): Server {
 
       // Calculate initial points based on selected package
       let initialPoints = 0;
-      const selectedPackage = req.body.selectedPackage?.toUpperCase();
+      const selectedPackage = req.body.selectedPackage?.toUpperCase() || 'OPPORTUNITY';
       switch (selectedPackage) {
         case 'OPPORTUNITY': initialPoints = 2500; break;
         case 'MOMENTUM': initialPoints = 5000; break;
@@ -157,20 +157,53 @@ export function registerRoutes(app: Express): Server {
         default: initialPoints = 2500;
       }
 
-      console.log('Pre-insert data verification:', {
-        package: selectedPackage,
-        initialPoints,
-        signaturePresent: !!req.body.signature,
-        mandateAccepted: req.body.acceptMandate,
-        mandateAcceptedAt: new Date().toISOString()
+      console.log('Package activation:', { 
+        selectedPackage, 
+        initialPoints 
       });
 
       await connection.beginTransaction();
 
       try {
+        // Prepare insert parameters with explicit null handling
+        const insertParams = [
+          req.body.email || null,
+          hashedPassword || null,
+          req.body.firstName || null,
+          req.body.lastName || null,
+          req.body.phoneNumber || null,
+          req.body.isSouthAfrican ? 1 : 0,
+          req.body.idNumber || null,
+          req.body.dateOfBirth || null,
+          req.body.gender || null,
+          req.body.occupation || null,
+          req.body.industry || null,
+          req.body.address || null,
+          req.body.city || null,
+          req.body.postalCode || null,
+          selectedPackage,
+          req.body.bankName || null,
+          req.body.accountType || null,
+          req.body.accountNumber || null,
+          req.body.accountHolderName || null,
+          req.body.branchCode || null,
+          req.body.hasCreditCard ? 1 : 0,
+          req.body.signature || null,
+          initialPoints,
+          newReferralCode,
+          req.body.referralCode || null,
+          req.body.acceptMandate ? 1 : 0,
+        ];
+
+        console.log('Insert parameters prepared:', {
+          paramsLength: insertParams.length,
+          nullCount: insertParams.filter(p => p === null).length,
+          definedCount: insertParams.filter(p => p !== undefined).length
+        });
+
         // Create user with all form fields including signature and mandate
-        const insertQuery = `
-          INSERT INTO users (
+        const [userResult] = await connection.execute(
+          `INSERT INTO users (
             email, password, first_name, last_name, phone_number,
             is_south_african, id_number, date_of_birth, gender,
             occupation, industry, address, city, postal_code,
@@ -179,68 +212,16 @@ export function registerRoutes(app: Express): Server {
             signature, points, referral_code, referred_by,
             mandate_accepted, mandate_accepted_at, is_enabled,
             created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`;
-
-        console.log('Executing insert with query:', insertQuery);
-
-        const [userResult] = await connection.execute(
-          insertQuery,
-          [
-            req.body.email,
-            hashedPassword,
-            req.body.firstName,
-            req.body.lastName, 
-            req.body.phoneNumber,
-            req.body.isSouthAfrican ? 1 : 0,
-            req.body.idNumber,
-            req.body.dateOfBirth,
-            req.body.gender,
-            req.body.occupation,
-            req.body.industry,
-            req.body.addressLine1,
-            req.body.suburb,
-            req.body.postalCode,
-            selectedPackage,
-            req.body.bankName,
-            req.body.accountType,
-            req.body.accountNumber,
-            req.body.accountHolderName,
-            req.body.branchCode,
-            req.body.hasCreditCard ? 1 : 0,
-            req.body.signature,
-            initialPoints,
-            newReferralCode,
-            req.body.referralCode || null,
-            req.body.acceptMandate ? 1 : 0,
-            new Date()
-          ]
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`,
+          insertParams
         );
 
         const userId = (userResult as any).insertId;
         console.log('User created with ID:', userId);
 
-        // Verify user creation
-        const [newUser] = await connection.execute(
-          'SELECT * FROM users WHERE id = ?',
-          [userId]
-        );
-
-        console.log('Newly created user data:', {
-          id: userId,
-          points: (newUser as any)[0]?.points,
-          signature: (newUser as any)[0]?.signature ? 'Present' : 'Missing',
-          mandateAccepted: (newUser as any)[0]?.mandate_accepted
-        });
-
         // Record the points transaction
         if (initialPoints > 0) {
-          console.log('Recording initial points transaction:', {
-            userId,
-            points: initialPoints,
-            package: selectedPackage
-          });
-
-          const [transactionResult] = await connection.execute(
+          await connection.execute(
             `INSERT INTO transactions (
               user_id, points, type, description, status,
               created_at
@@ -254,42 +235,10 @@ export function registerRoutes(app: Express): Server {
             ]
           );
 
-          console.log('Points transaction recorded:', transactionResult);
+          console.log('Points transaction recorded for user:', userId);
         }
 
         await connection.commit();
-
-        console.log('User created successfully:', {
-          id: userId,
-          email: req.body.email,
-          points: initialPoints,
-          package: selectedPackage,
-          mandateAccepted: true,
-          hasSignature: !!req.body.signature
-        });
-
-        // Send welcome email
-        try {
-          const { text, html } = formatRegistrationEmail(req.body.firstName, newReferralCode);
-          await sendEmail({
-            to: req.body.email,
-            subject: "Welcome to OPIAN Rewards!",
-            text,
-            html
-          });
-          console.log('Welcome email sent successfully to:', req.body.email);
-        } catch (emailError) {
-          console.error('Failed to send welcome email:', emailError);
-          // Don't fail the registration if email fails
-        }
-
-        // Get complete user data for response
-        const [userData] = await connection.execute(
-          'SELECT * FROM users WHERE id = ?',
-          [userId]
-        );
-        
-        const user = userData[0];
 
         // Log the user in after successful registration
         req.login({
@@ -306,16 +255,14 @@ export function registerRoutes(app: Express): Server {
             return res.status(500).json({ error: "Registration successful but login failed" });
           }
 
-          // Send response with all user fields
           res.status(201).json({
-            id: user.id,
-            email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            points: user.points,
-            selectedPackage: user.selected_package,
-            mandateAccepted: Boolean(user.mandate_accepted),
-            mandateAcceptedAt: user.mandate_accepted_at
+            id: userId,
+            email: req.body.email,
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            points: initialPoints,
+            selectedPackage,
+            mandateAccepted: true
           });
         });
 
@@ -325,12 +272,10 @@ export function registerRoutes(app: Express): Server {
       }
     } catch (error) {
       console.error('Registration error:', error);
-      if (!res.headersSent) {
-        return res.status(500).json({
-          error: "Registration failed. Please try again.",
-          details: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-      }
+      res.status(500).json({
+        error: "Registration failed. Please try again.",
+        details: error.message
+      });
     } finally {
       await connection.end();
     }
