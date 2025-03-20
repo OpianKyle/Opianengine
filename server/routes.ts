@@ -108,8 +108,10 @@ export function registerRoutes(app: Express): Server {
 
   // Update the registration endpoint
   app.post("/api/register", async (req: Request, res: Response) => {
-    const connection = await createConnection();
+    let connection;
     try {
+      connection = await createConnection();
+
       // Log registration data
       console.log('Registration attempt data:', {
         email: req.body.email,
@@ -154,7 +156,37 @@ export function registerRoutes(app: Express): Server {
       await connection.beginTransaction();
 
       try {
-        // Create user with all form fields including signature and mandate
+        // Prepare user data with explicit null handling
+        const userData = {
+          email: req.body.email,
+          password: hashedPassword,
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          phoneNumber: req.body.phoneNumber || null,
+          isSouthAfrican: req.body.isSouthAfrican ? 1 : 0,
+          idNumber: req.body.idNumber || null,
+          dateOfBirth: req.body.dateOfBirth || null,
+          gender: req.body.gender || null,
+          occupation: req.body.occupation || null,
+          industry: req.body.industry || null,
+          address: req.body.address || null,
+          city: req.body.city || null,
+          postalCode: req.body.postalCode || null,
+          selectedPackage: selectedPackage,
+          bankName: req.body.bankName || null,
+          accountType: req.body.accountType || null,
+          accountNumber: req.body.accountNumber || null,
+          accountHolderName: req.body.accountHolderName || null,
+          branchCode: req.body.branchCode || null,
+          hasCreditCard: req.body.hasCreditCard ? 1 : 0,
+          signature: req.body.signature || null,
+          points: initialPoints,
+          referralCode: newReferralCode,
+          referredBy: req.body.referralCode || null,
+          mandateAccepted: req.body.acceptMandate ? 1 : 0
+        };
+
+        // Create user
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, phone_number,
@@ -166,34 +198,7 @@ export function registerRoutes(app: Express): Server {
             mandate_accepted, mandate_accepted_at, is_enabled,
             created_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`,
-          [
-            req.body.email,
-            hashedPassword,
-            req.body.firstName,
-            req.body.lastName,
-            req.body.phoneNumber || null,
-            req.body.isSouthAfrican ? 1 : 0,
-            req.body.idNumber || null,
-            req.body.dateOfBirth || null,
-            req.body.gender || null,
-            req.body.occupation || null,
-            req.body.industry || null,
-            req.body.address || null,
-            req.body.city || null,
-            req.body.postalCode || null,
-            selectedPackage,
-            req.body.bankName || null,
-            req.body.accountType || null,
-            req.body.accountNumber || null,
-            req.body.accountHolderName || null,
-            req.body.branchCode || null,
-            req.body.hasCreditCard ? 1 : 0,
-            req.body.signature || null,
-            initialPoints,
-            newReferralCode,
-            req.body.referralCode || null,
-            req.body.acceptMandate ? 1 : 0
-          ]
+          Object.values(userData)
         );
 
         const userId = (userResult as any).insertId;
@@ -252,7 +257,9 @@ export function registerRoutes(app: Express): Server {
         details: error.message
       });
     } finally {
-      await connection.end();
+      if (connection) {
+        await connection.end();
+      }
     }
   });
 
