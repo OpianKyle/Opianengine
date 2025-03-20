@@ -146,127 +146,127 @@ export function registerRoutes(app: Express): Server {
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       // Calculate initial points based on selected package
-          let initialPoints = 0;
-          const selectedPackage = req.body.selectedPackage?.toUpperCase();
-          switch (selectedPackage) {
-            case 'OPPORTUNITY': initialPoints = 2500; break;
-            case 'MOMENTUM': initialPoints = 5000; break;
-            case 'PROSPER': initialPoints = 7500; break;
-            case 'PRESTIGE': initialPoints = 10000; break;
-            case 'PINNACLE': initialPoints = 12500; break;
-            default: initialPoints = 2500;
-          }
+      let initialPoints = 0;
+      const selectedPackage = req.body.selectedPackage?.toUpperCase();
+      switch (selectedPackage) {
+        case 'OPPORTUNITY': initialPoints = 2500; break;
+        case 'MOMENTUM': initialPoints = 5000; break;
+        case 'PROSPER': initialPoints = 7500; break;
+        case 'PRESTIGE': initialPoints = 10000; break;
+        case 'PINNACLE': initialPoints = 12500; break;
+        default: initialPoints = 2500;
+      }
 
-          console.log('Pre-insert data verification:', {
-            package: selectedPackage,
+      console.log('Pre-insert data verification:', {
+        package: selectedPackage,
+        initialPoints,
+        signaturePresent: !!req.body.signature,
+        mandateAccepted: req.body.acceptMandate,
+        mandateAcceptedAt: new Date().toISOString()
+      });
+
+      await connection.beginTransaction();
+
+      try {
+        // Create user with all form fields including signature and mandate
+        const insertQuery = `
+          INSERT INTO users (
+            email, password, first_name, last_name, phone_number,
+            is_south_african, id_number, date_of_birth, gender,
+            occupation, industry, address, city, postal_code,
+            selected_package, bank_name, account_type, account_number,
+            account_holder_name, branch_code, has_credit_card,
+            signature, points, referral_code, referred_by,
+            mandate_accepted, mandate_accepted_at, is_enabled,
+            created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`;
+
+        console.log('Executing insert with query:', insertQuery);
+
+        const [userResult] = await connection.execute(
+          insertQuery,
+          [
+            req.body.email,
+            hashedPassword,
+            req.body.firstName,
+            req.body.lastName, 
+            req.body.phoneNumber,
+            req.body.isSouthAfrican ? 1 : 0,
+            req.body.idNumber,
+            req.body.dateOfBirth,
+            req.body.gender,
+            req.body.occupation,
+            req.body.industry,
+            req.body.addressLine1,
+            req.body.suburb,
+            req.body.postalCode,
+            selectedPackage,
+            req.body.bankName,
+            req.body.accountType,
+            req.body.accountNumber,
+            req.body.accountHolderName,
+            req.body.branchCode,
+            req.body.hasCreditCard ? 1 : 0,
+            req.body.signature,
             initialPoints,
-            signaturePresent: !!req.body.signature,
-            mandateAccepted: req.body.acceptMandate,
-            mandateAcceptedAt: new Date().toISOString()
+            newReferralCode,
+            req.body.referralCode || null,
+            req.body.acceptMandate ? 1 : 0,
+            new Date()
+          ]
+        );
+
+        const userId = (userResult as any).insertId;
+        console.log('User created with ID:', userId);
+
+        // Verify user creation
+        const [newUser] = await connection.execute(
+          'SELECT * FROM users WHERE id = ?',
+          [userId]
+        );
+
+        console.log('Newly created user data:', {
+          id: userId,
+          points: (newUser as any)[0]?.points,
+          signature: (newUser as any)[0]?.signature ? 'Present' : 'Missing',
+          mandateAccepted: (newUser as any)[0]?.mandate_accepted
+        });
+
+        // Record the points transaction
+        if (initialPoints > 0) {
+          console.log('Recording initial points transaction:', {
+            userId,
+            points: initialPoints,
+            package: selectedPackage
           });
 
-          await connection.beginTransaction();
+          const [transactionResult] = await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description, status,
+              created_at
+            ) VALUES (?, ?, ?, ?, ?, NOW())`,
+            [
+              userId,
+              initialPoints,
+              'WELCOME_BONUS',
+              `Initial points allocation for ${selectedPackage} package`,
+              'PROCESSED'
+            ]
+          );
 
-          try {
-            // Create user with all form fields including signature and mandate
-            const insertQuery = `
-              INSERT INTO users (
-                email, password, first_name, last_name, phone_number,
-                is_south_african, id_number, date_of_birth, gender,
-                occupation, industry, address, city, postal_code,
-                selected_package, bank_name, account_type, account_number,
-                account_holder_name, branch_code, has_credit_card,
-                signature, points, referral_code, referred_by,
-                mandate_accepted, mandate_accepted_at, is_enabled,
-                created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`;
+          console.log('Points transaction recorded:', transactionResult);
+        }
 
-            console.log('Executing insert with query:', insertQuery);
+        await connection.commit();
 
-            const [userResult] = await connection.execute(
-              insertQuery,
-              [
-                req.body.email,
-                hashedPassword,
-                req.body.firstName,
-                req.body.lastName,
-                req.body.mobileNumber,
-                req.body.isSouthAfrican ? 1 : 0,
-                req.body.idNumber,
-                req.body.dateOfBirth,
-                req.body.gender,
-                req.body.occupation,
-                req.body.industry,
-                req.body.addressLine1,
-                req.body.suburb,
-                req.body.postalCode,
-                selectedPackage,
-                req.body.bankName,
-                req.body.accountType,
-                req.body.accountNumber,
-                req.body.accountHolderName,
-                req.body.branchCode,
-                req.body.hasCreditCard ? 1 : 0,
-                req.body.signature,
-                initialPoints,
-                newReferralCode,
-                req.body.referralCode || null,
-                req.body.acceptMandate ? 1 : 0,
-                new Date()
-              ]
-            );
-
-            const userId = (userResult as any).insertId;
-            console.log('User created with ID:', userId);
-
-            // Verify user creation
-            const [newUser] = await connection.execute(
-              'SELECT * FROM users WHERE id = ?',
-              [userId]
-            );
-
-            console.log('Newly created user data:', {
-              id: userId,
-              points: (newUser as any)[0]?.points,
-              signature: (newUser as any)[0]?.signature ? 'Present' : 'Missing',
-              mandateAccepted: (newUser as any)[0]?.mandate_accepted
-            });
-
-            // Record the points transaction
-            if (initialPoints > 0) {
-              console.log('Recording initial points transaction:', {
-                userId,
-                points: initialPoints,
-                package: selectedPackage
-              });
-
-              const [transactionResult] = await connection.execute(
-                `INSERT INTO transactions (
-                  user_id, points, type, description, status,
-                  created_at
-                ) VALUES (?, ?, ?, ?, ?, NOW())`,
-                [
-                  userId,
-                  initialPoints,
-                  'WELCOME_BONUS',
-                  `Initial points allocation for ${selectedPackage} package`,
-                  'PROCESSED'
-                ]
-              );
-
-              console.log('Points transaction recorded:', transactionResult);
-            }
-
-            await connection.commit();
-
-            console.log('User created successfully:', {
-              id: userId,
-              email: req.body.email,
-              points: initialPoints,
-              package: selectedPackage,
-              mandateAccepted: true,
-              hasSignature: !!req.body.signature
-            });
+        console.log('User created successfully:', {
+          id: userId,
+          email: req.body.email,
+          points: initialPoints,
+          package: selectedPackage,
+          mandateAccepted: true,
+          hasSignature: !!req.body.signature
+        });
 
         // Send welcome email
         try {
@@ -306,43 +306,16 @@ export function registerRoutes(app: Express): Server {
             return res.status(500).json({ error: "Registration successful but login failed" });
           }
 
-          // Send response with all user fields 
+          // Send response with all user fields
           res.status(201).json({
             id: user.id,
             email: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            phone_number: user.phone_number,
-            is_south_african: Boolean(user.is_south_african),
-            id_number: user.id_number,
-            date_of_birth: user.date_of_birth,
-            gender: user.gender,
-            occupation: user.occupation,
-            industry: user.industry,
-            address: user.address,
-            city: user.city,
-            postal_code: user.postal_code,
-            selected_package: user.selected_package,
-            bank_name: user.bank_name,
-            account_type: user.account_type,
-            account_number: user.account_number,
-            account_holder_name: user.account_holder_name,
-            branch_code: user.branch_code,
-            has_credit_card: Boolean(user.has_credit_card),
-            signature: user.signature,
-            is_admin: Boolean(user.is_admin),
-            is_super_admin: Boolean(user.is_super_admin),
-            is_enabled: Boolean(user.is_enabled),
+            firstName: user.first_name,
+            lastName: user.last_name,
             points: user.points,
-            referral_code: user.referral_code,
-            referred_by: user.referred_by,
-            reset_token: user.reset_token,
-            reset_token_expiry: user.reset_token_expiry,
-            created_at: user.created_at,
-            is_agent: Boolean(user.is_agent),
-            agent_id: user.agent_id,
-            mandate_accepted: Boolean(user.mandate_accepted),
-            mandate_accepted_at: user.mandate_accepted_at
+            selectedPackage: user.selected_package,
+            mandateAccepted: Boolean(user.mandate_accepted),
+            mandateAcceptedAt: user.mandate_accepted_at
           });
         });
 
