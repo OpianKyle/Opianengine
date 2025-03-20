@@ -110,14 +110,13 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/register", async (req: Request, res: Response) => {
     const connection = await createConnection();
     try {
-      // Log full registration data for debugging
-      console.log('Full registration payload:', {
-        ...req.body,
-        password: '[REDACTED]',
-        signaturePresent: !!req.body.signature,
-        signatureDataType: typeof req.body.signature,
-        signatureLength: req.body.signature?.length || 0,
-        signatureValue: req.body.signature?.substring(0, 50) + '...' // Log start of signature
+      // Debug log for signature data
+      console.log('Registration signature debug:', {
+        signatureType: typeof req.body.signature,
+        signatureValue: req.body.signature?.substring(0, 100),
+        signatureLength: req.body.signature?.length,
+        isBase64: req.body.signature?.match(/^data:image\/[^;]+;base64,/),
+        mandateAccepted: req.body.acceptMandate
       });
 
       // Input validation
@@ -125,9 +124,9 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Required fields missing" });
       }
 
-      // Signature validation
-      if (!req.body.signature) {
-        return res.status(400).json({ error: "Signature is required" });
+      // Validate signature format
+      if (!req.body.signature || typeof req.body.signature !== 'string' || !req.body.signature.startsWith('data:image/')) {
+        return res.status(400).json({ error: "Valid signature image data is required" });
       }
 
       // Check for existing user
@@ -144,7 +143,7 @@ export function registerRoutes(app: Express): Server {
       const hashedPassword = await crypto.hash(req.body.password);
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
-      // Calculate initial points based on selected package
+      // Calculate initial points
       let initialPoints = 0;
       const selectedPackage = req.body.selectedPackage?.toUpperCase();
       switch (selectedPackage) {
@@ -159,7 +158,45 @@ export function registerRoutes(app: Express): Server {
       await connection.beginTransaction();
 
       try {
-        // Insert user with explicit signature value
+        // Debug the SQL query parameters
+        const queryParams = [
+          req.body.email,
+          hashedPassword,
+          req.body.firstName,
+          req.body.lastName,
+          req.body.mobileNumber,
+          req.body.isSouthAfrican ? 1 : 0,
+          req.body.idNumber,
+          req.body.dateOfBirth,
+          req.body.gender,
+          req.body.occupation,
+          req.body.industry,
+          req.body.addressLine1,
+          req.body.suburb,
+          req.body.postalCode,
+          selectedPackage,
+          req.body.bankName,
+          req.body.accountType,
+          req.body.accountNumber,
+          req.body.accountHolderName,
+          req.body.branchCode,
+          req.body.hasCreditCard ? 1 : 0,
+          req.body.signature,
+          initialPoints,
+          newReferralCode,
+          req.body.referralCode || null,
+          req.body.acceptMandate ? 1 : 0,
+          new Date()
+        ];
+
+        console.log('Registration insert parameters:', {
+          ...queryParams,
+          password: '[REDACTED]',
+          signatureLength: queryParams[21]?.length || 0,
+          signaturePreview: queryParams[21]?.substring(0, 50) + '...'
+        });
+
+        // Insert user with explicit column names
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, phone_number,
@@ -170,55 +207,27 @@ export function registerRoutes(app: Express): Server {
             signature, points, referral_code, referred_by,
             mandate_accepted, mandate_accepted_at, is_enabled,
             created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`,
-          [
-            req.body.email,
-            hashedPassword,
-            req.body.firstName,
-            req.body.lastName,
-            req.body.mobileNumber,
-            req.body.isSouthAfrican ? 1 : 0,
-            req.body.idNumber,
-            req.body.dateOfBirth,
-            req.body.gender,
-            req.body.occupation,
-            req.body.industry,
-            req.body.addressLine1,
-            req.body.suburb,
-            req.body.postalCode,
-            selectedPackage,
-            req.body.bankName,
-            req.body.accountType,
-            req.body.accountNumber,
-            req.body.accountHolderName,
-            req.body.branchCode,
-            req.body.hasCreditCard ? 1 : 0,
-            req.body.signature.toString(), // Ensure signature is stored as string
-            initialPoints,
-            newReferralCode,
-            req.body.referralCode || null,
-            req.body.acceptMandate ? 1 : 0,
-            new Date()
-          ]
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
+          queryParams
         );
 
         const userId = (userResult as any).insertId;
 
-        // Verify the user data was saved correctly
+        // Verify the user data was saved
         const [savedUser] = await connection.execute(
-          'SELECT id, signature, points, mandate_accepted FROM users WHERE id = ?',
+          'SELECT id, signature IS NOT NULL as has_signature, CHAR_LENGTH(signature) as signature_length, points, mandate_accepted FROM users WHERE id = ?',
           [userId]
         );
 
-        console.log('Verification of saved user data:', {
+        console.log('Saved user verification:', {
           userId,
-          hasSignature: !!(savedUser as any)[0]?.signature,
-          signatureLength: (savedUser as any)[0]?.signature?.length,
+          hasSignature: !!(savedUser as any)[0]?.has_signature,
+          signatureLength: (savedUser as any)[0]?.signature_length,
           points: (savedUser as any)[0]?.points,
           mandateAccepted: (savedUser as any)[0]?.mandate_accepted
         });
 
-        // Record points transaction if applicable
+        // Record points transaction
         if (initialPoints > 0) {
           await connection.execute(
             `INSERT INTO transactions (
@@ -237,7 +246,6 @@ export function registerRoutes(app: Express): Server {
 
         await connection.commit();
 
-        // Send success response with user data
         res.status(201).json({
           id: userId,
           email: req.body.email,
@@ -251,11 +259,15 @@ export function registerRoutes(app: Express): Server {
 
       } catch (error) {
         await connection.rollback();
+        console.error('Registration transaction error:', error);
         throw error;
       }
     } catch (error) {
       console.error('Registration error:', error);
-      res.status(500).json({ error: "Registration failed. Please try again." });
+      res.status(500).json({ 
+        error: "Registration failed. Please try again.",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     } finally {
       await connection.end();
     }
