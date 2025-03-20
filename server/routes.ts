@@ -110,12 +110,16 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/register", async (req: Request, res: Response) => {
     const connection = await createConnection();
     try {
-      console.log('Registration attempt with data:', {
-        ...req.body,
-        password: '[REDACTED]',
-        signature: req.body.signature ? '[SIGNATURE_PRESENT]' : null,
-        mandateAccepted: req.body.acceptMandate,
-        mandateAcceptedAt: new Date().toISOString()
+      // Log registration data
+      console.log('Registration attempt data:', {
+        email: req.body.email,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        hasSignature: !!req.body.signature,
+        signatureLength: req.body.signature?.length,
+        acceptMandate: req.body.acceptMandate,
+        selectedPackage: req.body.selectedPackage,
+        hashedPasswordLength: req.body.password?.length
       });
 
       // Input validation
@@ -153,19 +157,20 @@ export function registerRoutes(app: Express): Server {
             default: initialPoints = 2500;
           }
 
-          console.log('Processing package activation:', {
-            selectedPackage,
+          console.log('Pre-insert data verification:', {
+            package: selectedPackage,
             initialPoints,
-            acceptMandate: req.body.acceptMandate,
-            hasSignature: !!req.body.signature
+            signaturePresent: !!req.body.signature,
+            mandateAccepted: req.body.acceptMandate,
+            mandateAcceptedAt: new Date().toISOString()
           });
 
           await connection.beginTransaction();
 
           try {
             // Create user with all form fields including signature and mandate
-            const [userResult] = await connection.execute(
-              `INSERT INTO users (
+            const insertQuery = `
+              INSERT INTO users (
                 email, password, first_name, last_name, phone_number,
                 is_south_african, id_number, date_of_birth, gender,
                 occupation, industry, address, city, postal_code,
@@ -174,7 +179,12 @@ export function registerRoutes(app: Express): Server {
                 signature, points, referral_code, referred_by,
                 mandate_accepted, mandate_accepted_at, is_enabled,
                 created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`,
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`;
+
+            console.log('Executing insert with query:', insertQuery);
+
+            const [userResult] = await connection.execute(
+              insertQuery,
               [
                 req.body.email,
                 hashedPassword,
@@ -207,6 +217,20 @@ export function registerRoutes(app: Express): Server {
             );
 
             const userId = (userResult as any).insertId;
+            console.log('User created with ID:', userId);
+
+            // Verify user creation
+            const [newUser] = await connection.execute(
+              'SELECT * FROM users WHERE id = ?',
+              [userId]
+            );
+
+            console.log('Newly created user data:', {
+              id: userId,
+              points: (newUser as any)[0]?.points,
+              signature: (newUser as any)[0]?.signature ? 'Present' : 'Missing',
+              mandateAccepted: (newUser as any)[0]?.mandate_accepted
+            });
 
             // Record the points transaction
             if (initialPoints > 0) {
@@ -216,7 +240,7 @@ export function registerRoutes(app: Express): Server {
                 package: selectedPackage
               });
 
-              await connection.execute(
+              const [transactionResult] = await connection.execute(
                 `INSERT INTO transactions (
                   user_id, points, type, description, status,
                   created_at
@@ -229,6 +253,8 @@ export function registerRoutes(app: Express): Server {
                   'PROCESSED'
                 ]
               );
+
+              console.log('Points transaction recorded:', transactionResult);
             }
 
             await connection.commit();
