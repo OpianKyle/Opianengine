@@ -2,7 +2,6 @@ import mysql from 'mysql2/promise';
 
 export async function createConnection() {
   try {
-    // Create the connection with explicit configuration
     const connection = await mysql.createConnection({
       host: 'dedi1350.jnb1.host-h.net',
       user: 'admin',
@@ -11,14 +10,6 @@ export async function createConnection() {
       port: 3306,
       ssl: {
         rejectUnauthorized: false
-      },
-      // Add connection configuration
-      dateStrings: true,
-      typeCast: function (field: any, next: any) {
-        if (field.type === 'BIT') {
-          return field.buffer()[0] === 1;
-        }
-        return next();
       }
     });
 
