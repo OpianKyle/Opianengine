@@ -115,6 +115,7 @@ export function registerRoutes(app: Express): Server {
         email: req.body.email,
         firstName: req.body.firstName,
         lastName: req.body.lastName,
+        phoneNumber: req.body.phoneNumber,
         hasSignature: !!req.body.signature,
         signatureLength: req.body.signature?.length,
         acceptMandate: req.body.acceptMandate,
@@ -192,7 +193,7 @@ export function registerRoutes(app: Express): Server {
           initialPoints,
           newReferralCode,
           req.body.referralCode || null,
-          req.body.acceptMandate ? 1 : 0,
+          req.body.acceptMandate ? 1 : 0
         ];
 
         console.log('Insert parameters prepared:', {
