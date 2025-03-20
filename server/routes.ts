@@ -113,7 +113,9 @@ export function registerRoutes(app: Express): Server {
       console.log('Registration attempt with data:', {
         ...req.body,
         password: '[REDACTED]',
-        signature: req.body.signature ? '[SIGNATURE_PRESENT]' : null
+        signature: req.body.signature ? '[SIGNATURE_PRESENT]' : null,
+        mandateAccepted: req.body.acceptMandate,
+        mandateAcceptedAt: new Date().toISOString()
       });
 
       // Input validation
@@ -151,15 +153,18 @@ export function registerRoutes(app: Express): Server {
         default: initialPoints = 2500;
       }
 
-      console.log('Points calculation:', {
+      console.log('Registration details:', {
         package: selectedPackage,
-        initialPoints
+        initialPoints,
+        signature: req.body.signature ? 'Present' : 'Missing',
+        mandateAccepted: req.body.acceptMandate,
+        mandateAcceptedAt: new Date().toISOString()
       });
 
       await connection.beginTransaction();
 
       try {
-        // Create user with all form fields
+        // Create user with all form fields including signature and mandate
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, phone_number,
@@ -170,7 +175,10 @@ export function registerRoutes(app: Express): Server {
             signature, points, referral_code, referred_by,
             mandate_accepted, mandate_accepted_at, is_enabled,
             created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())`,
+          ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, NOW(), 1, NOW()
+          )`,
           [
             req.body.email,
             hashedPassword,
@@ -193,12 +201,12 @@ export function registerRoutes(app: Express): Server {
             req.body.accountHolderName,
             req.body.branchCode,
             req.body.hasCreditCard ? 1 : 0,
-            req.body.signature,
+            req.body.signature, // Add signature
             initialPoints,
             newReferralCode,
             req.body.referralCode || null,
-            1, // mandate_accepted is true since we checked earlier
-            null // mandate_accepted_at will be set by NOW()
+            req.body.acceptMandate ? 1 : 0, // Add mandate acceptance
+            new Date() // Add mandate acceptance timestamp
           ]
         );
 
