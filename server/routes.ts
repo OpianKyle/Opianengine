@@ -110,21 +110,26 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/register", async (req: Request, res: Response) => {
     const connection = await createConnection();
     try {
-      // Log registration data
+      // Log registration data with signature details
       console.log('Registration attempt data:', {
         email: req.body.email,
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         hasSignature: !!req.body.signature,
         signatureLength: req.body.signature?.length,
+        signatureType: typeof req.body.signature,
         acceptMandate: req.body.acceptMandate,
         selectedPackage: req.body.selectedPackage,
-        hashedPasswordLength: req.body.password?.length
       });
 
       // Input validation
       if (!req.body.email || !req.body.password || !req.body.firstName || !req.body.lastName) {
         return res.status(400).json({ error: "Required fields missing" });
+      }
+
+      // Validate signature
+      if (!req.body.signature) {
+        return res.status(400).json({ error: "Signature is required" });
       }
 
       // Check for existing user
@@ -146,118 +151,123 @@ export function registerRoutes(app: Express): Server {
       const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
 
       // Calculate initial points based on selected package
-          let initialPoints = 0;
-          const selectedPackage = req.body.selectedPackage?.toUpperCase();
-          switch (selectedPackage) {
-            case 'OPPORTUNITY': initialPoints = 2500; break;
-            case 'MOMENTUM': initialPoints = 5000; break;
-            case 'PROSPER': initialPoints = 7500; break;
-            case 'PRESTIGE': initialPoints = 10000; break;
-            case 'PINNACLE': initialPoints = 12500; break;
-            default: initialPoints = 2500;
-          }
+      let initialPoints = 0;
+      const selectedPackage = req.body.selectedPackage?.toUpperCase();
+      switch (selectedPackage) {
+        case 'OPPORTUNITY': initialPoints = 2500; break;
+        case 'MOMENTUM': initialPoints = 5000; break;
+        case 'PROSPER': initialPoints = 7500; break;
+        case 'PRESTIGE': initialPoints = 10000; break;
+        case 'PINNACLE': initialPoints = 12500; break;
+        default: initialPoints = 2500;
+      }
 
-          console.log('Pre-insert data verification:', {
-            package: selectedPackage,
+      console.log('Pre-insert data verification:', {
+        package: selectedPackage,
+        initialPoints,
+        signaturePresent: !!req.body.signature,
+        signatureLength: req.body.signature?.length,
+        mandateAccepted: req.body.acceptMandate,
+        mandateAcceptedAt: new Date().toISOString()
+      });
+
+      await connection.beginTransaction();
+
+      try {
+        // Create user with all form fields including signature and mandate
+        const insertQuery = `
+          INSERT INTO users (
+            email, password, first_name, last_name, phone_number,
+            is_south_african, id_number, date_of_birth, gender,
+            occupation, industry, address, city, postal_code,
+            selected_package, bank_name, account_type, account_number,
+            account_holder_name, branch_code, has_credit_card,
+            signature, points, referral_code, referred_by,
+            mandate_accepted, mandate_accepted_at, is_enabled,
+            created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`;
+
+        console.log('Executing insert with signature data:', {
+          hasSignature: !!req.body.signature,
+          signatureLength: req.body.signature?.length
+        });
+
+        const [userResult] = await connection.execute(
+          insertQuery,
+          [
+            req.body.email,
+            hashedPassword,
+            req.body.firstName,
+            req.body.lastName,
+            req.body.mobileNumber,
+            req.body.isSouthAfrican ? 1 : 0,
+            req.body.idNumber,
+            req.body.dateOfBirth,
+            req.body.gender,
+            req.body.occupation,
+            req.body.industry,
+            req.body.addressLine1,
+            req.body.suburb,
+            req.body.postalCode,
+            selectedPackage,
+            req.body.bankName,
+            req.body.accountType,
+            req.body.accountNumber,
+            req.body.accountHolderName,
+            req.body.branchCode,
+            req.body.hasCreditCard ? 1 : 0,
+            req.body.signature, // Store signature data
             initialPoints,
-            signaturePresent: !!req.body.signature,
-            mandateAccepted: req.body.acceptMandate,
-            mandateAcceptedAt: new Date().toISOString()
+            newReferralCode,
+            req.body.referralCode || null,
+            req.body.acceptMandate ? 1 : 0,
+            new Date()
+          ]
+        );
+
+        const userId = (userResult as any).insertId;
+        console.log('User created with ID:', userId);
+
+        // Verify user creation and signature storage
+        const [newUser] = await connection.execute(
+          'SELECT id, signature, points, mandate_accepted FROM users WHERE id = ?',
+          [userId]
+        );
+
+        console.log('Verification of saved data:', {
+          id: userId,
+          hasSignature: !!(newUser as any)[0]?.signature,
+          signatureLength: (newUser as any)[0]?.signature?.length,
+          points: (newUser as any)[0]?.points,
+          mandateAccepted: !!(newUser as any)[0]?.mandate_accepted
+        });
+
+        // Record initial points transaction
+        if (initialPoints > 0) {
+          console.log('Recording initial points transaction:', {
+            userId,
+            points: initialPoints,
+            package: selectedPackage
           });
 
-          await connection.beginTransaction();
+          const [transactionResult] = await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description, status,
+              created_at
+            ) VALUES (?, ?, ?, ?, ?, NOW())`,
+            [
+              userId,
+              initialPoints,
+              'WELCOME_BONUS',
+              `Initial points allocation for ${selectedPackage} package`,
+              'PROCESSED'
+            ]
+          );
 
-          try {
-            // Create user with all form fields including signature and mandate
-            const insertQuery = `
-              INSERT INTO users (
-                email, password, first_name, last_name, phone_number,
-                is_south_african, id_number, date_of_birth, gender,
-                occupation, industry, address, city, postal_code,
-                selected_package, bank_name, account_type, account_number,
-                account_holder_name, branch_code, has_credit_card,
-                signature, points, referral_code, referred_by,
-                mandate_accepted, mandate_accepted_at, is_enabled,
-                created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`;
+          console.log('Points transaction recorded:', transactionResult);
+        }
 
-            console.log('Executing insert with query:', insertQuery);
-
-            const [userResult] = await connection.execute(
-              insertQuery,
-              [
-                req.body.email,
-                hashedPassword,
-                req.body.firstName,
-                req.body.lastName,
-                req.body.mobileNumber,
-                req.body.isSouthAfrican ? 1 : 0,
-                req.body.idNumber,
-                req.body.dateOfBirth,
-                req.body.gender,
-                req.body.occupation,
-                req.body.industry,
-                req.body.addressLine1,
-                req.body.suburb,
-                req.body.postalCode,
-                selectedPackage,
-                req.body.bankName,
-                req.body.accountType,
-                req.body.accountNumber,
-                req.body.accountHolderName,
-                req.body.branchCode,
-                req.body.hasCreditCard ? 1 : 0,
-                req.body.signature,
-                initialPoints,
-                newReferralCode,
-                req.body.referralCode || null,
-                req.body.acceptMandate ? 1 : 0,
-                new Date()
-              ]
-            );
-
-            const userId = (userResult as any).insertId;
-            console.log('User created with ID:', userId);
-
-            // Verify user creation
-            const [newUser] = await connection.execute(
-              'SELECT * FROM users WHERE id = ?',
-              [userId]
-            );
-
-            console.log('Newly created user data:', {
-              id: userId,
-              points: (newUser as any)[0]?.points,
-              signature: (newUser as any)[0]?.signature ? 'Present' : 'Missing',
-              mandateAccepted: (newUser as any)[0]?.mandate_accepted
-            });
-
-            // Record the points transaction
-            if (initialPoints > 0) {
-              console.log('Recording initial points transaction:', {
-                userId,
-                points: initialPoints,
-                package: selectedPackage
-              });
-
-              const [transactionResult] = await connection.execute(
-                `INSERT INTO transactions (
-                  user_id, points, type, description, status,
-                  created_at
-                ) VALUES (?, ?, ?, ?, ?, NOW())`,
-                [
-                  userId,
-                  initialPoints,
-                  'WELCOME_BONUS',
-                  `Initial points allocation for ${selectedPackage} package`,
-                  'PROCESSED'
-                ]
-              );
-
-              console.log('Points transaction recorded:', transactionResult);
-            }
-
-            await connection.commit();
+        await connection.commit();
 
             console.log('User created successfully:', {
               id: userId,
