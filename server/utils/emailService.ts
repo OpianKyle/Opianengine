@@ -130,8 +130,7 @@ export function formatAdminNotificationEmail(
 
 export function formatRegistrationEmail(
   firstName: string,
-  email: string,
-  tempPassword: string
+  email: string
 ): { text: string; html: string } {
   const text = `
     Dear ${firstName},
@@ -143,7 +142,7 @@ export function formatRegistrationEmail(
     Your Next Steps:
     1. Sign in: Visit our platform and log in using your credentials:
        Username: ${email}
-       Password: ${tempPassword}
+       Password: 123456
     2. Secure your account: Change your password to something strong and unique.
     3. Activate your rewards: Start engaging on the Opian journey with referral, financial product engagement and merchant rewards and unlock great benefits!
     4. Earn as you go: Every interaction brings you closer to bigger rewards and exclusive perks. We will guide you on your journey all the way, so expect regular communication from us.
@@ -185,7 +184,7 @@ export function formatRegistrationEmail(
           <li><strong>Sign in:</strong> Visit our platform and log in using your credentials:
             <div style="background: rgba(255,255,255,0.1); padding: 10px; margin: 10px 0; border-radius: 3px;">
               Username: ${email}<br>
-              Password: ${tempPassword}
+              Password: 123456
             </div>
           </li>
           <li><strong>Secure your account:</strong> Change your password to something strong and unique.</li>
@@ -217,6 +216,7 @@ export function formatRegistrationEmail(
 
       <p style="color: #011d3d; margin: 20px 0;">
         Best regards,<br><br>
+        <img src="/Assets/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
         <strong>Lance Heynes</strong><br>
         CEO, Opian Financial Services (Pty) Ltd
       </p>
