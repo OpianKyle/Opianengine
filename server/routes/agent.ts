@@ -1,37 +1,46 @@
 import { Router } from 'express';
 import { createConnection } from '../db';
-import { checkAgent } from '../auth';
 import { generateReferralCode } from '../utils/referral';
 import { sendEmail, formatRegistrationEmail } from '../utils/emailService';
 
 const router = Router();
 
 // Middleware to check if user is an agent
-router.use(checkAgent);
+router.use(async (req: any, res, next) => {
+  console.log('Agent route authentication check:', {
+    isAuthenticated: req.isAuthenticated(),
+    hasSession: !!req.session,
+    user: req.user,
+    url: req.url
+  });
 
-// Helper function to generate a unique referral code
-async function generateUniqueReferralCode(connection: any): Promise<string> {
-  let isUnique = false;
-  let referralCode = '';
-
-  while (!isUnique) {
-    referralCode = generateReferralCode();
-    const [existing] = await connection.execute(
-      'SELECT id FROM users WHERE referral_code = ?',
-      [referralCode]
-    );
-    isUnique = !existing || (Array.isArray(existing) && existing.length === 0);
-  }
-
-  return referralCode;
-}
-
-// Get agent's customers
-router.get('/customers', async (req: any, res) => {
-  if (!req.session || !req.isAuthenticated()) {
+  if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
+  const connection = await createConnection();
+  try {
+    // Verify agent status
+    const [agent] = await connection.execute(
+      'SELECT is_agent FROM users WHERE id = ? AND is_agent = 1',
+      [req.user.id]
+    );
+
+    if (!agent || !Array.isArray(agent) || agent.length === 0) {
+      return res.status(403).json({ error: "Not authorized as agent" });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error checking agent status:', error);
+    res.status(500).json({ error: "Internal server error" });
+  } finally {
+    await connection.end();
+  }
+});
+
+// Get agent's customers
+router.get('/customers', async (req: any, res) => {
   const connection = await createConnection();
   try {
     const [customers] = await connection.execute(
@@ -104,14 +113,14 @@ router.get('/customers', async (req: any, res) => {
 
 // Create customer as agent
 router.post('/customers/create', async (req: any, res) => {
-  if (!req.session || !req.isAuthenticated()) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
+  console.log('Create customer request received:', {
+    isAuthenticated: req.isAuthenticated(),
+    hasSession: !!req.session,
+    agentId: req.user?.id
+  });
 
   const connection = await createConnection();
   try {
-    console.log('Creating customer for agent:', req.user.id);
-
     const { 
       email, firstName, lastName, mobileNumber, dateOfBirth,
       gender, idNumber, occupation, industry, addressLine1,
@@ -120,46 +129,36 @@ router.post('/customers/create', async (req: any, res) => {
       branchCode, isSouthAfrican, hasCreditCard
     } = req.body;
 
-    // Debug log the input parameters
-    console.log('Customer creation parameters:', {
-      email,
-      firstName,
-      lastName,
-      agentId: req.user.id,
-      selectedPackage
-    });
+    // Check for existing user
+    const [existingUsers] = await connection.execute(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (Array.isArray(existingUsers) && existingUsers.length > 0) {
+      return res.status(400).json({ error: "Email already exists" });
+    }
+
+    // Generate a unique referral code
+    const referralCode = await generateUniqueReferralCode(connection);
+
+    // Generate a temporary password
+    const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
+
+    // Calculate initial points
+    let initialPoints = 0;
+    switch (selectedPackage?.toUpperCase()) {
+      case 'OPPORTUNITY': initialPoints = 2500; break;
+      case 'MOMENTUM': initialPoints = 5000; break;
+      case 'PROSPER': initialPoints = 7500; break;
+      case 'PRESTIGE': initialPoints = 10000; break;
+      case 'PINNACLE': initialPoints = 12500; break;
+      default: initialPoints = 0;
+    }
 
     await connection.beginTransaction();
 
     try {
-      // Check for existing user
-      const [existingUsers] = await connection.execute(
-        'SELECT id FROM users WHERE email = ?',
-        [email]
-      );
-
-      if (Array.isArray(existingUsers) && existingUsers.length > 0) {
-        return res.status(400).json({ error: "Email already exists" });
-      }
-
-      // Generate a unique referral code
-      const referralCode = await generateUniqueReferralCode(connection);
-
-      // Generate a temporary password
-      const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
-
-      // Calculate initial points based on selected package
-      let initialPoints = 0;
-      switch (selectedPackage?.toUpperCase()) {
-        case 'OPPORTUNITY': initialPoints = 2500; break;
-        case 'MOMENTUM': initialPoints = 5000; break;
-        case 'PROSPER': initialPoints = 7500; break;
-        case 'PRESTIGE': initialPoints = 10000; break;
-        case 'PINNACLE': initialPoints = 12500; break;
-        default: initialPoints = 0;
-      }
-
-      // Create user with all fields and agent_id
       const insertQuery = `
         INSERT INTO users (
           email, password, first_name, last_name, phone_number,
@@ -203,7 +202,14 @@ router.post('/customers/create', async (req: any, res) => {
         new Date() // mandate_accepted_at
       ];
 
-      console.log('Executing insert with parameters count:', insertParams.length);
+      console.log('Creating customer with parameters:', {
+        email,
+        firstName,
+        lastName,
+        agentId: req.user.id,
+        selectedPackage,
+        paramCount: insertParams.length
+      });
 
       const [userResult] = await connection.execute(insertQuery, insertParams);
       const userId = (userResult as any).insertId;
@@ -236,10 +242,8 @@ router.post('/customers/create', async (req: any, res) => {
           text,
           html
         });
-        console.log('Welcome email sent successfully to:', email);
       } catch (emailError) {
         console.error('Failed to send welcome email:', emailError);
-        // Don't fail the registration if email fails
       }
 
       console.log('Customer created successfully:', {

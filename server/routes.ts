@@ -103,6 +103,17 @@ export function registerRoutes(app: Express): Server {
   // Move setupAuth before defining routes that use passport
   setupAuth(app);
 
+  // Debug middleware to log session state
+  app.use((req: any, res, next) => {
+    console.log('Session debug:', {
+      hasSession: !!req.session,
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user,
+      cookies: req.headers.cookie
+    });
+    next();
+  });
 
 
 
