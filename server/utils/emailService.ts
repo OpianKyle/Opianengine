@@ -130,34 +130,109 @@ export function formatAdminNotificationEmail(
 
 export function formatRegistrationEmail(
   firstName: string,
-  referralCode: string
+  email: string,
+  tempPassword: string
 ): { text: string; html: string } {
   const text = `
-    Welcome to OPIAN Rewards, ${firstName}!
+    Dear ${firstName},
 
-    Thank you for joining our rewards program. Your account has been successfully created with 2,000 welcome bonus points!
+    Welcome to Opian Rewards!
 
-    Your unique referral code is: ${referralCode}
-    Share this code with friends to earn additional rewards when they sign up!
+    Thank you for joining us on your journey to grow, save, and earn through Opian Rewards. Here, every financial decision is an Opportunity—whether it's reducing costs, earning rewards, or building long-term wealth.
 
-    Start exploring our rewards and benefits now.
+    Your Next Steps:
+    1. Sign in: Visit our platform and log in using your credentials:
+       Username: ${email}
+       Password: ${tempPassword}
+    2. Secure your account: Change your password to something strong and unique.
+    3. Activate your rewards: Start engaging on the Opian journey with referral, financial product engagement and merchant rewards and unlock great benefits!
+    4. Earn as you go: Every interaction brings you closer to bigger rewards and exclusive perks. We will guide you on your journey all the way, so expect regular communication from us.
+
+    White-list the numbers and email addresses you receive communication from us, so you can always stay in the LOOP!
+
+    The Opian Rewards System is designed to empower you financially—whether through savings, earnings, or smart financial choices.
+
+    For assistance, contact our support team:
+    📞 Call: 0861 263 346
+    💬 WhatsApp: 0861 263 346
+    📧 Email: clientservices@opianfsgroup.com
+
+    Your biggest financial journey starts now! Let's make it rewarding!
 
     Best regards,
-    The OPIAN Rewards Team
+
+    Lance Heynes
+    CEO, Opian Financial Services (Pty) Ltd
+
+    Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider
+    Company Registration Number: 2018/584168/07 FSP No: 50974
+    Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape
+    Tel: 0861 263 346 | Email: info@opianfsgroup.com | Website: www.opianfsgroup.com
   `;
 
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #43EB3E;">Welcome to OPIAN Rewards!</h2>
-      <p>Dear ${firstName},</p>
-      <p>Thank you for joining our rewards program. Your account has been successfully created with <strong>2,000 welcome bonus points!</strong></p>
-      <div style="background-color: #011d3d; padding: 15px; border-radius: 5px; margin: 20px 0;">
-        <p style="color: #ffffff; margin: 0;">Your unique referral code is: <strong>${referralCode}</strong></p>
-        <p style="color: #43EB3E; margin: 10px 0 0 0;">Share this code with friends to earn additional rewards when they sign up!</p>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #011d3d;">Dear ${firstName},</h2>
+      <h1 style="color: #43EB3E;">Welcome to Opian Rewards!</h1>
+
+      <p style="color: #011d3d; line-height: 1.6;">
+        Thank you for joining us on your journey to grow, save, and earn through Opian Rewards. Here, every financial decision is an Opportunity—whether it's reducing costs, earning rewards, or building long-term wealth.
+      </p>
+
+      <div style="background-color: #011d3d; padding: 20px; border-radius: 5px; color: white; margin: 20px 0;">
+        <h3 style="color: #43EB3E;">Your Next Steps:</h3>
+        <ol style="line-height: 1.8;">
+          <li><strong>Sign in:</strong> Visit our platform and log in using your credentials:
+            <div style="background: rgba(255,255,255,0.1); padding: 10px; margin: 10px 0; border-radius: 3px;">
+              Username: ${email}<br>
+              Password: ${tempPassword}
+            </div>
+          </li>
+          <li><strong>Secure your account:</strong> Change your password to something strong and unique.</li>
+          <li><strong>Activate your rewards:</strong> Start engaging on the Opian journey with referral, financial product engagement and merchant rewards and unlock great benefits!</li>
+          <li><strong>Earn as you go:</strong> Every interaction brings you closer to bigger rewards and exclusive perks.</li>
+        </ol>
       </div>
-      <p>Start exploring our rewards and benefits now.</p>
-      <br/>
-      <p>Best regards,<br/>The OPIAN Rewards Team</p>
+
+      <p style="color: #011d3d; background-color: #f5f5f5; padding: 15px; border-left: 4px solid #43EB3E;">
+        <strong>Important:</strong> White-list the numbers and email addresses you receive communication from us, so you can always stay in the LOOP!
+      </p>
+
+      <p style="color: #011d3d; line-height: 1.6;">
+        The Opian Rewards System is designed to empower you financially—whether through savings, earnings, or smart financial choices.
+      </p>
+
+      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="color: #011d3d; margin-top: 0;">For assistance, contact our support team:</h3>
+        <p style="line-height: 1.8;">
+          📞 Call: <a href="tel:0861263346" style="color: #43EB3E;">0861 263 346</a><br>
+          💬 WhatsApp: <a href="tel:0861263346" style="color: #43EB3E;">0861 263 346</a><br>
+          📧 Email: <a href="mailto:clientservices@opianfsgroup.com" style="color: #43EB3E;">clientservices@opianfsgroup.com</a>
+        </p>
+      </div>
+
+      <p style="color: #011d3d; font-size: 18px; font-weight: bold;">
+        Your biggest financial journey starts now! Let's make it rewarding!
+      </p>
+
+      <p style="color: #011d3d; margin: 20px 0;">
+        Best regards,<br><br>
+        <strong>Lance Heynes</strong><br>
+        CEO, Opian Financial Services (Pty) Ltd
+      </p>
+
+      <hr style="border: 1px solid #eee; margin: 30px 0;">
+
+      <div style="color: #666; font-size: 12px; line-height: 1.6;">
+        <p><strong>Opian Financial Services (Pty) Ltd</strong> is an Authorised Financial Services Provider</p>
+        <p>Company Registration Number: 2018/584168/07 FSP No: 50974</p>
+        <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
+        <p>
+          Tel: <a href="tel:0861263346" style="color: #43EB3E;">0861 263 346</a> |
+          Email: <a href="mailto:info@opianfsgroup.com" style="color: #43EB3E;">info@opianfsgroup.com</a> |
+          Website: <a href="http://www.opianfsgroup.com" style="color: #43EB3E;">www.opianfsgroup.com</a>
+        </p>
+      </div>
     </div>
   `;
 
