@@ -22,6 +22,23 @@ async function generateUniqueReferralCode(connection: any): Promise<string> {
   return referralCode;
 }
 
+// Helper function to get package price
+async function getPackagePrice(connection: any, packageName: string): Promise<number> {
+  // Get package price from the table
+  const [prices] = await connection.execute(
+    'SELECT premium_amount FROM package_premium_amounts WHERE package_type = ?',
+    [packageName?.toUpperCase()]
+  );
+
+  console.log('Fetched package price:', {
+    packageName: packageName?.toUpperCase(),
+    prices,
+    amount: prices.length > 0 ? Number(prices[0].premium_amount) : 0
+  });
+
+  return prices.length > 0 ? Number(prices[0].premium_amount) : 0;
+}
+
 // Middleware to check if user is an agent
 router.use(async (req: any, res, next) => {
   if (!req.isAuthenticated()) {
@@ -149,7 +166,7 @@ router.post('/customers/create', async (req: any, res) => {
     // Generate a temporary password
     const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
 
-    // Calculate initial points based on package names in MariaDB
+    // Calculate initial points based on package
     let initialPoints = 0;
     const normalizedPackage = selectedPackage?.toUpperCase();
     switch (normalizedPackage) {
@@ -160,6 +177,16 @@ router.post('/customers/create', async (req: any, res) => {
       case 'PINNACLE': initialPoints = 12500; break;
       default: initialPoints = 2500;
     }
+
+    // Get package price
+    const packagePrice = await getPackagePrice(connection, normalizedPackage);
+
+    console.log('Creating customer with package:', {
+      originalPackage: selectedPackage,
+      normalizedPackage,
+      packagePrice,
+      initialPoints
+    });
 
     await connection.beginTransaction();
 
@@ -196,7 +223,7 @@ router.post('/customers/create', async (req: any, res) => {
         addressLine1,
         suburb,
         postalCode,
-        selectedPackage, // Will be converted to uppercase in query
+        selectedPackage,
         bankName,
         accountType,
         accountNumber,
@@ -205,15 +232,9 @@ router.post('/customers/create', async (req: any, res) => {
         isSouthAfrican ? 1 : 0,
         hasCreditCard ? 1 : 0,
         initialPoints,
-        req.user.id, // agent_id
+        req.user.id,
         referralCode
       ];
-
-      console.log('Creating customer with package:', {
-        originalPackage: selectedPackage,
-        normalizedPackage,
-        initialPoints
-      });
 
       const [userResult] = await connection.execute(insertQuery, insertParams);
       const userId = (userResult as any).insertId;
@@ -229,7 +250,7 @@ router.post('/customers/create', async (req: any, res) => {
             userId,
             initialPoints,
             'WELCOME_BONUS',
-            `Initial points allocation for ${normalizedPackage} package`,
+            `Initial points allocation for ${normalizedPackage} package (R${packagePrice})`,
             'PROCESSED'
           ]
         );
@@ -257,6 +278,7 @@ router.post('/customers/create', async (req: any, res) => {
         lastName,
         points: initialPoints,
         selectedPackage: normalizedPackage,
+        packagePrice,
         temporaryPassword: '123456',
         agentId: req.user.id,
         isEnabled: true,
@@ -301,12 +323,16 @@ router.put('/customers/:id/update', async (req: any, res) => {
       branchCode, isSouthAfrican, hasCreditCard
     } = req.body;
 
+    // Get package price for the selected package
+    const packagePrice = await getPackagePrice(connection, selectedPackage);
+
     console.log('Updating customer with data:', {
       id: customerId,
       email,
       firstName,
       lastName,
       selectedPackage,
+      packagePrice,
       agentId: req.user.id
     });
 
@@ -340,11 +366,6 @@ router.put('/customers/:id/update', async (req: any, res) => {
         [customerId]
       );
 
-      console.log('Customer updated successfully:', {
-        id: customerId,
-        updatedPackage: (updatedUser as any)[0]?.selected_package
-      });
-
       await connection.commit();
       res.json({ 
         message: "Customer updated successfully",
@@ -352,7 +373,8 @@ router.put('/customers/:id/update', async (req: any, res) => {
         email: (updatedUser as any)[0]?.email,
         firstName: (updatedUser as any)[0]?.first_name,
         lastName: (updatedUser as any)[0]?.last_name,
-        selectedPackage: (updatedUser as any)[0]?.selected_package
+        selectedPackage: (updatedUser as any)[0]?.selected_package,
+        packagePrice
       });
 
     } catch (error) {
