@@ -14,6 +14,30 @@ import referralRouter from './routes/referral';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import { logAdminAction } from './admin-logger';
+import { ResultSetHeader, QueryError, RowDataPacket } from 'mysql2';
+
+interface User extends RowDataPacket {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  points?: number;
+  is_admin?: boolean;
+  is_super_admin?: boolean;
+  is_agent?: boolean;
+}
+
+interface AdminUser extends RowDataPacket {
+  user_id: number;
+  role_type: string;
+}
+
+declare module 'express-session' {
+  interface SessionData {
+    points: number;
+  }
+}
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -102,8 +126,123 @@ export function registerRoutes(app: Express): Server {
   // Move setupAuth before defining routes that use passport
   setupAuth(app);
 
+  // Validate admin status middleware
+  interface AuthenticatedRequest extends Request {
+    user?: { id: number };
+  }
 
+  const checkAdminStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const connection = await createConnection();
+    try {
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user?.id]
+      );
 
+      if (!adminCheck || (adminCheck as any[]).length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      next();
+    } catch (error) {
+      console.error('Admin check error:', error);
+      res.status(500).json({ error: "Failed to verify admin status" });
+    } finally {
+      await connection.end();
+    }
+  };
+
+  // Agent creation endpoint 
+  app.post("/api/admin/agents/create", checkAdminStatus, async (req: AuthenticatedRequest, res: Response) => {
+    const connection = await createConnection();
+    try {
+      if (!req.user?.id) {
+        console.error('Admin ID missing from request');
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      console.log('Starting agent creation process:', {
+        adminId: req.user.id,
+        email: req.body.email,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName
+      });
+
+      await connection.beginTransaction();
+
+      try {
+        // Generate password hash
+        const hashedPassword = await crypto.hash(req.body.password || 'default123');
+
+        // Insert the new agent
+        const [result] = await connection.execute(
+          `INSERT INTO users (
+            email, password, first_name, last_name, 
+            phone_number, is_agent, is_enabled, created_at
+          ) VALUES (?, ?, ?, ?, ?, 1, 1, NOW())`,
+          [
+            req.body.email,
+            hashedPassword,
+            req.body.firstName,
+            req.body.lastName,
+            req.body.phoneNumber
+          ]
+        );
+
+        const agentId = (result as any).insertId;
+
+        // Verify agent was created
+        const [newAgent] = await connection.execute(
+          'SELECT id, email, is_agent FROM users WHERE id = ?',
+          [agentId]
+        );
+
+        console.log('Agent created:', {
+          agentId,
+          result: newAgent[0]
+        });
+
+        // Log the admin action
+        try {
+          console.log('Attempting to log admin action');
+          await logAdminAction({
+            adminId: req.user.id,
+            actionType: "AGENT_CREATED", 
+            targetUserId: agentId,
+            details: `Created agent: ${req.body.email}`
+          });
+          console.log('Admin action logged successfully');
+        } catch (logError) {
+          // Log error but don't fail the transaction
+          console.error('Failed to log admin action:', logError);
+        }
+
+        await connection.commit();
+
+        res.status(201).json({
+          id: agentId,
+          email: req.body.email,
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          phoneNumber: req.body.phoneNumber,
+          isAgent: true
+        });
+
+      } catch (error) {
+        await connection.rollback();
+        console.error('Transaction error during agent creation:', error);
+        throw error;
+      }
+
+    } catch (error) {
+      console.error('Agent creation failed:', error);
+      res.status(500).json({ 
+        error: "Failed to create agent",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } finally {
+      await connection.end();
+    }
+  });
 
 
   // Registration endpoint with enhanced validation and field handling
@@ -996,7 +1135,87 @@ export function registerRoutes(app: Express): Server {
          ) tr ON u.id = tr.user_id
          LEFT JOIN admin_users au ON u.id = au.user_id
          WHERE au.user_id IS NULL 
-         AND u.is_agent = 0
+         AND u.is_agent = 0;
+  });
+
+  // Agent creation endpoint
+  app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user?.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      console.log('Creating user with data:', {
+        email: req.body.email,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        phoneNumber: req.body.phoneNumber,
+        isAgent: true,
+        adminId: req.user?.id
+      });
+
+      await connection.beginTransaction();
+
+      try {
+        // Generate password hash
+        const hashedPassword = await crypto.hash(req.body.password || 'default123');
+
+        // Insert the new agent
+        const [result] = await connection.execute(
+          `INSERT INTO users (
+            email, password, first_name, last_name, 
+            phone_number, is_agent, is_enabled, created_at
+          ) VALUES (?, ?, ?, ?, ?, 1, 1, NOW())`,
+          [
+            req.body.email,
+            hashedPassword,
+            req.body.firstName,
+            req.body.lastName,
+            req.body.phoneNumber
+          ]
+        );
+
+        const agentId = (result as any).insertId;
+
+        // Log the admin action
+        await logAdminAction({
+          adminId: req.user?.id,
+          actionType: "AGENT_CREATED",
+          targetUserId: agentId,
+          details: `Created agent: ${req.body.email}`
+        });
+
+        await connection.commit();
+
+        res.status(201).json({
+          id: agentId,
+          email: req.body.email,
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          phoneNumber: req.body.phoneNumber,
+          isAgent: true
+        });
+
+      } catch (error) {
+        await connection.rollback();
+        console.error('Error creating agent:', error);
+        throw error;
+      }
+
+    } catch (error) {
+      console.error('Failed to create agent:', error);
+      res.status(500).json({ error: "Failed to create agent" });
+    } finally {
+      await connection.end();
+    }
+  });
          GROUP BY 
            u.id, u.email, u.first_name, u.last_name, u.phone_number,
            u.is_south_african, u.id_number, u.date_of_birth, u.gender,
