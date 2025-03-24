@@ -216,7 +216,7 @@ export function formatRegistrationEmail(
 
       <p style="color: #011d3d; margin: 20px 0;">
         Best regards,<br><br>
-        <img src="/Assets/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+        <img src="https://opianrewards.co.za/Assets/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
         <strong>Lance Heynes</strong><br>
         CEO, Opian Financial Services (Pty) Ltd
       </p>
