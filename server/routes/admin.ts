@@ -1,11 +1,74 @@
 import { Router } from 'express';
 import { createConnection } from '../db';
 import { checkAdmin } from '../auth';
+import { logAdminAction } from '../admin-logger';
 
 const router = Router();
 
 // Middleware to check if user is an admin
 router.use(checkAdmin);
+
+// Create new agent
+router.post('/agents', async (req: any, res) => {
+  const connection = await createConnection();
+  try {
+    console.log('Creating new agent:', req.body);
+
+    await connection.beginTransaction();
+
+    try {
+      // Hash password if provided
+      let hashedPassword = null;
+      if (req.body.password) {
+        const crypto = require('crypto');
+        const salt = crypto.randomBytes(16).toString('hex');
+        hashedPassword = crypto.scryptSync(req.body.password, salt, 64).toString('hex') + '.' + salt;
+      }
+
+      // Insert the new agent
+      const [agentResult] = await connection.execute(
+        `INSERT INTO users (
+          email, password, first_name, last_name,
+          is_agent, is_enabled, created_at
+        ) VALUES (?, ?, ?, ?, 1, 1, NOW())`,
+        [
+          req.body.email,
+          hashedPassword,
+          req.body.firstName,
+          req.body.lastName
+        ]
+      );
+
+      const agentId = (agentResult as any).insertId;
+
+      // Log the admin action
+      await logAdminAction({
+        adminId: req.user.id,
+        actionType: 'AGENT_CREATED',
+        targetUserId: agentId,
+        details: `Created agent: ${req.body.firstName} ${req.body.lastName} (${req.body.email})`
+      });
+
+      await connection.commit();
+
+      res.json({
+        success: true,
+        agentId,
+        message: 'Agent created successfully'
+      });
+
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    }
+
+  } catch (error) {
+    console.error('Error creating agent:', error);
+    res.status(500).json({ error: 'Failed to create agent' });
+  } finally {
+    await connection.end();
+  }
+});
 
 // Get agent statistics
 router.get('/agents/stats', async (req: any, res) => {

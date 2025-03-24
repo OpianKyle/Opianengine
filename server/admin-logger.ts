@@ -18,8 +18,8 @@ export async function logAdminAction({
     console.log('Attempting to log admin action:', { adminId, actionType, targetUserId, details });
 
     const [result] = await connection.execute(
-      `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details, created_at)
+       VALUES (?, ?, ?, ?, NOW())`,
       [adminId, actionType, targetUserId || null, details]
     );
 
@@ -27,8 +27,7 @@ export async function logAdminAction({
     return result;
   } catch (error) {
     console.error("Failed to log admin action:", error);
-    // Don't throw the error, just log it
-    return null;
+    throw error; // Propagate the error to handle it in the route
   } finally {
     await connection.end();
   }
@@ -52,28 +51,10 @@ export async function getAdminLogs() {
        ORDER BY al.created_at DESC`
     );
 
-    console.log('Retrieved admin logs:', logs.length);
-    return logs.map((log: any) => ({
-      id: log.id,
-      actionType: log.action_type,
-      details: log.details,
-      createdAt: log.created_at,
-      admin: {
-        id: log.admin_id,
-        email: log.admin_email,
-        firstName: log.admin_first_name,
-        lastName: log.admin_last_name
-      },
-      targetUser: log.target_user_id ? {
-        id: log.target_user_id,
-        email: log.target_email,
-        firstName: log.target_first_name,
-        lastName: log.target_last_name
-      } : null
-    }));
+    return logs;
   } catch (error) {
     console.error("Failed to fetch admin logs:", error);
-    return [];
+    throw error;
   } finally {
     await connection.end();
   }
