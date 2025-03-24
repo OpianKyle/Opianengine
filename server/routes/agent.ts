@@ -188,6 +188,14 @@ router.post('/customers/create', async (req: any, res) => {
           mandate_accepted_at, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`;
 
+      console.log('Creating customer with parameters:', {
+        email,
+        firstName,
+        lastName,
+        agentId: req.user.id,
+        selectedPackage
+      });
+
       const insertParams = [
         email,
         defaultPassword,
@@ -216,15 +224,11 @@ router.post('/customers/create', async (req: any, res) => {
         0, // is_agent
         referralCode,
         1, // mandate_accepted
-        new Date() // mandate_accepted_at
+        new Date() //mandate_accepted_at
       ];
 
-      console.log('Creating customer with parameters:', {
-        email,
-        firstName,
-        lastName,
-        agentId: req.user.id,
-        selectedPackage,
+      console.log('SQL Parameters:', {
+        columnCount: insertQuery.split('?').length - 1,
         paramCount: insertParams.length
       });
 
