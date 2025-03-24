@@ -149,15 +149,15 @@ router.post('/customers/create', async (req: any, res) => {
     // Generate a temporary password
     const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
 
-    // Calculate initial points based on standardized package names
+    // Calculate initial points based on package names in MariaDB
     let initialPoints = 0;
     const normalizedPackage = selectedPackage?.toUpperCase();
     switch (normalizedPackage) {
-      case 'STARTER': initialPoints = 2500; break;
-      case 'STANDARD': initialPoints = 5000; break;
-      case 'PROFESSIONAL': initialPoints = 7500; break;
-      case 'ENTERPRISE': initialPoints = 10000; break;
-      case 'ULTIMATE': initialPoints = 12500; break;
+      case 'OPPORTUNITY': initialPoints = 2500; break;
+      case 'MOMENTUM': initialPoints = 5000; break;
+      case 'PROSPER': initialPoints = 7500; break;
+      case 'PRESTIGE': initialPoints = 10000; break;
+      case 'PINNACLE': initialPoints = 12500; break;
       default: initialPoints = 2500;
     }
 
@@ -178,8 +178,8 @@ router.post('/customers/create', async (req: any, res) => {
           ?, ?, ?, ?, ?,
           ?, ?, ?, UPPER(?), ?,
           ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, 1, NOW()
+          ?, ?, 1, ?,
+          ?, 0, ?, 1, NOW()
         )`;
 
       const insertParams = [
@@ -204,10 +204,8 @@ router.post('/customers/create', async (req: any, res) => {
         branchCode,
         isSouthAfrican ? 1 : 0,
         hasCreditCard ? 1 : 0,
-        1, // is_enabled
         initialPoints,
         req.user.id, // agent_id
-        0, // is_agent
         referralCode
       ];
 
