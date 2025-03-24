@@ -260,7 +260,7 @@ router.post('/customers/create', async (req: any, res) => {
 
       // Send welcome email
       try {
-        const { text, html } = formatRegistrationEmail(firstName, referralCode);
+        const { text, html } = formatRegistrationEmail(firstName, email);
         await sendEmail({
           to: email,
           subject: "Welcome to OPIAN Rewards!",
