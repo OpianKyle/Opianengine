@@ -26,11 +26,11 @@ import {
 } from "@/components/ui/select";
 
 const packages = [
-  { id: 'BEGINNER', name: 'Beginner', price: 550 },
-  { id: 'NOVICE', name: 'Novice', price: 750 },
-  { id: 'ACTIVE', name: 'Active', price: 950 },
-  { id: 'PROFESSIONAL', name: 'Professional', price: 1150 },
-  { id: 'EXPERT', name: 'Expert', price: 1350 },
+  { id: 'OPPORTUNITY', name: 'Opportunity', price: 350 },
+  { id: 'MOMENTUM', name: 'Momentum', price: 450 },
+  { id: 'PROSPER', name: 'Prosper', price: 550 },
+  { id: 'PRESTIGE', name: 'Prestige', price: 695 },
+  { id: 'PINNACLE', name: 'Pinnacle', price: 825 }
 ];
 
 const customerSchema = z.object({
@@ -48,7 +48,7 @@ const customerSchema = z.object({
   city: z.string().min(1, "City is required"),
   postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
   hasCreditCard: z.boolean(),
-  selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]),
+  selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]),
   accountHolderName: z.string().min(1, "Account holder name is required"),
   bankName: z.string().min(1, "Bank name is required"),
   branchCode: z.string().min(1, "Branch code is required"),
@@ -101,7 +101,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
       city: "",
       postalCode: "",
       hasCreditCard: false,
-      selectedPackage: "BEGINNER",
+      selectedPackage: "OPPORTUNITY",
       accountHolderName: "",
       bankName: "",
       branchCode: "",
@@ -130,7 +130,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
         city: customer.city || "",
         postalCode: customer.postalCode || "",
         hasCreditCard: customer.hasCreditCard || false,
-        selectedPackage: customer.selectedPackage?.toUpperCase() || "BEGINNER",
+        selectedPackage: customer.selectedPackage?.toUpperCase() || "OPPORTUNITY",
         accountHolderName: customer.accountHolderName || "",
         bankName: customer.bankName || "",
         branchCode: customer.branchCode || "",
@@ -412,11 +412,11 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="BEGINNER">Beginner - R550/month</SelectItem>
-                          <SelectItem value="NOVICE">Novice - R750/month</SelectItem>
-                          <SelectItem value="ACTIVE">Active - R950/month</SelectItem>
-                          <SelectItem value="PROFESSIONAL">Professional - R1150/month</SelectItem>
-                          <SelectItem value="EXPERT">Expert - R1350/month</SelectItem>
+                          {packages.map((pkg) => (
+                            <SelectItem key={pkg.id} value={pkg.id}>
+                              {pkg.name} - R{pkg.price}/month
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
