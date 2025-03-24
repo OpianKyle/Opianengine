@@ -24,13 +24,6 @@ async function generateUniqueReferralCode(connection: any): Promise<string> {
 
 // Middleware to check if user is an agent
 router.use(async (req: any, res, next) => {
-  console.log('Agent route authentication check:', {
-    isAuthenticated: req.isAuthenticated(),
-    hasSession: !!req.session,
-    user: req.user,
-    url: req.url
-  });
-
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Not authenticated" });
   }
@@ -130,12 +123,6 @@ router.get('/customers', async (req: any, res) => {
 
 // Create customer as agent
 router.post('/customers/create', async (req: any, res) => {
-  console.log('Create customer request received:', {
-    isAuthenticated: req.isAuthenticated(),
-    hasSession: !!req.session,
-    agentId: req.user?.id
-  });
-
   const connection = await createConnection();
   try {
     const { 
@@ -170,31 +157,29 @@ router.post('/customers/create', async (req: any, res) => {
       case 'PROSPER': initialPoints = 7500; break;
       case 'PRESTIGE': initialPoints = 10000; break;
       case 'PINNACLE': initialPoints = 12500; break;
-      default: initialPoints = 0;
+      default: initialPoints = 2500;
     }
 
     await connection.beginTransaction();
 
     try {
+      // Insert user with explicit column names
       const insertQuery = `
         INSERT INTO users (
           email, password, first_name, last_name, phone_number,
-          date_of_birth, gender, id_number, occupation,
-          industry, address, city, postal_code,
-          selected_package, bank_name, account_type,
-          account_number, account_holder_name, branch_code,
+          date_of_birth, gender, id_number, occupation, industry,
+          address, city, postal_code, selected_package, bank_name,
+          account_type, account_number, account_holder_name, branch_code,
           is_south_african, has_credit_card, is_enabled, points,
-          agent_id, is_agent, referral_code, mandate_accepted,
-          mandate_accepted_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`;
-
-      console.log('Creating customer with parameters:', {
-        email,
-        firstName,
-        lastName,
-        agentId: req.user.id,
-        selectedPackage
-      });
+          agent_id, is_agent, referral_code, mandate_accepted
+        ) VALUES (
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, ?, ?, 1
+        )`;
 
       const insertParams = [
         email,
@@ -222,14 +207,15 @@ router.post('/customers/create', async (req: any, res) => {
         initialPoints,
         req.user.id, // agent_id
         0, // is_agent
-        referralCode,
-        1, // mandate_accepted
-        new Date() //mandate_accepted_at
+        referralCode
       ];
 
       console.log('SQL Parameters:', {
-        columnCount: insertQuery.split('?').length - 1,
-        paramCount: insertParams.length
+        columns: insertQuery.match(/\(/g)?.length,
+        values: insertParams.length,
+        email,
+        agentId: req.user.id,
+        selectedPackage
       });
 
       const [userResult] = await connection.execute(insertQuery, insertParams);
@@ -266,14 +252,6 @@ router.post('/customers/create', async (req: any, res) => {
       } catch (emailError) {
         console.error('Failed to send welcome email:', emailError);
       }
-
-      console.log('Customer created successfully:', {
-        id: userId,
-        email,
-        points: initialPoints,
-        package: selectedPackage,
-        agentId: req.user.id
-      });
 
       res.status(201).json({
         id: userId,
