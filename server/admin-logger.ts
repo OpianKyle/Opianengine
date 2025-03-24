@@ -15,19 +15,37 @@ export async function logAdminAction({
 }: AdminAction) {
   const connection = await createConnection();
   try {
-    console.log('Attempting to log admin action:', { adminId, actionType, targetUserId, details });
+    // Verify admin exists and has proper permissions
+    const [adminUser] = await connection.execute(
+      'SELECT role_type FROM admin_users WHERE user_id = ?',
+      [adminId]
+    );
+
+    if (!Array.isArray(adminUser) || adminUser.length === 0) {
+      throw new Error('Invalid admin user');
+    }
+
+    console.log('Logging admin action:', {
+      adminId,
+      actionType,
+      targetUserId,
+      details,
+      adminRole: (adminUser as any)[0]?.role_type
+    });
 
     const [result] = await connection.execute(
-      `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details, created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
+      `INSERT INTO admin_logs (
+        admin_id, action_type, target_user_id, details, created_at
+      ) VALUES (?, ?, ?, ?, NOW())`,
       [adminId, actionType, targetUserId || null, details]
     );
 
     console.log('Admin action logged successfully:', result);
     return result;
+
   } catch (error) {
-    console.error("Failed to log admin action:", error);
-    throw error; // Propagate the error to handle it in the route
+    console.error('Failed to log admin action:', error);
+    throw error;
   } finally {
     await connection.end();
   }

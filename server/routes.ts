@@ -14,6 +14,7 @@ import referralRouter from './routes/referral';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import { logAdminAction } from './admin-logger';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -828,6 +829,102 @@ export function registerRoutes(app: Express): Server {
 
   // Mount referral routes
   app.use('/api/customer', referralRouter);
+
+  // Create new agent endpoint
+  app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user?.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      console.log('Creating new agent:', {
+        email: req.body.email,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName
+      });
+
+      await connection.beginTransaction();
+
+      try {
+        // Check for existing agent with same email
+        const [existingAgent] = await connection.execute(
+          'SELECT id FROM users WHERE email = ?',
+          [req.body.email]
+        );
+
+        if (Array.isArray(existingAgent) && existingAgent.length > 0) {
+          return res.status(400).json({ error: "Email already exists" });
+        }
+
+        // Hash password if provided
+        let hashedPassword = null;
+        if (req.body.password) {
+          hashedPassword = await crypto.hash(req.body.password);
+        }
+
+        // Insert the new agent with explicit is_agent flag
+        const [result] = await connection.execute(
+          `INSERT INTO users (
+            email, password, first_name, last_name,
+            phone_number, is_agent, is_enabled, created_at
+          ) VALUES (?, ?, ?, ?, ?, 1, 1, NOW())`,
+          [
+            req.body.email,
+            hashedPassword,
+            req.body.firstName,
+            req.body.lastName,
+            req.body.phoneNumber || null
+          ]
+        );
+
+        const agentId = (result as any).insertId;
+
+        // Log the admin action
+        await logAdminAction({
+          adminId: req.user?.id,
+          actionType: 'AGENT_CREATED',
+          targetUserId: agentId,
+          details: `Created agent: ${req.body.firstName} ${req.body.lastName} (${req.body.email})`
+        });
+
+        await connection.commit();
+
+        console.log('Agent created successfully:', {
+          id: agentId,
+          email: req.body.email,
+          firstName: req.body.firstName,
+          lastName: req.body.lastName
+        });
+
+        res.json({
+          success: true,
+          agentId,
+          message: 'Agent created successfully'
+        });
+
+      } catch (error) {
+        await connection.rollback();
+        console.error('Error during agent creation transaction:', error);
+        throw error;
+      }
+
+    } catch (error) {
+      console.error('Error creating agent:', error);
+      res.status(500).json({ 
+        error: "Failed to create agent", 
+        details: error.message 
+      });
+    } finally {
+      await connection.end();
+    }
+  });
 
   // Points adjustment endpoint with notifications
   app.post("/api/admin/points/adjust", async (req, res) => {
