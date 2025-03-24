@@ -5,6 +5,23 @@ import { sendEmail, formatRegistrationEmail } from '../utils/emailService';
 
 const router = Router();
 
+// Helper function to generate a unique referral code
+async function generateUniqueReferralCode(connection: any): Promise<string> {
+  let isUnique = false;
+  let referralCode = '';
+
+  while (!isUnique) {
+    referralCode = generateReferralCode();
+    const [existing] = await connection.execute(
+      'SELECT id FROM users WHERE referral_code = ?',
+      [referralCode]
+    );
+    isUnique = !existing || (Array.isArray(existing) && existing.length === 0);
+  }
+
+  return referralCode;
+}
+
 // Middleware to check if user is an agent
 router.use(async (req: any, res, next) => {
   console.log('Agent route authentication check:', {
@@ -169,7 +186,7 @@ router.post('/customers/create', async (req: any, res) => {
           is_south_african, has_credit_card, is_enabled, points,
           agent_id, is_agent, referral_code, mandate_accepted,
           mandate_accepted_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`;
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`;
 
       const insertParams = [
         email,
