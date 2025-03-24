@@ -18,8 +18,8 @@ export async function logAdminAction({
     console.log('Attempting to log admin action:', { adminId, actionType, targetUserId, details });
 
     const [result] = await connection.execute(
-      `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details, created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
+      `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
+       VALUES (?, ?, ?, ?)`,
       [adminId, actionType, targetUserId || null, details]
     );
 
@@ -27,7 +27,7 @@ export async function logAdminAction({
     return result;
   } catch (error) {
     console.error("Failed to log admin action:", error);
-    // Don't throw the error, just log it and return null
+    // Don't throw the error, just log it
     return null;
   } finally {
     await connection.end();
@@ -50,7 +50,7 @@ export async function getAdminLogs() {
        JOIN users admin ON al.admin_id = admin.id
        LEFT JOIN users target ON al.target_user_id = target.id
        ORDER BY al.created_at DESC`
-    ) as any[];
+    );
 
     console.log('Retrieved admin logs:', logs.length);
     return logs.map((log: any) => ({
