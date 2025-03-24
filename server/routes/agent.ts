@@ -171,14 +171,14 @@ router.post('/customers/create', async (req: any, res) => {
           address, city, postal_code, selected_package, bank_name,
           account_type, account_number, account_holder_name, branch_code,
           is_south_african, has_credit_card, is_enabled, points,
-          agent_id, is_agent, referral_code, mandate_accepted
+          agent_id, is_agent, referral_code, mandate_accepted, created_at
         ) VALUES (
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?,
           ?, ?, ?, ?,
-          ?, ?, ?, 1
+          ?, ?, ?, 1, NOW()
         )`;
 
       const insertParams = [
@@ -282,10 +282,6 @@ router.post('/customers/create', async (req: any, res) => {
 
 // Update customer details
 router.put('/customers/:id/update', async (req: any, res) => {
-  if (!req.session || !req.isAuthenticated()) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-
   const customerId = req.params.id;
   const connection = await createConnection();
 
