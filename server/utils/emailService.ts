@@ -170,7 +170,11 @@ export function formatRegistrationEmail(
   `;
 
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://opianrewards.co.za/Assets/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
+      </div>
+
       <h2 style="color: #011d3d;">Dear ${firstName},</h2>
       <h1 style="color: #43EB3E;">Welcome to Opian Rewards!</h1>
 
@@ -183,8 +187,8 @@ export function formatRegistrationEmail(
         <ol style="line-height: 1.8;">
           <li><strong>Sign in:</strong> Visit our platform and log in using your credentials:
             <div style="background: rgba(255,255,255,0.1); padding: 10px; margin: 10px 0; border-radius: 3px;">
-              Username: ${email}<br>
-              Password: 123456
+              <span style="color: #43EB3E;">Username:</span> ${email}<br>
+              <span style="color: #43EB3E;">Password:</span> 123456
             </div>
           </li>
           <li><strong>Secure your account:</strong> Change your password to something strong and unique.</li>
