@@ -149,14 +149,15 @@ router.post('/customers/create', async (req: any, res) => {
     // Generate a temporary password
     const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
 
-    // Calculate initial points
+    // Calculate initial points based on standardized package names
     let initialPoints = 0;
-    switch (selectedPackage?.toUpperCase()) {
-      case 'OPPORTUNITY': initialPoints = 2500; break;
-      case 'MOMENTUM': initialPoints = 5000; break;
-      case 'PROSPER': initialPoints = 7500; break;
-      case 'PRESTIGE': initialPoints = 10000; break;
-      case 'PINNACLE': initialPoints = 12500; break;
+    const normalizedPackage = selectedPackage?.toUpperCase();
+    switch (normalizedPackage) {
+      case 'STARTER': initialPoints = 2500; break;
+      case 'STANDARD': initialPoints = 5000; break;
+      case 'PROFESSIONAL': initialPoints = 7500; break;
+      case 'ENTERPRISE': initialPoints = 10000; break;
+      case 'ULTIMATE': initialPoints = 12500; break;
       default: initialPoints = 2500;
     }
 
@@ -175,7 +176,7 @@ router.post('/customers/create', async (req: any, res) => {
         ) VALUES (
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?,
+          ?, ?, ?, UPPER(?), ?,
           ?, ?, ?, ?,
           ?, ?, ?, ?,
           ?, ?, ?, 1, NOW()
@@ -195,7 +196,7 @@ router.post('/customers/create', async (req: any, res) => {
         addressLine1,
         suburb,
         postalCode,
-        selectedPackage,
+        selectedPackage, // Will be converted to uppercase in query
         bankName,
         accountType,
         accountNumber,
@@ -210,12 +211,10 @@ router.post('/customers/create', async (req: any, res) => {
         referralCode
       ];
 
-      console.log('SQL Parameters:', {
-        columns: insertQuery.match(/\(/g)?.length,
-        values: insertParams.length,
-        email,
-        agentId: req.user.id,
-        selectedPackage
+      console.log('Creating customer with package:', {
+        originalPackage: selectedPackage,
+        normalizedPackage,
+        initialPoints
       });
 
       const [userResult] = await connection.execute(insertQuery, insertParams);
@@ -232,7 +231,7 @@ router.post('/customers/create', async (req: any, res) => {
             userId,
             initialPoints,
             'WELCOME_BONUS',
-            `Initial points allocation for ${selectedPackage} package`,
+            `Initial points allocation for ${normalizedPackage} package`,
             'PROCESSED'
           ]
         );
@@ -259,7 +258,7 @@ router.post('/customers/create', async (req: any, res) => {
         firstName,
         lastName,
         points: initialPoints,
-        selectedPackage,
+        selectedPackage: normalizedPackage,
         temporaryPassword: '123456',
         agentId: req.user.id,
         isEnabled: true,
@@ -304,16 +303,25 @@ router.put('/customers/:id/update', async (req: any, res) => {
       branchCode, isSouthAfrican, hasCreditCard
     } = req.body;
 
+    console.log('Updating customer with data:', {
+      id: customerId,
+      email,
+      firstName,
+      lastName,
+      selectedPackage,
+      agentId: req.user.id
+    });
+
     await connection.beginTransaction();
 
     try {
-      // Update user details
+      // Update user details with correct package name handling
       await connection.execute(
         `UPDATE users SET
           email = ?, first_name = ?, last_name = ?, phone_number = ?,
           date_of_birth = ?, gender = ?, id_number = ?, occupation = ?,
           industry = ?, address = ?, city = ?, postal_code = ?,
-          selected_package = ?, bank_name = ?, account_type = ?,
+          selected_package = UPPER(?), bank_name = ?, account_type = ?,
           account_number = ?, account_holder_name = ?, branch_code = ?,
           is_south_african = ?, has_credit_card = ?
         WHERE id = ? AND agent_id = ?`,
@@ -328,8 +336,27 @@ router.put('/customers/:id/update', async (req: any, res) => {
         ]
       );
 
+      // Verify the update
+      const [updatedUser] = await connection.execute(
+        'SELECT id, email, first_name, last_name, selected_package FROM users WHERE id = ?',
+        [customerId]
+      );
+
+      console.log('Customer updated successfully:', {
+        id: customerId,
+        updatedPackage: (updatedUser as any)[0]?.selected_package
+      });
+
       await connection.commit();
-      res.json({ message: "Customer updated successfully" });
+      res.json({ 
+        message: "Customer updated successfully",
+        id: customerId,
+        email: (updatedUser as any)[0]?.email,
+        firstName: (updatedUser as any)[0]?.first_name,
+        lastName: (updatedUser as any)[0]?.last_name,
+        selectedPackage: (updatedUser as any)[0]?.selected_package
+      });
+
     } catch (error) {
       await connection.rollback();
       console.error('Transaction failed:', error);
