@@ -11,9 +11,23 @@ const calculateCommission = async (connection: any, packageType: string, level: 
   try {
     if (!packageType) return 0;
 
-    // Fixed commission of 2000 points for all referrals
-    const commission = 2000;
-    console.log('Commission calculation:', { packageType, level, commission });
+    // Get package amount from database
+    const [prices] = await connection.execute(
+      'SELECT premium_amount FROM package_premium_amounts WHERE package_type = ?',
+      [packageType.toUpperCase()]
+    );
+
+    const packageAmount = prices.length > 0 ? Number(prices[0].premium_amount) : 0;
+    console.log('Package price lookup:', { packageType, packageAmount });
+
+    const percentages = {
+      1: 0.075, // 7.5% for level 1
+      2: 0.05,  // 5% for level 2
+      3: 0.025  // 2.5% for level 3
+    };
+
+    const commission = packageAmount * (percentages[level as keyof typeof percentages] || 0);
+    console.log('Commission calculation:', { packageAmount, level, commission });
 
     return commission;
   } catch (error) {
@@ -120,9 +134,9 @@ const getReferralInfo = async (userId: number) => {
         createdAt: ref.created_at,
         directReferralCount: ref.direct_referral_count,
         commission: {
-          percentage: 0, // Remove percentage since we're using fixed points
-          randValue: '0.00', // Remove rand value since we're using fixed points
-          points: 2000 // Fixed 2000 points
+          percentage: level === 1 ? 7.5 : level === 2 ? 5 : 2.5,
+          randValue: commission.toFixed(2),
+          points: level === 1 ? 2000 : Math.floor(commission) // Fixed 2000 points for level 1, calculated for others
         }
       };
 
@@ -143,14 +157,14 @@ const getReferralInfo = async (userId: number) => {
           count: 0,
           totalReferrals: 0,
           referralsByPackage: {
-            BEGINNER: 0,
-            NOVICE: 0,
-            ACTIVE: 0,
-            PROFESSIONAL: 0,
-            EXPERT: 0
+            OPPORTUNITY: 0,
+            MOMENTUM: 0,
+            PROSPER: 0,
+            PRESTIGE: 0,
+            PINNACLE: 0
           },
           commission: {
-            percentage: 0, // Remove percentage since we're using fixed points
+            percentage: level === 1 ? 7.5 : level === 2 ? 5 : 2.5,
             baseAmount: packagePrices[packageType] || 0
           }
         };
