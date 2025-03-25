@@ -172,7 +172,7 @@ export function formatRegistrationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://opianrewards.co.za/Assets/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
+        <img src="https://www.opianrewards.co.za/Assets/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
       </div>
 
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
@@ -222,22 +222,12 @@ export function formatRegistrationEmail(
         <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
           <p style="color: white; margin: 20px 0;">
             Best regards,<br><br>
-            <img src="https://opianrewards.co.za/Assets/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+            <img src="https://www.opianrewards.co.za/Assets/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
             <strong>Lance Heynes</strong><br>
             CEO, Opian Financial Services (Pty) Ltd
           </p>
         </div>
 
-        <div style="color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.6; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-          <p><strong>Opian Financial Services (Pty) Ltd</strong> is an Authorised Financial Services Provider</p>
-          <p>Company Registration Number: 2018/584168/07 FSP No: 50974</p>
-          <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
-          <p>
-            Tel: <a href="tel:0861263346" style="color: #43EB3E;">0861 263 346</a> |
-            Email: <a href="mailto:info@opianfsgroup.com" style="color: #43EB3E;">info@opianfsgroup.com</a> |
-            Website: <a href="http://www.opianfsgroup.com" style="color: #43EB3E;">www.opianfsgroup.com</a>
-          </p>
-        </div>
       </div>
     </div>
   `;
