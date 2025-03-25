@@ -154,12 +154,12 @@ export default function ReferralSection() {
         <div className="text-sm text-muted-foreground">
           Share your referral link with friends. When they register, you'll earn 2,500 points!
         </div>
-        <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; margin: 20px 0;">
-          <h3 style="color: #43EB3E; margin-top: 0;">Your Referral Rewards</h3>
-          <ul style="list-style-type: none; padding-left: 0; margin: 10px 0;">
-            <li style="margin: 5px 0;">• Level 1: 7.5% commission + 2000 points per direct referral</li>
-            <li style="margin: 5px 0;">• Level 2: 5% commission from your referrals' referrals</li>
-            <li style="margin: 5px 0;">• Level 3: 2.5% commission from level 3 referrals</li>
+        <div className="bg-[rgba(255,255,255,0.05)] p-5 rounded-lg my-5">
+          <h3 className="text-[#43EB3E] mt-0">Your Referral Rewards</h3>
+          <ul className="list-none pl-0 my-2.5">
+            <li className="my-1.5">• Level 1: 7.5% commission + 2000 points per direct referral</li>
+            <li className="my-1.5">• Level 2: 5% commission from your referrals' referrals</li>
+            <li className="my-1.5">• Level 3: 2.5% commission from level 3 referrals</li>
           </ul>
         </div>
         {referralLink && (
