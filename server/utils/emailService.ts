@@ -188,8 +188,8 @@ export function formatRegistrationEmail(
           <ol style="line-height: 1.8;">
             <li><strong>Sign in:</strong> Visit our platform and log in using your credentials:
               <div style="background: rgba(255,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 3px;">
-                <span style="color: #43EB3E;">Username:</span> <span style="color: white;">${email}</span><br>
-                <span style="color: #43EB3E;">Password:</span> <span style="color: white;">123456</span>
+                <span style="color: #43EB3E;">Username:</span> <span style="color: white !important;">${email}</span><br>
+                <span style="color: #43EB3E;">Password:</span> <span style="color: white !important;">123456</span>
               </div>
             </li>
             <li><strong>Secure your account:</strong> Change your password to something strong and unique.</li>
@@ -209,9 +209,9 @@ export function formatRegistrationEmail(
         <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; margin: 20px 0;">
           <h3 style="color: #43EB3E; margin-top: 0;">For assistance, contact our support team:</h3>
           <p style="line-height: 1.8;">
-            📞 Call: <a href="tel:0861263346" style="color: #43EB3E;">0861 263 346</a><br>
-            💬 WhatsApp: <a href="tel:0861263346" style="color: #43EB3E;">0861 263 346</a><br>
-            📧 Email: <a href="mailto:clientservices@opianfsgroup.com" style="color: #43EB3E;">clientservices@opianfsgroup.com</a>
+            📞 Call: <a href="tel:0861263346" style="color: white !important; text-decoration: none;">0861 263 346</a><br>
+            💬 WhatsApp: <a href="tel:0861263346" style="color: white !important; text-decoration: none;">0861 263 346</a><br>
+            📧 Email: <a href="mailto:clientservices@opianfsgroup.com" style="color: white !important; text-decoration: none;">clientservices@opianfsgroup.com</a>
           </p>
         </div>
 
@@ -233,14 +233,13 @@ export function formatRegistrationEmail(
           <p>Company Registration Number: 2018/584168/07 FSP No: 50974</p>
           <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
           <p>
-            Tel: <a href="tel:0861263346" style="color: #43EB3E;">0861 263 346</a> |
-            Email: <a href="mailto:info@opianfsgroup.com" style="color: #43EB3E;">info@opianfsgroup.com</a> |
-            Website: <a href="http://www.opianfsgroup.com" style="color: #43EB3E;">www.opianfsgroup.com</a>
+            Tel: <a href="tel:0861263346" style="color: white !important; text-decoration: none;">0861 263 346</a> |
+            Email: <a href="mailto:info@opianfsgroup.com" style="color: white !important; text-decoration: none;">info@opianfsgroup.com</a> |
+            Website: <a href="http://www.opianfsgroup.com" style="color: white !important; text-decoration: none;">www.opianfsgroup.com</a>
           </p>
         </div>
       </div>
     </div>
-
   `;
 
   return { text, html };
