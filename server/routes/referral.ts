@@ -11,23 +11,9 @@ const calculateCommission = async (connection: any, packageType: string, level: 
   try {
     if (!packageType) return 0;
 
-    // Get package amount from database
-    const [prices] = await connection.execute(
-      'SELECT premium_amount FROM package_premium_amounts WHERE package_type = ?',
-      [packageType.toUpperCase()]
-    );
-
-    const packageAmount = prices.length > 0 ? Number(prices[0].premium_amount) : 0;
-    console.log('Package price lookup:', { packageType, packageAmount });
-
-    const percentages = {
-      1: 0.15, // 15% for level 1
-      2: 0.10, // 10% for level 2
-      3: 0.05, // 5% for level 3
-    };
-
-    const commission = packageAmount * (percentages[level as keyof typeof percentages] || 0);
-    console.log('Commission calculation:', { packageAmount, level, commission });
+    // Fixed commission of 2000 points for all referrals
+    const commission = 2000;
+    console.log('Commission calculation:', { packageType, level, commission });
 
     return commission;
   } catch (error) {
@@ -134,9 +120,9 @@ const getReferralInfo = async (userId: number) => {
         createdAt: ref.created_at,
         directReferralCount: ref.direct_referral_count,
         commission: {
-          percentage: level === 1 ? 15 : level === 2 ? 10 : 5,
-          randValue: commission.toFixed(2),
-          points: Math.floor(commission * 100)
+          percentage: 0, // Remove percentage since we're using fixed points
+          randValue: '0.00', // Remove rand value since we're using fixed points
+          points: 2000 // Fixed 2000 points
         }
       };
 
@@ -164,7 +150,7 @@ const getReferralInfo = async (userId: number) => {
             EXPERT: 0
           },
           commission: {
-            percentage: level === 1 ? 15 : level === 2 ? 10 : 5,
+            percentage: 0, // Remove percentage since we're using fixed points
             baseAmount: packagePrices[packageType] || 0
           }
         };
