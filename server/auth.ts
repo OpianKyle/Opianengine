@@ -299,30 +299,38 @@ export function setupAuth(app: Express) {
       const selectedPackage = req.body.selectedPackage?.toUpperCase();
       console.log('Processing package activation:', { selectedPackage });
 
+      // Align point values with the agent customer creation
       switch (selectedPackage) {
-        case 'BEGINNER':
+        case 'OPPORTUNITY':
+          initialPoints = 2500;
+          break;
+        case 'MOMENTUM':
           initialPoints = 5000;
           break;
-        case 'NOVICE':
+        case 'PROSPER':
+          initialPoints = 7500;
+          break;
+        case 'PRESTIGE':
           initialPoints = 10000;
           break;
-        case 'ACTIVE':
-          initialPoints = 15000;
-          break;
-        case 'PROFESSIONAL':
-          initialPoints = 20000;
-          break;
-        case 'EXPERT':
-          initialPoints = 25000;
+        case 'PINNACLE':
+          initialPoints = 12500;
           break;
         default:
-          initialPoints = 0;
+          initialPoints = 2500; // Default package points
       }
 
       console.log('Package points calculation:', {
         package: selectedPackage,
         points: initialPoints
       });
+
+      // Get package price for transaction record
+      const [prices] = await connection.execute(
+        'SELECT premium_amount FROM package_premium_amounts WHERE package_type = ?',
+        [selectedPackage]
+      );
+      const packagePrice = prices.length > 0 ? Number(prices[0].premium_amount) : 0;
 
       // Start transaction
       await connection.beginTransaction();
@@ -333,8 +341,8 @@ export function setupAuth(app: Express) {
           `INSERT INTO users (
             email, password, first_name, last_name, 
             phone_number, is_enabled, points, referral_code, 
-            referred_by, selected_package
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            referred_by, selected_package, mandate_accepted
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             req.body.email,
             hashedPassword,
@@ -342,10 +350,11 @@ export function setupAuth(app: Express) {
             req.body.lastName,
             req.body.mobileNumber,
             1, // is_enabled
-            initialPoints, // Initial points based on package
+            initialPoints,
             newReferralCode,
             req.body.referralCode || null,
-            selectedPackage // Store uppercase package name
+            selectedPackage,
+            1 // mandate_accepted
           ]
         );
 
@@ -360,13 +369,15 @@ export function setupAuth(app: Express) {
         if (initialPoints > 0) {
           await connection.execute(
             `INSERT INTO transactions (
-              user_id, points, type, description
-            ) VALUES (?, ?, ?, ?)`,
+              user_id, points, type, description, status,
+              created_at
+            ) VALUES (?, ?, ?, ?, ?, NOW())`,
             [
               userId,
               initialPoints,
               'WELCOME_BONUS',
-              `Welcome bonus points for ${selectedPackage} package`
+              `Initial points allocation for ${selectedPackage} package (R${packagePrice})`,
+              'PROCESSED'
             ]
           );
           console.log('Welcome bonus transaction recorded:', {
@@ -417,6 +428,22 @@ export function setupAuth(app: Express) {
 
         await connection.commit();
         console.log('Registration transaction committed successfully');
+
+        // Send welcome email
+        try {
+          const { formatRegistrationEmail, sendEmail } = await import('./utils/emailService');
+          const { text, html } = formatRegistrationEmail(req.body.firstName, req.body.email);
+          await sendEmail({
+            to: req.body.email,
+            subject: "Welcome to OPIAN Rewards!",
+            text,
+            html
+          });
+          console.log('Welcome email sent successfully to:', req.body.email);
+        } catch (emailError) {
+          console.error('Failed to send welcome email:', emailError);
+          // Don't fail registration if email fails
+        }
 
         // Fetch complete user data
         const [newUserCheck] = await connection.execute(
