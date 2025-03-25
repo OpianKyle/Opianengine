@@ -188,8 +188,8 @@ export function formatRegistrationEmail(
           <ol style="line-height: 1.8;">
             <li><strong>Sign in:</strong> Visit our platform and log in using your credentials:
               <div style="background: rgba(255,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 3px;">
-                <span style="color: #43EB3E;">Username:</span> <strong style="color: white;">${email}</strong><br>
-                <span style="color: #43EB3E;">Password:</span> <strong style="color: white;">123456</strong>
+                <span style="color: #43EB3E;">Username:</span> <span style="color: white;">${email}</span><br>
+                <span style="color: #43EB3E;">Password:</span> <span style="color: white;">123456</span>
               </div>
             </li>
             <li><strong>Secure your account:</strong> Change your password to something strong and unique.</li>
