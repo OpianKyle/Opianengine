@@ -4,13 +4,58 @@ import { type Express } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { db } from "@db";
-import mysql from 'mysql2/promise';
+import { MemoryStore } from 'express-session';
 import { JWT_SECRET } from './config';
 import { createConnection } from './db';
-import { MemoryStore } from 'express-session';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
+
+// Keep existing imports and configurations...
+
+// Add helper function for validating referral code
+async function validateReferralCode(connection: any, referralCode: string): Promise<boolean> {
+  if (!referralCode) return true;
+  const [referrer] = await connection.execute(
+    'SELECT id FROM users WHERE referral_code = ? AND is_enabled = 1',
+    [referralCode]
+  );
+  return Array.isArray(referrer) && referrer.length > 0;
+}
+
+// Add helper function for processing referral points
+async function processReferralPoints(connection: any, userId: number, referralCode: string, selectedPackage: string, packagePrice: number) {
+  if (!referralCode) return;
+
+  const [referrer] = await connection.execute(
+    'SELECT id FROM users WHERE referral_code = ?',
+    [referralCode]
+  );
+
+  if (!Array.isArray(referrer) || referrer.length === 0) return;
+
+  const referrerId = referrer[0].id;
+  const referralBonus = Math.floor(packagePrice * 0.15); // 15% referral bonus
+
+  // Add points to referrer
+  await connection.execute(
+    'UPDATE users SET points = points + ? WHERE id = ?',
+    [referralBonus, referrerId]
+  );
+
+  // Record referral transaction
+  await connection.execute(
+    `INSERT INTO transactions (
+      user_id, points, type, description, status, created_at
+    ) VALUES (?, ?, ?, ?, ?, NOW())`,
+    [
+      referrerId,
+      referralBonus,
+      'REFERRAL_BONUS',
+      `Referral bonus for new ${selectedPackage} package signup (R${packagePrice})`,
+      'PROCESSED'
+    ]
+  );
+}
 
 
 const scryptAsync = promisify(scrypt);
@@ -233,51 +278,24 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.post("/api/logout", (req, res) => {
-    console.log('Logout request received');
-
-    // Clear session cookie
-    res.clearCookie('session', {
-      path: '/',
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax'
-    });
-
-    if (req.session) {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error('Error destroying session:', err);
-        }
-        req.logout(() => {
-          res.status(200).json({ message: "Logged out successfully" });
-        });
-      });
-    } else {
-      res.status(200).json({ message: "Logged out successfully" });
-    }
-  });
-
-  app.get("/api/user", (req, res) => {
-    console.log('GET /api/user request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? { id: req.user.id, email: req.user.email } : null
-    });
-
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    res.json(req.user);
-  });
-
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
       console.log('Registration attempt with data:', {
         ...req.body,
-        password: '[REDACTED]'
+        password: '[REDACTED]',
+        signature: req.body.signature ? '[PRESENT]' : '[NOT PRESENT]'
       });
+
+      // Validate referral code if provided
+      if (req.body.referralCode) {
+        const isValidReferral = await validateReferralCode(connection, req.body.referralCode);
+        if (!isValidReferral) {
+          return res.status(400).json({
+            error: "Invalid referral code"
+          });
+        }
+      }
 
       // Check for existing user
       const [existingUsers] = await connection.execute(
@@ -301,29 +319,13 @@ export function setupAuth(app: Express) {
 
       // Align point values with the agent customer creation
       switch (selectedPackage) {
-        case 'OPPORTUNITY':
-          initialPoints = 2500;
-          break;
-        case 'MOMENTUM':
-          initialPoints = 5000;
-          break;
-        case 'PROSPER':
-          initialPoints = 7500;
-          break;
-        case 'PRESTIGE':
-          initialPoints = 10000;
-          break;
-        case 'PINNACLE':
-          initialPoints = 12500;
-          break;
-        default:
-          initialPoints = 2500; // Default package points
+        case 'OPPORTUNITY': initialPoints = 2500; break;
+        case 'MOMENTUM': initialPoints = 5000; break;
+        case 'PROSPER': initialPoints = 7500; break;
+        case 'PRESTIGE': initialPoints = 10000; break;
+        case 'PINNACLE': initialPoints = 12500; break;
+        default: initialPoints = 2500; // Default package points
       }
-
-      console.log('Package points calculation:', {
-        package: selectedPackage,
-        points: initialPoints
-      });
 
       // Get package price for transaction record
       const [prices] = await connection.execute(
@@ -336,13 +338,14 @@ export function setupAuth(app: Express) {
       await connection.beginTransaction();
 
       try {
-        // Create user with only the required fields initially
+        // Create user with signature
         const [userResult] = await connection.execute(
           `INSERT INTO users (
             email, password, first_name, last_name, 
             phone_number, is_enabled, points, referral_code, 
-            referred_by, selected_package, mandate_accepted
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            referred_by, selected_package, mandate_accepted,
+            signature, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
           [
             req.body.email,
             hashedPassword,
@@ -354,18 +357,14 @@ export function setupAuth(app: Express) {
             newReferralCode,
             req.body.referralCode || null,
             selectedPackage,
-            1 // mandate_accepted
+            1, // mandate_accepted
+            req.body.signature || null
           ]
         );
 
         const userId = (userResult as any).insertId;
-        console.log('User created successfully:', {
-          id: userId,
-          package: selectedPackage,
-          points: initialPoints
-        });
 
-        // Record the points transaction if points were allocated
+        // Record initial points transaction
         if (initialPoints > 0) {
           await connection.execute(
             `INSERT INTO transactions (
@@ -380,11 +379,11 @@ export function setupAuth(app: Express) {
               'PROCESSED'
             ]
           );
-          console.log('Welcome bonus transaction recorded:', {
-            userId,
-            points: initialPoints,
-            package: selectedPackage
-          });
+        }
+
+        // Process referral points if applicable
+        if (req.body.referralCode) {
+          await processReferralPoints(connection, userId, req.body.referralCode, selectedPackage, packagePrice);
         }
 
         // Update additional user details
@@ -451,11 +450,11 @@ export function setupAuth(app: Express) {
           [userId]
         );
 
-        const newUser = newUserCheck[0];
-        if (!newUser) {
+        if (!newUserCheck || (newUserCheck as any[]).length === 0) {
           throw new Error("Failed to retrieve created user");
         }
 
+        const newUser = (newUserCheck as any[])[0];
         const adminStatus = await checkUserAdminStatus(userId);
         const { password: _, ...safeUser } = newUser;
 
@@ -468,7 +467,6 @@ export function setupAuth(app: Express) {
           has_credit_card: Boolean(safeUser.has_credit_card)
         };
 
-        // Log the user in after successful registration
         req.login(transformedUser, (err) => {
           if (err) {
             console.error('Login error after registration:', err);
@@ -480,15 +478,14 @@ export function setupAuth(app: Express) {
             email: transformedUser.email,
             points: transformedUser.points,
             selected_package: transformedUser.selected_package,
-            is_admin: transformedUser.is_admin,
-            is_super_admin: transformedUser.is_super_admin
+            referral_code: transformedUser.referral_code,
+            referred_by: transformedUser.referred_by
           });
 
           res.status(201).json(transformedUser);
         });
 
       } catch (error) {
-        console.error('Error during registration transaction:', error);
         await connection.rollback();
         throw error;
       }
@@ -498,13 +495,52 @@ export function setupAuth(app: Express) {
       if (!res.headersSent) {
         return res.status(500).json({
           error: "Registration failed. Please try again.",
-          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
         });
       }
     } finally {
       await connection.end();
     }
   });
+
+  app.post("/api/logout", (req, res) => {
+    console.log('Logout request received');
+
+    // Clear session cookie
+    res.clearCookie('session', {
+      path: '/',
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax'
+    });
+
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+        }
+        req.logout(() => {
+          res.status(200).json({ message: "Logged out successfully" });
+        });
+      });
+    } else {
+      res.status(200).json({ message: "Logged out successfully" });
+    }
+  });
+
+  app.get("/api/user", (req, res) => {
+    console.log('GET /api/user request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, email: req.user.email } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    res.json(req.user);
+  });
+
 
   // Check for existing super admin
   async function checkForSuperAdmin() {
