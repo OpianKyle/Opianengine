@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
+import {
   FaXTwitter as TwitterIcon,
   FaFacebook as FacebookIcon,
   FaLinkedin as LinkedInIcon,
@@ -79,7 +79,7 @@ export default function ReferralSection() {
 
   console.log('Current referral info:', referralInfo);
 
-  const referralLink = referralInfo?.referralCode 
+  const referralLink = referralInfo?.referralCode
     ? `${window.location.origin}/?ref=${referralInfo.referralCode}`
     : '';
 
@@ -153,6 +153,14 @@ export default function ReferralSection() {
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground">
           Share your referral link with friends. When they register, you'll earn 2,500 points!
+        </div>
+        <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Your Referral Rewards</h3>
+          <ul style="list-style-type: none; padding-left: 0; margin: 10px 0;">
+            <li style="margin: 5px 0;">• Level 1: 7.5% commission + 2000 points per direct referral</li>
+            <li style="margin: 5px 0;">• Level 2: 5% commission from your referrals' referrals</li>
+            <li style="margin: 5px 0;">• Level 3: 2.5% commission from level 3 referrals</li>
+          </ul>
         </div>
         {referralLink && (
           <>

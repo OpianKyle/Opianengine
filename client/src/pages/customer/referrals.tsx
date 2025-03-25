@@ -199,7 +199,7 @@ export default function ReferralsPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="py-3">
-                  <CardTitle className="text-sm font-medium">Level 1 (15%)</CardTitle>
+                  <CardTitle className="text-sm font-medium">Level 1 (7.5%)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -213,7 +213,7 @@ export default function ReferralsPage() {
 
               <Card>
                 <CardHeader className="py-3">
-                  <CardTitle className="text-sm font-medium">Level 2 (10%)</CardTitle>
+                  <CardTitle className="text-sm font-medium">Level 2 (5%)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -227,7 +227,7 @@ export default function ReferralsPage() {
 
               <Card>
                 <CardHeader className="py-3">
-                  <CardTitle className="text-sm font-medium">Level 3 (5%)</CardTitle>
+                  <CardTitle className="text-sm font-medium">Level 3 (2.5%)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
