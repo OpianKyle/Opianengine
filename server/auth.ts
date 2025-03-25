@@ -23,7 +23,7 @@ async function validateReferralCode(connection: any, referralCode: string): Prom
 }
 
 // Add helper function for processing referral points
-async function processReferralPoints(connection: any, userId: number, referralCode: string, selectedPackage: string, packagePrice: number) {
+async function processReferralPoints(connection: any, userId: number, referralCode: string, selectedPackage: string) {
   if (!referralCode) return;
 
   const [referrer] = await connection.execute(
@@ -34,7 +34,7 @@ async function processReferralPoints(connection: any, userId: number, referralCo
   if (!Array.isArray(referrer) || referrer.length === 0) return;
 
   const referrerId = referrer[0].id;
-  const referralBonus = Math.floor(packagePrice * 0.15); // 15% referral bonus
+  const referralBonus = 2000; // Fixed referral bonus points
 
   // Add points to referrer
   await connection.execute(
@@ -51,12 +51,11 @@ async function processReferralPoints(connection: any, userId: number, referralCo
       referrerId,
       referralBonus,
       'REFERRAL_BONUS',
-      `Referral bonus for new ${selectedPackage} package signup (R${packagePrice})`,
+      `Referral bonus for new ${selectedPackage} package signup - 2000 points`,
       'PROCESSED'
     ]
   );
 }
-
 
 const scryptAsync = promisify(scrypt);
 
@@ -90,7 +89,7 @@ export function setupAuth(app: Express) {
   // Configure session middleware
   app.use(session({
     secret: process.env.SESSION_SECRET || 'development-secret',
-    cookie: { 
+    cookie: {
       maxAge: 86400000, // 24 hours
       secure: false, // Set to false to allow non-HTTPS in development
       sameSite: 'lax',
@@ -327,12 +326,6 @@ export function setupAuth(app: Express) {
         default: initialPoints = 2500; // Default package points
       }
 
-      // Get package price for transaction record
-      const [prices] = await connection.execute(
-        'SELECT premium_amount FROM package_premium_amounts WHERE package_type = ?',
-        [selectedPackage]
-      );
-      const packagePrice = prices.length > 0 ? Number(prices[0].premium_amount) : 0;
 
       // Start transaction
       await connection.beginTransaction();
@@ -375,7 +368,7 @@ export function setupAuth(app: Express) {
               userId,
               initialPoints,
               'WELCOME_BONUS',
-              `Initial points allocation for ${selectedPackage} package (R${packagePrice})`,
+              `Initial points allocation for ${selectedPackage} package`,
               'PROCESSED'
             ]
           );
@@ -383,7 +376,7 @@ export function setupAuth(app: Express) {
 
         // Process referral points if applicable
         if (req.body.referralCode) {
-          await processReferralPoints(connection, userId, req.body.referralCode, selectedPackage, packagePrice);
+          await processReferralPoints(connection, userId, req.body.referralCode, selectedPackage);
         }
 
         // Update additional user details
