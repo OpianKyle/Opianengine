@@ -15,6 +15,7 @@ import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { logAdminAction } from './admin-logger';
+import config from './config';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
