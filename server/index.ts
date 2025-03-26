@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import dotenv from "dotenv";
+dotenv.config();
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
@@ -8,7 +10,7 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
-import adminRouter from './routes/admin';  // Add this import
+import adminRouter from './routes/admin';
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
@@ -109,7 +111,7 @@ app.use((req, res, next) => {
 
     // Register routes
     app.use('/api/agent', agentRouter);
-    app.use('/api/admin', adminRouter); // Add this line
+    app.use('/api/admin', adminRouter);
     registerRoutes(app);
     console.log('Routes registered');
 
