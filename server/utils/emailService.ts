@@ -41,19 +41,24 @@ async function logEmail(params: {
   errorMessage?: string;
   hasAttachments?: boolean;
   templateData?: any;
+  htmlContent?: string;
+  textContent?: string;
 }) {
   const connection = await pool.getConnection();
   try {
     const query = `
       INSERT INTO email_logs (
-        recipient_email, subject, email_type, status, 
-        has_attachments, error_message, template_data
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        recipient_email, subject, html_content, text_content, 
+        email_type, status, has_attachments, error_message, 
+        template_data
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     await connection.execute(query, [
       params.recipientEmail,
       params.subject,
+      params.htmlContent || null,
+      params.textContent || null,
       params.emailType,
       params.status,
       params.hasAttachments || false,
@@ -93,7 +98,9 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
         emailType,
         status: 'FAILED',
         errorMessage: 'Missing Gmail credentials',
-        templateData
+        templateData,
+        htmlContent: html,
+        textContent: text
       });
       return false;
     }
@@ -116,7 +123,9 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
       subject,
       emailType,
       status: 'SENT',
-      templateData
+      templateData,
+      htmlContent: html,
+      textContent: text
     });
 
     return true;
@@ -130,7 +139,9 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
       emailType,
       status: 'FAILED',
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      templateData
+      templateData,
+      htmlContent: html,
+      textContent: text
     });
 
     return false;

@@ -6,11 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Mail, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface EmailLog {
   id: number;
   recipient_email: string;
   subject: string;
+  html_content: string;
+  text_content: string;
   email_type: string;
   status: string;
   sent_at: string;
@@ -64,6 +74,44 @@ export default function EmailLogs() {
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
     }
   };
+
+  const EmailPreviewDialog = ({ log }: { log: EmailLog }) => (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          Preview
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Email Preview</DialogTitle>
+        </DialogHeader>
+        <Tabs defaultValue="html">
+          <TabsList>
+            <TabsTrigger value="html">HTML</TabsTrigger>
+            <TabsTrigger value="text">Text</TabsTrigger>
+            <TabsTrigger value="rendered">Rendered</TabsTrigger>
+          </TabsList>
+          <TabsContent value="html" className="mt-4">
+            <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md overflow-x-auto">
+              {log.html_content}
+            </pre>
+          </TabsContent>
+          <TabsContent value="text" className="mt-4">
+            <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md">
+              {log.text_content}
+            </pre>
+          </TabsContent>
+          <TabsContent value="rendered" className="mt-4">
+            <div
+              className="bg-white p-4 rounded-md"
+              dangerouslySetInnerHTML={{ __html: log.html_content }}
+            />
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <div className="space-y-6">
@@ -129,18 +177,19 @@ export default function EmailLogs() {
                 <TableHead>Subject</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Details</TableHead>
+                <TableHead>Preview</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
+                  <TableCell colSpan={7} className="text-center py-4">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : data?.logs?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
+                  <TableCell colSpan={7} className="text-center py-4">
                     No email logs found
                   </TableCell>
                 </TableRow>
@@ -168,6 +217,9 @@ export default function EmailLogs() {
                     </TableCell>
                     <TableCell>
                       {log.error_message || (log.has_attachments ? 'Has attachments' : '')}
+                    </TableCell>
+                    <TableCell>
+                      <EmailPreviewDialog log={log} />
                     </TableCell>
                   </TableRow>
                 ))
