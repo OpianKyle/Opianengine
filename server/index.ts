@@ -8,12 +8,11 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
-import adminRouter from './routes/admin';
+import adminRouter from './routes/admin';  // Add this import
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
 import { createServer } from 'http';
-import config from './config';
 
 console.log('Starting server initialization...', new Date().toISOString());
 
@@ -43,10 +42,10 @@ app.use(fileUpload({
 
 // Session configuration
 const sessionMiddleware = session({
-  secret: config.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'development-secret',
   cookie: { 
     maxAge: 86400000, // 24 hours
-    secure: config.isProduction, // Set secure cookies in production
+    secure: false, // Set to false to allow non-HTTPS in development
     sameSite: 'lax',
     path: '/'
   },
@@ -86,7 +85,11 @@ app.use((req, res, next) => {
     // Test MariaDB connection
     try {
       const connection = await mysql.createConnection({
-        ...config.dbConfig,
+        host: 'dedi1350.jnb1.host-h.net',
+        user: 'admin',
+        password: '8E33U976qa800F',
+        database: 'opianrewards',
+        port: 3306,
         ssl: {
           rejectUnauthorized: false
         }
@@ -106,7 +109,7 @@ app.use((req, res, next) => {
 
     // Register routes
     app.use('/api/agent', agentRouter);
-    app.use('/api/admin', adminRouter);
+    app.use('/api/admin', adminRouter); // Add this line
     registerRoutes(app);
     console.log('Routes registered');
 
@@ -119,7 +122,7 @@ app.use((req, res, next) => {
     });
 
     // Setup appropriate server based on environment
-    if (!config.isProduction) {
+    if (process.env.NODE_ENV !== "production") {
       console.log('Setting up Vite development server...');
       await setupVite(app, server);
       console.log('Vite setup complete');
@@ -131,7 +134,7 @@ app.use((req, res, next) => {
 
     // Start the server
     const PORT = process.env.PORT || 5000;
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
       console.log(`Server URL: http://0.0.0.0:${PORT}`);
     });

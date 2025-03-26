@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { MemoryStore } from 'express-session';
-import config from './config';
+import { JWT_SECRET } from './config';
 import { createConnection } from './db';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
@@ -88,10 +88,10 @@ const crypto = {
 export function setupAuth(app: Express) {
   // Configure session middleware
   app.use(session({
-    secret: config.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || 'development-secret',
     cookie: {
       maxAge: 86400000, // 24 hours
-      secure: config.isProduction, // Set to true in production
+      secure: false, // Set to false to allow non-HTTPS in development
       sameSite: 'lax',
       path: '/'
     },
@@ -583,6 +583,7 @@ export function setupAuth(app: Express) {
     }
   }
 
+
   app.post("/api/logout", (req, res) => {
     console.log('Logout request received');
 
@@ -653,7 +654,7 @@ export function generateToken(user: Express.User): string {
       isAdmin: user.isAdmin,
       isSuperAdmin: user.isSuperAdmin
     },
-    config.JWT_SECRET,
+    JWT_SECRET,
     { expiresIn: '24h' }
   );
 
@@ -668,7 +669,7 @@ export function verifyToken(token: string): { id: number, isAdmin: boolean, isSu
       firstChars: token.substring(0, 10) + '...',
     });
 
-    const decoded = jwt.verify(token, config.JWT_SECRET) as {
+    const decoded = jwt.verify(token, JWT_SECRET) as {
       id: number,
       isAdmin: boolean,
       isSuperAdmin: boolean,
@@ -728,10 +729,10 @@ export async function verifySession(req: Request): Promise<any> {
 
     return new Promise((resolve) => {
       session({
-        secret: config.SESSION_SECRET,
+        secret: process.env.SESSION_SECRET || 'development-secret',
         cookie: {
           maxAge: 86400000,
-          secure: config.isProduction,
+          secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax'
         },
         store: new MemoryStore({
