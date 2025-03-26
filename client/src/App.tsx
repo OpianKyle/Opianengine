@@ -24,6 +24,7 @@ import CashRedemptions from "@/pages/admin/cash-redemptions";
 import AdminQuoteRequests from "@/pages/admin/quote-requests";
 import AdminAgents from "@/pages/admin/agents";
 import AgentCustomers from "@/pages/agent/customers"; // Update import path
+import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -118,9 +119,9 @@ function Router() {
             <ProtectedRoute component={AdminAgents} admin />
           </AdminLayout>
         </Route>
-        <Route path="/admin/agents/:id/customers">
+        <Route path="/admin/email-logs">
           <AdminLayout>
-            <ProtectedRoute component={AgentCustomers} admin />
+            <ProtectedRoute component={EmailLogs} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/products">

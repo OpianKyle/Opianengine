@@ -3,12 +3,12 @@ import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Package, 
-  Gift, 
-  DollarSign, 
+import {
+  LayoutDashboard,
+  Users,
+  Package,
+  Gift,
+  DollarSign,
   UserCog,
   ScrollText,
   FileText,
@@ -16,7 +16,8 @@ import {
   Menu,
   X,
   UserPlus,
-  UserCheck
+  UserCheck,
+  Mail, // Added import for Mail icon
 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "Rewards", href: "/admin/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Cash Redemptions", href: "/admin/cash-redemptions", icon: <DollarSign className="h-4 w-4 mr-2" /> },
     { label: "Action Logs", href: "/admin/logs", icon: <ScrollText className="h-4 w-4 mr-2" /> },
+    { label: "Email Logs", href: "/admin/email-logs", icon: <Mail className="h-4 w-4 mr-2" /> },
   ];
 
   return (
@@ -72,8 +74,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}>
         <div className="flex flex-col h-full">
           <div className="p-4 md:p-6 border-b">
-            <img 
-              src="/Assets/opian-logo-white.png" 
+            <img
+              src="/Assets/opian-logo-white.png"
               alt="OPIAN Rewards"
               className="h-8 md:h-12 w-auto object-contain mx-auto dark:invert"
               onError={(e) => {
@@ -105,9 +107,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
           <div className="p-3 md:p-4 border-t mt-auto">
-            <Button 
-              variant="outline" 
-              className="w-full text-sm md:text-base" 
+            <Button
+              variant="outline"
+              className="w-full text-sm md:text-base"
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
             >

@@ -8,6 +8,64 @@ const router = Router();
 // Middleware to check if user is an admin
 router.use(checkAdmin);
 
+// Get email logs with pagination and filtering
+router.get('/email-logs', async (req: any, res) => {
+  const connection = await createConnection();
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = (page - 1) * limit;
+    const status = req.query.status;
+    const emailType = req.query.emailType;
+    const search = req.query.search;
+
+    let whereClause = '';
+    const params: any[] = [];
+
+    if (status) {
+      whereClause += ' WHERE status = ?';
+      params.push(status);
+    }
+
+    if (emailType) {
+      whereClause += whereClause ? ' AND email_type = ?' : ' WHERE email_type = ?';
+      params.push(emailType);
+    }
+
+    if (search) {
+      whereClause += whereClause ? ' AND (recipient_email LIKE ? OR subject LIKE ?)' : ' WHERE (recipient_email LIKE ? OR subject LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    // Get total count
+    const [countResult] = await connection.execute(
+      `SELECT COUNT(*) as total FROM email_logs${whereClause}`,
+      params
+    );
+
+    // Get paginated results
+    const [logs] = await connection.execute(
+      `SELECT * FROM email_logs${whereClause} 
+       ORDER BY sent_at DESC 
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    res.json({
+      totalCount: (countResult as any)[0].total,
+      page,
+      limit,
+      logs: logs
+    });
+
+  } catch (error) {
+    console.error('Error fetching email logs:', error);
+    res.status(500).json({ error: 'Failed to fetch email logs' });
+  } finally {
+    await connection.end();
+  }
+});
+
 // Create new agent
 router.post('/agents', async (req: any, res) => {
   const connection = await createConnection();

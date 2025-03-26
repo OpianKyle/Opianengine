@@ -1,10 +1,11 @@
 import nodemailer from 'nodemailer';
 import htmlPdf from 'html-pdf';
 import { promisify } from 'util';
+import { createConnection } from '../db';
 
 // Create reusable transporter with Gmail SMTP configuration
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Use Gmail's predefined settings
+  service: 'gmail',
   host: 'smtp.gmail.com',
   port: 465,
   secure: true,
@@ -12,37 +13,79 @@ const transporter = nodemailer.createTransport({
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD
   },
-  debug: true, // Enable debug output
-  logger: true // Log information to the console
+  debug: true,
+  logger: true
 });
+
+// Add email logging function
+async function logEmail(params: {
+  recipientEmail: string;
+  subject: string;
+  emailType: string;
+  status: 'SENT' | 'FAILED';
+  errorMessage?: string;
+  hasAttachments?: boolean;
+  templateData?: any;
+}) {
+  const connection = await createConnection();
+  try {
+    const query = `
+      INSERT INTO email_logs (
+        recipient_email, subject, email_type, status, 
+        has_attachments, error_message, template_data
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    await connection.execute(query, [
+      params.recipientEmail,
+      params.subject,
+      params.emailType,
+      params.status,
+      params.hasAttachments || false,
+      params.errorMessage || null,
+      params.templateData ? JSON.stringify(params.templateData) : null
+    ]);
+
+    console.log('Email logged successfully:', params);
+  } catch (error) {
+    console.error('Failed to log email:', error);
+  } finally {
+    await connection.end();
+  }
+}
 
 interface EmailParams {
   to: string;
   subject: string;
   text?: string;
   html?: string;
+  emailType?: string;
+  templateData?: any;
 }
 
-export async function sendEmail({ to, subject, text, html }: EmailParams): Promise<boolean> {
+export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL', templateData }: EmailParams): Promise<boolean> {
   try {
     console.log('========== EMAIL SENDING ATTEMPT ==========');
     console.log('To:', to);
     console.log('Subject:', subject);
     console.log('Using Gmail account:', process.env.GMAIL_USER);
 
-    // Check if credentials are present
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       console.error('Missing Gmail credentials');
+      await logEmail({
+        recipientEmail: to,
+        subject,
+        emailType,
+        status: 'FAILED',
+        errorMessage: 'Missing Gmail credentials',
+        templateData
+      });
       return false;
     }
 
-    // Verify SMTP connection configuration
-    console.log('Verifying SMTP connection...');
     const verification = await transporter.verify();
     console.log('SMTP Connection verified:', verification);
 
-    // Attempt to send email
-    console.log('Attempting to send email...');
     const result = await transporter.sendMail({
       from: `"OPIAN Rewards" <${process.env.GMAIL_USER}>`,
       to,
@@ -52,22 +95,33 @@ export async function sendEmail({ to, subject, text, html }: EmailParams): Promi
     });
 
     console.log('Email sent successfully. Message ID:', result.messageId);
-    console.log('Preview URL:', nodemailer.getTestMessageUrl(result));
-    console.log('Full result:', result);
+
+    await logEmail({
+      recipientEmail: to,
+      subject,
+      emailType,
+      status: 'SENT',
+      templateData
+    });
+
     return true;
   } catch (error) {
     console.error('========== EMAIL ERROR ==========');
     console.error('Detailed email error:', error);
-    if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    }
+
+    await logEmail({
+      recipientEmail: to,
+      subject,
+      emailType,
+      status: 'FAILED',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      templateData
+    });
+
     return false;
   }
 }
 
-// Keep existing email formatting functions unchanged
 export function formatPointsAssignmentEmail(
   customerName: string,
   points: number,
@@ -456,7 +510,6 @@ export function formatNewCustomerAdminEmail(
   return { text, html };
 }
 
-// Function to generate PDF
 async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
   const pdfHtml = `
     <!DOCTYPE html>
@@ -543,7 +596,6 @@ async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
   });
 }
 
-// Function to send admin notification with PDF
 export async function sendAdminRegistrationNotification(customerData: any): Promise<boolean> {
   try {
     console.log('Generating PDF for admin notification...');
