@@ -68,9 +68,29 @@ async function parseResponse(response: Response) {
 
 // Helper function for making API requests with retries
 async function fetchWithRetry(url: string, options: RequestInit, retries = 3, delay = 1000) {
+  const defaultOptions: RequestInit = {
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    ...options,
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    }
+  };
+
   for (let i = 0; i < retries; i++) {
     try {
-      const response = await fetch(url, options);
+      console.log('Making request to:', url, {
+        method: options.method,
+        hasCredentials: defaultOptions.credentials === 'include',
+        hasToken: !!(defaultOptions.headers as any)?.Authorization
+      });
+
+      const response = await fetch(url, defaultOptions);
 
       // For logout, we don't care about the response content
       if (url.includes('/api/logout')) {
@@ -79,6 +99,7 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3, de
 
       // Handle 401 specifically
       if (response.status === 401) {
+        console.log('Unauthorized response received');
         return null;
       }
 
@@ -94,6 +115,7 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3, de
 
       return data;
     } catch (error) {
+      console.error('Request failed:', error);
       if (i === retries - 1) throw error;
       await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
     }
@@ -129,7 +151,6 @@ export function useUser() {
     queryFn: async () => {
       try {
         const data = await fetchWithRetry('/api/user', {
-          credentials: 'include',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -168,7 +189,6 @@ export function useUser() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
-        credentials: 'include',
       });
 
       if (!data) {
@@ -215,7 +235,6 @@ export function useUser() {
         // Make the logout request - don't wait for it
         await fetchWithRetry('/api/logout', {
           method: 'POST',
-          credentials: 'include',
           headers: {
             'Accept': 'application/json',
             ...(token && { 'Authorization': `Bearer ${token}` })
