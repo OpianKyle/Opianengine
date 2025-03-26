@@ -84,14 +84,14 @@ app.use((req, res, next) => {
   try {
     console.log('Starting database initialization...');
 
-    // Test MariaDB connection
+    // Test MariaDB connection using environment variables
     try {
       const connection = await mysql.createConnection({
-        host: 'dedi1350.jnb1.host-h.net',
-        user: 'admin',
-        password: '8E33U976qa800F',
-        database: 'opianrewards',
-        port: 3306,
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        port: parseInt(process.env.DB_PORT || '3306'),
         ssl: {
           rejectUnauthorized: false
         }
