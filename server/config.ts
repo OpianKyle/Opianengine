@@ -7,21 +7,29 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(1),
   // Database configuration
   DATABASE_URL: z.string().optional(),
+  // MariaDB variables
   DB_HOST: z.string().optional(),
   DB_USER: z.string().optional(),
   DB_PASSWORD: z.string().optional(),
   DB_NAME: z.string().optional(),
   DB_PORT: z.string().transform(val => parseInt(val, 10)).optional(),
+  // PostgreSQL variables
+  PGHOST: z.string().optional(),
+  PGUSER: z.string().optional(),
+  PGPASSWORD: z.string().optional(),
+  PGDATABASE: z.string().optional(),
+  PGPORT: z.string().transform(val => parseInt(val, 10)).optional(),
 }).refine(data => {
-  // Ensure either DATABASE_URL or all DB_ variables are present
-  return !!(data.DATABASE_URL || (
-    data.DB_HOST && 
-    data.DB_USER && 
-    data.DB_PASSWORD && 
-    data.DB_NAME
-  ));
+  // Check for DATABASE_URL first
+  if (data.DATABASE_URL) return true;
+
+  // Then check for either MariaDB or PostgreSQL variables
+  const hasMariaDB = !!(data.DB_HOST && data.DB_USER && data.DB_PASSWORD && data.DB_NAME);
+  const hasPostgres = !!(data.PGHOST && data.PGUSER && data.PGPASSWORD && data.PGDATABASE);
+
+  return hasMariaDB || hasPostgres;
 }, {
-  message: "Either DATABASE_URL or all DB_ variables must be provided"
+  message: "Either DATABASE_URL or a complete set of database connection variables must be provided"
 });
 
 // Parse environment variables with more detailed error handling
@@ -38,16 +46,25 @@ try {
   // Export derived database config
   export const DB_CONFIG = env.DATABASE_URL ? {
     url: env.DATABASE_URL
-  } : {
-    host: env.DB_HOST!,
+  } : env.DB_HOST ? {
+    // MariaDB config
+    host: env.DB_HOST,
     user: env.DB_USER!,
     password: env.DB_PASSWORD!,
     database: env.DB_NAME!,
     port: env.DB_PORT || 3306
+  } : {
+    // PostgreSQL config
+    host: env.PGHOST!,
+    user: env.PGUSER!,
+    password: env.PGPASSWORD!,
+    database: env.PGDATABASE!,
+    port: env.PGPORT || 5432
   };
 
   // Log sanitized configuration (excluding sensitive data)
   console.log('Config loaded:', {
+    nodeEnv: env.NODE_ENV,
     hasJwtSecret: !!JWT_SECRET,
     hasSessionSecret: !!SESSION_SECRET,
     hasDbUrl: !!DATABASE_URL,

@@ -16,10 +16,11 @@ console.log('Environment variables loaded:', {
   NODE_ENV: process.env.NODE_ENV,
   hasSessionSecret: !!process.env.SESSION_SECRET,
   hasJwtSecret: !!process.env.JWT_SECRET,
-  hasDbHost: !!process.env.DB_HOST,
-  hasDbUser: !!process.env.DB_USER,
-  hasDbName: !!process.env.DB_NAME,
-  hasDbPort: !!process.env.DB_PORT,
+  // Database variables
+  hasDbHost: !!process.env.DB_HOST || !!process.env.PGHOST,
+  hasDbUser: !!process.env.DB_USER || !!process.env.PGUSER,
+  hasDbName: !!process.env.DB_NAME || !!process.env.PGDATABASE,
+  hasDbPort: !!process.env.DB_PORT || !!process.env.PGPORT,
   hasDatabaseUrl: !!process.env.DATABASE_URL
 });
 
@@ -42,27 +43,37 @@ import { createServer } from 'http';
 
 // Essential environment variables validation
 const requiredEnvSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production']).default('development'),
   SESSION_SECRET: z.string().min(1, "SESSION_SECRET is required"),
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
 }).strict();
 
-// Optional database configuration validation
+// Database configuration validation with fallbacks for PostgreSQL variables
 const dbSchema = z.object({
+  DATABASE_URL: z.string().optional(),
+  // MariaDB variables
   DB_HOST: z.string().optional(),
   DB_USER: z.string().optional(),
   DB_PASSWORD: z.string().optional(),
   DB_NAME: z.string().optional(),
   DB_PORT: z.string().transform(val => parseInt(val, 10)).optional(),
-  DATABASE_URL: z.string().optional(),
+  // PostgreSQL variables
+  PGHOST: z.string().optional(),
+  PGUSER: z.string().optional(),
+  PGPASSWORD: z.string().optional(),
+  PGDATABASE: z.string().optional(),
+  PGPORT: z.string().transform(val => parseInt(val, 10)).optional(),
 }).refine(data => {
-  return !!(data.DATABASE_URL || (
-    data.DB_HOST && 
-    data.DB_USER && 
-    data.DB_PASSWORD && 
-    data.DB_NAME
-  ));
+  // Check for DATABASE_URL first
+  if (data.DATABASE_URL) return true;
+
+  // Then check for either MariaDB or PostgreSQL variables
+  const hasMariaDB = !!(data.DB_HOST && data.DB_USER && data.DB_PASSWORD && data.DB_NAME);
+  const hasPostgres = !!(data.PGHOST && data.PGUSER && data.PGPASSWORD && data.PGDATABASE);
+
+  return hasMariaDB || hasPostgres;
 }, {
-  message: "Either DATABASE_URL or all DB_ variables (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) must be provided"
+  message: "Either DATABASE_URL or a complete set of database connection variables must be provided"
 });
 
 // Validate required environment variables first
@@ -79,7 +90,8 @@ try {
   const dbConfig = dbSchema.parse(process.env);
   console.log('Database configuration validated successfully:', {
     hasDbUrl: !!dbConfig.DATABASE_URL,
-    hasIndividualDbVars: !!(dbConfig.DB_HOST && dbConfig.DB_USER && dbConfig.DB_NAME)
+    hasMariaDB: !!(dbConfig.DB_HOST && dbConfig.DB_USER && dbConfig.DB_NAME),
+    hasPostgres: !!(dbConfig.PGHOST && dbConfig.PGUSER && dbConfig.PGDATABASE)
   });
 } catch (error) {
   console.error('Database configuration validation failed:', error);
@@ -170,14 +182,26 @@ app.use((req: any, res, next) => {
             rejectUnauthorized: false
           }
         };
-      } else {
-        // Use individual DB_ variables
+      } else if (process.env.DB_HOST) {
+        // Use MariaDB variables
         connectionConfig = {
-          host: process.env.DB_HOST!,
+          host: process.env.DB_HOST,
           user: process.env.DB_USER!,
           password: process.env.DB_PASSWORD!,
           database: process.env.DB_NAME!,
           port: parseInt(process.env.DB_PORT || '3306'),
+          ssl: {
+            rejectUnauthorized: false
+          }
+        };
+      } else {
+        // Use PostgreSQL variables
+        connectionConfig = {
+          host: process.env.PGHOST!,
+          user: process.env.PGUSER!,
+          password: process.env.PGPASSWORD!,
+          database: process.env.PGDATABASE!,
+          port: parseInt(process.env.PGPORT || '5432'),
           ssl: {
             rejectUnauthorized: false
           }
