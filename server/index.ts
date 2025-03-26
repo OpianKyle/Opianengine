@@ -1,30 +1,26 @@
 // Import config first to ensure environment variables are loaded
-import './config';
-import dotenv from "dotenv";
-dotenv.config();
-
+import { SESSION_SECRET, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT } from './config.js';
 console.log('Starting server initialization...', new Date().toISOString());
 
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic } from "./vite";
+import { registerRoutes } from "./routes.js";
+import { setupVite, serveStatic } from "./vite.js";
 import cors from "cors";
 import fileUpload from 'express-fileupload';
-import { setupAuth } from "./auth";
+import { setupAuth } from "./auth.js";
 import { db } from "@db";
 import mysql from 'mysql2/promise';
-import agentRouter from './routes/agent';
-import adminRouter from './routes/admin';
+import agentRouter from './routes/agent.js';
+import adminRouter from './routes/admin.js';
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
 import { createServer } from 'http';
-import { SESSION_SECRET, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT } from './config';
 
 const app = express();
 const server = createServer(app);
 
-// Update CORS configuration for proper cookie handling
+// Configure CORS properly
 app.use(cors({
   origin: true,
   credentials: true,
@@ -45,15 +41,18 @@ app.use(fileUpload({
   },
 }));
 
-// Session configuration with enhanced security and debugging
+// Session configuration with enhanced security
 const sessionStore = new MemoryStore({
   checkPeriod: 86400000 // prune expired entries every 24h
 });
 
-// Verify session secret is set
+// Verify session secret is available
 if (!SESSION_SECRET) {
-  throw new Error('SESSION_SECRET environment variable is required');
+  console.error('Fatal: SESSION_SECRET not found in environment');
+  process.exit(1);
 }
+
+console.log('Configuring session with secret length:', SESSION_SECRET.length);
 
 const sessionMiddleware = session({
   secret: SESSION_SECRET,
@@ -69,10 +68,8 @@ const sessionMiddleware = session({
   name: 'connect.sid'
 });
 
-// Initialize session before passport
+// Initialize session and passport
 app.use(sessionMiddleware);
-
-// Initialize passport and restore authentication state from session
 app.use(passport.initialize());
 app.use(passport.session());
 
