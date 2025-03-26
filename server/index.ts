@@ -21,7 +21,7 @@ console.log('Starting server initialization...', new Date().toISOString());
 const app = express();
 const server = createServer(app);
 
-// Configure CORS with specific options
+// Update CORS configuration for proper cookie handling
 app.use(cors({
   origin: true,
   credentials: true,
@@ -42,7 +42,7 @@ app.use(fileUpload({
   },
 }));
 
-// Session configuration
+// Session configuration with enhanced security and debugging
 const sessionStore = new MemoryStore({
   checkPeriod: 86400000 // prune expired entries every 24h
 });
@@ -73,7 +73,7 @@ app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Add session debug middleware
+// Add comprehensive session debug middleware
 app.use((req: any, res, next) => {
   console.log('Session debug:', {
     hasSession: !!req.session,

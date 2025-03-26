@@ -1,7 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
-import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { MemoryStore } from 'express-session';
@@ -9,53 +8,6 @@ import { JWT_SECRET } from './config';
 import { createConnection } from './db';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-
-// Keep existing imports and configurations...
-
-// Add helper function for validating referral code
-async function validateReferralCode(connection: any, referralCode: string): Promise<boolean> {
-  if (!referralCode) return true;
-  const [referrer] = await connection.execute(
-    'SELECT id FROM users WHERE referral_code = ? AND is_enabled = 1',
-    [referralCode]
-  );
-  return Array.isArray(referrer) && referrer.length > 0;
-}
-
-// Add helper function for processing referral points
-async function processReferralPoints(connection: any, userId: number, referralCode: string, selectedPackage: string) {
-  if (!referralCode) return;
-
-  const [referrer] = await connection.execute(
-    'SELECT id FROM users WHERE referral_code = ?',
-    [referralCode]
-  );
-
-  if (!Array.isArray(referrer) || referrer.length === 0) return;
-
-  const referrerId = referrer[0].id;
-  const referralBonus = 2000; // Fixed referral bonus points
-
-  // Add points to referrer
-  await connection.execute(
-    'UPDATE users SET points = points + ? WHERE id = ?',
-    [referralBonus, referrerId]
-  );
-
-  // Record referral transaction
-  await connection.execute(
-    `INSERT INTO transactions (
-      user_id, points, type, description, status, created_at
-    ) VALUES (?, ?, ?, ?, ?, NOW())`,
-    [
-      referrerId,
-      referralBonus,
-      'REFERRAL_BONUS',
-      `Referral bonus for new ${selectedPackage} package signup - 2000 points`,
-      'PROCESSED'
-    ]
-  );
-}
 
 const scryptAsync = promisify(scrypt);
 
@@ -68,11 +20,6 @@ const crypto = {
 
   async verifyPassword(password: string, storedHash: string) {
     try {
-      // Special case for default development password
-      if (process.env.NODE_ENV === 'development' && password === '123456') {
-        return true;
-      }
-
       const [hash, salt] = storedHash.split('.');
       if (!salt || !hash) return false;
       const hashBuffer = Buffer.from(hash, 'hex');
@@ -86,27 +33,7 @@ const crypto = {
 };
 
 export function setupAuth(app: Express) {
-  // Configure session middleware
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'development-secret',
-    cookie: {
-      maxAge: 86400000, // 24 hours
-      secure: false, // Set to false to allow non-HTTPS in development
-      sameSite: 'lax',
-      path: '/'
-    },
-    store: new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    }),
-    resave: false,
-    saveUninitialized: false,
-    name: 'session'
-  }));
-
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  // Configure authentication strategy
+  // Configure LocalStrategy for Passport
   passport.use(new LocalStrategy(
     { usernameField: 'email', passwordField: 'password' },
     async (email, password, done) => {
@@ -166,13 +93,6 @@ export function setupAuth(app: Express) {
           referred_by: user.referred_by
         };
 
-        console.log('Login successful:', {
-          id: transformedUser.id,
-          email: transformedUser.email,
-          isAdmin: transformedUser.is_admin,
-          isSuperAdmin: transformedUser.is_super_admin
-        });
-
         return done(null, transformedUser);
       } catch (error) {
         console.error('Authentication error:', error);
@@ -183,11 +103,13 @@ export function setupAuth(app: Express) {
     }
   ));
 
+  // Serialize user for session storage
   passport.serializeUser((user: any, done) => {
     console.log('Serializing user:', { id: user.id, email: user.email });
     done(null, user.id);
   });
 
+  // Deserialize user from session
   passport.deserializeUser(async (id: number, done) => {
     console.log('Deserializing user:', { id });
     const connection = await createConnection();
@@ -209,6 +131,7 @@ export function setupAuth(app: Express) {
       }
 
       const user = users[0];
+      // Transform user object consistently
       const transformedUser = {
         id: user.id,
         email: user.email,
@@ -240,7 +163,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Add API routes
+  // Authentication routes
   app.post("/api/login", (req, res, next) => {
     console.log('Login request received:', { email: req.body.email });
 
@@ -276,6 +199,83 @@ export function setupAuth(app: Express) {
       });
     })(req, res, next);
   });
+
+  app.post("/api/logout", (req, res) => {
+    console.log('Logout request received');
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+        }
+        req.logout(() => {
+          res.status(200).json({ message: "Logged out successfully" });
+        });
+      });
+    } else {
+      res.status(200).json({ message: "Logged out successfully" });
+    }
+  });
+
+  app.get("/api/user", (req, res) => {
+    console.log('GET /api/user request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, email: req.user.email } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    res.json(req.user);
+  });
+
+  // Keep existing imports and configurations...
+
+  // Add helper function for validating referral code
+  async function validateReferralCode(connection: any, referralCode: string): Promise<boolean> {
+    if (!referralCode) return true;
+    const [referrer] = await connection.execute(
+      'SELECT id FROM users WHERE referral_code = ? AND is_enabled = 1',
+      [referralCode]
+    );
+    return Array.isArray(referrer) && referrer.length > 0;
+  }
+
+  // Add helper function for processing referral points
+  async function processReferralPoints(connection: any, userId: number, referralCode: string, selectedPackage: string) {
+    if (!referralCode) return;
+
+    const [referrer] = await connection.execute(
+      'SELECT id FROM users WHERE referral_code = ?',
+      [referralCode]
+    );
+
+    if (!Array.isArray(referrer) || referrer.length === 0) return;
+
+    const referrerId = referrer[0].id;
+    const referralBonus = 2000; // Fixed referral bonus points
+
+    // Add points to referrer
+    await connection.execute(
+      'UPDATE users SET points = points + ? WHERE id = ?',
+      [referralBonus, referrerId]
+    );
+
+    // Record referral transaction
+    await connection.execute(
+      `INSERT INTO transactions (
+        user_id, points, type, description, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, NOW())`,
+      [
+        referrerId,
+        referralBonus,
+        'REFERRAL_BONUS',
+        `Referral bonus for new ${selectedPackage} package signup - 2000 points`,
+        'PROCESSED'
+      ]
+    );
+  }
+
 
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
