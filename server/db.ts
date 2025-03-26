@@ -1,13 +1,11 @@
 import mysql from 'mysql2/promise';
+import { dbConfig } from './config';
 
 export async function createConnection() {
   try {
+    console.log('Starting database initialization...');
     const connection = await mysql.createConnection({
-      host: 'dedi1350.jnb1.host-h.net',
-      user: 'admin',
-      password: '8E33U976qa800F',
-      database: 'opianrewards',
-      port: 3306,
+      ...dbConfig,
       ssl: {
         rejectUnauthorized: false
       }
@@ -15,10 +13,17 @@ export async function createConnection() {
 
     // Test the connection
     await connection.query('SELECT 1');
-    console.log('Successfully connected to MariaDB');
+    console.log('MariaDB connection successful');
     return connection;
   } catch (error) {
     console.error('Database connection error:', error);
-    throw new Error('Failed to connect to database');
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
+    }
+    throw new Error('Failed to connect to MariaDB');
   }
 }
