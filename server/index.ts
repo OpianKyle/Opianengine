@@ -1,5 +1,9 @@
+// Import config first to ensure environment variables are loaded
+import './config';
 import dotenv from "dotenv";
 dotenv.config();
+
+console.log('Starting server initialization...', new Date().toISOString());
 
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
@@ -15,8 +19,7 @@ import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
 import { createServer } from 'http';
-
-console.log('Starting server initialization...', new Date().toISOString());
+import { SESSION_SECRET, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT } from './config';
 
 const app = express();
 const server = createServer(app);
@@ -48,12 +51,12 @@ const sessionStore = new MemoryStore({
 });
 
 // Verify session secret is set
-if (!process.env.SESSION_SECRET) {
+if (!SESSION_SECRET) {
   throw new Error('SESSION_SECRET environment variable is required');
 }
 
 const sessionMiddleware = session({
-  secret: process.env.SESSION_SECRET,
+  secret: SESSION_SECRET,
   store: sessionStore,
   resave: false,
   saveUninitialized: false,
@@ -96,18 +99,18 @@ app.use((req: any, res, next) => {
     try {
       // Log database configuration (excluding sensitive data)
       console.log('Database configuration:', {
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: process.env.DB_NAME,
-        user: process.env.DB_USER
+        host: DB_HOST,
+        port: DB_PORT,
+        database: DB_NAME,
+        user: DB_USER
       });
 
       const connection = await mysql.createConnection({
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        port: parseInt(process.env.DB_PORT || '3306'),
+        host: DB_HOST,
+        user: DB_USER,
+        password: DB_PASSWORD,
+        database: DB_NAME,
+        port: parseInt(DB_PORT),
         ssl: {
           rejectUnauthorized: false
         }

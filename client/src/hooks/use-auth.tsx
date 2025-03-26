@@ -12,11 +12,16 @@ import { cleanupWebSockets } from "@/lib/utils";
 type User = {
   id: number;
   email: string;
-  firstName: string;
-  lastName: string;
-  isAgent: boolean;
-  isAdmin: boolean;
-  isSuperAdmin: boolean;
+  first_name: string;
+  last_name: string;
+  phone_number: string | null;
+  is_agent: boolean;
+  is_admin: boolean;
+  is_super_admin: boolean;
+  is_enabled: boolean;
+  points: number;
+  referral_code: string | null;
+  referred_by: string | null;
 };
 
 type AuthContextType = {
@@ -37,7 +42,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const isLoggingOut = useRef(false);
 
@@ -48,15 +53,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
   } = useQuery<User>({
     queryKey: ["/api/user"],
+    queryFn: async () => {
+      const res = await fetch("/api/user", {
+        credentials: "include",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        }
+      });
+      if (!res.ok) {
+        if (res.status === 401) return null;
+        throw new Error("Failed to fetch user data");
+      }
+      return res.json();
+    },
     retry: false,
-    enabled: !isLoggingOut.current, // Disable during logout
+    enabled: !isLoggingOut.current,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    onError: () => {
-      // On session timeout/error, redirect to home page
-      setLocation('/');
-    }
   });
 
   const clearAuthState = useCallback(async () => {
@@ -87,17 +102,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsTransitioning(true);
       const res = await fetch("/api/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify(credentials),
         credentials: "include",
       });
+
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || "Failed to login");
       }
+
       return res.json();
     },
-    onSuccess: async (user) => {
+    onSuccess: async (user: User) => {
       console.log('Login mutation success');
       isLoggingOut.current = false;
 
@@ -109,15 +129,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!sessionStorage.getItem(sessionKey)) {
         toast({
           title: "Welcome back",
-          description: `Logged in as ${user.firstName} ${user.lastName}`,
+          description: `Logged in as ${user.first_name} ${user.last_name}`,
         });
         sessionStorage.setItem(sessionKey, 'true');
       }
 
       // Navigate based on user role
-      if (user.isAgent) {
+      if (user.is_agent) {
         setLocation('/agent');
-      } else if (user.isAdmin || user.isSuperAdmin) {
+      } else if (user.is_admin || user.is_super_admin) {
         setLocation('/admin');
       } else {
         setLocation('/dashboard');
@@ -144,6 +164,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch("/api/logout", {
         method: "POST",
         credentials: 'include',
+        headers: {
+          "Accept": "application/json"
+        }
       });
 
       if (!res.ok) {
@@ -168,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: user ?? null,
+        user,
         isLoading,
         error,
         loginMutation,
