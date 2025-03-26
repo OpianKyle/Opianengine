@@ -43,30 +43,38 @@ app.use(fileUpload({
 }));
 
 // Session configuration
-const sessionMiddleware = session({
-  secret: process.env.SESSION_SECRET || 'development-secret',
-  cookie: { 
-    maxAge: 86400000, // 24 hours
-    secure: false, // Set to false to allow non-HTTPS in development
-    sameSite: 'lax',
-    path: '/'
-  },
-  store: new MemoryStore({
-    checkPeriod: 86400000 // prune expired entries every 24h
-  }),
-  resave: false,
-  saveUninitialized: false,
-  name: 'session'
+const sessionStore = new MemoryStore({
+  checkPeriod: 86400000 // prune expired entries every 24h
 });
 
+// Verify session secret is set
+if (!process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET environment variable is required');
+}
+
+const sessionMiddleware = session({
+  secret: process.env.SESSION_SECRET,
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    maxAge: 86400000, // 24 hours
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax'
+  },
+  name: 'connect.sid'
+});
+
+// Initialize session before passport
 app.use(sessionMiddleware);
 
-// Initialize passport after session
+// Initialize passport and restore authentication state from session
 app.use(passport.initialize());
 app.use(passport.session());
 
 // Add session debug middleware
-app.use((req, res, next) => {
+app.use((req: any, res, next) => {
   console.log('Session debug:', {
     hasSession: !!req.session,
     sessionID: req.sessionID,
@@ -84,8 +92,16 @@ app.use((req, res, next) => {
   try {
     console.log('Starting database initialization...');
 
-    // Test MariaDB connection using environment variables
+    // Test MariaDB connection using DB_ environment variables
     try {
+      // Log database configuration (excluding sensitive data)
+      console.log('Database configuration:', {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        database: process.env.DB_NAME,
+        user: process.env.DB_USER
+      });
+
       const connection = await mysql.createConnection({
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
