@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 // Debug logging for environment variables presence
 console.log('Environment variables check:', {
@@ -28,6 +32,35 @@ const envSchema = z.object({
   GMAIL_APP_PASSWORD: z.string().optional(),
 });
 
+const config = {
+  NODE_ENV: 'development',
+  JWT_SECRET: '',
+  SESSION_SECRET: '',
+  MARIADB_HOST: '',
+  MARIADB_USER: '',
+  MARIADB_PASSWORD: '',
+  MARIADB_DATABASE: '',
+  MARIADB_PORT: 3306,
+  GMAIL_USER: '',
+  GMAIL_APP_PASSWORD: '',
+  isProduction: false,
+  isDevelopment: true,
+  isTest: false,
+  dbConfig: {
+    host: '',
+    user: '',
+    password: '',
+    database: '',
+    port: 3306,
+    ssl: {
+      rejectUnauthorized: false
+    },
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+  }
+} as const;
+
 try {
   // Validate environment variables
   const env = envSchema.parse({
@@ -43,32 +76,28 @@ try {
     GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD,
   });
 
-  // Export validated environment variables
-  export const {
-    NODE_ENV,
-    JWT_SECRET,
-    SESSION_SECRET,
-    MARIADB_HOST,
-    MARIADB_USER,
-    MARIADB_PASSWORD,
-    MARIADB_DATABASE,
-    MARIADB_PORT,
-    GMAIL_USER,
-    GMAIL_APP_PASSWORD,
-  } = env;
+  // Update config object with validated values
+  config.NODE_ENV = env.NODE_ENV;
+  config.JWT_SECRET = env.JWT_SECRET;
+  config.SESSION_SECRET = env.SESSION_SECRET;
+  config.MARIADB_HOST = env.MARIADB_HOST;
+  config.MARIADB_USER = env.MARIADB_USER;
+  config.MARIADB_PASSWORD = env.MARIADB_PASSWORD;
+  config.MARIADB_DATABASE = env.MARIADB_DATABASE;
+  config.MARIADB_PORT = env.MARIADB_PORT;
+  config.GMAIL_USER = env.GMAIL_USER;
+  config.GMAIL_APP_PASSWORD = env.GMAIL_APP_PASSWORD;
 
-  // Environment specific configurations
-  export const isProduction = NODE_ENV === 'production';
-  export const isDevelopment = NODE_ENV === 'development';
-  export const isTest = NODE_ENV === 'test';
+  config.isProduction = env.NODE_ENV === 'production';
+  config.isDevelopment = env.NODE_ENV === 'development';
+  config.isTest = env.NODE_ENV === 'test';
 
-  // Database connection configuration
-  export const dbConfig = {
-    host: MARIADB_HOST,
-    user: MARIADB_USER,
-    password: MARIADB_PASSWORD,
-    database: MARIADB_DATABASE,
-    port: MARIADB_PORT,
+  config.dbConfig = {
+    host: env.MARIADB_HOST,
+    user: env.MARIADB_USER,
+    password: env.MARIADB_PASSWORD,
+    database: env.MARIADB_DATABASE,
+    port: env.MARIADB_PORT,
     ssl: {
       rejectUnauthorized: false
     },
@@ -79,13 +108,13 @@ try {
 
   // Log validated configuration
   console.log('Config loaded:', {
-    environment: NODE_ENV,
-    hasJwtSecret: !!JWT_SECRET,
-    hasSessionSecret: !!SESSION_SECRET,
-    hasDbConfig: !!(MARIADB_HOST && MARIADB_USER && MARIADB_PASSWORD && MARIADB_DATABASE),
-    hasGmailConfig: !!(GMAIL_USER && GMAIL_APP_PASSWORD),
-    dbHost: MARIADB_HOST,
-    dbPort: MARIADB_PORT,
+    environment: config.NODE_ENV,
+    hasJwtSecret: !!config.JWT_SECRET,
+    hasSessionSecret: !!config.SESSION_SECRET,
+    hasDbConfig: !!(config.MARIADB_HOST && config.MARIADB_USER && config.MARIADB_PASSWORD && config.MARIADB_DATABASE),
+    hasGmailConfig: !!(config.GMAIL_USER && config.GMAIL_APP_PASSWORD),
+    dbHost: config.MARIADB_HOST,
+    dbPort: config.MARIADB_PORT,
   });
 
 } catch (error) {
@@ -100,3 +129,5 @@ try {
   }
   process.exit(1);
 }
+
+export default config;

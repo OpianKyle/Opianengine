@@ -2,12 +2,7 @@ import nodemailer from 'nodemailer';
 import htmlPdf from 'html-pdf';
 import { promisify } from 'util';
 import mysql from 'mysql2/promise';
-import { 
-  GMAIL_USER,
-  GMAIL_APP_PASSWORD,
-  isProduction,
-  dbConfig
-} from '../config';
+import config from '../config';
 
 // Create reusable transporter with Gmail SMTP configuration
 const transporter = nodemailer.createTransport({
@@ -16,15 +11,15 @@ const transporter = nodemailer.createTransport({
   port: 465,
   secure: true,
   auth: {
-    user: GMAIL_USER,
-    pass: GMAIL_APP_PASSWORD
+    user: config.GMAIL_USER,
+    pass: config.GMAIL_APP_PASSWORD
   },
-  debug: !isProduction,
-  logger: !isProduction
+  debug: !config.isProduction,
+  logger: !config.isProduction
 });
 
 // Create connection pool using environment variables
-const pool = mysql.createPool(dbConfig);
+const pool = mysql.createPool(config.dbConfig);
 
 // Add email logging function
 async function logEmail(params: {
@@ -82,9 +77,9 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
     console.log('========== EMAIL SENDING ATTEMPT ==========');
     console.log('To:', to);
     console.log('Subject:', subject);
-    console.log('Using Gmail account:', GMAIL_USER);
+    console.log('Using Gmail account:', config.GMAIL_USER);
 
-    if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    if (!config.GMAIL_USER || !config.GMAIL_APP_PASSWORD) {
       console.error('Missing Gmail credentials');
       await logEmail({
         recipientEmail: to,
@@ -103,7 +98,7 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
     console.log('SMTP Connection verified:', verification);
 
     const result = await transporter.sendMail({
-      from: `"OPIAN Rewards" <${GMAIL_USER}>`,
+      from: `"OPIAN Rewards" <${config.GMAIL_USER}>`,
       to,
       subject,
       text,
@@ -624,7 +619,7 @@ export async function sendAdminRegistrationNotification(customerData: any): Prom
     const { text, html } = formatNewCustomerAdminEmail(customerData);
 
     const result = await transporter.sendMail({
-      from: `"OPIAN Rewards" <${GMAIL_USER}>`,
+      from: `"OPIAN Rewards" <${config.GMAIL_USER}>`,
       to: 'clientservices@opianfsgroup.com',
       subject: 'New Customer Registration',
       text,

@@ -1,21 +1,21 @@
-import { dbConfig } from './config';
+import config from './config';
 import mysql from 'mysql2/promise';
 
 async function testDatabaseConnection() {
   console.log('Starting database connection test...');
   console.log('Database configuration:', {
-    host: dbConfig.host,
-    port: dbConfig.port,
-    database: dbConfig.database,
-    user: dbConfig.user,
-    hasPassword: !!dbConfig.password,
-    ssl: !!dbConfig.ssl
+    host: config.dbConfig.host,
+    port: config.dbConfig.port,
+    database: config.dbConfig.database,
+    user: config.dbConfig.user,
+    hasPassword: !!config.dbConfig.password,
+    ssl: !!config.dbConfig.ssl
   });
 
   try {
     console.log('Attempting to create connection...');
     const connection = await mysql.createConnection({
-      ...dbConfig,
+      ...config.dbConfig,
       ssl: {
         rejectUnauthorized: false
       }

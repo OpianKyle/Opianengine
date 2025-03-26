@@ -1,11 +1,11 @@
 import mysql from 'mysql2/promise';
-import { dbConfig } from './config';
+import config from './config';
 
 export async function createConnection() {
   try {
     console.log('Starting database initialization...');
     const connection = await mysql.createConnection({
-      ...dbConfig,
+      ...config.dbConfig,
       ssl: {
         rejectUnauthorized: false
       }
