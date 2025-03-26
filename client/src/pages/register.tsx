@@ -673,17 +673,17 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                       <div className="space-y-4">
                         <Label>Digital Signature</Label>
                         <Card className="p-4">
-                          <div className="border rounded-md bg-background">
+                          <div className="border rounded-md bg-white">
                             <SignatureCanvas
                               ref={(ref) => setSignature(ref)}
                               canvasProps={{
                                 className: 'w-full h-[200px]',
                                 style: {
-                                  background: 'transparent',
+                                  background: 'white',
                                   border: '1px solid var(--border)'
                                 }
                               }}
-                              penColor='white'
+                              penColor='black'
                             />
                           </div>
                           <Button
