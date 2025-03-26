@@ -147,11 +147,7 @@ export function setupAuth(app: Express) {
 
   // Authentication routes
   app.post("/api/login", (req, res, next) => {
-    console.log('Login request received:', { 
-      email: req.body.email,
-      hasPassword: !!req.body.password,
-      headers: req.headers
-    });
+    console.log('Login request received:', { email: req.body.email });
 
     if (!req.body.email || !req.body.password) {
       console.log('Missing credentials');

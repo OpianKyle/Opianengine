@@ -32,12 +32,12 @@ import { createServer } from 'http';
 const app = express();
 const server = createServer(app);
 
-// Update CORS configuration
+// Configure CORS properly
 app.use(cors({
   origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['set-cookie']
 }));
 
