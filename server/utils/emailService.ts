@@ -339,16 +339,54 @@ export function formatNewCustomerAdminEmail(
     selectedPackage: string;
     referralCode?: string;
     signature?: string;
+    isSouthAfrican?: boolean;
+    idNumber?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    occupation?: string;
+    industry?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    hasCreditCard?: boolean;
+    bankName?: string;
+    accountType?: string;
+    accountNumber?: string;
+    accountHolderName?: string;
+    branchCode?: string;
   }
 ): { text: string; html: string } {
   const text = `
     New Customer Registration
 
-    Customer Details:
+    Personal Details:
     First Name: ${customerData.firstName}
     Last Name: ${customerData.lastName}
     Email: ${customerData.email}
     Mobile Number: ${customerData.mobileNumber}
+    ID Number: ${customerData.idNumber || 'Not provided'}
+    Date of Birth: ${customerData.dateOfBirth || 'Not provided'}
+    Gender: ${customerData.gender || 'Not provided'}
+    South African Resident: ${customerData.isSouthAfrican ? 'Yes' : 'No'}
+
+    Professional Information:
+    Occupation: ${customerData.occupation || 'Not provided'}
+    Industry: ${customerData.industry || 'Not provided'}
+
+    Address Information:
+    Address: ${customerData.address || 'Not provided'}
+    City: ${customerData.city || 'Not provided'}
+    Postal Code: ${customerData.postalCode || 'Not provided'}
+
+    Banking Details:
+    Has Credit Card: ${customerData.hasCreditCard ? 'Yes' : 'No'}
+    Bank Name: ${customerData.bankName || 'Not provided'}
+    Account Type: ${customerData.accountType || 'Not provided'}
+    Account Number: ${customerData.accountNumber || 'Not provided'}
+    Account Holder Name: ${customerData.accountHolderName || 'Not provided'}
+    Branch Code: ${customerData.branchCode || 'Not provided'}
+
+    Package Information:
     Selected Package: ${customerData.selectedPackage}
     Referral Code: ${customerData.referralCode || 'None'}
 
@@ -360,19 +398,52 @@ export function formatNewCustomerAdminEmail(
       <h2>New Customer Registration</h2>
 
       <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">Customer Details</h3>
+        <h3 style="margin-top: 0;">Personal Details</h3>
         <p><strong>First Name:</strong> ${customerData.firstName}</p>
         <p><strong>Last Name:</strong> ${customerData.lastName}</p>
         <p><strong>Email:</strong> ${customerData.email}</p>
         <p><strong>Mobile Number:</strong> ${customerData.mobileNumber}</p>
+        <p><strong>ID Number:</strong> ${customerData.idNumber || 'Not provided'}</p>
+        <p><strong>Date of Birth:</strong> ${customerData.dateOfBirth || 'Not provided'}</p>
+        <p><strong>Gender:</strong> ${customerData.gender || 'Not provided'}</p>
+        <p><strong>South African Resident:</strong> ${customerData.isSouthAfrican ? 'Yes' : 'No'}</p>
+      </div>
+
+      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">Professional Information</h3>
+        <p><strong>Occupation:</strong> ${customerData.occupation || 'Not provided'}</p>
+        <p><strong>Industry:</strong> ${customerData.industry || 'Not provided'}</p>
+      </div>
+
+      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">Address Information</h3>
+        <p><strong>Address:</strong> ${customerData.address || 'Not provided'}</p>
+        <p><strong>City:</strong> ${customerData.city || 'Not provided'}</p>
+        <p><strong>Postal Code:</strong> ${customerData.postalCode || 'Not provided'}</p>
+      </div>
+
+      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">Banking Details</h3>
+        <p><strong>Has Credit Card:</strong> ${customerData.hasCreditCard ? 'Yes' : 'No'}</p>
+        <p><strong>Bank Name:</strong> ${customerData.bankName || 'Not provided'}</p>
+        <p><strong>Account Type:</strong> ${customerData.accountType || 'Not provided'}</p>
+        <p><strong>Account Number:</strong> ${customerData.accountNumber || 'Not provided'}</p>
+        <p><strong>Account Holder Name:</strong> ${customerData.accountHolderName || 'Not provided'}</p>
+        <p><strong>Branch Code:</strong> ${customerData.branchCode || 'Not provided'}</p>
+      </div>
+
+      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">Package Information</h3>
         <p><strong>Selected Package:</strong> ${customerData.selectedPackage}</p>
         <p><strong>Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
       </div>
 
       ${customerData.signature ? `
-        <div style="margin-top: 20px;">
+        <div style="margin-top: 20px; background-color: white; padding: 20px; border-radius: 5px;">
           <h3>Customer Signature</h3>
-          <img src="${customerData.signature}" alt="Customer Signature" style="max-width: 300px; border: 1px solid #ccc; padding: 10px;"/>
+          <div style="background-color: white; padding: 10px;">
+            <img src="${customerData.signature}" alt="Customer Signature" style="max-width: 300px; filter: brightness(0%);"/>
+          </div>
         </div>
       ` : ''}
 
@@ -395,8 +466,8 @@ async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
         body { font-family: Arial, sans-serif; }
         .container { padding: 20px; }
         .header { text-align: center; margin-bottom: 30px; }
-        .details { margin: 20px 0; }
-        .signature { margin-top: 30px; }
+        .section { margin: 20px 0; padding: 15px; background-color: #f5f5f5; }
+        .signature { margin-top: 30px; background-color: white; padding: 20px; }
       </style>
     </head>
     <body>
@@ -406,12 +477,43 @@ async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
           <p>Registration Date: ${new Date().toLocaleDateString()}</p>
         </div>
 
-        <div class="details">
-          <h2>Customer Information</h2>
+        <div class="section">
+          <h2>Personal Details</h2>
           <p><strong>First Name:</strong> ${customerData.firstName}</p>
           <p><strong>Last Name:</strong> ${customerData.lastName}</p>
           <p><strong>Email:</strong> ${customerData.email}</p>
           <p><strong>Mobile Number:</strong> ${customerData.mobileNumber}</p>
+          <p><strong>ID Number:</strong> ${customerData.idNumber || 'Not provided'}</p>
+          <p><strong>Date of Birth:</strong> ${customerData.dateOfBirth || 'Not provided'}</p>
+          <p><strong>Gender:</strong> ${customerData.gender || 'Not provided'}</p>
+          <p><strong>South African Resident:</strong> ${customerData.isSouthAfrican ? 'Yes' : 'No'}</p>
+        </div>
+
+        <div class="section">
+          <h2>Professional Information</h2>
+          <p><strong>Occupation:</strong> ${customerData.occupation || 'Not provided'}</p>
+          <p><strong>Industry:</strong> ${customerData.industry || 'Not provided'}</p>
+        </div>
+
+        <div class="section">
+          <h2>Address Information</h2>
+          <p><strong>Address:</strong> ${customerData.address || 'Not provided'}</p>
+          <p><strong>City:</strong> ${customerData.city || 'Not provided'}</p>
+          <p><strong>Postal Code:</strong> ${customerData.postalCode || 'Not provided'}</p>
+        </div>
+
+        <div class="section">
+          <h2>Banking Details</h2>
+          <p><strong>Has Credit Card:</strong> ${customerData.hasCreditCard ? 'Yes' : 'No'}</p>
+          <p><strong>Bank Name:</strong> ${customerData.bankName || 'Not provided'}</p>
+          <p><strong>Account Type:</strong> ${customerData.accountType || 'Not provided'}</p>
+          <p><strong>Account Number:</strong> ${customerData.accountNumber || 'Not provided'}</p>
+          <p><strong>Account Holder Name:</strong> ${customerData.accountHolderName || 'Not provided'}</p>
+          <p><strong>Branch Code:</strong> ${customerData.branchCode || 'Not provided'}</p>
+        </div>
+
+        <div class="section">
+          <h2>Package Information</h2>
           <p><strong>Selected Package:</strong> ${customerData.selectedPackage}</p>
           <p><strong>Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
         </div>
@@ -419,7 +521,9 @@ async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
         ${customerData.signature ? `
           <div class="signature">
             <h2>Customer Signature</h2>
-            <img src="${customerData.signature}" style="max-width: 300px;"/>
+            <div style="background-color: white; padding: 10px;">
+              <img src="${customerData.signature}" style="max-width: 300px; filter: brightness(0%);"/>
+            </div>
           </div>
         ` : ''}
       </div>

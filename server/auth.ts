@@ -441,7 +441,22 @@ export function setupAuth(app: Express) {
             mobileNumber: req.body.mobileNumber,
             selectedPackage: selectedPackage,
             referralCode: req.body.referralCode,
-            signature: req.body.signature
+            signature: req.body.signature,
+            isSouthAfrican: req.body.isSouthAfrican,
+            idNumber: req.body.idNumber,
+            dateOfBirth: req.body.dateOfBirth,
+            gender: req.body.gender,
+            occupation: req.body.occupation,
+            industry: req.body.industry,
+            address: req.body.addressLine1,
+            city: req.body.suburb,
+            postalCode: req.body.postalCode,
+            hasCreditCard: req.body.hasCreditCard,
+            bankName: req.body.bankName,
+            accountType: req.body.accountType,
+            accountNumber: req.body.accountNumber,
+            accountHolderName: req.body.accountHolderName,
+            branchCode: req.body.branchCode
           });
           console.log('Admin notification sent successfully');
         } catch (emailError) {
