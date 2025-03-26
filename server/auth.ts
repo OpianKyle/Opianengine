@@ -4,7 +4,6 @@ import { type Express } from "express";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { MemoryStore } from 'express-session';
-import { JWT_SECRET } from './config';
 import { createConnection } from './db';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
@@ -41,7 +40,6 @@ export function setupAuth(app: Express) {
       const connection = await createConnection();
 
       try {
-        // Get user with all roles
         const [users] = await connection.execute(
           `SELECT u.*, 
            CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
@@ -58,14 +56,6 @@ export function setupAuth(app: Express) {
         }
 
         const user = users[0];
-        console.log('Found user:', {
-          id: user.id,
-          email: user.email,
-          isAdmin: user.is_admin,
-          isSuperAdmin: user.is_super_admin
-        });
-
-        // Verify password
         const isValid = await crypto.verifyPassword(password, user.password);
         if (!isValid) {
           console.log('Invalid password for user:', { id: user.id, email });
@@ -126,7 +116,6 @@ export function setupAuth(app: Express) {
       );
 
       if (!Array.isArray(users) || users.length === 0) {
-        console.log('User not found during deserialization:', { id });
         return done(null, false);
       }
 
@@ -146,13 +135,6 @@ export function setupAuth(app: Express) {
         referral_code: user.referral_code,
         referred_by: user.referred_by
       };
-
-      console.log('User deserialized:', {
-        id: transformedUser.id,
-        email: transformedUser.email,
-        isAdmin: transformedUser.is_admin,
-        isSuperAdmin: transformedUser.is_super_admin
-      });
 
       done(null, transformedUser);
     } catch (error) {
@@ -189,13 +171,20 @@ export function setupAuth(app: Express) {
           return res.status(500).json({ error: "Login failed" });
         }
 
+        // Generate JWT token
+        const token = jwt.sign(
+          { id: user.id, is_admin: user.is_admin, is_super_admin: user.is_super_admin },
+          process.env.JWT_SECRET!,
+          { expiresIn: '24h' }
+        );
+
         console.log('Login successful:', {
           id: user.id,
           email: user.email,
           sessionID: req.sessionID
         });
 
-        res.json(user);
+        res.json({ user, token });
       });
     })(req, res, next);
   });
@@ -641,6 +630,20 @@ async function checkUserAdminStatus(userId: number) {
   }
 }
 
+// JWT token verification helper
+export function verifyJwtToken(token: string): { id: number, is_admin: boolean, is_super_admin: boolean } | null {
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET!) as { 
+      id: number, 
+      is_admin: boolean, 
+      is_super_admin: boolean 
+    };
+  } catch (error) {
+    console.error('JWT verification failed:', error);
+    return null;
+  }
+}
+
 export function generateToken(user: Express.User): string {
   console.log('Generating token for user:', {
     userId: user.id,
@@ -654,7 +657,7 @@ export function generateToken(user: Express.User): string {
       isAdmin: user.isAdmin,
       isSuperAdmin: user.isSuperAdmin
     },
-    JWT_SECRET,
+    process.env.JWT_SECRET!,
     { expiresIn: '24h' }
   );
 
@@ -669,7 +672,7 @@ export function verifyToken(token: string): { id: number, isAdmin: boolean, isSu
       firstChars: token.substring(0, 10) + '...',
     });
 
-    const decoded = jwt.verify(token, JWT_SECRET) as {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
       id: number,
       isAdmin: boolean,
       isSuperAdmin: boolean,

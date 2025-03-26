@@ -1,7 +1,19 @@
-// Import config first to ensure environment variables are loaded
-import { SESSION_SECRET, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT } from './config.js';
-console.log('Starting server initialization...', new Date().toISOString());
+// Load environment variables first (must be before other imports)
+import 'dotenv/config';
 
+// Validate critical environment variables
+if (!process.env.SESSION_SECRET) {
+  console.error('Fatal: SESSION_SECRET environment variable is missing');
+  process.exit(1);
+}
+
+console.log('Environment validated:', {
+  sessionSecret: process.env.SESSION_SECRET?.substring(0, 10) + '...',
+  dbHost: process.env.DB_HOST,
+  hasDbUrl: !!process.env.DATABASE_URL
+});
+
+// Rest of imports
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic } from "./vite.js";
@@ -46,16 +58,10 @@ const sessionStore = new MemoryStore({
   checkPeriod: 86400000 // prune expired entries every 24h
 });
 
-// Verify session secret is available
-if (!SESSION_SECRET) {
-  console.error('Fatal: SESSION_SECRET not found in environment');
-  process.exit(1);
-}
-
-console.log('Configuring session with secret length:', SESSION_SECRET.length);
+console.log('Configuring session with secret length:', process.env.SESSION_SECRET?.length);
 
 const sessionMiddleware = session({
-  secret: SESSION_SECRET,
+  secret: process.env.SESSION_SECRET!,
   store: sessionStore,
   resave: false,
   saveUninitialized: false,
@@ -92,35 +98,27 @@ app.use((req: any, res, next) => {
   try {
     console.log('Starting database initialization...');
 
-    // Test MariaDB connection using DB_ environment variables
+    // Test database connection
     try {
-      // Log database configuration (excluding sensitive data)
-      console.log('Database configuration:', {
-        host: DB_HOST,
-        port: DB_PORT,
-        database: DB_NAME,
-        user: DB_USER
-      });
-
       const connection = await mysql.createConnection({
-        host: DB_HOST,
-        user: DB_USER,
-        password: DB_PASSWORD,
-        database: DB_NAME,
-        port: parseInt(DB_PORT),
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        port: parseInt(process.env.DB_PORT || '3306'),
         ssl: {
           rejectUnauthorized: false
         }
       });
 
-      console.log('MariaDB connection successful');
+      console.log('Database connection successful');
       await connection.end();
-    } catch (mariaDbError) {
-      console.error('MariaDB connection test failed:', mariaDbError);
-      throw mariaDbError;
+    } catch (dbError) {
+      console.error('Database connection test failed:', dbError);
+      throw dbError;
     }
 
-    // Setup authentication before routes
+    // Setup authentication
     console.log('Setting up authentication...');
     setupAuth(app);
     console.log('Authentication setup complete');
@@ -130,14 +128,6 @@ app.use((req: any, res, next) => {
     app.use('/api/admin', adminRouter);
     registerRoutes(app);
     console.log('Routes registered');
-
-    // Global error handler
-    app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-      console.error('Global error handler caught:', err);
-      const status = (err as any).status || (err as any).statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      res.status(status).json({ error: message });
-    });
 
     // Setup appropriate server based on environment
     if (process.env.NODE_ENV !== "production") {
