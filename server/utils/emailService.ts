@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import htmlPdf from 'html-pdf';
+import { promisify } from 'util';
 
 // Create reusable transporter with Gmail SMTP configuration
 const transporter = nodemailer.createTransport({
@@ -326,4 +328,142 @@ export function formatAdminQuoteRequestEmail(
   `;
 
   return { text, html };
+}
+
+export function formatNewCustomerAdminEmail(
+  customerData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    mobileNumber: string;
+    selectedPackage: string;
+    referralCode?: string;
+    signature?: string;
+  }
+): { text: string; html: string } {
+  const text = `
+    New Customer Registration
+
+    Customer Details:
+    First Name: ${customerData.firstName}
+    Last Name: ${customerData.lastName}
+    Email: ${customerData.email}
+    Mobile Number: ${customerData.mobileNumber}
+    Selected Package: ${customerData.selectedPackage}
+    Referral Code: ${customerData.referralCode || 'None'}
+
+    Please find the attached PDF with complete registration details including the customer's signature.
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>New Customer Registration</h2>
+
+      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">Customer Details</h3>
+        <p><strong>First Name:</strong> ${customerData.firstName}</p>
+        <p><strong>Last Name:</strong> ${customerData.lastName}</p>
+        <p><strong>Email:</strong> ${customerData.email}</p>
+        <p><strong>Mobile Number:</strong> ${customerData.mobileNumber}</p>
+        <p><strong>Selected Package:</strong> ${customerData.selectedPackage}</p>
+        <p><strong>Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
+      </div>
+
+      ${customerData.signature ? `
+        <div style="margin-top: 20px;">
+          <h3>Customer Signature</h3>
+          <img src="${customerData.signature}" alt="Customer Signature" style="max-width: 300px; border: 1px solid #ccc; padding: 10px;"/>
+        </div>
+      ` : ''}
+
+      <p style="color: #666; font-size: 12px; margin-top: 20px;">
+        A PDF containing complete registration details is attached to this email.
+      </p>
+    </div>
+  `;
+
+  return { text, html };
+}
+
+// Function to generate PDF
+async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
+  const pdfHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; }
+        .container { padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .details { margin: 20px 0; }
+        .signature { margin-top: 30px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>OPIAN Rewards - Customer Registration</h1>
+          <p>Registration Date: ${new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div class="details">
+          <h2>Customer Information</h2>
+          <p><strong>First Name:</strong> ${customerData.firstName}</p>
+          <p><strong>Last Name:</strong> ${customerData.lastName}</p>
+          <p><strong>Email:</strong> ${customerData.email}</p>
+          <p><strong>Mobile Number:</strong> ${customerData.mobileNumber}</p>
+          <p><strong>Selected Package:</strong> ${customerData.selectedPackage}</p>
+          <p><strong>Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
+        </div>
+
+        ${customerData.signature ? `
+          <div class="signature">
+            <h2>Customer Signature</h2>
+            <img src="${customerData.signature}" style="max-width: 300px;"/>
+          </div>
+        ` : ''}
+      </div>
+    </body>
+    </html>
+  `;
+
+  return new Promise((resolve, reject) => {
+    htmlPdf.create(pdfHtml).toBuffer((err, buffer) => {
+      if (err) {
+        console.error('PDF generation error:', err);
+        reject(err);
+      } else {
+        resolve(buffer);
+      }
+    });
+  });
+}
+
+// Function to send admin notification with PDF
+export async function sendAdminRegistrationNotification(customerData: any): Promise<boolean> {
+  try {
+    console.log('Generating PDF for admin notification...');
+    const pdfBuffer = await generateRegistrationPDF(customerData);
+
+    const { text, html } = formatNewCustomerAdminEmail(customerData);
+
+    const result = await transporter.sendMail({
+      from: `"OPIAN Rewards" <${process.env.GMAIL_USER}>`,
+      to: 'clientservices@opianfsgroup.com',
+      subject: 'New Customer Registration',
+      text,
+      html,
+      attachments: [{
+        filename: `${customerData.firstName}_${customerData.lastName}_Registration.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
+    });
+
+    console.log('Admin notification sent successfully:', result.messageId);
+    return true;
+  } catch (error) {
+    console.error('Failed to send admin notification:', error);
+    return false;
+  }
 }

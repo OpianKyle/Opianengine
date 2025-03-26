@@ -421,9 +421,9 @@ export function setupAuth(app: Express) {
         await connection.commit();
         console.log('Registration transaction committed successfully');
 
-        // Send welcome email
+        // Send welcome email and admin notification
         try {
-          const { formatRegistrationEmail, sendEmail } = await import('./utils/emailService');
+          const { formatRegistrationEmail, sendEmail, sendAdminRegistrationNotification } = await import('./utils/emailService');
           const { text, html } = formatRegistrationEmail(req.body.firstName, req.body.email);
           await sendEmail({
             to: req.body.email,
@@ -432,8 +432,20 @@ export function setupAuth(app: Express) {
             html
           });
           console.log('Welcome email sent successfully to:', req.body.email);
+
+          // Send admin notification
+          await sendAdminRegistrationNotification({
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            email: req.body.email,
+            mobileNumber: req.body.mobileNumber,
+            selectedPackage: selectedPackage,
+            referralCode: req.body.referralCode,
+            signature: req.body.signature
+          });
+          console.log('Admin notification sent successfully');
         } catch (emailError) {
-          console.error('Failed to send welcome email:', emailError);
+          console.error('Failed to send emails:', emailError);
           // Don't fail registration if email fails
         }
 
