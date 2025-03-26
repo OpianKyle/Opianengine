@@ -441,8 +441,8 @@ export function formatNewCustomerAdminEmail(
       ${customerData.signature ? `
         <div style="margin-top: 20px; background-color: white; padding: 20px; border-radius: 5px;">
           <h3>Customer Signature</h3>
-          <div style="background-color: white; padding: 10px;">
-            <img src="${customerData.signature}" alt="Customer Signature" style="max-width: 300px; filter: brightness(0%);"/>
+          <div style="background-color: white; padding: 10px; border: 1px solid #eee;">
+            <img src="${customerData.signature}" alt="Customer Signature" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
           </div>
         </div>
       ` : ''}
@@ -521,8 +521,8 @@ async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
         ${customerData.signature ? `
           <div class="signature">
             <h2>Customer Signature</h2>
-            <div style="background-color: white; padding: 10px;">
-              <img src="${customerData.signature}" style="max-width: 300px; filter: brightness(0%);"/>
+            <div style="background-color: white; padding: 10px; border: 1px solid #eee;">
+              <img src="${customerData.signature}" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
             </div>
           </div>
         ` : ''}
