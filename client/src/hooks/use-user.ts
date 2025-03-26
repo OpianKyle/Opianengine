@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { cleanupWebSockets } from "@/lib/utils";
 
-// Get base API URL from environment or default to relative path
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
+
+// Simplify boolean transformation logic without excessive logging
 const booleanSchema = z.union([z.boolean(), z.number()]).transform(val => !!val);
 
 // Define schema with required fields and transformations
@@ -68,8 +67,7 @@ async function parseResponse(response: Response) {
 }
 
 // Helper function for making API requests with retries
-async function fetchWithRetry(endpoint: string, options: RequestInit, retries = 3, delay = 1000) {
-  const url = `${API_BASE_URL}${endpoint}`;
+async function fetchWithRetry(url: string, options: RequestInit, retries = 3, delay = 1000) {
   const defaultOptions: RequestInit = {
     credentials: 'include',
     headers: {
@@ -89,35 +87,29 @@ async function fetchWithRetry(endpoint: string, options: RequestInit, retries = 
       console.log('Making request to:', url, {
         method: options.method,
         hasCredentials: defaultOptions.credentials === 'include',
-        hasToken: !!(defaultOptions.headers as any)?.Authorization,
-        baseUrl: API_BASE_URL
+        hasToken: !!(defaultOptions.headers as any)?.Authorization
       });
 
       const response = await fetch(url, defaultOptions);
-      console.log('Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
 
       // For logout, we don't care about the response content
-      if (endpoint.includes('/logout')) {
+      if (url.includes('/api/logout')) {
         return true;
       }
 
       // Handle 401 specifically
       if (response.status === 401) {
         console.log('Unauthorized response received');
-        throw new Error('Authentication failed');
+        return null;
       }
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || `Request failed with status ${response.status}`);
+        const data = await parseResponse(response);
+        throw new Error(data?.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      if (!data && !endpoint.includes('/logout')) {
+      const data = await parseResponse(response);
+      if (!data && !url.includes('/api/logout')) {
         throw new Error('Invalid response format');
       }
 
@@ -175,7 +167,7 @@ export function useUser() {
       } catch (error) {
         console.error('Error fetching user:', error);
         // Only throw non-auth errors
-        if (error instanceof Error && !error.message.includes('Authentication failed')) {
+        if (error instanceof Error && !error.message.includes('401')) {
           throw error;
         }
         return null;
@@ -183,7 +175,7 @@ export function useUser() {
     },
     retry: (failureCount, error) => {
       // Don't retry on 401s
-      if (error instanceof Error && error.message.includes('Authentication failed')) {
+      if (error instanceof Error && error.message.includes('401')) {
         return false;
       }
       return failureCount < 3;
@@ -264,7 +256,7 @@ export function useUser() {
     },
     onError: (error: Error) => {
       // Only show error if it's not related to session expiry
-      if (!error.message.includes('Authentication failed') && !error.message.includes('Invalid response format')) {
+      if (!error.message.includes('401') && !error.message.includes('Invalid response format')) {
         toast({
           variant: "destructive",
           title: "Warning",
@@ -276,7 +268,7 @@ export function useUser() {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: any) => {
-      const response = await fetchWithRetry('/api/register', {
+      const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
