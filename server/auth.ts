@@ -193,37 +193,6 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.post("/api/logout", (req, res) => {
-    console.log('Logout request received');
-    if (req.session) {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error('Error destroying session:', err);
-        }
-        req.logout(() => {
-          res.status(200).json({ message: "Logged out successfully" });
-        });
-      });
-    } else {
-      res.status(200).json({ message: "Logged out successfully" });
-    }
-  });
-
-  app.get("/api/user", (req, res) => {
-    console.log('GET /api/user request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? { id: req.user.id, email: req.user.email } : null
-    });
-
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    res.json(req.user);
-  });
-
-  // Keep existing imports and configurations...
-
   // Add helper function for validating referral code
   async function validateReferralCode(connection: any, referralCode: string): Promise<boolean> {
     if (!referralCode) return true;
@@ -516,10 +485,10 @@ export function setupAuth(app: Express) {
     }
   });
 
+
+  // Clear session cookie
   app.post("/api/logout", (req, res) => {
     console.log('Logout request received');
-
-    // Clear session cookie
     res.clearCookie('session', {
       path: '/',
       httpOnly: true,
@@ -576,343 +545,318 @@ export function setupAuth(app: Express) {
     }
   }
 
-
-  app.post("/api/logout", (req, res) => {
-    console.log('Logout request received');
-
-    // Clear session cookie
-    res.clearCookie('session', {
-      path: '/',
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax'
-    });
-
-    if (req.session) {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error('Error destroying session:', err);
-        }
-        req.logout(() => {
-          res.status(200).json({ message: "Logged out successfully" });
-        });
-      });
-    } else {
-      res.status(200).json({ message: "Logged out successfully" });
-    }
-  });
-
-  return app;
-}
-
-async function checkUserAdminStatus(userId: number) {
-  const connection = await createConnection();
-  try {
-    console.log('Checking admin status for user:', userId);
-    const [rows] = await connection.execute(
-      'SELECT role_type FROM admin_users WHERE user_id = ?',
-      [userId]
-    );
-
-    if (!Array.isArray(rows) || rows.length === 0) {
-      console.log('No admin entry found for user:', userId);
-      return { isAdmin: false, isSuperAdmin: false };
-    }
-
-    const roleType = rows[0].role_type;
-    console.log('Admin role found:', { userId, roleType });
-
-    return {
-      isAdmin: true,
-      isSuperAdmin: roleType === 'SUPER_ADMIN'
-    };
-  } catch (error) {
-    console.error('Error checking admin status:', error);
-    return { isAdmin: false, isSuperAdmin: false };
-  } finally {
-    await connection.end();
-  }
-}
-
-// JWT token verification helper
-export function verifyJwtToken(token: string): { id: number, is_admin: boolean, is_super_admin: boolean } | null {
-  try {
-    return jwt.verify(token, process.env.JWT_SECRET!) as { 
-      id: number, 
-      is_admin: boolean, 
-      is_super_admin: boolean 
-    };
-  } catch (error) {
-    console.error('JWT verification failed:', error);
-    return null;
-  }
-}
-
-export function generateToken(user: Express.User): string {
-  console.log('Generating token for user:', {
-    userId: user.id,
-    isAdmin: user.isAdmin,
-    isSuperAdmin: user.isSuperAdmin
-  });
-
-  const token = jwt.sign(
-    {
-      id: user.id,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin
-    },
-    process.env.JWT_SECRET!,
-    { expiresIn: '24h' }
-  );
-
-  console.log('Token generated successfully:', token.slice(0, 10) + '...');
-  return token;
-}
-
-export function verifyToken(token: string): { id: number, isAdmin: boolean, isSuperAdmin: boolean } | null {
-  try {
-    console.log('Verifying token:', {
-      tokenLength: token.length,
-      firstChars: token.substring(0, 10) + '...',
-    });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      id: number,
-      isAdmin: boolean,
-      isSuperAdmin: boolean,
-      exp?: number
-    };
-
-    console.log('Token verified successfully:', {
-      userId: decoded.id,
-      isAdmin: decoded.isAdmin,
-      exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
-    });
-
-    return {
-      id: decoded.id,
-      isAdmin: decoded.isAdmin,
-      isSuperAdmin: decoded.isSuperAdmin
-    };
-  } catch (error) {
-    console.error('Token verification failed:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      name: error instanceof Error ? error.name : 'Unknown error type',
-      tokenLength: token?.length
-    });
-    return null;
-  }
-}
-
-export async function verifySession(req: Request): Promise<any> {
-  try {
-    console.log('Verifying session for request:', {
-      url: req.url,
-      headers: {
-        cookie: req.headers.cookie,
-        'sec-websocket-protocol': req.headers['sec-websocket-protocol']
-      }
-    });
-
-    if (req.user) {
-      console.log('Using existing session user:', req.user);
-      return req.user;
-    }
-
-    if (!req.headers.cookie) {
-      console.log('No cookie found in request');
-      return null;
-    }
-
-    const cookies = parseCookie(req.headers.cookie);
-    const sessionId = cookies['connect.sid'];
-
-    if (!sessionId) {
-      console.log('No session ID found in cookies');
-      return null;
-    }
-
-    console.log('Found session ID:', sessionId);
-
-    return new Promise((resolve) => {
-      session({
-        secret: process.env.SESSION_SECRET || 'development-secret',
-        cookie: {
-          maxAge: 86400000,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax'
-        },
-        store: new MemoryStore({
-          checkPeriod: 86400000
-        }),
-        resave: false,
-        saveUninitialized: false
-      }).store.get(sessionId, async (err: any, session: any) => {
-        if (err || !session) {
-          console.log('Session not found or error:', err);
-          resolve(null);
-          return;
-        }
-
-        try {
-          console.log('Retrieved session data:', {
-            ...session,
-            cookie: '[Redacted]',
-            passport: session.passport ? { user: session.passport.user } : undefined
-          });
-
-          const userId = session.passport?.user;
-          if (!userId) {
-            console.log('No user ID in session');
-            resolve(null);
-            return;
-          }
-
-          console.log('Found user ID in session:', userId);
-
-          const connection = await createConnection();
-          const [user] = await connection.execute(
-            'SELECT * FROM users WHERE id = ?',
-            [userId]
-          );
-          await connection.end();
-
-          if (!user) {
-            console.log('User not found in database');
-            resolve(null);
-            return;
-          }
-
-          const adminStatus = await checkUserAdminStatus(userId);
-
-          const { password: _, ...safeUser } = user[0];
-          console.log('Session verified for user:', safeUser.id);
-          resolve({ ...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin });
-        } catch (error) {
-          console.error('Error verifying session:', error);
-          resolve(null);
-        }
-      });
-    });
-  } catch (error) {
-    console.error('Error in verifySession:', error);
-    return null;
-  }
-}
-
-// Add checkAdmin middleware function
-export async function checkAdmin(req: Request, res: Response, next: NextFunction) {
-  try {
-    console.log('Running admin check middleware:', {
-      hasSession: !!req.session,
-      hasUser: !!req.user,
-      sessionID: req.sessionID,
-      isAuthenticated: req.isAuthenticated?.()
-    });
-
-    if (!req.session || !req.session.passport || !req.session.passport.user) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    const connection = await createConnection();
-    const [adminCheck] = await connection.execute(
-      'SELECT role_type FROM admin_users WHERE user_id = ?',
-      [req.session.passport.user]
-    );
-    await connection.end();
-
-    if (!adminCheck || (adminCheck as any[]).length === 0) {
-      console.log('Admin access denied:', {
-        userId: req.session.passport.user,
-        foundAdmin: false
-      });
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
-    console.log('Admin access granted:', {
-      userId: req.session.passport.user,
-      roleType: adminCheck[0].role_type
-    });
-
-    next();
-  } catch (error) {
-    console.error('Error in admin check:', error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-}
-
-// Add debug logging to checkAgent middleware
-export async function checkAgent(req: Request, res: Response, next: NextFunction) {
-  try {
-    console.log('Running agent check middleware:', {
-      hasSession: !!req.session,
-      hasUser: !!req.user,
-      sessionID: req.sessionID,
-      isAuthenticated: req.isAuthenticated?.()
-    });
-
-    if (!req.session || !req.isAuthenticated()) {
-      console.log('Authentication check failed:', {
-        hasSession: !!req.session,
-        isAuthenticated: req.isAuthenticated?.()
-      });
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
+  // Check for existing super admin
+  async function checkUserAdminStatus(userId: number) {
     const connection = await createConnection();
     try {
-      // Check if user exists and is an agent
-      const [users] = await connection.execute(
-        `SELECT id, email, is_agent, is_enabled 
-         FROM users 
-         WHERE id = ?`,
-        [req.user.id]
+      console.log('Checking admin status for user:', userId);
+      const [rows] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [userId]
       );
 
-      const user = users[0];
-      console.log('Agent check results:', {
-        userId: req.user.id,
-        foundUser: !!user,
-        isAgent: user?.is_agent,
-        isEnabled: user?.is_enabled
-      });
-
-      if (!user || !user.is_agent || !user.is_enabled) {
-        console.log('User is not an agent or is disabled:', {
-          userId: req.user.id,
-          isAgent: user?.is_agent,
-          isEnabled: user?.is_enabled
-        });
-        return res.status(403).json({ error: "Agent access required" });
+      if (!Array.isArray(rows) || rows.length === 0) {
+        console.log('No admin entry found for user:', userId);
+        return { isAdmin: false, isSuperAdmin: false };
       }
 
-      console.log('Agent check passed for user:', {
-        userId: user.id,
-        email: user.email
-      });
-      next();
+      const roleType = rows[0].role_type;
+      console.log('Admin role found:', { userId, roleType });
+
+      return {
+        isAdmin: true,
+        isSuperAdmin: roleType === 'SUPER_ADMIN'
+      };
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      return { isAdmin: false, isSuperAdmin: false };
     } finally {
       await connection.end();
     }
-  } catch (error) {
-    console.error('Error in agent check:', error);
-    res.status(500).json({ error: "Internal server error" });
   }
-}
 
-// Add global error handler
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  console.error('Stack trace:', err.stack);
-});
+  // JWT token verification helper
+  export function verifyJwtToken(token: string): { id: number, is_admin: boolean, is_super_admin: boolean } | null {
+    try {
+      return jwt.verify(token, process.env.JWT_SECRET!) as { 
+        id: number, 
+        is_admin: boolean, 
+        is_super_admin: boolean 
+      };
+    } catch (error) {
+      console.error('JWT verification failed:', error);
+      return null;
+    }
+  }
 
-//Helper function (assuming it exists elsewhere or needs to be added)
-function parseCookie(cookieString: string | undefined): { [key: string]: string } {
-  if (!cookieString) return {};
-  const cookies: { [key: string]: string } = {};
-  cookieString.split(';').forEach(cookie => {
-    const [key, value] = cookie.trim().split('=');
-    cookies[key] = value;
+  export function generateToken(user: Express.User): string {
+    console.log('Generating token for user:', {
+      userId: user.id,
+      isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin
+    });
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        isAdmin: user.isAdmin,
+        isSuperAdmin: user.isSuperAdmin
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: '24h' }
+    );
+
+    console.log('Token generated successfully:', token.slice(0, 10) + '...');
+    return token;
+  }
+
+  export function verifyToken(token: string): { id: number, isAdmin: boolean, isSuperAdmin: boolean } | null {
+    try {
+      console.log('Verifying token:', {
+        tokenLength: token.length,
+        firstChars: token.substring(0, 10) + '...',
+      });
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        id: number,
+        isAdmin: boolean,
+        isSuperAdmin: boolean,
+        exp?: number
+      };
+
+      console.log('Token verified successfully:', {
+        userId: decoded.id,
+        isAdmin: decoded.isAdmin,
+        exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
+      });
+
+      return {
+        id: decoded.id,
+        isAdmin: decoded.isAdmin,
+        isSuperAdmin: decoded.isSuperAdmin
+      };
+    } catch (error) {
+      console.error('Token verification failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        name: error instanceof Error ? error.name : 'Unknown error type',
+        tokenLength: token?.length
+      });
+      return null;
+    }
+  }
+
+  export async function verifySession(req: Request): Promise<any> {
+    try {
+      console.log('Verifying session for request:', {
+        url: req.url,
+        headers: {
+          cookie: req.headers.cookie,
+          'sec-websocket-protocol': req.headers['sec-websocket-protocol']
+        }
+      });
+
+      if (req.user) {
+        console.log('Using existing session user:', req.user);
+        return req.user;
+      }
+
+      if (!req.headers.cookie) {
+        console.log('No cookie found in request');
+        return null;
+      }
+
+      const cookies = parseCookie(req.headers.cookie);
+      const sessionId = cookies['connect.sid'];
+
+      if (!sessionId) {
+        console.log('No session ID found in cookies');
+        return null;
+      }
+
+      console.log('Found session ID:', sessionId);
+
+      return new Promise((resolve) => {
+        session({
+          secret: process.env.SESSION_SECRET || 'development-secret',
+          cookie: {
+            maxAge: 86400000,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+          },
+          store: new MemoryStore({
+            checkPeriod: 86400000
+          }),
+          resave: false,
+          saveUninitialized: false
+        }).store.get(sessionId, async (err: any, session: any) => {
+          if (err || !session) {
+            console.log('Session not found or error:', err);
+            resolve(null);
+            return;
+          }
+
+          try {
+            console.log('Retrieved session data:', {
+              ...session,
+              cookie: '[Redacted]',
+              passport: session.passport ? { user: session.passport.user } : undefined
+            });
+
+            const userId = session.passport?.user;
+            if (!userId) {
+              console.log('No user ID in session');
+              resolve(null);
+              return;
+            }
+
+            console.log('Found user ID in session:', userId);
+
+            const connection = await createConnection();
+            const [user] = await connection.execute(
+              'SELECT * FROM users WHERE id = ?',
+              [userId]
+            );
+            await connection.end();
+
+            if (!user) {
+              console.log('User not found in database');
+              resolve(null);
+              return;
+            }
+
+            const adminStatus = await checkUserAdminStatus(userId);
+
+            const { password: _, ...safeUser } = user[0];
+            console.log('Session verified for user:', safeUser.id);
+            resolve({ ...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin });
+          } catch (error) {
+            console.error('Error verifying session:', error);
+            resolve(null);
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Error in verifySession:', error);
+      return null;
+    }
+  }
+
+  // Add checkAdmin middleware function
+  export async function checkAdmin(req: Request, res: Response, next: NextFunction) {
+    try {
+      console.log('Running admin check middleware:', {
+        hasSession: !!req.session,
+        hasUser: !!req.user,
+        sessionID: req.sessionID,
+        isAuthenticated: req.isAuthenticated?.()
+      });
+
+      if (!req.session || !req.session.passport || !req.session.passport.user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const connection = await createConnection();
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.session.passport.user]
+      );
+      await connection.end();
+
+      if (!adminCheck || (adminCheck as any[]).length === 0) {
+        console.log('Admin access denied:', {
+          userId: req.session.passport.user,
+          foundAdmin: false
+        });
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      console.log('Admin access granted:', {
+        userId: req.session.passport.user,
+        roleType: adminCheck[0].role_type
+      });
+
+      next();
+    } catch (error) {
+      console.error('Error in admin check:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  // Add debug logging to checkAgent middleware
+  export async function checkAgent(req: Request, res: Response, next: NextFunction) {
+    try {
+      console.log('Running agent check middleware:', {
+        hasSession: !!req.session,
+        hasUser: !!req.user,
+        sessionID: req.sessionID,
+        isAuthenticated: req.isAuthenticated?.()
+      });
+
+      if (!req.session || !req.isAuthenticated()) {
+        console.log('Authentication check failed:', {
+          hasSession: !!req.session,
+          isAuthenticated: req.isAuthenticated?.()
+        });
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const connection = await createConnection();
+      try {
+        // Check if user exists and is an agent
+        const [users] = await connection.execute(
+          `SELECT id, email, is_agent, is_enabled 
+           FROM users 
+           WHERE id = ?`,
+          [req.user.id]
+        );
+
+        const user = users[0];
+        console.log('Agent check results:', {
+          userId: req.user.id,
+          foundUser: !!user,
+          isAgent: user?.is_agent,
+          isEnabled: user?.is_enabled
+        });
+
+        if (!user || !user.is_agent || !user.is_enabled) {
+          console.log('User is not an agent or is disabled:', {
+            userId: req.user.id,
+            isAgent: user?.is_agent,
+            isEnabled: user?.is_enabled
+          });
+          return res.status(403).json({ error: "Agent access required" });
+        }
+
+        console.log('Agent check passed for user:', {
+          userId: user.id,
+          email: user.email
+        });
+        next();
+      } finally {
+        await connection.end();
+      }
+    } catch (error) {
+      console.error('Error in agent check:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  // Add global error handler
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    console.error('Stack trace:', err.stack);
   });
-  return cookies;
+
+  //Helper function (assuming it exists elsewhere or needs to be added)
+  function parseCookie(cookieString: string | undefined): { [key: string]: string } {
+    if (!cookieString) return {};
+    const cookies: { [key: string]: string } = {};
+    cookieString.split(';').forEach(cookie => {
+      const [key, value] = cookie.trim().split('=');
+      cookies[key] = value;
+    });
+    return cookies;
+  }
+
+  return app;
 }

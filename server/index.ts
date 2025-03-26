@@ -67,7 +67,7 @@ const sessionMiddleware = session({
   saveUninitialized: false,
   cookie: { 
     maxAge: 86400000, // 24 hours
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Set to false as we're handling HTTPS at the proxy level
     httpOnly: true,
     sameSite: 'lax'
   },
@@ -137,7 +137,7 @@ app.use((req: any, res, next) => {
     } else {
       console.log('Setting up static file serving...');
       serveStatic(app);
-      console.log('Static serving setup complete');
+      console.log('Static serving complete');
     }
 
     // Start the server
