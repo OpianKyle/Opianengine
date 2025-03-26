@@ -1,16 +1,31 @@
 import { Router } from 'express';
-import { createConnection } from '../db';
+import mysql from 'mysql2/promise';
 import { checkAdmin } from '../auth';
 import { logAdminAction } from '../admin-logger';
 
 const router = Router();
+
+// MariaDB connection pool
+const pool = mysql.createPool({
+  host: 'dedi1350.jnb1.host-h.net',
+  user: 'admin',
+  password: '8E33U976qa800F',
+  database: 'opianrewards',
+  port: 3306,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
 
 // Middleware to check if user is an admin
 router.use(checkAdmin);
 
 // Get email logs with pagination and filtering
 router.get('/email-logs', async (req: any, res) => {
-  const connection = await createConnection();
+  const connection = await pool.getConnection();
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
@@ -33,7 +48,9 @@ router.get('/email-logs', async (req: any, res) => {
     }
 
     if (search) {
-      whereClause += whereClause ? ' AND (recipient_email LIKE ? OR subject LIKE ?)' : ' WHERE (recipient_email LIKE ? OR subject LIKE ?)';
+      whereClause += whereClause ? 
+        ' AND (recipient_email LIKE ? OR subject LIKE ?)' : 
+        ' WHERE (recipient_email LIKE ? OR subject LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
     }
 
@@ -55,20 +72,20 @@ router.get('/email-logs', async (req: any, res) => {
       totalCount: (countResult as any)[0].total,
       page,
       limit,
-      logs: logs
+      logs
     });
 
   } catch (error) {
     console.error('Error fetching email logs:', error);
     res.status(500).json({ error: 'Failed to fetch email logs' });
   } finally {
-    await connection.end();
+    connection.release();
   }
 });
 
 // Create new agent
 router.post('/agents', async (req: any, res) => {
-  const connection = await createConnection();
+  const connection = await pool.getConnection();
   try {
     console.log('Creating new agent:', req.body);
 
@@ -88,7 +105,7 @@ router.post('/agents', async (req: any, res) => {
         `INSERT INTO users (
           email, password, first_name, last_name,
           is_agent, is_enabled, created_at
-        ) VALUES (?, ?, ?, ?, 1, 1, NOW())`,
+        ) VALUES (?, ?, ?, ?, 1, 1, NOW()) RETURNING id`,
         [
           req.body.email,
           hashedPassword,
@@ -97,7 +114,7 @@ router.post('/agents', async (req: any, res) => {
         ]
       );
 
-      const agentId = (agentResult as any).insertId;
+      const agentId = (agentResult as any)[0].id;
 
       // Log the admin action
       await logAdminAction({
@@ -124,13 +141,13 @@ router.post('/agents', async (req: any, res) => {
     console.error('Error creating agent:', error);
     res.status(500).json({ error: 'Failed to create agent' });
   } finally {
-    await connection.end();
+    connection.release();
   }
 });
 
 // Get agent statistics
 router.get('/agents/stats', async (req: any, res) => {
-  const connection = await createConnection();
+  const connection = await pool.getConnection();
   try {
     console.log('Fetching agent statistics');
 
@@ -168,29 +185,29 @@ router.get('/agents/stats', async (req: any, res) => {
     );
 
     console.log('Agent statistics:', {
-      totalAgents: agentsCount[0].count,
-      totalCustomers: customersCount[0].count,
-      todaySignups: todaySignups[0].count,
-      agentsCount: Array.isArray(agents) ? agents.length : 0
+      totalAgents: (agentsCount as any)[0].count,
+      totalCustomers: (customersCount as any)[0].count,
+      todaySignups: (todaySignups as any)[0].count,
+      agentsCount: (agents as any).length
     });
 
     res.json({
-      totalAgents: agentsCount[0].count,
-      totalCustomers: customersCount[0].count,
-      todaySignups: todaySignups[0].count,
+      totalAgents: (agentsCount as any)[0].count,
+      totalCustomers: (customersCount as any)[0].count,
+      todaySignups: (todaySignups as any)[0].count,
       agents: agents,
     });
   } catch (error) {
     console.error('Error fetching agent statistics:', error);
     res.status(500).json({ error: 'Failed to fetch agent statistics' });
   } finally {
-    await connection.end();
+    connection.release();
   }
 });
 
 // Toggle agent status (enable/disable)
 router.post('/agents/:id/toggle-status', async (req: any, res) => {
-  const connection = await createConnection();
+  const connection = await pool.getConnection();
   try {
     console.log('Toggling agent status:', req.params.id);
 
@@ -200,12 +217,12 @@ router.post('/agents/:id/toggle-status', async (req: any, res) => {
       [req.params.id]
     );
 
-    if (!agent || !Array.isArray(agent) || agent.length === 0) {
+    if (!agent || (agent as any).length === 0) {
       return res.status(404).json({ error: 'Agent not found' });
     }
 
     // Toggle status
-    const newStatus = agent[0].is_enabled ? 0 : 1;
+    const newStatus = (agent as any)[0].is_enabled ? 0 : 1;
     await connection.execute(
       'UPDATE users SET is_enabled = ? WHERE id = ? AND is_agent = 1',
       [newStatus, req.params.id]
@@ -221,13 +238,13 @@ router.post('/agents/:id/toggle-status', async (req: any, res) => {
     console.error('Error toggling agent status:', error);
     res.status(500).json({ error: 'Failed to update agent status' });
   } finally {
-    await connection.end();
+    connection.release();
   }
 });
 
 // Get agent details with their customers
 router.get('/agents/:id/customers', async (req: any, res) => {
-  const connection = await createConnection();
+  const connection = await pool.getConnection();
   try {
     console.log('Fetching customers for agent:', req.params.id);
 
@@ -235,7 +252,7 @@ router.get('/agents/:id/customers', async (req: any, res) => {
       `SELECT 
         u.*, 
         COALESCE(
-          GROUP_CONCAT(
+          JSON_ARRAYAGG(
             JSON_OBJECT(
               'id', p.id,
               'name', p.name,
@@ -253,7 +270,7 @@ router.get('/agents/:id/customers', async (req: any, res) => {
       [req.params.id]
     );
 
-    const transformedCustomers = customers?.map((customer: any) => ({
+    const transformedCustomers = (customers as any).map((customer: any) => ({
       id: customer.id,
       email: customer.email,
       firstName: customer.first_name,
@@ -263,7 +280,7 @@ router.get('/agents/:id/customers', async (req: any, res) => {
       points: customer.points,
       createdAt: customer.created_at,
       isEnabled: Boolean(customer.is_enabled),
-      products: JSON.parse(customer.products || '[]')
+      products: JSON.parse(customer.products)
     }));
 
     console.log('Found customers for agent:', {
@@ -276,7 +293,7 @@ router.get('/agents/:id/customers', async (req: any, res) => {
     console.error('Error fetching agent customers:', error);
     res.status(500).json({ error: 'Failed to fetch agent customers' });
   } finally {
-    await connection.end();
+    connection.release();
   }
 });
 

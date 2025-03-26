@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import htmlPdf from 'html-pdf';
 import { promisify } from 'util';
-import { createConnection } from '../db';
+import mysql from 'mysql2/promise';
 
 // Create reusable transporter with Gmail SMTP configuration
 const transporter = nodemailer.createTransport({
@@ -17,6 +17,21 @@ const transporter = nodemailer.createTransport({
   logger: true
 });
 
+// Create connection pool
+const pool = mysql.createPool({
+  host: 'dedi1350.jnb1.host-h.net',
+  user: 'admin',
+  password: '8E33U976qa800F',
+  database: 'opianrewards',
+  port: 3306,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
 // Add email logging function
 async function logEmail(params: {
   recipientEmail: string;
@@ -27,7 +42,7 @@ async function logEmail(params: {
   hasAttachments?: boolean;
   templateData?: any;
 }) {
-  const connection = await createConnection();
+  const connection = await pool.getConnection();
   try {
     const query = `
       INSERT INTO email_logs (
@@ -50,7 +65,7 @@ async function logEmail(params: {
   } catch (error) {
     console.error('Failed to log email:', error);
   } finally {
-    await connection.end();
+    connection.release();
   }
 }
 
