@@ -1,0 +1,186 @@
+
+Search
+
+Live tail
+GMT+2
+
+
+==> Cloning from https://github.com/OpianKyle/Opianengine
+==> Checking out commit 0a4224a55e9593272741dfc42aab7cf5a2a352de in branch main
+==> Using Node.js version 22.12.0 (default)
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Using Bun version 1.1.0 (default)
+==> Docs on specifying a bun version: https://render.com/docs/bun-version
+==> Running build command 'npm install; npm run build'...
+added 689 packages, and audited 690 packages in 21s
+74 packages are looking for funding
+  run `npm fund` for details
+13 vulnerabilities (12 moderate, 1 high)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+Run `npm audit` for details.
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+vite v5.4.10 building for production...
+transforming...
+✓ 2897 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/public/index.html                     1.74 kB │ gzip:   0.68 kB
+../dist/public/assets/index-Db5F8K2S.css     71.60 kB │ gzip:  12.57 kB
+../dist/public/assets/index-Bgw45ITz.js   1,171.88 kB │ gzip: 328.35 kB
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 8.02s
+  dist/index.js  233.2kb
+⚡ Done in 16ms
+==> Uploading build...
+==> Uploaded in 9.2s. Compression took 7.1s
+==> Build successful 🎉
+==> Deploying...
+==> Running 'npm run start'
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+file:///opt/render/project/src/node_modules/zod/lib/index.mjs:587
+                const error = new ZodError(ctx.common.issues);
+                              ^
+ZodError: [
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "SESSION_SECRET"
+    ],
+    "message": "Required"
+  },
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "DATABASE_URL"
+    ],
+    "message": "Required"
+  }
+]
+    at get error (file:///opt/render/project/src/node_modules/zod/lib/index.mjs:587:31)
+    at ZodObject.parse (file:///opt/render/project/src/node_modules/zod/lib/index.mjs:692:22)
+    at server/config.ts (file:///opt/render/project/src/dist/index.js:31:21)
+    at __init (file:///opt/render/project/src/dist/index.js:10:56)
+    at file:///opt/render/project/src/dist/index.js:627:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:271:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:547:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5) {
+  issues: [
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [ 'SESSION_SECRET' ],
+      message: 'Required'
+    },
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [ 'DATABASE_URL' ],
+      message: 'Required'
+    }
+  ],
+  addIssue: [Function (anonymous)],
+  addIssues: [Function (anonymous)],
+  errors: [
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [ 'SESSION_SECRET' ],
+      message: 'Required'
+    },
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [ 'DATABASE_URL' ],
+      message: 'Required'
+    }
+  ]
+}
+Node.js v22.12.0
+==> Exited with status 1
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+==> Running 'npm run start'
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+file:///opt/render/project/src/node_modules/zod/lib/index.mjs:587
+                const error = new ZodError(ctx.common.issues);
+                              ^
+ZodError: [
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "SESSION_SECRET"
+    ],
+    "message": "Required"
+  },
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "DATABASE_URL"
+    ],
+    "message": "Required"
+  }
+]
+    at get error (file:///opt/render/project/src/node_modules/zod/lib/index.mjs:587:31)
+    at ZodObject.parse (file:///opt/render/project/src/node_modules/zod/lib/index.mjs:692:22)
+    at server/config.ts (file:///opt/render/project/src/dist/index.js:31:21)
+    at __init (file:///opt/render/project/src/dist/index.js:10:56)
+    at file:///opt/render/project/src/dist/index.js:627:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:271:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:547:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5) {
+  issues: [
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [ 'SESSION_SECRET' ],
+      message: 'Required'
+    },
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [ 'DATABASE_URL' ],
+      message: 'Required'
+    }
+  ],
+  addIssue: [Function (anonymous)],
+  addIssues: [Function (anonymous)],
+  errors: [
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [ 'SESSION_SECRET' ],
+      message: 'Required'
+    },
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      received: 'undefined',
+      path: [ 'DATABASE_URL' ],
+      message: 'Required'
+    }
+  ]
+}
+Node.js v22.12.0

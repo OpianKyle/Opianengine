@@ -3,10 +3,10 @@ import htmlPdf from 'html-pdf';
 import { promisify } from 'util';
 import mysql from 'mysql2/promise';
 import { 
-  DATABASE_URL,
   GMAIL_USER,
   GMAIL_APP_PASSWORD,
-  isProduction 
+  isProduction,
+  dbConfig
 } from '../config';
 
 // Create reusable transporter with Gmail SMTP configuration
@@ -24,15 +24,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Create connection pool using environment variables
-const pool = mysql.createPool({
-  uri: DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  },
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+const pool = mysql.createPool(dbConfig);
 
 // Add email logging function
 async function logEmail(params: {
