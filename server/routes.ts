@@ -32,6 +32,8 @@ interface User {
   points: number;
   referral_code?: string;
   referred_by?: string;
+  
+  // Client-side aliases for compatibility
   isAdmin?: boolean;
   isSuperAdmin?: boolean;
   firstName?: string;
