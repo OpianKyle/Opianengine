@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { cleanupWebSockets } from "@/lib/utils";
 
+// Define a unified User type that supports both snake_case (server) and camelCase (client) formats
 type User = {
   id: number;
   email: string;
@@ -22,11 +23,29 @@ type User = {
   points: number;
   referral_code: string | null;
   referred_by: string | null;
-  // Add client-side aliases to match server interface
+  // Add client-side aliases for compatibility
+  isAgent?: boolean;
   isAdmin?: boolean;
   isSuperAdmin?: boolean;
   firstName?: string;
   lastName?: string;
+};
+
+// Define types for registration with referral support
+type RegisterData = {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  mobileNumber?: string;
+  referralCode?: string;
+  selectedPackage?: string;
+  signature?: string;
+};
+
+type LoginData = {
+  email: string;
+  password: string;
 };
 
 type AuthContextType = {
@@ -35,14 +54,52 @@ type AuthContextType = {
   error: Error | null;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-};
-
-type LoginData = {
-  email: string;
-  password: string;
+  registerMutation: UseMutationResult<User, Error, RegisterData>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+// API request helper with credentials
+async function apiRequest(method: string, url: string, data?: any) {
+  const response = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: data ? JSON.stringify(data) : undefined,
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(errorData.error || `${method} request to ${url} failed`);
+  }
+
+  return response;
+}
+
+// Normalize user data to ensure both snake_case and camelCase fields
+function normalizeUser(userData: any): User {
+  if (!userData) return null as unknown as User;
+  
+  return {
+    ...userData,
+    // Ensure snake_case fields are available
+    first_name: userData.first_name || userData.firstName || '',
+    last_name: userData.last_name || userData.lastName || '',
+    is_admin: userData.is_admin || userData.isAdmin || false,
+    is_super_admin: userData.is_super_admin || userData.isSuperAdmin || false,
+    is_agent: userData.is_agent || userData.isAgent || false,
+    
+    // Ensure camelCase fields are available
+    firstName: userData.firstName || userData.first_name || '',
+    lastName: userData.lastName || userData.last_name || '',
+    isAdmin: userData.isAdmin || userData.is_admin || false,
+    isSuperAdmin: userData.isSuperAdmin || userData.is_super_admin || false,
+    isAgent: userData.isAgent || userData.is_agent || false,
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
@@ -51,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const isLoggingOut = useRef(false);
 
-  // Silent user data fetch
+  // Silent user data fetch on initial load
   const {
     data: user,
     error,
@@ -59,37 +116,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      const res = await fetch("/api/user", {
-        credentials: "include",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
+      try {
+        const res = await fetch("/api/user", {
+          credentials: "include",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          }
+        });
+        
+        if (!res.ok) {
+          if (res.status === 401) return null;
+          throw new Error("Failed to fetch user data");
         }
-      });
-      if (!res.ok) {
-        if (res.status === 401) return null;
-        throw new Error("Failed to fetch user data");
+        
+        const userData = await res.json();
+        return normalizeUser(userData);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        return null;
       }
-      
-      const userData = await res.json();
-      
-      // Map server response fields to client model if needed
-      if (userData) {
-        if (userData.firstName === undefined && userData.first_name !== undefined) {
-          userData.firstName = userData.first_name;
-        }
-        if (userData.lastName === undefined && userData.last_name !== undefined) {
-          userData.lastName = userData.last_name;
-        }
-        if (userData.isAdmin === undefined && userData.is_admin !== undefined) {
-          userData.isAdmin = userData.is_admin;
-        }
-        if (userData.isSuperAdmin === undefined && userData.is_super_admin !== undefined) {
-          userData.isSuperAdmin = userData.is_super_admin;
-        }
-      }
-      
-      return userData;
     },
     retry: false,
     enabled: !isLoggingOut.current,
@@ -98,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchOnMount: false,
   });
 
+  // Clear all auth state during logout
   const clearAuthState = useCallback(async () => {
     isLoggingOut.current = true;
 
@@ -120,53 +167,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cleanupWebSockets();
   }, [queryClient]);
 
+  // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       console.log('Login mutation started');
       setIsTransitioning(true);
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(credentials),
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to login");
-      }
-
+      const res = await apiRequest("POST", "/api/login", credentials);
       const data = await res.json();
-      // Add any necessary field transformations here
-      return data.user || data; // Handle both response formats (some endpoints return {user, token})
+      // Return user data, handling both response formats
+      return normalizeUser(data.user || data);
     },
-    onSuccess: async (userData: User) => {
+    onSuccess: (user: User) => {
       console.log('Login mutation success');
       isLoggingOut.current = false;
 
-      // Create a normalized user object with all expected fields
-      const user: User = {
-        ...userData,
-        // Ensure snake_case fields are available
-        first_name: userData.first_name || userData.firstName || '',
-        last_name: userData.last_name || userData.lastName || '',
-        is_admin: userData.is_admin || userData.isAdmin || false,
-        is_super_admin: userData.is_super_admin || userData.isSuperAdmin || false,
-        
-        // Ensure camelCase fields are available
-        firstName: userData.firstName || userData.first_name || '',
-        lastName: userData.lastName || userData.last_name || '',
-        isAdmin: userData.isAdmin || userData.is_admin || false,
-        isSuperAdmin: userData.isSuperAdmin || userData.is_super_admin || false,
-      };
-
-      // Set user data in query cache
+      // Update query cache with user data
       queryClient.setQueryData(["/api/user"], user);
 
-      // Show welcome message only if not shown in this session
+      // Show welcome toast (only once per session)
       const sessionKey = `welcome_shown_${user.id}`;
       if (!sessionStorage.getItem(sessionKey)) {
         toast({
@@ -176,8 +194,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem(sessionKey, 'true');
       }
 
-      // Navigate based on user role
-      if (user.is_agent) {
+      // Route based on user role
+      if (user.is_agent || user.isAgent) {
         setLocation('/agent');
       } else if (user.is_admin || user.is_super_admin || user.isAdmin || user.isSuperAdmin) {
         setLocation('/admin');
@@ -197,24 +215,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  // Registration mutation
+  const registerMutation = useMutation({
+    mutationFn: async (userData: RegisterData) => {
+      setIsTransitioning(true);
+      const res = await apiRequest("POST", "/api/register", userData);
+      const data = await res.json();
+      return normalizeUser(data.user || data);
+    },
+    onSuccess: (user: User) => {
+      isLoggingOut.current = false;
+      
+      // Update query cache with user data
+      queryClient.setQueryData(["/api/user"], user);
+      
+      // Show welcome message
+      toast({
+        title: "Registration successful",
+        description: `Welcome, ${user.first_name || user.firstName}! Your account has been created.`,
+      });
+      
+      // Navigate to dashboard
+      setLocation('/dashboard');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setIsTransitioning(false);
+    }
+  });
+
+  // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
       setIsTransitioning(true);
-      // Clear state before making request
+      // Clear state before API call
       await clearAuthState();
-
-      const res = await fetch("/api/logout", {
-        method: "POST",
-        credentials: 'include',
-        headers: {
-          "Accept": "application/json"
-        }
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to logout");
-      }
+      await apiRequest("POST", "/api/logout");
     },
     onError: (error: Error) => {
       toast({
@@ -233,11 +275,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: user ?? null, // Ensure user is never undefined
+        user: user ?? null,
         isLoading,
         error,
         loginMutation,
         logoutMutation,
+        registerMutation,
       }}
     >
       {children}
