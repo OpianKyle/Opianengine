@@ -14,35 +14,9 @@ import referralRouter from './routes/referral';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
-
-const scryptAsync = promisify(scrypt);
-import { pool, db } from "@db";
-import { users, products, transactions, rewards, notifications, productActivities, productAssignments, quoteRequests } from "@db/schema";
-import { and, eq, desc, asc, sql, inArray } from "drizzle-orm";
-
-// Define User interface to fix TypeScript errors
-interface User {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone_number?: string;
-  is_agent: boolean;
-  is_admin: boolean;
-  is_super_admin: boolean;
-  is_enabled: boolean;
-  points: number;
-  referral_code?: string;
-  referred_by?: string;
-  
-  // Client-side aliases for compatibility
-  isAdmin?: boolean;
-  isSuperAdmin?: boolean;
-  firstName?: string;
-  lastName?: string;
-}
 import { logAdminAction } from './admin-logger';
 
+const scryptAsync = promisify(scrypt);
 const crypto = {
   hash: async (password: string) => {
     const salt = randomBytes(16).toString("hex");
@@ -123,37 +97,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       user: req.user,
       cookies: req.headers.cookie
     });
-    next();
-  });
-  
-  // Add middleware to normalize user object properties (handle both snake_case and camelCase)
-  app.use((req, res, next) => {
-    if (req.user) {
-      // Ensure both camelCase and snake_case versions are available
-      if (req.user.isAdmin === undefined && req.user.is_admin !== undefined) {
-        req.user.isAdmin = Boolean(req.user.is_admin);
-      } else if (req.user.is_admin === undefined && req.user.isAdmin !== undefined) {
-        req.user.is_admin = Boolean(req.user.isAdmin);
-      }
-      
-      if (req.user.isSuperAdmin === undefined && req.user.is_super_admin !== undefined) {
-        req.user.isSuperAdmin = Boolean(req.user.is_super_admin);
-      } else if (req.user.is_super_admin === undefined && req.user.isSuperAdmin !== undefined) {
-        req.user.is_super_admin = Boolean(req.user.isSuperAdmin);
-      }
-      
-      if (req.user.firstName === undefined && req.user.first_name !== undefined) {
-        req.user.firstName = req.user.first_name;
-      } else if (req.user.first_name === undefined && req.user.firstName !== undefined) {
-        req.user.first_name = req.user.firstName;
-      }
-      
-      if (req.user.lastName === undefined && req.user.last_name !== undefined) {
-        req.user.lastName = req.user.last_name;
-      } else if (req.user.last_name === undefined && req.user.lastName !== undefined) {
-        req.user.last_name = req.user.lastName;
-      }
-    }
     next();
   });
 

@@ -1,14 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
-// Directly use interface instead of importing from @db/schema
-// Define the minimal user interface needed here
-interface User {
-  id: number;
-  email: string;
-  is_admin?: boolean;
-  isAdmin?: boolean;
-}
-import { NotificationService } from './services/notification-service.js';
+import { type User } from '@db/schema';
+import { NotificationService } from './services/notification-service';
 
 export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
   const wss = new WebSocketServer({ 

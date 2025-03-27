@@ -1,4 +1,4 @@
-import { createConnection } from '../db.js';
+import { createConnection } from '../db';
 
 type NotificationCallback = (notification: any) => void;
 type NotificationType = 

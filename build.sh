@@ -1,38 +1,35 @@
 #!/bin/bash
 
-# Build script for the application
-echo "Building client and server..."
+# Create build directory if it doesn't exist
+mkdir -p dist/server
 
-# First, check that the required imports are in server/routes.ts
-echo "Checking required imports in server/routes.ts..."
+echo "Building client..."
+# Build the client app
+npx vite build
 
-# Make sure the required Drizzle imports are in place
-ROUTES_FILE="server/routes.ts"
-
-# Update tsconfig.server.json to force adding .js extensions to imports
-echo "Updating TypeScript configuration..."
-cat > tsconfig.server.json << EOF
+echo "Transpiling server code..."
+# Compile server TypeScript files
+npx tsc --project tsconfig.server.json || {
+  echo "Creating tsconfig.server.json..."
+  cat > tsconfig.server.json << EOF
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "dist",
+    "target": "ES2020",
+    "outDir": "dist/server",
     "rootDir": ".",
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true
+    "esModuleInterop": true
   },
-  "include": ["server/**/*", "db/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["server/**/*.ts", "db/**/*.ts"],
+  "exclude": ["node_modules", "client"]
 }
 EOF
+  npx tsc --project tsconfig.server.json
+}
 
-# Build the client (frontend)
-echo "Building client..."
-npx vite build
+echo "Copying .env file to dist directory..."
+cp .env dist/
 
-# Build the server (backend)
-echo "Building server..."
-npx tsc -p tsconfig.server.json
-
-echo "Build complete!"
+echo "Build completed. Run 'NODE_ENV=production node dist/server/server/index.js' to start the production server."
