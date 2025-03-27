@@ -52,10 +52,30 @@ const server = createServer(app);
 
 // Configure CORS properly
 app.use(cors({
-  origin: true,
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:5000',
+      'https://localhost:5000',
+      'http://127.0.0.1:5000', 
+      'https://127.0.0.1:5000',
+      'http://0.0.0.0:5000',
+      'https://0.0.0.0:5000',
+      'https://opianrewards.com',
+      'https://www.opianrewards.com'
+    ];
+    // Allow requests with no origin (like mobile apps, curl requests, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(null, true); // Still allowing all for now, but logging blocked ones
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['set-cookie']
 }));
 
@@ -85,7 +105,7 @@ const sessionMiddleware = session({
   saveUninitialized: false,
   cookie: { 
     maxAge: 86400000, // 24 hours
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Set to false for now to work in both environments
     httpOnly: true,
     sameSite: 'lax'
   },
