@@ -2,12 +2,25 @@ import mysql from 'mysql2/promise';
 
 export async function createConnection() {
   try {
+    // Ensure environment variables are loaded
+    if (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME) {
+      console.error('Missing database environment variables:',
+        { 
+          host: !!process.env.DB_HOST,
+          user: !!process.env.DB_USER,
+          password: !!process.env.DB_PASSWORD,
+          database: !!process.env.DB_NAME
+        }
+      );
+      throw new Error('Missing required database environment variables');
+    }
+
     const connection = await mysql.createConnection({
-      host: 'dedi1350.jnb1.host-h.net',
-      user: 'admin',
-      password: '8E33U976qa800F',
-      database: 'opianrewards',
-      port: 3306,
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      port: parseInt(process.env.DB_PORT || '3306'),
       ssl: {
         rejectUnauthorized: false
       }
@@ -19,6 +32,6 @@ export async function createConnection() {
     return connection;
   } catch (error) {
     console.error('Database connection error:', error);
-    throw new Error('Failed to connect to database');
+    throw new Error('Failed to connect to database: ' + (error.message || 'Unknown error'));
   }
 }

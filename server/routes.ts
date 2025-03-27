@@ -83,25 +83,10 @@ async function calculateCommissionPoints(connection: any, packageName: string, l
   return { points, randValue };
 }
 
-export function registerRoutes(app: Express): Server {
-  const MemoryStoreSession = MemoryStore(session);
-  const sessionMiddleware = session({
-    cookie: { 
-      maxAge: 86400000, // 24 hours
-      secure: false, // Set to true in production
-      sameSite: 'lax'
-    },
-    store: new MemoryStoreSession({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    }),
-    resave: false,
-    saveUninitialized: false,
-    secret: process.env.SESSION_SECRET || 'development-secret'
-  });
-
-  app.use(sessionMiddleware);
-  // Move setupAuth before defining routes that use passport
-  setupAuth(app);
+export function registerRoutes(app: Express, sessionMiddleware: any): Server {
+  // Note: Session middleware is already configured in server/index.ts
+  // And authentication setup is handled there as well
+  // Just setup the routes here
 
   // Debug middleware to log session state
   app.use((req: any, res, next) => {

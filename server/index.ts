@@ -1,5 +1,22 @@
 // Load environment variables first (must be before other imports)
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get the current file's directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env file from the root directory
+const result = dotenv.config({
+  path: path.resolve(__dirname, '..', '.env')
+});
+
+// Check if dotenv loaded successfully
+if (result.error) {
+  console.error('Error loading .env file:', result.error);
+  process.exit(1);
+}
 
 // Validate critical environment variables
 if (!process.env.SESSION_SECRET) {
@@ -10,7 +27,8 @@ if (!process.env.SESSION_SECRET) {
 console.log('Environment validated:', {
   sessionSecret: process.env.SESSION_SECRET?.substring(0, 10) + '...',
   dbHost: process.env.DB_HOST,
-  hasDbUrl: !!process.env.DATABASE_URL
+  hasDbUrl: !!process.env.DATABASE_URL,
+  envPath: path.resolve(__dirname, '..', '.env')
 });
 
 // Rest of imports
@@ -126,7 +144,7 @@ app.use((req: any, res, next) => {
     // Register routes
     app.use('/api/agent', agentRouter);
     app.use('/api/admin', adminRouter);
-    registerRoutes(app);
+    registerRoutes(app, sessionMiddleware);
     console.log('Routes registered');
 
     // Setup appropriate server based on environment
