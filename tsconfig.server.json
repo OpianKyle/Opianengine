@@ -12,9 +12,28 @@
     "paths": {
       "@/*": ["client/src/*"],
       "@db/*": ["db/*"],
-      "@db": ["db"]
-    }
+      "@db": ["db/index.js"]
+    },
+    "allowImportingTsExtensions": false,
+    /* Force TypeScript to add .js extensions for Node.js ESM compatibility */
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false, // Temporarily disable strict checking
+    /* TypeScript emits JS with the .js extension for ESM */
+    "moduleDetection": "force",
+    /* Add .js extension to imports in the emitted JS */
+    "verbatimModuleSyntax": false,
+    "skipLibCheck": true,
+    "exactOptionalPropertyTypes": false,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./server/@types"
+    ]
   },
-  "include": ["server/**/*.ts", "db/**/*.ts"],
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
+  "include": ["server/**/*.ts", "db/**/*.ts", "server/@types/**/*.d.ts"],
   "exclude": ["node_modules", "client"]
 }

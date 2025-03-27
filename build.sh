@@ -8,28 +8,22 @@ echo "Building client..."
 npx vite build
 
 echo "Transpiling server code..."
-# Compile server TypeScript files
+# Use the updated tsconfig.server.json with proper module resolution settings
 npx tsc --project tsconfig.server.json || {
-  echo "Creating tsconfig.server.json..."
-  cat > tsconfig.server.json << EOF
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "target": "ES2020",
-    "outDir": "dist/server",
-    "rootDir": ".",
-    "esModuleInterop": true
-  },
-  "include": ["server/**/*.ts", "db/**/*.ts"],
-  "exclude": ["node_modules", "client"]
-}
-EOF
-  npx tsc --project tsconfig.server.json
+  echo "TypeScript compilation failed. Check for errors in the server code."
+  exit 1
 }
 
 echo "Copying .env file to dist directory..."
 cp .env dist/
+
+# Create a declaration file for express-fileupload if needed
+if [ ! -f "dist/server/@types/express-fileupload/index.d.ts" ]; then
+  echo "Creating express-fileupload type declaration..."
+  mkdir -p dist/server/@types/express-fileupload
+  cat > dist/server/@types/express-fileupload/index.d.ts << EOF
+declare module 'express-fileupload';
+EOF
+fi
 
 echo "Build completed. Run 'NODE_ENV=production node dist/server/server/index.js' to start the production server."
