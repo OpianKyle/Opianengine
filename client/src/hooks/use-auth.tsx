@@ -22,6 +22,11 @@ type User = {
   points: number;
   referral_code: string | null;
   referred_by: string | null;
+  // Add client-side aliases to match server interface
+  isAdmin?: boolean;
+  isSuperAdmin?: boolean;
+  firstName?: string;
+  lastName?: string;
 };
 
 type AuthContextType = {
@@ -51,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery<User>({
+  } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
       const res = await fetch("/api/user", {
@@ -65,7 +70,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (res.status === 401) return null;
         throw new Error("Failed to fetch user data");
       }
-      return res.json();
+      
+      const userData = await res.json();
+      
+      // Map server response fields to client model if needed
+      if (userData) {
+        if (userData.firstName === undefined && userData.first_name !== undefined) {
+          userData.firstName = userData.first_name;
+        }
+        if (userData.lastName === undefined && userData.last_name !== undefined) {
+          userData.lastName = userData.last_name;
+        }
+        if (userData.isAdmin === undefined && userData.is_admin !== undefined) {
+          userData.isAdmin = userData.is_admin;
+        }
+        if (userData.isSuperAdmin === undefined && userData.is_super_admin !== undefined) {
+          userData.isSuperAdmin = userData.is_super_admin;
+        }
+      }
+      
+      return userData;
     },
     retry: false,
     enabled: !isLoggingOut.current,
@@ -115,11 +139,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(error.error || "Failed to login");
       }
 
-      return res.json();
+      const data = await res.json();
+      // Add any necessary field transformations here
+      return data.user || data; // Handle both response formats (some endpoints return {user, token})
     },
-    onSuccess: async (user: User) => {
+    onSuccess: async (userData: User) => {
       console.log('Login mutation success');
       isLoggingOut.current = false;
+
+      // Create a normalized user object with all expected fields
+      const user: User = {
+        ...userData,
+        // Ensure snake_case fields are available
+        first_name: userData.first_name || userData.firstName || '',
+        last_name: userData.last_name || userData.lastName || '',
+        is_admin: userData.is_admin || userData.isAdmin || false,
+        is_super_admin: userData.is_super_admin || userData.isSuperAdmin || false,
+        
+        // Ensure camelCase fields are available
+        firstName: userData.firstName || userData.first_name || '',
+        lastName: userData.lastName || userData.last_name || '',
+        isAdmin: userData.isAdmin || userData.is_admin || false,
+        isSuperAdmin: userData.isSuperAdmin || userData.is_super_admin || false,
+      };
 
       // Set user data in query cache
       queryClient.setQueryData(["/api/user"], user);
@@ -129,7 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!sessionStorage.getItem(sessionKey)) {
         toast({
           title: "Welcome back",
-          description: `Logged in as ${user.first_name} ${user.last_name}`,
+          description: `Logged in as ${user.first_name || user.firstName} ${user.last_name || user.lastName}`,
         });
         sessionStorage.setItem(sessionKey, 'true');
       }
@@ -137,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Navigate based on user role
       if (user.is_agent) {
         setLocation('/agent');
-      } else if (user.is_admin || user.is_super_admin) {
+      } else if (user.is_admin || user.is_super_admin || user.isAdmin || user.isSuperAdmin) {
         setLocation('/admin');
       } else {
         setLocation('/dashboard');
