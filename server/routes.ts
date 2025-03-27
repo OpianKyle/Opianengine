@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
-import { setupAuth, checkAgent } from "./auth";
+import { setupAuth, checkAgent, verifyJwtToken } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail } from "./utils/emailService";
@@ -4393,72 +4393,102 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       });
     }
   });
+  // Unified API endpoint that handles both session-based and JWT token-based authentication
   app.get("/api/user", (req, res) => {
     console.log('User request:', {
       isAuthenticated: req.isAuthenticated(),
-      user: req.user,
-      session: req.session
+      user: req.user ? { id: req.user.id, email: req.user.email } : null,
+      hasAuthHeader: !!req.headers.authorization
     });
 
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Unauthorized" });
+    // First check session authentication
+    if (req.isAuthenticated()) {
+      // Get complete user details from database if authenticated via session
+      const connection = createConnection()
+        .then(conn => {
+          conn.execute(
+            `SELECT 
+              u.id,
+              u.email,
+              u.first_name,
+              u.last_name,
+              u.phone_number,
+              u.is_admin,
+              u.is_super_admin,
+              u.is_agent,
+              u.is_enabled,
+              u.points,
+              u.referral_code,
+              u.referred_by,
+              u.created_at,
+              u.is_south_african,
+              u.id_number,
+              u.date_of_birth,
+              u.address,
+              u.city,
+              u.postal_code,
+              u.industry,
+              u.occupation,
+              u.bank_name,
+              u.account_type,
+              u.account_number,
+              u.account_holder_name,
+              u.branch_code,
+              u.selected_package,
+              u.gender,
+              u.has_credit_card,
+              u.signature
+            FROM users u
+            WHERE u.id = ?`,
+            [req.user.id]
+          )
+          .then(([users]: any) => {
+            if (users && users.length > 0) {
+              const user = users[0];
+              // Format dates properly
+              if (user.created_at) {
+                user.created_at = new Date(user.created_at).toISOString();
+              }
+              if (user.date_of_birth) {
+                user.date_of_birth = new Date(user.date_of_birth).toISOString().split('T')[0];
+              }
+              res.json(user);
+            } else {
+              res.status(404).json({ error: "User not found" });
+            }
+            return conn;
+          })
+          .catch(error => {
+            console.error('Error fetching user details:', error);
+            res.status(500).json({ error: 'Failed to fetch user details' });
+            return conn;
+          })
+          .then(conn => conn.end());
+        })
+        .catch(error => {
+          console.error('DB connection error:', error);
+          res.status(500).json({ error: 'Database connection error' });
+        });
+      
+      return;
     }
-
-    // Get complete user details from database
-    db.execute(
-      `SELECT 
-        u.id,
-        u.email,
-        u.first_name,
-        u.last_name,
-        u.phone_number,
-        u.is_admin,
-        u.is_super_admin,
-        u.is_enabled,
-        u.points,
-        u.referral_code,
-        u.referred_by,
-        u.created_at,
-        u.is_south_african,
-        u.id_number,
-        u.date_of_birth,
-        u.address,
-        u.city,
-        u.postal_code,
-        u.industry,
-        u.occupation,
-        u.bank_name,
-        u.account_type,
-        u.account_number,
-        u.account_holder_name,
-        u.branch_code,
-        u.selected_package,
-        u.gender,
-        u.has_credit_card,
-        u.signature
-      FROM users u
-      WHERE u.id = ?`,
-      [req.user.id]
-    )
-    .then(([users]) => {
-      if (users && users.length > 0) {
-        const user = users[0];
-        // Format dates properly
-        if (user.created_at) {
-          user.created_at = new Date(user.created_at).toISOString();
+    
+    // Then try JWT token authentication
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = verifyJwtToken(token);
+        if (decoded) {
+          return res.json(decoded);
         }
-        if (user.date_of_birth) {
-          user.date_of_birth = new Date(user.date_of_birth).toISOString().split('T')[0];
-        }
-        res.json(user);
-      } else {
-        res.status(404).json({ error: "User not found" });
+      } catch (err) {
+        console.error('JWT verification error:', err);
       }
-    })
-    .catch(error => {
-      console.error('Error fetching user details:', error);
-      res.status(500).json({ error: 'Failed to fetch user details' });
-    });
+    }
+    
+    // If neither authentication method succeeded
+    return res.status(401).json({ error: "Unauthorized" });
   });
 
   app.post("/api/admin/products/assign", async (req, res) => {

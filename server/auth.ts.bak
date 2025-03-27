@@ -3,7 +3,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import session, { MemoryStore } from 'express-session';
+import { MemoryStore } from 'express-session';
 import { createConnection } from './db';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
@@ -319,6 +319,18 @@ export function setupAuth(app: Express) {
     }
   });
 
+  app.get("/api/user", (req, res) => {
+    console.log('GET /api/user request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, email: req.user.email } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    res.json(req.user);
+  });
 
   // Keep existing imports and configurations...
 
@@ -640,15 +652,19 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
+    console.log('GET /api/user request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, email: req.user.email } : null
+    });
+
     if (!req.isAuthenticated()) {
-      console.log('User not authenticated');
       return res.status(401).json({ error: "Not authenticated" });
     }
-    
-    console.log('User authenticated, returning user data');
+
     res.json(req.user);
   });
-  
+
+
   // Check for existing super admin
   async function checkForSuperAdmin() {
     const connection = await createConnection();
@@ -669,10 +685,37 @@ export function setupAuth(app: Express) {
       await connection.end();
     }
   }
+
+
+  app.post("/api/logout", (req, res) => {
+    console.log('Logout request received');
+
+    // Clear session cookie
+    res.clearCookie('session', {
+      path: '/',
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax'
+    });
+
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+        }
+        req.logout(() => {
+          res.status(200).json({ message: "Logged out successfully" });
+        });
+      });
+    } else {
+      res.status(200).json({ message: "Logged out successfully" });
+    }
+  });
+
+  return app;
 }
 
-// User admin status checker function - moved to global scope
-export async function checkUserAdminStatus(userId: number) {
+async function checkUserAdminStatus(userId: number) {
   const connection = await createConnection();
   try {
     console.log('Checking admin status for user:', userId);
@@ -702,11 +745,11 @@ export async function checkUserAdminStatus(userId: number) {
 }
 
 // JWT token verification helper
-export function verifyJwtToken(token: string): { id: number; is_admin: boolean; is_super_admin: boolean } | null {
+export function verifyJwtToken(token: string): { id: number, is_admin: boolean, is_super_admin: boolean } | null {
   try {
     return jwt.verify(token, process.env.JWT_SECRET!) as { 
-      id: number; 
-      is_admin: boolean; 
+      id: number, 
+      is_admin: boolean, 
       is_super_admin: boolean 
     };
   } catch (error) {
@@ -736,7 +779,7 @@ export function generateToken(user: Express.User): string {
   return token;
 }
 
-export function verifyToken(token: string): { id: number; isAdmin: boolean; isSuperAdmin: boolean } | null {
+export function verifyToken(token: string): { id: number, isAdmin: boolean, isSuperAdmin: boolean } | null {
   try {
     console.log('Verifying token:', {
       tokenLength: token.length,
@@ -744,10 +787,10 @@ export function verifyToken(token: string): { id: number; isAdmin: boolean; isSu
     });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      id: number;
-      isAdmin: boolean;
-      isSuperAdmin: boolean;
-      exp?: number;
+      id: number,
+      isAdmin: boolean,
+      isSuperAdmin: boolean,
+      exp?: number
     };
 
     console.log('Token verified successfully:', {
@@ -802,12 +845,20 @@ export async function verifySession(req: Request): Promise<any> {
     console.log('Found session ID:', sessionId);
 
     return new Promise((resolve) => {
-      const sessionStore = new MemoryStore({
-        checkPeriod: 86400000 as any
-      });
-      
-      sessionStore.get(sessionId, async (err: any, sessionData: any) => {
-        if (err || !sessionData) {
+      session({
+        secret: process.env.SESSION_SECRET || 'development-secret',
+        cookie: {
+          maxAge: 86400000,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        },
+        store: new MemoryStore({
+          checkPeriod: 86400000
+        }),
+        resave: false,
+        saveUninitialized: false
+      }).store.get(sessionId, async (err: any, session: any) => {
+        if (err || !session) {
           console.log('Session not found or error:', err);
           resolve(null);
           return;
@@ -815,12 +866,12 @@ export async function verifySession(req: Request): Promise<any> {
 
         try {
           console.log('Retrieved session data:', {
-            ...sessionData,
+            ...session,
             cookie: '[Redacted]',
-            passport: sessionData.passport ? { user: sessionData.passport.user } : undefined
+            passport: session.passport ? { user: session.passport.user } : undefined
           });
 
-          const userId = sessionData.passport?.user;
+          const userId = session.passport?.user;
           if (!userId) {
             console.log('No user ID in session');
             resolve(null);
