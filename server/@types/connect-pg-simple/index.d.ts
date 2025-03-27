@@ -1,20 +1,20 @@
 declare module 'connect-pg-simple' {
-  import { Store } from 'express-session';
+  import session from 'express-session';
   
   interface PgStoreOptions {
     pool?: any;
-    schemaName?: string;
     tableName?: string;
+    schemaName?: string;
     ttl?: number;
     createTableIfMissing?: boolean;
-    pruneSessionInterval?: boolean | number;
+    disableTouch?: boolean;
+    pruneSessionInterval?: number;
     errorLog?: (error: Error) => void;
-    checkPeriod?: number;
   }
-
-  function connectPgSimple(session: any): {
-    new (options: PgStoreOptions): Store;
+  
+  function PgStore(session: typeof session): {
+    new(options: PgStoreOptions): session.Store;
   };
   
-  export = connectPgSimple;
+  export = PgStore;
 }
