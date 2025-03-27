@@ -1,14 +1,16 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import { AuthProvider } from "@/hooks/use-auth";
+import Login from "@/pages/login";
+import Register from "@/pages/register";
+import ResetPassword from "@/pages/reset-password";
+import { useUser } from "@/hooks/use-user";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
+import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { ProtectedRoute } from "@/lib/protected-route";
-import AuthPage from "@/pages/auth-page";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -21,8 +23,8 @@ import AdminProducts from "@/pages/admin/products";
 import CashRedemptions from "@/pages/admin/cash-redemptions";
 import AdminQuoteRequests from "@/pages/admin/quote-requests";
 import AdminAgents from "@/pages/admin/agents";
-import AgentCustomers from "@/pages/agent/customers"; 
-import EmailLogs from "@/pages/admin/email-logs";
+import AgentCustomers from "@/pages/agent/customers"; // Update import path
+import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -36,13 +38,54 @@ import CustomerProducts from "@/pages/customer/products";
 import AgentDashboard from "@/pages/agent";
 import AgentLayout from "@/components/layout/agent-layout";
 
-// Legacy pages - to be migrated
-import Register from "@/pages/register";
-import ResetPassword from "@/pages/reset-password";
+function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
+  const { user, isLoading } = useUser();
+  useSessionTimeout();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    console.log('No user found, redirecting to home');
+    return <Redirect to="/" />;
+  }
+
+  // Handle routing based on user role
+  if (admin && !(user.is_admin || user.is_super_admin)) {
+    console.log('User lacks admin privileges, redirecting to appropriate dashboard');
+    if (user.is_agent) {
+      return <Redirect to="/agent" />;
+    }
+    return <Redirect to="/dashboard" />;
+  }
+
+  if (agent && !user.is_agent) {
+    console.log('User lacks agent privileges, redirecting to appropriate dashboard');
+    if (user.is_admin || user.is_super_admin) {
+      return <Redirect to="/admin" />;
+    }
+    return <Redirect to="/dashboard" />;
+  }
+
+  // Redirect regular customers if they try to access admin or agent routes
+  if (!admin && !agent && (user.is_admin || user.is_agent)) {
+    if (user.is_admin || user.is_super_admin) {
+      return <Redirect to="/admin" />;
+    }
+    if (user.is_agent) {
+      return <Redirect to="/agent" />;
+    }
+  }
+
+  return <Component {...rest} />;
+}
 
 function Router() {
-  useSessionTimeout();
-  
   return (
     <SidebarProvider>
       <Switch>
@@ -50,8 +93,8 @@ function Router() {
         <Route path="/" >
           <Home />
         </Route>
-        <Route path="/auth">
-          <AuthPage />
+        <Route path="/login">
+          <Login />
         </Route>
         <Route path="/register">
           <Register />
@@ -63,91 +106,91 @@ function Router() {
         {/* Admin Routes */}
         <Route path="/admin">
           <AdminLayout>
-            <ProtectedRoute path="/admin" component={AdminDashboard} admin={true} />
+            <ProtectedRoute component={AdminDashboard} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/customers">
           <AdminLayout>
-            <ProtectedRoute path="/admin/customers" component={AdminCustomers} admin={true} />
+            <ProtectedRoute component={AdminCustomers} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/agents">
           <AdminLayout>
-            <ProtectedRoute path="/admin/agents" component={AdminAgents} admin={true} />
+            <ProtectedRoute component={AdminAgents} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/email-logs">
           <AdminLayout>
-            <ProtectedRoute path="/admin/email-logs" component={EmailLogs} admin={true} />
+            <ProtectedRoute component={EmailLogs} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/products">
           <AdminLayout>
-            <ProtectedRoute path="/admin/products" component={AdminProducts} admin={true} />
+            <ProtectedRoute component={AdminProducts} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/rewards">
           <AdminLayout>
-            <ProtectedRoute path="/admin/rewards" component={AdminRewards} admin={true} />
+            <ProtectedRoute component={AdminRewards} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/cash-redemptions">
           <AdminLayout>
-            <ProtectedRoute path="/admin/cash-redemptions" component={CashRedemptions} admin={true} />
+            <ProtectedRoute component={CashRedemptions} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/manage-users">
           <AdminLayout>
-            <ProtectedRoute path="/admin/manage-users" component={ManageUsers} admin={true} />
+            <ProtectedRoute component={ManageUsers} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/logs">
           <AdminLayout>
-            <ProtectedRoute path="/admin/logs" component={AdminLogs} admin={true} />
+            <ProtectedRoute component={AdminLogs} admin />
           </AdminLayout>
         </Route>
         <Route path="/admin/quote-requests">
           <AdminLayout>
-            <ProtectedRoute path="/admin/quote-requests" component={AdminQuoteRequests} admin={true} />
+            <ProtectedRoute component={AdminQuoteRequests} admin />
           </AdminLayout>
         </Route>
 
         {/* Agent Routes */}
         <Route path="/agent">
           <AgentLayout>
-            <ProtectedRoute path="/agent" component={AgentDashboard} agent={true} />
+            <ProtectedRoute component={AgentDashboard} agent />
           </AgentLayout>
         </Route>
         <Route path="/agent/customers">
           <AgentLayout>
-            <ProtectedRoute path="/agent/customers" component={AgentCustomers} agent={true} />
+            <ProtectedRoute component={AgentCustomers} agent />
           </AgentLayout>
         </Route>
 
         {/* Customer Routes */}
         <Route path="/dashboard">
           <CustomerLayout>
-            <ProtectedRoute path="/dashboard" component={CustomerDashboard} />
+            <ProtectedRoute component={CustomerDashboard} />
           </CustomerLayout>
         </Route>
         <Route path="/rewards">
           <CustomerLayout>
-            <ProtectedRoute path="/rewards" component={CustomerRewards} />
+            <ProtectedRoute component={CustomerRewards} />
           </CustomerLayout>
         </Route>
         <Route path="/referrals">
           <CustomerLayout>
-            <ProtectedRoute path="/referrals" component={ReferralsPage} />
+            <ProtectedRoute component={ReferralsPage} />
           </CustomerLayout>
         </Route>
         <Route path="/profile">
           <CustomerLayout>
-            <ProtectedRoute path="/profile" component={ProfilePage} />
+            <ProtectedRoute component={ProfilePage} />
           </CustomerLayout>
         </Route>
         <Route path="/products">
           <CustomerLayout>
-            <ProtectedRoute path="/products" component={CustomerProducts} />
+            <ProtectedRoute component={CustomerProducts} />
           </CustomerLayout>
         </Route>
 
@@ -160,12 +203,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <div className="min-h-screen w-full bg-background">
-          <Router />
-          <Toaster />
-        </div>
-      </AuthProvider>
+      <div className="min-h-screen w-full bg-background">
+        <Router />
+        <Toaster />
+      </div>
     </QueryClientProvider>
   );
 }
