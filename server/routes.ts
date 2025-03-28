@@ -15,6 +15,7 @@ import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { logAdminAction } from './admin-logger';
+import nodemailer from 'nodemailer';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -98,6 +99,68 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       cookies: req.headers.cookie
     });
     next();
+  });
+
+// SMTP Test route - test connection to SMTP server without sending an email
+  app.get("/api/test-smtp", async (req: Request, res: Response) => {
+    try {
+      // Create a nodemailer transporter with the SMTP settings
+      console.log('=== SMTP CONNECTION TEST ===');
+      console.log('OPIAN_SMTP_HOST:', process.env.OPIAN_SMTP_HOST ? 'Set' : 'Not set');
+      console.log('OPIAN_SMTP_PORT:', process.env.OPIAN_SMTP_PORT ? process.env.OPIAN_SMTP_PORT : 'Not set');
+      console.log('OPIAN_SMTP_USER:', process.env.OPIAN_SMTP_USER ? 'Set' : 'Not set');
+      console.log('OPIAN_SMTP_PASSWORD:', process.env.OPIAN_SMTP_PASSWORD ? 'Set (length: ' + (process.env.OPIAN_SMTP_PASSWORD?.length || 0) + ')' : 'Not set');
+      
+      const transporter = nodemailer.createTransport({
+        host: process.env.OPIAN_SMTP_HOST,
+        port: parseInt(process.env.OPIAN_SMTP_PORT || '465'),
+        secure: process.env.OPIAN_SMTP_PORT === '465', // true for 465, false for other ports like 587
+        auth: {
+          user: process.env.OPIAN_SMTP_USER,
+          pass: process.env.OPIAN_SMTP_PASSWORD
+        },
+        debug: true,
+        logger: true,
+        tls: {
+          rejectUnauthorized: false // Accept all certificates (less secure but useful for testing)
+        }
+      });
+
+      console.log('Attempting to verify SMTP connection...');
+      const verificationResult = await transporter.verify();
+      
+      return res.status(200).json({
+        success: true,
+        message: 'SMTP connection verified successfully',
+        details: {
+          verificationResult,
+          smtp: {
+            host: process.env.OPIAN_SMTP_HOST,
+            port: process.env.OPIAN_SMTP_PORT,
+            user: process.env.OPIAN_SMTP_USER ? 'Configured (hidden)' : 'Missing',
+            password: process.env.OPIAN_SMTP_PASSWORD ? 'Configured (hidden)' : 'Missing',
+            secure: process.env.OPIAN_SMTP_PORT === '465' ? 'Yes (465)' : 'No'
+          },
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('SMTP Connection Test Error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'SMTP connection test failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorDetails: error,
+        smtp: {
+          host: process.env.OPIAN_SMTP_HOST,
+          port: process.env.OPIAN_SMTP_PORT,
+          user: process.env.OPIAN_SMTP_USER ? 'Configured (hidden)' : 'Missing',
+          password: process.env.OPIAN_SMTP_PASSWORD ? 'Configured (hidden)' : 'Missing',
+          secure: process.env.OPIAN_SMTP_PORT === '465' ? 'Yes (465)' : 'No'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 
   // Email test route (temporary for testing) - IMPROVED VERSION
