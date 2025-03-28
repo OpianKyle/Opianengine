@@ -718,15 +718,15 @@ export function verifyJwtToken(token: string): { id: number; is_admin: boolean; 
 export function generateToken(user: Express.User): string {
   console.log('Generating token for user:', {
     userId: user.id,
-    isAdmin: user.isAdmin,
-    isSuperAdmin: user.isSuperAdmin
+    isAdmin: user.is_admin,
+    isSuperAdmin: user.is_super_admin
   });
 
   const token = jwt.sign(
     {
       id: user.id,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin
+      is_admin: user.is_admin,
+      is_super_admin: user.is_super_admin
     },
     process.env.JWT_SECRET!,
     { expiresIn: '24h' }
@@ -745,21 +745,22 @@ export function verifyToken(token: string): { id: number; isAdmin: boolean; isSu
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
       id: number;
-      isAdmin: boolean;
-      isSuperAdmin: boolean;
+      is_admin: boolean;
+      is_super_admin: boolean;
       exp?: number;
     };
 
     console.log('Token verified successfully:', {
       userId: decoded.id,
-      isAdmin: decoded.isAdmin,
+      isAdmin: decoded.is_admin,
+      isSuperAdmin: decoded.is_super_admin,
       exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
     });
 
     return {
       id: decoded.id,
-      isAdmin: decoded.isAdmin,
-      isSuperAdmin: decoded.isSuperAdmin
+      isAdmin: decoded.is_admin,
+      isSuperAdmin: decoded.is_super_admin
     };
   } catch (error) {
     console.error('Token verification failed:', {
@@ -776,16 +777,48 @@ export async function verifySession(req: Request): Promise<any> {
     console.log('Verifying session for request:', {
       url: req.url,
       headers: {
-        cookie: req.headers.cookie,
+        cookie: req.headers.cookie ? 'present' : 'absent',
+        authorization: req.headers.authorization ? 'present' : 'absent',
         'sec-websocket-protocol': req.headers['sec-websocket-protocol']
       }
     });
 
+    // First check if already authenticated via session
     if (req.user) {
       console.log('Using existing session user:', req.user);
       return req.user;
     }
 
+    // Check for JWT token in Authorization header
+    if (req.headers.authorization) {
+      console.log('Found Authorization header, attempting JWT verification');
+      const authParts = req.headers.authorization.split(' ');
+      
+      if (authParts.length === 2 && authParts[0] === 'Bearer') {
+        const token = authParts[1];
+        const decoded = verifyToken(token);
+        
+        if (decoded) {
+          console.log('Successfully verified JWT token:', {
+            userId: decoded.id,
+            isAdmin: decoded.isAdmin
+          });
+          
+          // Return user info from JWT token
+          return {
+            id: decoded.id,
+            is_admin: decoded.isAdmin,
+            is_super_admin: decoded.isSuperAdmin
+          };
+        } else {
+          console.log('Invalid JWT token in Authorization header');
+        }
+      } else {
+        console.log('Malformed Authorization header');
+      }
+    }
+
+    // If no token found or invalid, continue with cookie-based session
     if (!req.headers.cookie) {
       console.log('No cookie found in request');
       return null;
@@ -866,23 +899,51 @@ export async function checkAdmin(req: Request, res: Response, next: NextFunction
       hasSession: !!req.session,
       hasUser: !!req.user,
       sessionID: req.sessionID,
-      isAuthenticated: req.isAuthenticated?.()
+      isAuthenticated: req.isAuthenticated?.(),
+      hasAuthHeader: !!req.headers.authorization
     });
 
+    let userId = null;
+    
+    // Check for JWT token in Authorization header
+    if (req.headers.authorization) {
+      console.log('Found Authorization header in checkAdmin middleware');
+      const authParts = req.headers.authorization.split(' ');
+      
+      if (authParts.length === 2 && authParts[0] === 'Bearer') {
+        const token = authParts[1];
+        const decoded = verifyToken(token);
+        
+        if (decoded && decoded.isAdmin) {
+          console.log('JWT token authorized as admin:', decoded);
+          // Admin permission verified via JWT, proceed
+          return next();
+        } else if (decoded) {
+          // User authenticated but not admin
+          console.log('JWT token authenticated but not admin:', decoded);
+          userId = decoded.id;
+        }
+      }
+    }
+    
+    // Continue with session-based auth if JWT failed
     if (!req.session || !req.session.passport || !req.session.passport.user) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    // Use user ID from session
+    userId = req.session.passport.user;
+    
     const connection = await createConnection();
     const [adminCheck] = await connection.execute(
       'SELECT role_type FROM admin_users WHERE user_id = ?',
-      [req.session.passport.user]
+      [userId]
     );
     await connection.end();
 
     if (!adminCheck || (adminCheck as any[]).length === 0) {
       console.log('Admin access denied:', {
-        userId: req.session.passport.user,
+        userId,
         foundAdmin: false
       });
       return res.status(403).json({ error: "Admin access required" });

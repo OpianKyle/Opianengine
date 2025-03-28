@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
-import { setupAuth, checkAgent, verifyJwtToken } from "./auth";
+import { setupAuth, checkAgent, verifyJwtToken, verifyToken, generateToken } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail } from "./utils/emailService";
@@ -14,6 +14,7 @@ import referralRouter from './routes/referral';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import jwt from 'jsonwebtoken';
 import { logAdminAction } from './admin-logger';
 
 const scryptAsync = promisify(scrypt);
@@ -313,8 +314,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         pointsType: typeof points
       });
 
-      // Send user data with properly typed points
-      res.json({
+      // Create user object with properly typed data
+      const user = {
         id: userData[0]?.id,
         email: userData[0]?.email,
         firstName: userData[0]?.first_name,
@@ -323,6 +324,28 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         isAdmin: Boolean(userData[0]?.is_admin),
         isSuperAdmin: Boolean(userData[0]?.is_super_admin),
         isAgent: Boolean(userData[0]?.is_agent)
+      };
+      
+      // Generate JWT token for this user using the updated function
+      const token = jwt.sign(
+        {
+          id: userData[0]?.id,
+          is_admin: Boolean(userData[0]?.is_admin),
+          is_super_admin: Boolean(userData[0]?.is_super_admin)
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: '24h' }
+      );
+      
+      console.log('Generated auth token for login:', {
+        tokenLength: token?.length || 0, 
+        firstChars: token ? token.substring(0, 10) + '...' : 'none'
+      });
+      
+      // Send user data with token
+      res.json({
+        user,
+        token
       });
 
       // Update session with points
@@ -4394,7 +4417,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
   // Unified API endpoint that handles both session-based and JWT token-based authentication
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", async (req, res) => {
     console.log('User request:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.user ? { id: req.user.id, email: req.user.email } : null,
@@ -4478,8 +4501,69 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       try {
+        console.log('Verifying JWT token for /api/user endpoint');
         const decoded = verifyJwtToken(token);
         if (decoded) {
+          console.log('JWT token successfully verified:', decoded);
+          
+          // Get complete user details from database
+          const connection = await createConnection();
+          try {
+            const [users] = await connection.execute(
+              `SELECT 
+                u.id,
+                u.email,
+                u.first_name,
+                u.last_name,
+                u.phone_number,
+                u.is_admin,
+                u.is_super_admin,
+                u.is_agent,
+                u.is_enabled,
+                u.points,
+                u.referral_code,
+                u.referred_by,
+                u.created_at,
+                u.is_south_african,
+                u.id_number,
+                u.date_of_birth,
+                u.address,
+                u.city,
+                u.postal_code,
+                u.industry,
+                u.occupation,
+                u.bank_name,
+                u.account_type,
+                u.account_number,
+                u.account_holder_name,
+                u.branch_code,
+                u.selected_package,
+                u.gender,
+                u.has_credit_card,
+                u.signature
+              FROM users u
+              WHERE u.id = ?`,
+              [decoded.id]
+            );
+            
+            if (users && users.length > 0) {
+              const user = users[0];
+              // Format dates properly
+              if (user.created_at) {
+                user.created_at = new Date(user.created_at).toISOString();
+              }
+              if (user.date_of_birth) {
+                user.date_of_birth = new Date(user.date_of_birth).toISOString().split('T')[0];
+              }
+              
+              return res.json(user);
+            } else {
+              console.log('User not found in database for ID:', decoded.id);
+            }
+          } finally {
+            await connection.end();
+          }
+          
           return res.json(decoded);
         }
       } catch (err) {
@@ -4576,6 +4660,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.get("/api/admin/dashboard/stats", async (req, res) => {
     console.log('Admin dashboard stats request:', {
       isAuthenticated: req.isAuthenticated(),
+      hasAuthHeader: !!req.headers.authorization,
       user: req.user ? {
         id: req.user.id,
         email: req.user.email,
@@ -4584,7 +4669,27 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       } : null
     });
 
-    if (!req.isAuthenticated()) {
+    // Check for JWT token in Authorization header
+    let isAuthorized = false;
+    if (req.headers.authorization) {
+      const authHeader = req.headers.authorization;
+      const [type, token] = authHeader.split(' ');
+      
+      if (type === 'Bearer' && token) {
+        try {
+          const decoded = verifyToken(token);
+          if (decoded && decoded.isAdmin) {
+            console.log('JWT token authorized admin access to dashboard stats');
+            isAuthorized = true;
+          }
+        } catch (error) {
+          console.error('Error verifying JWT token:', error);
+        }
+      }
+    }
+
+    // Fall back to session auth if token auth failed
+    if (!isAuthorized && !req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
