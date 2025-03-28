@@ -3,15 +3,34 @@ import htmlPdf from 'html-pdf';
 import { promisify } from 'util';
 import mysql from 'mysql2/promise';
 
-// Create reusable transporter with Opian SMTP configuration
+// Create reusable transporter with SMTP configuration
 const createTransporter = () => {
+  // Use new SMTP_ variables with fallback to the old OPIAN_SMTP_ variables
+  const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
+  const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
+  const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
+  
+  // Determine if connection should be secure based on SMTP_SECURE or port
+  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+  
+  // For debugging
+  console.log('Email configuration:', {
+    host: host ? 'Set' : 'Not set',
+    port,
+    secure,
+    secureReason: process.env.SMTP_SECURE === 'true' ? 'SMTP_SECURE=true' : (port === 465 ? 'port=465' : 'false'),
+    user: user ? 'Set' : 'Not set',
+    pass: pass ? 'Set' : 'Not set'
+  });
+  
   return nodemailer.createTransport({
-    host: process.env.OPIAN_SMTP_HOST,
-    port: parseInt(process.env.OPIAN_SMTP_PORT || '465'),
-    secure: process.env.OPIAN_SMTP_PORT === '465', // true for 465, false for other ports like 587
+    host,
+    port, 
+    secure, // Use the secure setting from environment variable or port-based determination
     auth: {
-      user: process.env.OPIAN_SMTP_USER,
-      pass: process.env.OPIAN_SMTP_PASSWORD
+      user,
+      pass
     },
     tls: {
       // Do not fail on invalid certs
@@ -99,27 +118,38 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
     console.log('========== EMAIL SENDING ATTEMPT ==========');
     console.log('To:', to);
     console.log('Subject:', subject);
-    console.log('Using Opian SMTP server:', process.env.OPIAN_SMTP_HOST);
-    console.log('Using SMTP Port:', process.env.OPIAN_SMTP_PORT);
+    
+    // Get SMTP host and port (with fallbacks)
+    const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
+    const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
+    const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
+    const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
+    
+    console.log('Using SMTP server:', host);
+    console.log('Using SMTP Port:', port);
 
+    // Get secure setting from environment variable
+    const secureMode = process.env.SMTP_SECURE === 'true' || port === 465;
+    
     // Detailed SMTP config check - DEBUGGING ONLY
     console.log('Detailed SMTP config:', {
-      host: process.env.OPIAN_SMTP_HOST,
-      port: parseInt(process.env.OPIAN_SMTP_PORT || '465'),
-      secure: process.env.OPIAN_SMTP_PORT === '465',
-      auth_user: process.env.OPIAN_SMTP_USER ? 'CONFIGURED (hidden)' : 'MISSING',
-      auth_pass: process.env.OPIAN_SMTP_PASSWORD ? 'CONFIGURED (hidden)' : 'MISSING',
+      host,
+      port,
+      secure: secureMode,
+      secureReason: process.env.SMTP_SECURE === 'true' ? 'SMTP_SECURE=true' : (port === 465 ? 'port=465' : 'false'),
+      auth_user: user ? 'CONFIGURED (hidden)' : 'MISSING',
+      auth_pass: pass ? 'CONFIGURED (hidden)' : 'MISSING',
     });
 
     // Verify SMTP credentials
-    if (!process.env.OPIAN_SMTP_HOST || !process.env.OPIAN_SMTP_USER || !process.env.OPIAN_SMTP_PASSWORD) {
-      console.error('Missing Opian SMTP configuration');
+    if (!host || !user || !pass) {
+      console.error('Missing SMTP configuration');
       await logEmail({
         recipientEmail: to,
         subject,
         emailType,
         status: 'FAILED',
-        errorMessage: 'Missing Opian SMTP configuration',
+        errorMessage: 'Missing SMTP configuration',
         templateData,
         htmlContent: html,
         textContent: text
@@ -148,10 +178,12 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
       return false;
     }
 
+    // Use the already defined secureMode for sending
+    
     // Attempt to send the email
-    console.log('Attempting to send email...');
+    console.log('Attempting to send email with secure:', secureMode);
     const result = await transporter.sendMail({
-      from: `"OPIAN Rewards" <admin@opian.co.za>`,
+      from: `"OPIAN Rewards" <clientservices@opianfsgroup.com>`,
       to,
       subject,
       text,
@@ -304,7 +336,7 @@ export function formatRegistrationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
+        <img src="https://opian.co.za/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
       </div>
 
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
@@ -354,7 +386,7 @@ export function formatRegistrationEmail(
         <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
           <p style="color: white; margin: 20px 0;">
             Best regards,<br><br>
-            <img src="/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+            <img src="https://opian.co.za/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
             <strong>Lance Heynes</strong><br>
             CEO, Opian Financial Services (Pty) Ltd
           </p>
@@ -680,7 +712,7 @@ export async function sendAdminRegistrationNotification(customerData: any): Prom
     const { text, html } = formatNewCustomerAdminEmail(customerData);
 
     const result = await transporter.sendMail({
-      from: `"OPIAN Rewards" <admin@opian.co.za>`,
+      from: `"OPIAN Rewards" <clientservices@opianfsgroup.com>`,
       to: 'clientservices@opianfsgroup.com',
       subject: 'New Customer Registration',
       text,

@@ -512,49 +512,6 @@ export function setupAuth(app: Express) {
         await connection.commit();
         console.log('Registration transaction committed successfully');
 
-        // Send welcome email and admin notification
-        try {
-          const { formatRegistrationEmail, sendEmail, sendAdminRegistrationNotification } = await import('./utils/emailService');
-          const { text, html } = formatRegistrationEmail(req.body.firstName, req.body.email);
-          await sendEmail({
-            to: req.body.email,
-            subject: "Welcome to OPIAN Rewards!",
-            text,
-            html
-          });
-          console.log('Welcome email sent successfully to:', req.body.email);
-
-          // Send admin notification
-          await sendAdminRegistrationNotification({
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
-            email: req.body.email,
-            mobileNumber: req.body.mobileNumber,
-            selectedPackage: selectedPackage,
-            referralCode: req.body.referralCode,
-            signature: req.body.signature,
-            isSouthAfrican: req.body.isSouthAfrican,
-            idNumber: req.body.idNumber,
-            dateOfBirth: req.body.dateOfBirth,
-            gender: req.body.gender,
-            occupation: req.body.occupation,
-            industry: req.body.industry,
-            address: req.body.addressLine1,
-            city: req.body.suburb,
-            postalCode: req.body.postalCode,
-            hasCreditCard: req.body.hasCreditCard,
-            bankName: req.body.bankName,
-            accountType: req.body.accountType,
-            accountNumber: req.body.accountNumber,
-            accountHolderName: req.body.accountHolderName,
-            branchCode: req.body.branchCode
-          });
-          console.log('Admin notification sent successfully');
-        } catch (emailError) {
-          console.error('Failed to send emails:', emailError);
-          // Don't fail registration if email fails
-        }
-
         // Fetch complete user data
         const [newUserCheck] = await connection.execute(
           'SELECT * FROM users WHERE id = ?',
@@ -578,29 +535,81 @@ export function setupAuth(app: Express) {
           has_credit_card: Boolean(safeUser.has_credit_card)
         };
 
+        // Log in the user and send response
         req.login(transformedUser, (err) => {
           if (err) {
             console.error('Login error after registration:', err);
-            return res.status(500).json({ error: "Registration successful but login failed" });
+            // Still return success to the client even if login fails
+            res.status(201).json({
+              id: userId,
+              email: req.body.email,
+              firstName: req.body.firstName,
+              lastName: req.body.lastName
+            });
+          } else {
+            console.log('Registration complete. User details:', {
+              id: transformedUser.id,
+              email: transformedUser.email,
+              points: transformedUser.points,
+              selected_package: transformedUser.selected_package,
+              referral_code: transformedUser.referral_code,
+              referred_by: transformedUser.referred_by
+            });
+
+            res.status(201).json(transformedUser);
           }
+          
+          // Send welcome email and admin notification asynchronously after response is sent
+          // This prevents the client from waiting for email delivery
+          setTimeout(async () => {
+            try {
+              const { formatRegistrationEmail, sendEmail, sendAdminRegistrationNotification } = await import('./utils/emailService');
+              const { text, html } = formatRegistrationEmail(req.body.firstName, req.body.email);
+              await sendEmail({
+                to: req.body.email,
+                subject: "Welcome to OPIAN Rewards!",
+                text,
+                html
+              });
+              console.log('Welcome email sent successfully to:', req.body.email);
 
-          console.log('Registration complete. User details:', {
-            id: transformedUser.id,
-            email: transformedUser.email,
-            points: transformedUser.points,
-            selected_package: transformedUser.selected_package,
-            referral_code: transformedUser.referral_code,
-            referred_by: transformedUser.referred_by
-          });
-
-          res.status(201).json(transformedUser);
+              // Send admin notification
+              await sendAdminRegistrationNotification({
+                firstName: req.body.firstName,
+                lastName: req.body.lastName,
+                email: req.body.email,
+                mobileNumber: req.body.mobileNumber,
+                selectedPackage: selectedPackage,
+                referralCode: req.body.referralCode,
+                signature: req.body.signature,
+                isSouthAfrican: req.body.isSouthAfrican,
+                idNumber: req.body.idNumber,
+                dateOfBirth: req.body.dateOfBirth,
+                gender: req.body.gender,
+                occupation: req.body.occupation,
+                industry: req.body.industry,
+                address: req.body.addressLine1,
+                city: req.body.suburb,
+                postalCode: req.body.postalCode,
+                hasCreditCard: req.body.hasCreditCard,
+                bankName: req.body.bankName,
+                accountType: req.body.accountType,
+                accountNumber: req.body.accountNumber,
+                accountHolderName: req.body.accountHolderName,
+                branchCode: req.body.branchCode
+              });
+              console.log('Admin notification sent successfully');
+            } catch (emailError) {
+              console.error('Failed to send emails:', emailError);
+              // Don't fail registration if email fails
+            }
+          }, 100);
         });
 
       } catch (error) {
         await connection.rollback();
         throw error;
       }
-
     } catch (error) {
       console.error('Registration error:', error);
       if (!res.headersSent) {

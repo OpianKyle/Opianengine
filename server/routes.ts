@@ -104,20 +104,28 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 // SMTP Test route - test connection to SMTP server without sending an email
   app.get("/api/test-smtp", async (req: Request, res: Response) => {
     try {
+      // Get SMTP settings with fallbacks
+      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
+      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
+      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
+      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
+      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+      
       // Create a nodemailer transporter with the SMTP settings
       console.log('=== SMTP CONNECTION TEST ===');
-      console.log('OPIAN_SMTP_HOST:', process.env.OPIAN_SMTP_HOST ? 'Set' : 'Not set');
-      console.log('OPIAN_SMTP_PORT:', process.env.OPIAN_SMTP_PORT ? process.env.OPIAN_SMTP_PORT : 'Not set');
-      console.log('OPIAN_SMTP_USER:', process.env.OPIAN_SMTP_USER ? 'Set' : 'Not set');
-      console.log('OPIAN_SMTP_PASSWORD:', process.env.OPIAN_SMTP_PASSWORD ? 'Set (length: ' + (process.env.OPIAN_SMTP_PASSWORD?.length || 0) + ')' : 'Not set');
+      console.log('SMTP_HOST:', host ? 'Set' : 'Not set');
+      console.log('SMTP_PORT:', port);
+      console.log('SMTP_USER:', user ? 'Set' : 'Not set');
+      console.log('SMTP_PASSWORD:', pass ? 'Set (length: ' + (pass.length || 0) + ')' : 'Not set');
+      console.log('SMTP_SECURE:', secure ? 'true' : 'false');
       
       const transporter = nodemailer.createTransport({
-        host: process.env.OPIAN_SMTP_HOST,
-        port: parseInt(process.env.OPIAN_SMTP_PORT || '465'),
-        secure: process.env.OPIAN_SMTP_PORT === '465', // true for 465, false for other ports like 587
+        host,
+        port,
+        secure, // true for 465, false for other ports
         auth: {
-          user: process.env.OPIAN_SMTP_USER,
-          pass: process.env.OPIAN_SMTP_PASSWORD
+          user,
+          pass
         },
         debug: true,
         logger: true,
@@ -135,43 +143,58 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         details: {
           verificationResult,
           smtp: {
-            host: process.env.OPIAN_SMTP_HOST,
-            port: process.env.OPIAN_SMTP_PORT,
-            user: process.env.OPIAN_SMTP_USER ? 'Configured (hidden)' : 'Missing',
-            password: process.env.OPIAN_SMTP_PASSWORD ? 'Configured (hidden)' : 'Missing',
-            secure: process.env.OPIAN_SMTP_PORT === '465' ? 'Yes (465)' : 'No'
+            host: host ? 'Configured (hidden)' : 'Missing',
+            port: port.toString(),
+            user: user ? 'Configured (hidden)' : 'Missing',
+            password: pass ? 'Configured (hidden)' : 'Missing',
+            secure: secure ? 'Yes' : 'No'
           },
           timestamp: new Date().toISOString()
         }
       });
     } catch (error) {
       console.error('SMTP Connection Test Error:', error);
+      // Variables in the catch block lose scope, so let's get our settings again
+      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
+      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
+      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
+      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
+      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+      
       return res.status(500).json({
         success: false,
         message: 'SMTP connection test failed',
         error: error instanceof Error ? error.message : 'Unknown error',
         errorDetails: error,
         smtp: {
-          host: process.env.OPIAN_SMTP_HOST,
-          port: process.env.OPIAN_SMTP_PORT,
-          user: process.env.OPIAN_SMTP_USER ? 'Configured (hidden)' : 'Missing',
-          password: process.env.OPIAN_SMTP_PASSWORD ? 'Configured (hidden)' : 'Missing',
-          secure: process.env.OPIAN_SMTP_PORT === '465' ? 'Yes (465)' : 'No'
+          host: host ? 'Configured (hidden)' : 'Missing',
+          port: port.toString(),
+          user: user ? 'Configured (hidden)' : 'Missing',
+          password: pass ? 'Configured (hidden)' : 'Missing',
+          secure: secure ? 'Yes' : 'No'
         },
         timestamp: new Date().toISOString()
       });
     }
   });
 
-  // Email test route (temporary for testing) - IMPROVED VERSION
+  // Email test route (temporary for testing) - UPDATED WITH NEW ENVIRONMENT VARIABLES
   app.get("/api/test-email", async (req: Request, res: Response) => {
     try {
+      // Get SMTP settings with fallbacks
+      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
+      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
+      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
+      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
+      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+      
       // Email configuration check
       console.log('=== EMAIL CONFIG CHECK ===');
-      console.log('OPIAN_SMTP_HOST:', process.env.OPIAN_SMTP_HOST ? 'Set' : 'Not set');
-      console.log('OPIAN_SMTP_PORT:', process.env.OPIAN_SMTP_PORT ? process.env.OPIAN_SMTP_PORT : 'Not set');
-      console.log('OPIAN_SMTP_USER:', process.env.OPIAN_SMTP_USER ? 'Set' : 'Not set');
-      console.log('OPIAN_SMTP_PASSWORD:', process.env.OPIAN_SMTP_PASSWORD ? 'Set (length: ' + (process.env.OPIAN_SMTP_PASSWORD?.length || 0) + ')' : 'Not set');
+      console.log('SMTP_HOST:', host ? 'Set' : 'Not set');
+      console.log('SMTP_PORT:', port);
+      console.log('SMTP_USER:', user ? 'Set' : 'Not set');
+      console.log('SMTP_PASSWORD:', pass ? 'Set (length: ' + (pass.length || 0) + ')' : 'Not set');
+      console.log('SMTP_SECURE:', secure ? 'true' : 'false');
       
       // Use query parameter or default to admin email
       const testEmail = req.query.email as string || 'admin@opian.co.za';
@@ -198,11 +221,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
             success: true,
             message: 'Test email sent successfully',
             config: {
-              host: process.env.OPIAN_SMTP_HOST ? 'Configured' : 'Missing',
-              port: process.env.OPIAN_SMTP_PORT || 'Missing',
-              user: process.env.OPIAN_SMTP_USER ? 'Configured' : 'Missing',
-              password: process.env.OPIAN_SMTP_PASSWORD ? 'Configured' : 'Missing',
-              smtp_secure: process.env.OPIAN_SMTP_PORT === '465' ? 'Yes (Port 465)' : 'No (Other port)'
+              host: host ? 'Configured' : 'Missing',
+              port: port.toString(),
+              user: user ? 'Configured' : 'Missing',
+              password: pass ? 'Configured' : 'Missing',
+              smtp_secure: secure ? 'Yes' : 'No'
             },
             timestamp: new Date().toISOString(),
             recipient: testEmail
@@ -213,11 +236,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
             success: false,
             error: 'Failed to send test email',
             config: {
-              host: process.env.OPIAN_SMTP_HOST ? 'Configured' : 'Missing',
-              port: process.env.OPIAN_SMTP_PORT || 'Missing',
-              user: process.env.OPIAN_SMTP_USER ? 'Configured' : 'Missing',
-              password: process.env.OPIAN_SMTP_PASSWORD ? 'Configured' : 'Missing',
-              smtp_secure: process.env.OPIAN_SMTP_PORT === '465' ? 'Yes (Port 465)' : 'No (Other port)'
+              host: host ? 'Configured' : 'Missing',
+              port: port.toString(),
+              user: user ? 'Configured' : 'Missing',
+              password: pass ? 'Configured' : 'Missing',
+              smtp_secure: secure ? 'Yes' : 'No'
             },
             timestamp: new Date().toISOString(),
             recipient: testEmail
@@ -230,11 +253,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           error: 'Failed to send test email', 
           details: emailError instanceof Error ? emailError.message : 'Unknown error',
           config: {
-            host: process.env.OPIAN_SMTP_HOST ? 'Configured' : 'Missing',
-            port: process.env.OPIAN_SMTP_PORT || 'Missing',
-            user: process.env.OPIAN_SMTP_USER ? 'Configured' : 'Missing',
-            password: process.env.OPIAN_SMTP_PASSWORD ? 'Configured' : 'Missing',
-            smtp_secure: process.env.OPIAN_SMTP_PORT === '465' ? 'Yes (Port 465)' : 'No (Other port)'
+            host: host ? 'Configured' : 'Missing',
+            port: port.toString(),
+            user: user ? 'Configured' : 'Missing',
+            password: pass ? 'Configured' : 'Missing',
+            smtp_secure: secure ? 'Yes' : 'No'
           },
           timestamp: new Date().toISOString(),
           recipient: testEmail
@@ -252,172 +275,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
 
-  // Registration endpoint with enhanced validation and field handling
-  app.post("/api/register", async (req: Request, res: Response) => {
-    const connection = await createConnection();
-    try {
-      // Debug log for signature data
-      console.log('Registration signature debug:', {
-        signatureType: typeof req.body.signature,
-        signatureValue: req.body.signature?.substring(0, 100),
-        signatureLength: req.body.signature?.length,
-        isBase64: req.body.signature?.match(/^data:image\/[^;]+;base64,/),
-        mandateAccepted: req.body.acceptMandate
-      });
-
-      // Input validation
-      if (!req.body.email || !req.body.password || !req.body.firstName || !req.body.lastName) {
-        return res.status(400).json({ error: "Required fields missing" });
-      }
-
-      // Validate signature format
-      if (!req.body.signature || typeof req.body.signature !== 'string' || !req.body.signature.startsWith('data:image/')) {
-        return res.status(400).json({ error: "Valid signature image data is required" });
-      }
-
-      // Check for existing user
-      const [existingUsers] = await connection.execute(
-        'SELECT id FROM users WHERE email = ?',
-        [req.body.email]
-      );
-
-      if (Array.isArray(existingUsers) && existingUsers.length > 0) {
-        return res.status(400).json({ error: "Email already exists" });
-      }
-
-      // Hash password
-      const hashedPassword = await crypto.hash(req.body.password);
-      const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
-
-      // Calculate initial points
-      let initialPoints = 0;
-      const selectedPackage = req.body.selectedPackage?.toUpperCase();
-      switch (selectedPackage) {
-        case 'OPPORTUNITY': initialPoints = 2500; break;
-        case 'MOMENTUM': initialPoints = 5000; break;
-        case 'PROSPER': initialPoints = 7500; break;
-        case 'PRESTIGE': initialPoints = 10000; break;
-        case 'PINNACLE': initialPoints = 12500; break;
-        default: initialPoints = 2500;
-      }
-
-      await connection.beginTransaction();
-
-      try {
-        // Debug the SQL query parameters
-        const queryParams = [
-          req.body.email,
-          hashedPassword,
-          req.body.firstName,
-          req.body.lastName,
-          req.body.mobileNumber,
-          req.body.isSouthAfrican ? 1 : 0,
-          req.body.idNumber,
-          req.body.dateOfBirth,
-          req.body.gender,
-          req.body.occupation,
-          req.body.industry,
-          req.body.addressLine1,
-          req.body.suburb,
-          req.body.postalCode,
-          selectedPackage,
-          req.body.bankName,
-          req.body.accountType,
-          req.body.accountNumber,
-          req.body.accountHolderName,
-          req.body.branchCode,
-          req.body.hasCreditCard ? 1 : 0,
-          req.body.signature,
-          initialPoints,
-          newReferralCode,
-          req.body.referralCode || null,
-          req.body.acceptMandate ? 1 : 0,
-          new Date()
-        ];
-
-        console.log('Registration insert parameters:', {
-          ...queryParams,
-          password: '[REDACTED]',
-          signatureLength: queryParams[21]?.length || 0,
-          signaturePreview: queryParams[21]?.substring(0, 50) + '...'
-        });
-
-        // Insert user with explicit column names
-        const [userResult] = await connection.execute(
-          `INSERT INTO users (
-            email, password, first_name, last_name, phone_number,
-            is_south_african, id_number, date_of_birth, gender,
-            occupation, industry, address, city, postal_code,
-            selected_package, bank_name, account_type, account_number,
-            account_holder_name, branch_code, has_credit_card,
-            signature, points, referral_code, referred_by,
-            mandate_accepted, mandate_accepted_at, is_enabled,
-            created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
-          queryParams
-        );
-
-        const userId = (userResult as any).insertId;
-
-        // Verify the user data was saved
-        const [savedUser] = await connection.execute(
-          'SELECT id, signature IS NOT NULL as has_signature, CHAR_LENGTH(signature) as signature_length, points, mandate_accepted FROM users WHERE id = ?',
-          [userId]
-        );
-
-        console.log('Saved user verification:', {
-          userId,
-          hasSignature: !!(savedUser as any)[0]?.has_signature,
-          signatureLength: (savedUser as any)[0]?.signature_length,
-          points: (savedUser as any)[0]?.points,
-          mandateAccepted: (savedUser as any)[0]?.mandate_accepted
-        });
-
-        // Record points transaction
-        if (initialPoints > 0) {
-          await connection.execute(
-            `INSERT INTO transactions (
-              user_id, points, type, description, status,
-              created_at
-            ) VALUES (?, ?, ?, ?, ?, NOW())`,
-            [
-              userId,
-              initialPoints,
-              'WELCOME_BONUS',
-              `Initial points allocation for ${selectedPackage} package`,
-              'PROCESSED'
-            ]
-          );
-        }
-
-        await connection.commit();
-
-        res.status(201).json({
-          id: userId,
-          email: req.body.email,
-          firstName: req.body.firstName,
-          lastName: req.body.lastName,
-          points: initialPoints,
-          selectedPackage,
-          mandateAccepted: true,
-          hasSignature: true
-        });
-
-      } catch (error) {
-        await connection.rollback();
-        console.error('Registration transaction error:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({ 
-        error: "Registration failed. Please try again.",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    } finally {
-      await connection.end();
-    }
-  });
+  /* Registration endpoint functionality moved to auth.ts
+   * The setupAuth function in auth.ts now handles user registration
+   * with proper crypto, database transaction, and signature validation.
+   * See auth.ts for the complete implementation.
+   */
 
   // Login endpoint uses imported passport instance
   // Global error handler
