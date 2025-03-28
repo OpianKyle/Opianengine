@@ -164,17 +164,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAgent: normalizedUser.is_agent 
       });
       
-      // Immediate redirect based on normalized user role
-      if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
-        console.log('Redirecting to admin dashboard');
-        window.location.href = '/admin';
-      } else if (normalizedUser.is_agent) {
-        console.log('Redirecting to agent dashboard');
-        window.location.href = '/agent'; 
-      } else {
-        console.log('Redirecting to customer dashboard');
-        window.location.href = '/dashboard';
-      }
+      // Use a defer pattern to avoid React state update during render
+      setTimeout(() => {
+        // Use React router for a smooth transition (no page reload)
+        if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+          console.log('Redirecting to admin dashboard');
+          setLocation('/admin');
+        } else if (normalizedUser.is_agent) {
+          console.log('Redirecting to agent dashboard');
+          setLocation('/agent'); 
+        } else {
+          console.log('Redirecting to customer dashboard');
+          setLocation('/dashboard');
+        }
+      }, 0);
     },
     onError: (error: Error) => {
       toast({
@@ -217,8 +220,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSettled: () => {
       setIsTransitioning(false);
-      // Force reload to ensure clean state
-      window.location.href = '/';
+      // Use setTimeout to avoid React state update during render
+      setTimeout(() => {
+        // Navigate to home without a page reload
+        setLocation('/');
+      }, 0);
     }
   });
 
