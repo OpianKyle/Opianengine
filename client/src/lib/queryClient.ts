@@ -10,23 +10,13 @@ export async function apiRequest(method: string, url: string, body?: any) {
     
   console.log(`API Request to: ${apiUrl}`);
   
-  // Get token from localStorage if available
-  const token = localStorage.getItem('auth_token');
-  
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "Accept": "application/json"
-  };
-  
-  // Add token to headers if available
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  
   const response = await fetch(apiUrl, {
     method,
-    credentials: "include", // Always include credentials
-    headers,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
     ...(body ? { body: JSON.stringify(body) } : {})
   });
 

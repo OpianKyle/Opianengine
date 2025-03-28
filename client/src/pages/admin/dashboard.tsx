@@ -28,22 +28,12 @@ export default function AdminDashboard() {
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/dashboard/stats"],
     queryFn: async () => {
-      // Get token from localStorage if available
-      const token = localStorage.getItem('auth_token');
-      
-      // Use a direct fetch with proper auth headers and credentials
-      const headers: Record<string, string> = {
-        "Accept": "application/json"
-      };
-      
-      // Add token to headers if available
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      
+      // Use a direct fetch with proper credentials to ensure auth is passed
       const response = await fetch("/api/admin/dashboard/stats", {
         credentials: "include",
-        headers
+        headers: {
+          "Accept": "application/json"
+        }
       });
       
       if (!response.ok) {

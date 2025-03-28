@@ -62,7 +62,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         <div className="flex flex-col h-full">
           <div className="p-4 md:p-6 border-b">
             <img 
-              src="/opian-logo-white.png" 
+              src="/Assets/opian-logo-white.png" 
               alt="OPIAN Rewards"
               className="h-8 md:h-12 w-auto object-contain mx-auto dark:invert"
               onError={(e) => {

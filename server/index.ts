@@ -159,7 +159,7 @@ app.use((req: any, res, next) => {
     }
 
     // Start the server
-    const PORT = process.env.PORT || 5001;
+    const PORT = process.env.PORT || 5000;
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
       console.log(`Server URL: http://0.0.0.0:${PORT}`);

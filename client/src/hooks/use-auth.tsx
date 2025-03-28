@@ -55,28 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      // Get token from localStorage if available
-      const token = localStorage.getItem('auth_token');
-      const headers: Record<string, string> = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      };
-      
-      // Add Authorization header if token exists
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
       const res = await fetch("/api/user", {
         credentials: "include",
-        headers
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        }
       });
       if (!res.ok) {
-        if (res.status === 401) {
-          // Clear invalid token on 401
-          if (token) localStorage.removeItem('auth_token');
-          return null;
-        }
+        if (res.status === 401) return null;
         throw new Error("Failed to fetch user data");
       }
       return res.json();
@@ -141,27 +128,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       return data;
     },
-    onSuccess: async (userData: User | any) => {
+    onSuccess: async (userData: User) => {
       console.log('Login mutation success');
       console.log('User data received:', userData);
       isLoggingOut.current = false;
 
-      // Store token in localStorage if it's in the response
-      if (userData.token) {
-        console.log('Storing auth token in localStorage');
-        localStorage.setItem('auth_token', userData.token);
-      }
-
-      // Get the user object - it might be nested in a response with token
-      const user = userData.user || userData;
-
       // Ensure boolean flags are properly set
       const normalizedUser = {
-        ...user,
-        is_admin: Boolean(user.is_admin),
-        is_super_admin: Boolean(user.is_super_admin),
-        is_agent: Boolean(user.is_agent),
-        is_enabled: Boolean(user.is_enabled)
+        ...userData,
+        is_admin: Boolean(userData.is_admin),
+        is_super_admin: Boolean(userData.is_super_admin),
+        is_agent: Boolean(userData.is_agent),
+        is_enabled: Boolean(userData.is_enabled)
       };
 
       console.log('Normalized user data:', normalizedUser);

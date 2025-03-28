@@ -63,7 +63,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
           {/* Logo */}
           <div className="p-4 border-b">
             <img 
-              src="/opian-logo-white.png" 
+              src="/Assets/opian-logo-white.png" 
               alt="OPIAN Rewards"
               className="h-8 w-auto object-contain mx-auto dark:invert"
               onError={(e) => {
