@@ -7,7 +7,7 @@ import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ResetPassword from "@/pages/reset-password";
-import { useUser } from "@/hooks/use-user";
+import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -39,7 +39,7 @@ import AgentDashboard from "@/pages/agent";
 import AgentLayout from "@/components/layout/agent-layout";
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
-  const { user, isLoading } = useUser();
+  const { user, isLoading } = useAuth();
   useSessionTimeout();
 
   if (isLoading) {
@@ -203,10 +203,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen w-full bg-background">
-        <Router />
-        <Toaster />
-      </div>
+      <AuthProvider>
+        <div className="min-h-screen w-full bg-background">
+          <Router />
+          <Toaster />
+        </div>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
