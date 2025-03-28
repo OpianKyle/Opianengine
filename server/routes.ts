@@ -3629,72 +3629,33 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/customer/points", async (req, res) => {
+  // REMOVED DUPLICATE ENDPOINTS - USING EARLIER DEFINITIONS INSTEAD
+
+  // Customer referrals endpoint - moved from previous duplicate implementation
+  app.get("/api/customer/referrals", async (req, res) => {
     if (!req.user) return res.status(401).json({error: "Unauthorized"});
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, req.user.id),
-    });
-    res.json(user);
-  });
 
-  // Add the customer transactions endpoint
-  app.get("/api/customer/transactions", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
+    const connection = await createConnection();
     try {
-      console.log('Fetching transactions for user:', req.user.id);
-
-      const transactions = await db.execute(
-        `SELECT 
-          t.*,
-          DATE_FORMAT(t.created_at, '%Y-%m-%dT%H:%i:%s.000Z') as created_at
-        FROM transactions t
-        WHERE t.user_id = ?
-        ORDER BY t.created_at DESC`,
+      console.log('Fetching referral information for user:', req.user.id);
+      const [userData] = await connection.execute(
+        `SELECT referral_code FROM users WHERE id = ?`,
         [req.user.id]
       );
 
-      // Transform the data to match the expected format
-      const formattedTransactions = transactions[0].map((t: any) => ({
-        id: t.id,
-        points: t.points,
-        description: t.description,
-        type: t.type,
-        createdAt: t.created_at
-      }));
-
-      res.json(formattedTransactions);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      res.status(500).json({ error: 'Failed to fetch transactions' });
-    }
-  });
-
-  app.get("/api/customer/referral", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, req.user.id))
-        .limit(1)
-        .execute();
-
-      if (!user) {
+      if (!userData || userData.length === 0) {
+        console.log('No user found with ID:', req.user.id);
         return res.status(404).json({ error: "User not found" });
       }
 
-      let currentReferralCode = user.referral_code;
+      let currentReferralCode = userData[0].referral_code;
       if (!currentReferralCode) {
         currentReferralCode = randomBytes(8).toString("hex");
-        await db
-          .update(users)
-          .set({ referral_code: currentReferralCode })
-          .where(eq(users.id, req.user.id))
-          .execute();
+        await connection.execute(
+          `UPDATE users SET referral_code = ? WHERE id = ?`,
+          [currentReferralCode, req.user.id]
+        );
+        console.log('Generated new referral code:', currentReferralCode);
       }
 
       const referrals = await db
@@ -3721,100 +3682,105 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   app.get("/api/customer/referrals", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
+    const connection = await createConnection();
     try {
       console.log("Fetching referral stats for user:", req.user.id);
+      
+      // Get user with referral code
+      const [userData] = await connection.execute(
+        `SELECT * FROM users WHERE id = ?`,
+        [req.user.id]
+      );
 
-      const [currentUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, req.user.id))
-        .limit(1)
-        .execute();
-
-      if (!currentUser) {
+      if (!userData || userData.length === 0) {
+        console.log('No user found with ID:', req.user.id);
         return res.status(404).json({ error: "User not found" });
       }
 
-      const level1Referrals = await db
-        .select({
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          email: users.email,
-          createdAt: users.createdAt,
-          referral_code: users.referral_code
-        })
-        .from(users)
-        .where(eq(users.referred_by, currentUser.referral_code))
-        .execute();
-
-      const level2Count = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(
-          inArray(
-            users.referred_by,
-            level1Referrals.map(r => r.referral_code)
-          )
-        )
-        .execute();
-
-      const level2Referrals = await db
-        .select({ referral_code: users.referral_code })
-        .from(users)
-        .where(
-          inArray(
-            users.referred_by,
-            level1Referrals.map(r => r.referral_code)
-          )
-        )
-        .execute();
-
-      const level3Count = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(
-          inArray(
-            users.referred_by,
-            level2Referrals.map(r => r.referral_code)
-          )
-        )
-        .execute();
-
+      const currentUser = userData[0];
+      
+      // Get level 1 referrals (direct referrals)
+      const [level1ReferralsData] = await connection.execute(
+        `SELECT 
+          id, 
+          first_name as firstName, 
+          last_name as lastName, 
+          email, 
+          created_at as createdAt, 
+          referral_code 
+        FROM users 
+        WHERE referred_by = ?`,
+        [currentUser.referral_code]
+      );
+      
+      // Get counts for level 2 referrals (referrals of referrals)
+      let level2Count = 0;
+      let level2Referrals = [];
+      let level3Count = 0;
+      
+      if (level1ReferralsData.length > 0) {
+        const referralCodes = level1ReferralsData.map(ref => `'${ref.referral_code}'`).join(',');
+        
+        const [level2Data] = await connection.execute(
+          `SELECT COUNT(*) as count FROM users WHERE referred_by IN (${referralCodes || "''"})`,
+        );
+        level2Count = level2Data[0]?.count || 0;
+        
+        const [level2RefData] = await connection.execute(
+          `SELECT referral_code FROM users WHERE referred_by IN (${referralCodes || "''"})`,
+        );
+        level2Referrals = level2RefData;
+        
+        if (level2Referrals.length > 0) {
+          const level2Codes = level2Referrals.map(ref => `'${ref.referral_code}'`).join(',');
+          const [level3Data] = await connection.execute(
+            `SELECT COUNT(*) as count FROM users WHERE referred_by IN (${level2Codes || "''"})`,
+          );
+          level3Count = level3Data[0]?.count || 0;
+        }
+      }
+      
+      // Add referral counts to each level 1 referral
       const referralsWithCounts = await Promise.all(
-        level1Referrals.map(async (referral) => {
-          const referralCount = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(users)
-            .where(eq(users.referred_by, referral.referral_code))
-            .execute();
-
+        level1ReferralsData.map(async (referral) => {
+          const [countData] = await connection.execute(
+            `SELECT COUNT(*) as count FROM users WHERE referred_by = ?`,
+            [referral.referral_code]
+          );
+          
           return {
             ...referral,
-            referralCount: Number(referralCount[0]?.count || 0),
+            referralCount: countData[0]?.count || 0,
           };
         })
       );
 
       console.log("Sending referral stats:", {
         referralCode: currentUser.referral_code,
-        level1Count: level1Referrals.length,
-        level2Count: Number(level2Count[0]?.count || 0),
-        level3Count: Number(level3Count[0]?.count || 0),
+        level1Count: level1ReferralsData.length,
+        level2Count: level2Count,
+        level3Count: level3Count,
       });
 
       res.json({
         referralCode: currentUser.referral_code,
-        level1Count: level1Referrals.length,
-        level2Count: Number(level2Count[0]?.count || 0),
-        level3Count: Number(level3Count[0]?.count || 0),
+        level1Count: level1ReferralsData.length,
+        level2Count: level2Count,
+        level3Count: level3Count,
         referrals: referralsWithCounts,
       });
     } catch (error) {
       console.error("Error fetching referral stats:", error);
-      res.status(500).json({ error: "Failed to fetch referral stats" });
+      res.status(500).json({ 
+        error: "Failed to fetch referral stats",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -4125,58 +4091,93 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/notifications", async (req, res) => {    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+  app.get("/api/notifications", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
     }
-
+    
+    const connection = await createConnection();
     try {
-      const userNotifications = await db.query.notifications.findMany({
-        where: eq(notifications.userId, req.user.id),
-        orderBy: desc(notifications.createdAt),
-        limit: 50 
-      });
-
-      res.json(userNotifications);
+      console.log('Fetching notifications for user:', req.user.id);
+      
+      const [notifications] = await connection.execute(
+        `SELECT *
+         FROM notifications
+         WHERE user_id = ?
+         ORDER BY created_at DESC 
+         LIMIT 50`,
+        [req.user.id]
+      );
+      
+      // Transform data to match client expectations
+      const transformedNotifications = notifications.map(notification => ({
+        id: notification.id,
+        userId: notification.user_id,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        read: Boolean(notification.read),
+        createdAt: notification.created_at,
+        metadata: notification.metadata ? JSON.parse(notification.metadata) : null
+      }));
+      
+      console.log(`Found ${transformedNotifications.length} notifications for user ${req.user.id}`);
+      res.json(transformedNotifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
-      res.status(500).json({ error: 'Failed to fetch notifications' });
+      res.status(500).json({ 
+        error: "Failed to fetch notifications",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } finally {
+      await connection.end();
     }
   });
 
   app.post("/api/notifications/mark-read", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
     const { notificationId } = req.body;
-
+    const connection = await createConnection();
+    
     try {
+      console.log('Marking notification(s) as read for user:', req.user.id);
+      
       if (notificationId) {
-        const [deletedNotification] = await db
-          .delete(notifications)
-          .where(
-            and(
-              eq(notifications.id, parseInt(notificationId)),
-              eq(notifications.userId, req.user.id)
-            )
-          )
-          .returning()
-          .execute();
-
-        if (!deletedNotification) {
-          return res.status(404).json({ error:"Notification not found" });
+        // Mark specific notification as read (delete it)
+        const [result] = await connection.execute(
+          `DELETE FROM notifications 
+           WHERE id = ? AND user_id = ?`,
+          [notificationId, req.user.id]
+        );
+        
+        if (!result || result.affectedRows === 0) {
+          console.log('Notification not found:', notificationId);
+          return res.status(404).json({ error: "Notification not found" });
         }
+        
+        console.log(`Marked notification ${notificationId} as read`);
       } else {
-        await db
-          .delete(notifications)
-          .where(eq(notifications.userId, req.user.id))
-          .execute();
+        // Mark all notifications as read (delete all)
+        const [result] = await connection.execute(
+          `DELETE FROM notifications WHERE user_id = ?`,
+          [req.user.id]
+        );
+        
+        console.log(`Marked all notifications as read for user ${req.user.id}, deleted ${result.affectedRows} notifications`);
       }
 
       res.json({ success: true });
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      res.status(500).json({ error: 'Failed to mark notification as read' });
+      res.status(500).json({ 
+        error: "Failed to mark notification as read",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -4284,11 +4285,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   app.put("/api/user", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
-    try{
+    const connection = await createConnection();
+    try {
       const {
         firstName,
         lastName,
@@ -4305,52 +4307,172 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         bankName,
         accountType,
         accountNumber,
-        hasCreditCard
-        
+        hasCreditCard,
+        password
       } = req.body;
 
-      const updates: any = {
-        firstName,
-        lastName,
-        phoneNumber,
-        address,
-        city,
-        postalCode,
-        idNumber,
-        dateOfBirth,
-        industry,
-        occupation,
-        isSouthAfrican,
-        selectedPackage,
-        bankName,
-        accountType,
-        accountNumber,
-        hasCreditCard
-      };
-
-      if (password) {
-        const hashedPassword = await crypto.hash(password);
-        updates.password = hashedPassword;
-      }
-
-      const [updatedUser] = await db
-        .update(users)
-        .set(updates)
-        .where(eq(users.id, req.user.id))
-        .returning()
-        .execute();
-
-      if (!updatedUser) {
+      // Check if user exists
+      const [userCheck] = await connection.execute(
+        'SELECT id FROM users WHERE id = ?',
+        [req.user.id]
+      );
+      
+      if (!userCheck || userCheck.length === 0) {
         return res.status(404).json({ error: "User not found" });
       }
-
-      res.json(updatedUser);
+      
+      // Build update SQL with only the fields that are provided
+      let updateFields = [];
+      let updateParams = [];
+      
+      if (firstName !== undefined) {
+        updateFields.push('first_name = ?');
+        updateParams.push(firstName);
+      }
+      
+      if (lastName !== undefined) {
+        updateFields.push('last_name = ?');
+        updateParams.push(lastName);
+      }
+      
+      if (phoneNumber !== undefined) {
+        updateFields.push('phone_number = ?');
+        updateParams.push(phoneNumber);
+      }
+      
+      if (address !== undefined) {
+        updateFields.push('address = ?');
+        updateParams.push(address);
+      }
+      
+      if (city !== undefined) {
+        updateFields.push('city = ?');
+        updateParams.push(city);
+      }
+      
+      if (postalCode !== undefined) {
+        updateFields.push('postal_code = ?');
+        updateParams.push(postalCode);
+      }
+      
+      if (idNumber !== undefined) {
+        updateFields.push('id_number = ?');
+        updateParams.push(idNumber);
+      }
+      
+      if (dateOfBirth !== undefined) {
+        updateFields.push('date_of_birth = ?');
+        updateParams.push(dateOfBirth);
+      }
+      
+      if (industry !== undefined) {
+        updateFields.push('industry = ?');
+        updateParams.push(industry);
+      }
+      
+      if (occupation !== undefined) {
+        updateFields.push('occupation = ?');
+        updateParams.push(occupation);
+      }
+      
+      if (isSouthAfrican !== undefined) {
+        updateFields.push('is_south_african = ?');
+        updateParams.push(isSouthAfrican);
+      }
+      
+      if (selectedPackage !== undefined) {
+        updateFields.push('selected_package = ?');
+        updateParams.push(selectedPackage);
+      }
+      
+      if (bankName !== undefined) {
+        updateFields.push('bank_name = ?');
+        updateParams.push(bankName);
+      }
+      
+      if (accountType !== undefined) {
+        updateFields.push('account_type = ?');
+        updateParams.push(accountType);
+      }
+      
+      if (accountNumber !== undefined) {
+        updateFields.push('account_number = ?');
+        updateParams.push(accountNumber);
+      }
+      
+      if (hasCreditCard !== undefined) {
+        updateFields.push('has_credit_card = ?');
+        updateParams.push(hasCreditCard);
+      }
+      
+      if (password !== undefined) {
+        updateFields.push('password = ?');
+        const hashedPassword = await hashPassword(password);
+        updateParams.push(hashedPassword);
+      }
+      
+      // Add user id as the last parameter
+      updateParams.push(req.user.id);
+      
+      if (updateFields.length === 0) {
+        return res.status(400).json({ error: "No fields to update" });
+      }
+      
+      const updateQuery = `
+        UPDATE users
+        SET ${updateFields.join(', ')}
+        WHERE id = ?
+      `;
+      
+      const [updateResult] = await connection.execute(updateQuery, updateParams);
+      
+      // Get updated user data
+      const [updatedUserData] = await connection.execute(
+        `SELECT 
+          id,
+          email,
+          first_name,
+          last_name,
+          phone_number,
+          is_admin,
+          is_super_admin,
+          is_agent,
+          is_enabled,
+          points,
+          referral_code,
+          referred_by,
+          is_south_african,
+          id_number,
+          date_of_birth,
+          address,
+          city,
+          postal_code,
+          industry,
+          occupation,
+          bank_name,
+          account_type,
+          account_number,
+          selected_package,
+          has_credit_card
+        FROM users
+        WHERE id = ?`,
+        [req.user.id]
+      );
+      
+      if (!updatedUserData || updatedUserData.length === 0) {
+        return res.status(404).json({ error: "Failed to retrieve updated user data" });
+      }
+      
+      console.log(`Updated user profile for user ${req.user.id}`);
+      res.json(updatedUserData[0]);
     } catch (error) {
       console.error('Error updating user profile:', error);
       res.status(500).json({ 
         error: 'Failed to update profile',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred'
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
+    } finally {
+      await connection.end();
     }
   });
   // Unified API endpoint that handles both session-based and JWT token-based authentication
