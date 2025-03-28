@@ -402,7 +402,7 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
       <div className="container mx-auto px-4 py-6 md:px-6">
         <div className="flex flex-col items-center space-y-4 mb-8">
           <img
-            src="/Assets/opian-logo-white.png"
+            src="/opian-logo-white.png"
             alt="OPIAN Rewards"
             className="h-12 w-auto dark:invert"
             onError={(e) => {
