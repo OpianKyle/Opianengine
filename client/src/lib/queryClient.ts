@@ -2,7 +2,15 @@ import { QueryClient } from "@tanstack/react-query";
 
 // Helper function for making API requests
 export async function apiRequest(method: string, url: string, body?: any) {
-  const response = await fetch(url, {
+  // Ensure we're using the correct base URL in all environments
+  // If the URL doesn't start with http or /, prefix it with /
+  const apiUrl = url.startsWith('http') || url.startsWith('/') 
+    ? url 
+    : `/${url}`;
+    
+  console.log(`API Request to: ${apiUrl}`);
+  
+  const response = await fetch(apiUrl, {
     method,
     credentials: "include",
     headers: {
@@ -35,14 +43,17 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: async ({ queryKey }) => {
         try {
-          const response = await apiRequest("GET", queryKey[0] as string);
+          // Ensure the URL is properly formatted
+          const url = typeof queryKey[0] === 'string' ? queryKey[0] : '';
+          const response = await apiRequest("GET", url);
           return response.json();
         } catch (error) {
           // If we get a network error, retry up to 3 times
           if (error instanceof TypeError && error.message.includes('network')) {
             return new Promise((resolve, reject) => {
               setTimeout(() => {
-                apiRequest("GET", queryKey[0] as string)
+                const url = typeof queryKey[0] === 'string' ? queryKey[0] : '';
+                apiRequest("GET", url)
                   .then(response => response.json())
                   .then(resolve)
                   .catch(reject);

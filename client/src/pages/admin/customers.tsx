@@ -262,13 +262,24 @@ export default function AdminCustomers() {
   const { data: customers } = useQuery({
     queryKey: ["/api/admin/customers"],
     queryFn: async () => {
+      console.log("Fetching customers from API...");
       const response = await fetch("/api/admin/customers", {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          "Accept": "application/json"
+        }
       });
+      
       if (!response.ok) {
-        throw new Error("Failed to fetch customers");
+        if (response.status === 401) {
+          throw new Error("Unauthorized: Please log in again");
+        }
+        throw new Error(`Failed to fetch customers: ${response.status}`);
       }
-      return response.json();
+      
+      const data = await response.json();
+      console.log(`Successfully fetched ${data?.length || 0} customers`);
+      return data;
     }
   });
 

@@ -27,6 +27,24 @@ interface DashboardStats {
 export default function AdminDashboard() {
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/dashboard/stats"],
+    queryFn: async () => {
+      // Use a direct fetch with proper credentials to ensure auth is passed
+      const response = await fetch("/api/admin/dashboard/stats", {
+        credentials: "include",
+        headers: {
+          "Accept": "application/json"
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Unauthorized: Please log in again");
+        }
+        throw new Error(`Failed to fetch dashboard stats: ${response.status}`);
+      }
+      
+      return response.json();
+    }
   });
 
   if (isLoading) {
