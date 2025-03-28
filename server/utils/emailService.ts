@@ -3,15 +3,14 @@ import htmlPdf from 'html-pdf';
 import { promisify } from 'util';
 import mysql from 'mysql2/promise';
 
-// Create reusable transporter with Gmail SMTP configuration
+// Create reusable transporter with Opian SMTP configuration
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  host: process.env.OPIAN_SMTP_HOST,
+  port: parseInt(process.env.OPIAN_SMTP_PORT || '465'),
+  secure: process.env.OPIAN_SMTP_PORT === '465', // true for 465, false for other ports like 587
   auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD
+    user: process.env.OPIAN_SMTP_USER,
+    pass: process.env.OPIAN_SMTP_PASSWORD
   },
   debug: true,
   logger: true
@@ -88,16 +87,16 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
     console.log('========== EMAIL SENDING ATTEMPT ==========');
     console.log('To:', to);
     console.log('Subject:', subject);
-    console.log('Using Gmail account:', process.env.GMAIL_USER);
+    console.log('Using Opian SMTP server:', process.env.OPIAN_SMTP_HOST);
 
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-      console.error('Missing Gmail credentials');
+    if (!process.env.OPIAN_SMTP_USER || !process.env.OPIAN_SMTP_PASSWORD) {
+      console.error('Missing Opian SMTP credentials');
       await logEmail({
         recipientEmail: to,
         subject,
         emailType,
         status: 'FAILED',
-        errorMessage: 'Missing Gmail credentials',
+        errorMessage: 'Missing Opian SMTP credentials',
         templateData,
         htmlContent: html,
         textContent: text
@@ -254,7 +253,7 @@ export function formatRegistrationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
+        <img src="/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
       </div>
 
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
@@ -304,7 +303,7 @@ export function formatRegistrationEmail(
         <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
           <p style="color: white; margin: 20px 0;">
             Best regards,<br><br>
-            <img src="https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+            <img src="/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
             <strong>Lance Heynes</strong><br>
             CEO, Opian Financial Services (Pty) Ltd
           </p>
