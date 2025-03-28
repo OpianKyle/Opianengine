@@ -41,8 +41,20 @@ async function getPackagePrice(connection: any, packageName: string): Promise<nu
 
 // Middleware to check if user is an agent
 router.use(async (req: any, res, next) => {
+  console.log('Agent router middleware check:', {
+    isAuthenticated: req.isAuthenticated(),
+    user: req.user ? { id: req.user.id, email: req.user.email } : null,
+    sessionID: req.sessionID,
+    cookies: req.headers.cookie
+  });
+
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  if (!req.user || !req.user.id) {
+    console.error('User object is missing or incomplete:', req.user);
+    return res.status(401).json({ error: "Invalid user session" });
   }
 
   const connection = await createConnection();
@@ -53,6 +65,12 @@ router.use(async (req: any, res, next) => {
       [req.user.id]
     );
 
+    console.log('Agent check result:', {
+      userId: req.user.id,
+      agentResult: agent,
+      isValid: agent && Array.isArray(agent) && agent.length > 0
+    });
+
     if (!agent || !Array.isArray(agent) || agent.length === 0) {
       return res.status(403).json({ error: "Not authorized as agent" });
     }
@@ -60,7 +78,7 @@ router.use(async (req: any, res, next) => {
     next();
   } catch (error) {
     console.error('Error checking agent status:', error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: error.message });
   } finally {
     await connection.end();
   }
