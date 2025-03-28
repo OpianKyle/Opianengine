@@ -33,23 +33,6 @@ export default function AdminManagement() {
   const { data: admins, refetch } = useQuery({
     queryKey: ["/api/admin/users"],
     staleTime: 0,
-    queryFn: async () => {
-      const response = await fetch("/api/admin/users", {
-        credentials: "include",
-        headers: {
-          "Accept": "application/json"
-        }
-      });
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error("Unauthorized: Please log in again");
-        }
-        throw new Error(`Failed to fetch users: ${response.status}`);
-      }
-      
-      return response.json();
-    }
   });
 
   const [filters, setFilters] = useState<FilterState>({
@@ -477,9 +460,9 @@ export default function AdminManagement() {
                                 if (confirm(
                                   "Are you sure? This will permanently remove this admin user."
                                 )) {
-                                  toggleAgentMutation.mutate({
+                                  toggleAdminMutation.mutate({
                                     userId: admin.id,
-                                    isAgent: false,
+                                    isAdmin: false,
                                   });
                                 }
                               }}
