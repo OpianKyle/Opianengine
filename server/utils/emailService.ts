@@ -4,17 +4,26 @@ import { promisify } from 'util';
 import mysql from 'mysql2/promise';
 
 // Create reusable transporter with Opian SMTP configuration
-const transporter = nodemailer.createTransport({
-  host: process.env.OPIAN_SMTP_HOST,
-  port: parseInt(process.env.OPIAN_SMTP_PORT || '465'),
-  secure: process.env.OPIAN_SMTP_PORT === '465', // true for 465, false for other ports like 587
-  auth: {
-    user: process.env.OPIAN_SMTP_USER,
-    pass: process.env.OPIAN_SMTP_PASSWORD
-  },
-  debug: true,
-  logger: true
-});
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: process.env.OPIAN_SMTP_HOST,
+    port: parseInt(process.env.OPIAN_SMTP_PORT || '465'),
+    secure: process.env.OPIAN_SMTP_PORT === '465', // true for 465, false for other ports like 587
+    auth: {
+      user: process.env.OPIAN_SMTP_USER,
+      pass: process.env.OPIAN_SMTP_PASSWORD
+    },
+    tls: {
+      // Do not fail on invalid certs
+      rejectUnauthorized: false
+    },
+    debug: true,
+    logger: true
+  });
+};
+
+// Create transporter on demand to ensure we have the latest environment variables
+let transporter: nodemailer.Transporter;
 
 // Create connection pool
 const pool = mysql.createPool({
@@ -83,20 +92,34 @@ interface EmailParams {
 }
 
 export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL', templateData }: EmailParams): Promise<boolean> {
+  // Create a fresh transporter using the latest environment variables
+  transporter = createTransporter();
+  
   try {
     console.log('========== EMAIL SENDING ATTEMPT ==========');
     console.log('To:', to);
     console.log('Subject:', subject);
     console.log('Using Opian SMTP server:', process.env.OPIAN_SMTP_HOST);
+    console.log('Using SMTP Port:', process.env.OPIAN_SMTP_PORT);
 
-    if (!process.env.OPIAN_SMTP_USER || !process.env.OPIAN_SMTP_PASSWORD) {
-      console.error('Missing Opian SMTP credentials');
+    // Detailed SMTP config check - DEBUGGING ONLY
+    console.log('Detailed SMTP config:', {
+      host: process.env.OPIAN_SMTP_HOST,
+      port: parseInt(process.env.OPIAN_SMTP_PORT || '465'),
+      secure: process.env.OPIAN_SMTP_PORT === '465',
+      auth_user: process.env.OPIAN_SMTP_USER ? 'CONFIGURED (hidden)' : 'MISSING',
+      auth_pass: process.env.OPIAN_SMTP_PASSWORD ? 'CONFIGURED (hidden)' : 'MISSING',
+    });
+
+    // Verify SMTP credentials
+    if (!process.env.OPIAN_SMTP_HOST || !process.env.OPIAN_SMTP_USER || !process.env.OPIAN_SMTP_PASSWORD) {
+      console.error('Missing Opian SMTP configuration');
       await logEmail({
         recipientEmail: to,
         subject,
         emailType,
         status: 'FAILED',
-        errorMessage: 'Missing Opian SMTP credentials',
+        errorMessage: 'Missing Opian SMTP configuration',
         templateData,
         htmlContent: html,
         textContent: text
@@ -104,9 +127,29 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
       return false;
     }
 
-    const verification = await transporter.verify();
-    console.log('SMTP Connection verified:', verification);
+    // Try to verify the transporter
+    try {
+      console.log('Verifying SMTP connection...');
+      const verification = await transporter.verify();
+      console.log('SMTP Connection verified:', verification);
+    } catch (verifyError) {
+      console.error('SMTP verification error:', verifyError);
+      console.error('This indicates the SMTP server is not reachable or credentials are invalid');
+      await logEmail({
+        recipientEmail: to,
+        subject,
+        emailType,
+        status: 'FAILED',
+        errorMessage: `SMTP verification failed: ${verifyError instanceof Error ? verifyError.message : 'Unknown error'}`,
+        templateData,
+        htmlContent: html,
+        textContent: text
+      });
+      return false;
+    }
 
+    // Attempt to send the email
+    console.log('Attempting to send email...');
     const result = await transporter.sendMail({
       from: `"OPIAN Rewards" <admin@opian.co.za>`,
       to,
@@ -116,6 +159,7 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
     });
 
     console.log('Email sent successfully. Message ID:', result.messageId);
+    console.log('Full send result:', result);
 
     await logEmail({
       recipientEmail: to,
@@ -131,6 +175,13 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
   } catch (error) {
     console.error('========== EMAIL ERROR ==========');
     console.error('Detailed email error:', error);
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
+    
+    if (error instanceof Error && 'code' in error) {
+      console.error('Error code:', (error as any).code);
+    }
 
     await logEmail({
       recipientEmail: to,

@@ -100,7 +100,93 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     next();
   });
 
-
+  // Email test route (temporary for testing) - IMPROVED VERSION
+  app.get("/api/test-email", async (req: Request, res: Response) => {
+    try {
+      // Email configuration check
+      console.log('=== EMAIL CONFIG CHECK ===');
+      console.log('OPIAN_SMTP_HOST:', process.env.OPIAN_SMTP_HOST ? 'Set' : 'Not set');
+      console.log('OPIAN_SMTP_PORT:', process.env.OPIAN_SMTP_PORT ? process.env.OPIAN_SMTP_PORT : 'Not set');
+      console.log('OPIAN_SMTP_USER:', process.env.OPIAN_SMTP_USER ? 'Set' : 'Not set');
+      console.log('OPIAN_SMTP_PASSWORD:', process.env.OPIAN_SMTP_PASSWORD ? 'Set (length: ' + (process.env.OPIAN_SMTP_PASSWORD?.length || 0) + ')' : 'Not set');
+      
+      // Use query parameter or default to admin email
+      const testEmail = req.query.email as string || 'admin@opian.co.za';
+      console.log('Recipient email:', testEmail);
+      
+      // Generate test email content with improved logging
+      console.log('Generating test email content...');
+      const { text, html } = formatRegistrationEmail('Test User', testEmail);
+      
+      console.log('Sending test email using updated transport configuration...');
+      try {
+        // Try to send email with detailed error capturing
+        const result = await sendEmail({
+          to: testEmail,
+          subject: 'Test Email from Opian Rewards',
+          text,
+          html,
+          emailType: 'TEST'
+        });
+        
+        if (result) {
+          console.log('Email sent successfully!');
+          return res.status(200).json({ 
+            success: true,
+            message: 'Test email sent successfully',
+            config: {
+              host: process.env.OPIAN_SMTP_HOST ? 'Configured' : 'Missing',
+              port: process.env.OPIAN_SMTP_PORT || 'Missing',
+              user: process.env.OPIAN_SMTP_USER ? 'Configured' : 'Missing',
+              password: process.env.OPIAN_SMTP_PASSWORD ? 'Configured' : 'Missing',
+              smtp_secure: process.env.OPIAN_SMTP_PORT === '465' ? 'Yes (Port 465)' : 'No (Other port)'
+            },
+            timestamp: new Date().toISOString(),
+            recipient: testEmail
+          });
+        } else {
+          console.error('Email sending returned false');
+          return res.status(500).json({ 
+            success: false,
+            error: 'Failed to send test email',
+            config: {
+              host: process.env.OPIAN_SMTP_HOST ? 'Configured' : 'Missing',
+              port: process.env.OPIAN_SMTP_PORT || 'Missing',
+              user: process.env.OPIAN_SMTP_USER ? 'Configured' : 'Missing',
+              password: process.env.OPIAN_SMTP_PASSWORD ? 'Configured' : 'Missing',
+              smtp_secure: process.env.OPIAN_SMTP_PORT === '465' ? 'Yes (Port 465)' : 'No (Other port)'
+            },
+            timestamp: new Date().toISOString(),
+            recipient: testEmail
+          });
+        }
+      } catch (emailError) {
+        console.error('Detailed email sending error:', emailError);
+        return res.status(500).json({ 
+          success: false,
+          error: 'Failed to send test email', 
+          details: emailError instanceof Error ? emailError.message : 'Unknown error',
+          config: {
+            host: process.env.OPIAN_SMTP_HOST ? 'Configured' : 'Missing',
+            port: process.env.OPIAN_SMTP_PORT || 'Missing',
+            user: process.env.OPIAN_SMTP_USER ? 'Configured' : 'Missing',
+            password: process.env.OPIAN_SMTP_PASSWORD ? 'Configured' : 'Missing',
+            smtp_secure: process.env.OPIAN_SMTP_PORT === '465' ? 'Yes (Port 465)' : 'No (Other port)'
+          },
+          timestamp: new Date().toISOString(),
+          recipient: testEmail
+        });
+      }
+    } catch (error) {
+      console.error('Test email route error:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to process email test',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
 
 
   // Registration endpoint with enhanced validation and field handling
