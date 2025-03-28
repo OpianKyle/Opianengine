@@ -2931,6 +2931,94 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  app.get("/api/admin/customers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Fetch users with their product assignments and activities
+      const [customers] = await connection.execute(
+        `SELECT 
+          u.*,
+          JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'id', pa.id,
+              'product', JSON_OBJECT(
+                'id', p.id,
+                'name', p.name,
+                'description', p.description,
+                'activities', (
+                  SELECT JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                      'id', act.id,
+                      'type', act.type,
+                      'pointsValue', act.points_value
+                    )
+                  )
+                  FROM product_activities act
+                  WHERE act.product_id = p.id
+                )
+              )
+            )
+          ) as product_assignments
+        FROM users u
+        LEFT JOIN product_assignments pa ON u.id = pa.user_id
+        LEFT JOIN products p ON pa.product_id = p.id
+        GROUP BY u.id
+        ORDER BY u.created_at DESC`
+      );
+
+      // Transform the data
+      const transformedCustomers = customers.map(customer => {
+        let productAssignments = [];
+        try {
+          productAssignments = customer.product_assignments ? 
+            JSON.parse(customer.product_assignments.replace(/null/g, '[]')) : [];
+        } catch (e) {
+          console.error('Error parsing product assignments:', e);
+        }
+
+        return {
+          id: customer.id,
+          email: customer.email,
+          firstName: customer.first_name,
+          lastName: customer.last_name,
+          phoneNumber: customer.phone_number,
+          isEnabled: Boolean(customer.is_enabled),
+          points: customer.points || 0,
+          createdAt: customer.created_at,
+          productAssignments: productAssignments.filter(pa => pa.id) // Filter out null assignments
+        };
+      });
+
+      console.log('Fetched customers with product activities:', 
+        transformedCustomers.map(c => ({
+          id: c.id,
+          assignmentsCount: c.productAssignments.length,
+          sampleActivities: c.productAssignments[0]?.product.activities?.length || 0
+        }))
+      );
+
+      res.json(transformedCustomers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    } finally {
+      await connection.end();
+    }
+  });
 
   app.put("/api/products/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -4679,6 +4767,130 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  app.get("/api/admin/customers", async (req, res) => {
+    console.log('Admin customers request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email
+      } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        console.log('User not found in admin_users:', req.user.id);
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // First, get all customers (non-admin users)
+      const [customers] = await connection.execute(
+        `SELECT DISTINCT u.*
+         FROM users u
+         LEFT JOIN admin_users au ON u.id = au.user_id
+         WHERE au.user_id IS NULL
+         ORDER BY u.created_at DESC`
+      );
+
+      // Then, for each customer, get their assigned products and activities
+      const transformedCustomers = await Promise.all(customers.map(async (customer) => {
+        // Get assigned products with their activities
+        const [assignments] = await connection.execute(
+          `SELECT 
+            p.id as product_id,
+            p.name as product_name,
+            p.description as product_description,
+            p.is_enabled as product_is_enabled,
+            pa.id as assignment_id,
+            GROUP_CONCAT(
+              JSON_OBJECT(
+                'id', pact.id,
+                'type', pact.type,
+                'pointsValue', pact.points_value
+              )
+            ) as activities
+           FROM product_assignments pa
+           JOIN products p ON pa.product_id = p.id
+           LEFT JOIN product_activities pact ON p.id = pact.product_id
+           WHERE pa.user_id = ?
+           GROUP BY p.id, pa.id`,
+          [customer.id]
+        );
+
+        // Get referral count
+        const [referrals] = await connection.execute(
+          'SELECT COUNT(*) as count FROM users WHERE referred_by = ?',
+          [customer.referral_code]
+        );
+
+        // Transform assignments into the expected format
+        const productAssignments = assignments.map(assignment => ({
+          id: assignment.assignment_id,
+          product: {
+            id: assignment.product_id,
+            name: assignment.product_name,
+            description: assignment.product_description,
+            isEnabled: Boolean(assignment.product_is_enabled),
+            activities: assignment.activities ? 
+              assignment.activities.split(',').map(activity => {
+                try {
+                  return JSON.parse(activity);
+                } catch (e) {
+                  console.error('Error parsing activity:', e);
+                  return null;
+                }
+              }).filter(Boolean) : []
+          }
+        }));
+
+        return {
+          id: customer.id,
+          email: customer.email,
+          firstName: customer.first_name,
+          lastName: customer.last_name,
+          phoneNumber: customer.phone_number,
+          isEnabled: Boolean(customer.is_enabled),
+          isSouthAfrican: Boolean(customer.is_south_african),
+          hasCreditCard: Boolean(customer.has_credit_card),
+          points: Number(customer.points || 0),
+          createdAt: customer.created_at,
+          selectedPackage: customer.selected_package,
+          industry: customer.industry,
+          occupation: customer.occupation,
+          address: customer.address,
+          city: customer.city,
+          postalCode: customer.postal_code,
+          bankName: customer.bank_name,
+          accountType: customer.account_type,
+          accountNumber: customer.account_number,
+          accountHolderName: customer.account_holder_name,
+          branchCode: customer.branch_code,
+          referralCode: customer.referral_code,
+          referredBy: customer.referred_by,
+          productAssignments: productAssignments,
+          referralCount: Number(referrals[0].count || 0)
+        };
+      }));
+
+      console.log(`Found ${transformedCustomers.length} customers`);
+      res.json(transformedCustomers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    } finally {
+      await connection.end();
+    }
+  });
 
   // Add this endpoint after other routes
   app.post("/api/agent/customers/create", async (req, res) => {
