@@ -56,25 +56,25 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   console.log('ProtectedRoute checking user role:', { 
-    isAdmin: user.is_admin, 
-    isSuperAdmin: user.is_super_admin, 
-    isAgent: user.is_agent,
+    isAdmin: Boolean(user.is_admin), 
+    isSuperAdmin: Boolean(user.is_super_admin), 
+    isAgent: Boolean(user.is_agent),
     requestingAdminRoute: admin,
     requestingAgentRoute: agent
   });
 
   // Handle routing based on user role
-  if (admin && !(user.is_admin || user.is_super_admin)) {
+  if (admin && !(Boolean(user.is_admin) || Boolean(user.is_super_admin))) {
     console.log('User lacks admin privileges, redirecting to appropriate dashboard');
-    if (user.is_agent) {
+    if (Boolean(user.is_agent)) {
       return <Redirect to="/agent" />;
     }
     return <Redirect to="/dashboard" />;
   }
 
-  if (agent && !user.is_agent) {
+  if (agent && !Boolean(user.is_agent)) {
     console.log('User lacks agent privileges, redirecting to appropriate dashboard');
-    if (user.is_admin || user.is_super_admin) {
+    if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
       return <Redirect to="/admin" />;
     }
     return <Redirect to="/dashboard" />;
@@ -82,13 +82,13 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
 
   // Redirect users to their appropriate dashboards if they try to access routes not for their role
   if (!admin && !agent && user) {
-    if (user.is_admin || user.is_super_admin) {
+    if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
       const currentPath = window.location.pathname;
       if (!currentPath.startsWith('/admin')) {
         console.log('Admin user accessing non-admin route, redirecting to admin dashboard');
         return <Redirect to="/admin" />;
       }
-    } else if (user.is_agent) {
+    } else if (Boolean(user.is_agent)) {
       const currentPath = window.location.pathname;
       if (!currentPath.startsWith('/agent')) {
         console.log('Agent user accessing non-agent route, redirecting to agent dashboard');

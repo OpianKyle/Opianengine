@@ -23,7 +23,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      navigate(user.is_admin || user.is_super_admin ? '/admin' : '/dashboard');
+      navigate(Boolean(user.is_admin) || Boolean(user.is_super_admin) ? '/admin' : '/dashboard');
     }
   }, [user, navigate]);
 

@@ -122,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: async (user: User) => {
       console.log('Login mutation success');
+      console.log('User data received:', user);
       isLoggingOut.current = false;
 
       // Set user data in query cache
@@ -137,20 +138,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem(sessionKey, 'true');
       }
 
-      // Navigate based on user role
-      console.log('Navigating based on role:', { 
-        isAdmin: user.is_admin, 
-        isSuperAdmin: user.is_super_admin, 
-        isAgent: user.is_agent 
+      // Force direct navigation based on the user role properties received from the server
+      console.log('Direct navigation check - User roles:', { 
+        isAdmin: Boolean(user.is_admin), 
+        isSuperAdmin: Boolean(user.is_super_admin), 
+        isAgent: Boolean(user.is_agent) 
       });
       
-      if (user.is_admin || user.is_super_admin) {
-        setLocation('/admin');
-      } else if (user.is_agent) {
-        setLocation('/agent');
-      } else {
-        setLocation('/dashboard');
-      }
+      // Use setTimeout to ensure the query cache has updated before redirecting
+      setTimeout(() => {
+        // Use window.location.href for a hard redirect that bypasses any React router issues
+        if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
+          console.log('Redirecting to admin dashboard');
+          window.location.href = '/admin';
+        } else if (Boolean(user.is_agent)) {
+          console.log('Redirecting to agent dashboard');
+          window.location.href = '/agent'; 
+        } else {
+          console.log('Redirecting to customer dashboard');
+          window.location.href = '/dashboard';
+        }
+      }, 100); // Short delay to ensure state updates complete
     },
     onError: (error: Error) => {
       toast({
