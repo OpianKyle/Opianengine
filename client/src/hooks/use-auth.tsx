@@ -118,47 +118,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.error || "Failed to login");
       }
 
-      return res.json();
+      const data = await res.json();
+      
+      // Extract the user from the response which might be {user: {...}, token: "..."}
+      if (data && data.user) {
+        console.log('Received nested user object in response');
+        return data.user; 
+      }
+      
+      return data;
     },
-    onSuccess: async (user: User) => {
+    onSuccess: async (userData: User) => {
       console.log('Login mutation success');
-      console.log('User data received:', user);
+      console.log('User data received:', userData);
       isLoggingOut.current = false;
 
+      // Ensure boolean flags are properly set
+      const normalizedUser = {
+        ...userData,
+        is_admin: Boolean(userData.is_admin),
+        is_super_admin: Boolean(userData.is_super_admin),
+        is_agent: Boolean(userData.is_agent),
+        is_enabled: Boolean(userData.is_enabled)
+      };
+
+      console.log('Normalized user data:', normalizedUser);
+
       // Set user data in query cache
-      queryClient.setQueryData(["/api/user"], user);
+      queryClient.setQueryData(["/api/user"], normalizedUser);
 
       // Show welcome message only if not shown in this session
-      const sessionKey = `welcome_shown_${user.id}`;
+      const sessionKey = `welcome_shown_${normalizedUser.id}`;
       if (!sessionStorage.getItem(sessionKey)) {
         toast({
           title: "Welcome back",
-          description: `Logged in as ${user.first_name} ${user.last_name}`,
+          description: `Logged in as ${normalizedUser.first_name} ${normalizedUser.last_name}`,
         });
         sessionStorage.setItem(sessionKey, 'true');
       }
 
       // Force direct navigation based on the user role properties received from the server
       console.log('Direct navigation check - User roles:', { 
-        isAdmin: Boolean(user.is_admin), 
-        isSuperAdmin: Boolean(user.is_super_admin), 
-        isAgent: Boolean(user.is_agent) 
+        isAdmin: normalizedUser.is_admin, 
+        isSuperAdmin: normalizedUser.is_super_admin, 
+        isAgent: normalizedUser.is_agent 
       });
       
-      // Use setTimeout to ensure the query cache has updated before redirecting
-      setTimeout(() => {
-        // Use window.location.href for a hard redirect that bypasses any React router issues
-        if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
-          console.log('Redirecting to admin dashboard');
-          window.location.href = '/admin';
-        } else if (Boolean(user.is_agent)) {
-          console.log('Redirecting to agent dashboard');
-          window.location.href = '/agent'; 
-        } else {
-          console.log('Redirecting to customer dashboard');
-          window.location.href = '/dashboard';
-        }
-      }, 100); // Short delay to ensure state updates complete
+      // Immediate redirect based on normalized user role
+      if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+        console.log('Redirecting to admin dashboard');
+        window.location.href = '/admin';
+      } else if (normalizedUser.is_agent) {
+        console.log('Redirecting to agent dashboard');
+        window.location.href = '/agent'; 
+      } else {
+        console.log('Redirecting to customer dashboard');
+        window.location.href = '/dashboard';
+      }
     },
     onError: (error: Error) => {
       toast({
