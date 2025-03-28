@@ -109,7 +109,7 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
     console.log('SMTP Connection verified:', verification);
 
     const result = await transporter.sendMail({
-      from: `"OPIAN Rewards" <${process.env.GMAIL_USER}>`,
+      from: `"OPIAN Rewards" <admin@opian.co.za>`,
       to,
       subject,
       text,
@@ -254,7 +254,7 @@ export function formatRegistrationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Assets/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
+        <img src="https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
       </div>
 
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
@@ -304,7 +304,7 @@ export function formatRegistrationEmail(
         <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
           <p style="color: white; margin: 20px 0;">
             Best regards,<br><br>
-            <img src="https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Assets/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+            <img src="https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
             <strong>Lance Heynes</strong><br>
             CEO, Opian Financial Services (Pty) Ltd
           </p>
@@ -630,7 +630,7 @@ export async function sendAdminRegistrationNotification(customerData: any): Prom
     const { text, html } = formatNewCustomerAdminEmail(customerData);
 
     const result = await transporter.sendMail({
-      from: `"OPIAN Rewards" <${process.env.GMAIL_USER}>`,
+      from: `"OPIAN Rewards" <admin@opian.co.za>`,
       to: 'clientservices@opianfsgroup.com',
       subject: 'New Customer Registration',
       text,
