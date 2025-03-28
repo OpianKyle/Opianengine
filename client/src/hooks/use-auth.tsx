@@ -9,7 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { cleanupWebSockets } from "@/lib/utils";
 
-type User = {
+// Define user interface
+export interface User {
   id: number;
   email: string;
   first_name: string;
@@ -22,23 +23,27 @@ type User = {
   points: number;
   referral_code: string | null;
   referred_by: string | null;
-};
+}
 
-type AuthContextType = {
+// Login credentials type
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+// Define the shape of the auth context
+interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-};
+}
 
-type LoginData = {
-  email: string;
-  password: string;
-};
-
+// Create the auth context
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Auth provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -46,12 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const isLoggingOut = useRef(false);
 
-  // Silent user data fetch
-  const {
-    data: user,
-    error,
-    isLoading,
-  } = useQuery<User>({
+  // Query to fetch the current user
+  const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
       const res = await fetch("/api/user", {
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchOnMount: false,
   });
 
+  // Clear auth state on logout
   const clearAuthState = useCallback(async () => {
     isLoggingOut.current = true;
 
@@ -96,7 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cleanupWebSockets();
   }, [queryClient]);
 
-  const loginMutation = useMutation({
+  // Login mutation
+  const loginMutation = useMutation<User, Error, LoginData>({
     mutationFn: async (credentials: LoginData) => {
       console.log('Login mutation started');
       setIsTransitioning(true);
@@ -111,8 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to login");
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to login");
       }
 
       return res.json();
@@ -135,10 +138,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Navigate based on user role
-      if (user.is_agent) {
-        setLocation('/agent');
-      } else if (user.is_admin || user.is_super_admin) {
+      console.log('Navigating based on role:', { 
+        isAdmin: user.is_admin, 
+        isSuperAdmin: user.is_super_admin, 
+        isAgent: user.is_agent 
+      });
+      
+      if (user.is_admin || user.is_super_admin) {
         setLocation('/admin');
+      } else if (user.is_agent) {
+        setLocation('/agent');
       } else {
         setLocation('/dashboard');
       }
@@ -155,7 +164,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const logoutMutation = useMutation({
+  // Logout mutation
+  const logoutMutation = useMutation<void, Error, void>({
     mutationFn: async () => {
       setIsTransitioning(true);
       // Clear state before making request
@@ -170,8 +180,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to logout");
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to logout");
       }
     },
     onError: (error: Error) => {
@@ -188,22 +198,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  // Create the context value
+  const authContextValue: AuthContextType = {
+    user: userQuery.data || null,
+    isLoading: userQuery.isLoading,
+    error: userQuery.error as Error | null,
+    loginMutation,
+    logoutMutation,
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        error,
-        loginMutation,
-        logoutMutation,
-      }}
-    >
+    <AuthContext.Provider value={authContextValue}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
+// Hook to use the auth context
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");

@@ -51,9 +51,17 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (!user) {
-    console.log('No user found, redirecting to home');
-    return <Redirect to="/" />;
+    console.log('No user found, redirecting to login');
+    return <Redirect to="/login" />;
   }
+
+  console.log('ProtectedRoute checking user role:', { 
+    isAdmin: user.is_admin, 
+    isSuperAdmin: user.is_super_admin, 
+    isAgent: user.is_agent,
+    requestingAdminRoute: admin,
+    requestingAgentRoute: agent
+  });
 
   // Handle routing based on user role
   if (admin && !(user.is_admin || user.is_super_admin)) {
@@ -72,13 +80,20 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     return <Redirect to="/dashboard" />;
   }
 
-  // Redirect regular customers if they try to access admin or agent routes
-  if (!admin && !agent && (user.is_admin || user.is_agent)) {
+  // Redirect users to their appropriate dashboards if they try to access routes not for their role
+  if (!admin && !agent && user) {
     if (user.is_admin || user.is_super_admin) {
-      return <Redirect to="/admin" />;
-    }
-    if (user.is_agent) {
-      return <Redirect to="/agent" />;
+      const currentPath = window.location.pathname;
+      if (!currentPath.startsWith('/admin')) {
+        console.log('Admin user accessing non-admin route, redirecting to admin dashboard');
+        return <Redirect to="/admin" />;
+      }
+    } else if (user.is_agent) {
+      const currentPath = window.location.pathname;
+      if (!currentPath.startsWith('/agent')) {
+        console.log('Agent user accessing non-agent route, redirecting to agent dashboard');
+        return <Redirect to="/agent" />;
+      }
     }
   }
 
