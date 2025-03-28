@@ -7,7 +7,7 @@ import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ResetPassword from "@/pages/reset-password";
-import { useUser } from "@/hooks/use-user";
+import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -39,7 +39,7 @@ import AgentDashboard from "@/pages/agent";
 import AgentLayout from "@/components/layout/agent-layout";
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
-  const { user, isLoading } = useUser();
+  const { user, isLoading } = useAuth();
   useSessionTimeout();
 
   if (isLoading) {
@@ -51,34 +51,49 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (!user) {
-    console.log('No user found, redirecting to home');
-    return <Redirect to="/" />;
+    console.log('No user found, redirecting to login');
+    return <Redirect to="/login" />;
   }
+
+  console.log('ProtectedRoute checking user role:', { 
+    isAdmin: Boolean(user.is_admin), 
+    isSuperAdmin: Boolean(user.is_super_admin), 
+    isAgent: Boolean(user.is_agent),
+    requestingAdminRoute: admin,
+    requestingAgentRoute: agent
+  });
 
   // Handle routing based on user role
-  if (admin && !(user.is_admin || user.is_super_admin)) {
+  if (admin && !(Boolean(user.is_admin) || Boolean(user.is_super_admin))) {
     console.log('User lacks admin privileges, redirecting to appropriate dashboard');
-    if (user.is_agent) {
+    if (Boolean(user.is_agent)) {
       return <Redirect to="/agent" />;
     }
     return <Redirect to="/dashboard" />;
   }
 
-  if (agent && !user.is_agent) {
+  if (agent && !Boolean(user.is_agent)) {
     console.log('User lacks agent privileges, redirecting to appropriate dashboard');
-    if (user.is_admin || user.is_super_admin) {
+    if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
       return <Redirect to="/admin" />;
     }
     return <Redirect to="/dashboard" />;
   }
 
-  // Redirect regular customers if they try to access admin or agent routes
-  if (!admin && !agent && (user.is_admin || user.is_agent)) {
-    if (user.is_admin || user.is_super_admin) {
-      return <Redirect to="/admin" />;
-    }
-    if (user.is_agent) {
-      return <Redirect to="/agent" />;
+  // Redirect users to their appropriate dashboards if they try to access routes not for their role
+  if (!admin && !agent && user) {
+    if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
+      const currentPath = window.location.pathname;
+      if (!currentPath.startsWith('/admin')) {
+        console.log('Admin user accessing non-admin route, redirecting to admin dashboard');
+        return <Redirect to="/admin" />;
+      }
+    } else if (Boolean(user.is_agent)) {
+      const currentPath = window.location.pathname;
+      if (!currentPath.startsWith('/agent')) {
+        console.log('Agent user accessing non-agent route, redirecting to agent dashboard');
+        return <Redirect to="/agent" />;
+      }
     }
   }
 
@@ -203,10 +218,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen w-full bg-background">
-        <Router />
-        <Toaster />
-      </div>
+      <AuthProvider>
+        <div className="min-h-screen w-full bg-background">
+          <Router />
+          <Toaster />
+        </div>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

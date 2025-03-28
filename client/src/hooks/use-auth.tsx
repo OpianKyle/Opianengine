@@ -9,7 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { cleanupWebSockets } from "@/lib/utils";
 
-type User = {
+// Define user interface
+export interface User {
   id: number;
   email: string;
   first_name: string;
@@ -22,28 +23,27 @@ type User = {
   points: number;
   referral_code: string | null;
   referred_by: string | null;
-  // Add client-side aliases to match server interface
-  isAdmin?: boolean;
-  isSuperAdmin?: boolean;
-  firstName?: string;
-  lastName?: string;
-};
+}
 
-type AuthContextType = {
+// Login credentials type
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+// Define the shape of the auth context
+interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-};
+}
 
-type LoginData = {
-  email: string;
-  password: string;
-};
-
+// Create the auth context
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Auth provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -51,12 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const isLoggingOut = useRef(false);
 
-  // Silent user data fetch
-  const {
-    data: user,
-    error,
-    isLoading,
-  } = useQuery<User | null>({
+  // Query to fetch the current user
+  const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
       const res = await fetch("/api/user", {
@@ -70,26 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (res.status === 401) return null;
         throw new Error("Failed to fetch user data");
       }
-      
-      const userData = await res.json();
-      
-      // Map server response fields to client model if needed
-      if (userData) {
-        if (userData.firstName === undefined && userData.first_name !== undefined) {
-          userData.firstName = userData.first_name;
-        }
-        if (userData.lastName === undefined && userData.last_name !== undefined) {
-          userData.lastName = userData.last_name;
-        }
-        if (userData.isAdmin === undefined && userData.is_admin !== undefined) {
-          userData.isAdmin = userData.is_admin;
-        }
-        if (userData.isSuperAdmin === undefined && userData.is_super_admin !== undefined) {
-          userData.isSuperAdmin = userData.is_super_admin;
-        }
-      }
-      
-      return userData;
+      return res.json();
     },
     retry: false,
     enabled: !isLoggingOut.current,
@@ -98,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchOnMount: false,
   });
 
+  // Clear auth state on logout
   const clearAuthState = useCallback(async () => {
     isLoggingOut.current = true;
 
@@ -120,7 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cleanupWebSockets();
   }, [queryClient]);
 
-  const loginMutation = useMutation({
+  // Login mutation
+  const loginMutation = useMutation<User, Error, LoginData>({
     mutationFn: async (credentials: LoginData) => {
       console.log('Login mutation started');
       setIsTransitioning(true);
@@ -135,55 +114,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to login");
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to login");
       }
 
       const data = await res.json();
-      // Add any necessary field transformations here
-      return data.user || data; // Handle both response formats (some endpoints return {user, token})
+      
+      // Extract the user from the response which might be {user: {...}, token: "..."}
+      if (data && data.user) {
+        console.log('Received nested user object in response');
+        return data.user; 
+      }
+      
+      return data;
     },
     onSuccess: async (userData: User) => {
       console.log('Login mutation success');
+      console.log('User data received:', userData);
       isLoggingOut.current = false;
 
-      // Create a normalized user object with all expected fields
-      const user: User = {
+      // Ensure boolean flags are properly set
+      const normalizedUser = {
         ...userData,
-        // Ensure snake_case fields are available
-        first_name: userData.first_name || userData.firstName || '',
-        last_name: userData.last_name || userData.lastName || '',
-        is_admin: userData.is_admin || userData.isAdmin || false,
-        is_super_admin: userData.is_super_admin || userData.isSuperAdmin || false,
-        
-        // Ensure camelCase fields are available
-        firstName: userData.firstName || userData.first_name || '',
-        lastName: userData.lastName || userData.last_name || '',
-        isAdmin: userData.isAdmin || userData.is_admin || false,
-        isSuperAdmin: userData.isSuperAdmin || userData.is_super_admin || false,
+        is_admin: Boolean(userData.is_admin),
+        is_super_admin: Boolean(userData.is_super_admin),
+        is_agent: Boolean(userData.is_agent),
+        is_enabled: Boolean(userData.is_enabled)
       };
 
+      console.log('Normalized user data:', normalizedUser);
+
       // Set user data in query cache
-      queryClient.setQueryData(["/api/user"], user);
+      queryClient.setQueryData(["/api/user"], normalizedUser);
 
       // Show welcome message only if not shown in this session
-      const sessionKey = `welcome_shown_${user.id}`;
+      const sessionKey = `welcome_shown_${normalizedUser.id}`;
       if (!sessionStorage.getItem(sessionKey)) {
         toast({
           title: "Welcome back",
-          description: `Logged in as ${user.first_name || user.firstName} ${user.last_name || user.lastName}`,
+          description: `Logged in as ${normalizedUser.first_name} ${normalizedUser.last_name}`,
         });
         sessionStorage.setItem(sessionKey, 'true');
       }
 
-      // Navigate based on user role
-      if (user.is_agent) {
-        setLocation('/agent');
-      } else if (user.is_admin || user.is_super_admin || user.isAdmin || user.isSuperAdmin) {
-        setLocation('/admin');
-      } else {
-        setLocation('/dashboard');
-      }
+      // Force direct navigation based on the user role properties received from the server
+      console.log('Direct navigation check - User roles:', { 
+        isAdmin: normalizedUser.is_admin, 
+        isSuperAdmin: normalizedUser.is_super_admin, 
+        isAgent: normalizedUser.is_agent 
+      });
+      
+      // Use a defer pattern to avoid React state update during render
+      setTimeout(() => {
+        // Use React router for a smooth transition (no page reload)
+        if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+          console.log('Redirecting to admin dashboard');
+          setLocation('/admin');
+        } else if (normalizedUser.is_agent) {
+          console.log('Redirecting to agent dashboard');
+          setLocation('/agent'); 
+        } else {
+          console.log('Redirecting to customer dashboard');
+          setLocation('/dashboard');
+        }
+      }, 0);
     },
     onError: (error: Error) => {
       toast({
@@ -197,7 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const logoutMutation = useMutation({
+  // Logout mutation
+  const logoutMutation = useMutation<void, Error, void>({
     mutationFn: async () => {
       setIsTransitioning(true);
       // Clear state before making request
@@ -212,8 +207,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to logout");
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to logout");
       }
     },
     onError: (error: Error) => {
@@ -225,27 +220,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSettled: () => {
       setIsTransitioning(false);
-      // Force reload to ensure clean state
-      window.location.href = '/';
+      // Use setTimeout to avoid React state update during render
+      setTimeout(() => {
+        // Navigate to home without a page reload
+        setLocation('/');
+      }, 0);
     }
   });
 
+  // Create the context value
+  const authContextValue: AuthContextType = {
+    user: userQuery.data || null,
+    isLoading: userQuery.isLoading,
+    error: userQuery.error as Error | null,
+    loginMutation,
+    logoutMutation,
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        error,
-        loginMutation,
-        logoutMutation,
-      }}
-    >
+    <AuthContext.Provider value={authContextValue}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
+// Hook to use the auth context
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");

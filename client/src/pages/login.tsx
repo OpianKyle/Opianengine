@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/hooks/use-user";
+import { useAuth } from "@/hooks/use-auth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
 
@@ -17,13 +17,13 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
 
-  const { loginMutation, user, isLoading } = useUser();
+  const { loginMutation, user, isLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
-      navigate(user.is_admin || user.is_super_admin ? '/admin' : '/dashboard');
+      navigate(Boolean(user.is_admin) || Boolean(user.is_super_admin) ? '/admin' : '/dashboard');
     }
   }, [user, navigate]);
 
@@ -51,7 +51,7 @@ export default function LoginPage() {
         email,
         password
       });
-      // Success toast is now handled in useUser hook
+      // Success toast is now handled in useAuth hook
     } catch (err) {
       console.error("Login error:", err);
       setError("Invalid email or password");

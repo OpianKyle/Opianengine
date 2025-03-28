@@ -14,29 +14,6 @@ import referralRouter from './routes/referral';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
-import { pool, db } from "@db";
-import { users, products, transactions, rewards, notifications, productActivities, productAssignments, quoteRequests } from "@db/schema";
-import { and, eq, desc, asc, sql, inArray } from "drizzle-orm";
-
-// Define User interface to fix TypeScript errors
-interface User {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone_number?: string;
-  is_agent: boolean;
-  is_admin: boolean;
-  is_super_admin: boolean;
-  is_enabled: boolean;
-  points: number;
-  referral_code?: string;
-  referred_by?: string;
-  isAdmin?: boolean;
-  isSuperAdmin?: boolean;
-  firstName?: string;
-  lastName?: string;
-}
 import { logAdminAction } from './admin-logger';
 
 const scryptAsync = promisify(scrypt);
