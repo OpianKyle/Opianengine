@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { createConnection } from '../db';
 import { generateReferralCode } from '../utils/referral';
-import { sendEmail, formatRegistrationEmail } from '../utils/emailService';
+import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from '../utils/emailService';
 
 const router = Router();
 
@@ -285,6 +285,39 @@ router.post('/customers/create', async (req: any, res) => {
           text,
           html
         });
+        
+        // Send admin notification email with customer details
+        try {
+          const customerData = {
+            firstName,
+            lastName,
+            email,
+            mobileNumber,
+            dateOfBirth,
+            gender,
+            idNumber,
+            occupation,
+            industry,
+            addressLine1,
+            suburb,
+            postalCode,
+            selectedPackage: normalizedPackage,
+            bankName,
+            accountType,
+            accountNumber,
+            accountHolderName,
+            branchCode,
+            isSouthAfrican,
+            hasCreditCard,
+            createdAt: new Date().toISOString(),
+            mandateAccepted: true,
+            agentId: req.user.id
+          };
+          
+          await sendAdminRegistrationNotification(customerData);
+        } catch (adminEmailError) {
+          console.error('Failed to send admin notification email:', adminEmailError);
+        }
       } catch (emailError) {
         console.error('Failed to send welcome email:', emailError);
       }

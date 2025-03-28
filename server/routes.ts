@@ -4,7 +4,7 @@ import passport from "passport";
 import { setupAuth, checkAgent, verifyJwtToken } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail } from "./utils/emailService";
+import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
@@ -270,6 +270,61 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         error: 'Failed to process email test',
         details: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Test route for admin notification emails with PDF attachment
+  app.post("/api/register-test", async (req: Request, res: Response) => {
+    try {
+      console.log('Received test registration data:', req.body);
+      
+      const customerData = {
+        firstName: req.body.first_name,
+        lastName: req.body.last_name,
+        email: req.body.email,
+        mobileNumber: req.body.phone_number,
+        selectedPackage: req.body.selectedPackage,
+        referralCode: req.body.referralCode,
+        signature: req.body.signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        isSouthAfrican: req.body.isSouthAfrican !== undefined ? req.body.isSouthAfrican : true,
+        idNumber: req.body.idNumber,
+        dateOfBirth: req.body.dateOfBirth,
+        gender: req.body.gender,
+        occupation: req.body.occupation,
+        industry: req.body.industry,
+        address: req.body.address,
+        city: req.body.city,
+        postalCode: req.body.postalCode,
+        hasCreditCard: req.body.hasCreditCard,
+        bankName: req.body.bankName,
+        accountType: req.body.accountType,
+        accountNumber: req.body.accountNumber,
+        accountHolderName: req.body.accountHolderName,
+        branchCode: req.body.branchCode
+      };
+      
+      console.log('Sending admin registration notification for test user');
+      const result = await sendAdminRegistrationNotification(customerData);
+      
+      if (result) {
+        res.status(200).json({ 
+          success: true, 
+          message: "Test admin notification with PDF attachment sent successfully",
+          recipient: process.env.SMTP_USER || process.env.OPIAN_SMTP_USER || 'clientservices@opianfsgroup.com'
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: "Failed to send test admin notification" 
+        });
+      }
+    } catch (error) {
+      console.error("Error sending test admin notification:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Error sending test admin notification", 
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   });
