@@ -373,6 +373,27 @@ export function formatFundCardEmail(
   return { text, html };
 }
 
+function getSignatureHTML(): string {
+  return `
+    <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 15px; border-collapse: collapse;">
+      <tr>
+        <td style="vertical-align: top; width: 150px; padding-right: 15px;">
+          <img src="https://opian.co.za/lance.png" alt="Lance Heynes Signature" style="width: 140px; margin-bottom: 10px;">
+          <img src="https://opian.co.za/Opian-white-logo.svg" alt="Opian Logo" style="width: 100px;">
+        </td>
+        <td style="vertical-align: top; border-left: 2px solid #43EB3E; padding-left: 15px;">
+          <p style="color: white; margin: 0 0 5px 0; font-size: 18px;"><strong>Lance Heynes</strong></p>
+          <p style="color: white; margin: 0 0 5px 0; font-size: 14px;">Chief Executive Officer</p>
+          <p style="color: #43EB3E; margin: 0 0 10px 0; font-size: 12px;">Opian Financial Services (Pty) Ltd</p>
+          <p style="color: white; margin: 0 0 3px 0; font-size: 12px;">📱 <a href="tel:0861263346" style="color: white; text-decoration: none;">0861 263 346</a></p>
+          <p style="color: white; margin: 0 0 3px 0; font-size: 12px;">✉️ <a href="mailto:lance@opianfsgroup.com" style="color: white; text-decoration: none;">lance@opianfsgroup.com</a></p>
+          <p style="color: white; margin: 0; font-size: 12px;">🌐 <a href="https://www.opian.co.za" style="color: white; text-decoration: none;">www.opian.co.za</a></p>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
 export function formatRegistrationEmail(
   firstName: string,
   email: string
@@ -385,7 +406,7 @@ export function formatRegistrationEmail(
     Thank you for joining us on your journey to grow, save, and earn through Opian Rewards. Here, every financial decision is an Opportunity—whether it's reducing costs, earning rewards, or building long-term wealth.
 
     Your Next Steps:
-    1. Sign in: Visit our platform and log in using your credentials:
+    1. Sign in: Visit our platform at www.opian.co.za and log in using your credentials:
        Username: ${email}
        Password: 123456
     2. Secure your account: Change your password to something strong and unique.
@@ -406,7 +427,11 @@ export function formatRegistrationEmail(
     Best regards,
 
     Lance Heynes
-    CEO, Opian Financial Services (Pty) Ltd
+    Chief Executive Officer
+    Opian Financial Services (Pty) Ltd
+    Tel: 0861 263 346
+    Email: lance@opianfsgroup.com
+    Website: www.opian.co.za
 
     Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider
     Company Registration Number: 2018/584168/07 FSP No: 50974
@@ -431,7 +456,7 @@ export function formatRegistrationEmail(
         <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; color: white; margin: 20px 0;">
           <h3 style="color: #43EB3E; margin-top: 0;">Your Next Steps:</h3>
           <ol style="line-height: 1.8;">
-            <li><strong>Sign in:</strong> Visit our platform and log in using your credentials:
+            <li><strong>Sign in:</strong> Visit our platform at <a href="https://www.opian.co.za" style="color: #43EB3E; text-decoration: underline; font-weight: bold;">www.opian.co.za</a> and log in using your credentials:
               <div style="background: rgba(255,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 3px;">
                 <span style="color: #43EB3E;">Username:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">${email}</span><br>
                 <span style="color: #43EB3E;">Password:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">123456</span>
@@ -465,12 +490,22 @@ export function formatRegistrationEmail(
         </p>
 
         <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-          <p style="color: white; margin: 20px 0;">
-            Best regards,<br><br>
-            <img src="https://opian.co.za/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
-            <strong>Lance Heynes</strong><br>
-            CEO, Opian Financial Services (Pty) Ltd
-          </p>
+          <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 15px; border-collapse: collapse;">
+            <tr>
+              <td style="vertical-align: top; width: 150px; padding-right: 15px;">
+                <img src="https://opian.co.za/lance.png" alt="Lance Heynes Signature" style="width: 140px; margin-bottom: 10px;">
+                <img src="https://opian.co.za/Opian-white-logo.svg" alt="Opian Logo" style="width: 100px;">
+              </td>
+              <td style="vertical-align: top; border-left: 2px solid #43EB3E; padding-left: 15px;">
+                <p style="color: white; margin: 0 0 5px 0; font-size: 18px;"><strong>Lance Heynes</strong></p>
+                <p style="color: white; margin: 0 0 5px 0; font-size: 14px;">Chief Executive Officer</p>
+                <p style="color: #43EB3E; margin: 0 0 10px 0; font-size: 12px;">Opian Financial Services (Pty) Ltd</p>
+                <p style="color: white; margin: 0 0 3px 0; font-size: 12px;">📱 <a href="tel:0861263346" style="color: white; text-decoration: none;">0861 263 346</a></p>
+                <p style="color: white; margin: 0 0 3px 0; font-size: 12px;">✉️ <a href="mailto:lance@opianfsgroup.com" style="color: white; text-decoration: none;">lance@opianfsgroup.com</a></p>
+                <p style="color: white; margin: 0; font-size: 12px;">🌐 <a href="https://www.opian.co.za" style="color: white; text-decoration: none;">www.opian.co.za</a></p>
+              </td>
+            </tr>
+          </table>
         </div>
 
         <div style="color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.6; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
