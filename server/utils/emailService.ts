@@ -234,6 +234,145 @@ export function formatAdminNotificationEmail(
   return { text, html };
 }
 
+export function formatFundCardEmail(
+  firstName: string,
+): { text: string; html: string } {
+  const text = `
+    Dear ${firstName},
+    
+    Next STEP. Fund your Opian Rewards card!
+    
+    Thank you for joining this exciting journey to grow your Rewards through Opian Rewards Programme.
+    
+    Over the next weeks and months, you will be receiving a series of emails guiding you on the steps to get the maximum value out of your Rewards journey. Please engage so that you can attain the maximum value on rewards Remember, you get rewarded for:
+    Your card transactions at merchant stores
+    ‣ Upgrading your Financial portfolio
+    Accepting comparative quotes on Life and Short-Term Insurance
+    ➤ Buying financial and related products via our financial partners
+    
+    Your Next Step - Funding your card
+    You would have received your Rewards card by now. Now is the time to fund your card!
+    Visti any Standard Bank or do an EFT from your current bank account and deposit money into the following account
+    Name: CENTRAL PAY Bank: STANDARD BANK Acc No: 1021 652 7021
+    Important! Use the 8 Digit Number at the back, Card Number on the front, or Your ID Number as reference
+    DO NOT USE YOUR NAME!
+    
+    Now you can start spending with your card at point-of-sale facilities, use your referral link to earn commission, and engage with our financial partners to get more value for your money!
+    
+    Please ensure you whitelist the numbers and email addresses where you receive communication from us, so you can always stay in the LOOP! Remember: The Opian Rewards System is designed to empower you financially-whether through savings, earnings, or smart financial choices.
+    
+    For assistance, contact our support team:
+    📞 Call: 0861 263 346
+    💬 WhatsApp: 063 581 2042
+    📧 Email: clientservices@opianfsgroup.com
+    
+    Your biggest financial journey starts now! Let's make it rewarding!
+    
+    Best regards,
+    
+    Lance Heynes
+    CEO, Opian Financial Services (Pty) Ltd
+    
+    Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider
+    Company Registration Number: 2018/584168/07 FSP No: 50974
+    Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape
+    Tel: 0861 263 346 | Email: info@opianfsgroup.com | Website: www.opianfsgroup.com
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://opian.co.za/Opian-white-logo.svg" alt="Opian Rewards Logo" style="max-width: 200px;">
+      </div>
+
+      <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
+        <h2 style="color: white; margin-top: 0;">Dear ${firstName},</h2>
+        <h1 style="color: #43EB3E;">Next STEP. Fund your Opian Rewards card!</h1>
+
+        <p style="color: white; line-height: 1.6;">
+          Thank you for joining this exciting journey to grow your Rewards through Opian Rewards Programme.
+        </p>
+
+        <p style="color: white; line-height: 1.6;">
+          Over the next weeks and months, you will be receiving a series of emails guiding you on the steps to get the maximum value out of your Rewards journey. Please engage so that you can attain the maximum value on rewards.
+        </p>
+
+        <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; color: white; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Remember, you get rewarded for:</h3>
+          <ul style="line-height: 1.8;">
+            <li>Your card transactions at merchant stores</li>
+            <li>Upgrading your Financial portfolio</li>
+            <li>Accepting comparative quotes on Life and Short-Term Insurance</li>
+            <li>Buying financial and related products via our financial partners</li>
+          </ul>
+        </div>
+
+        <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; color: white; margin: 30px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Your Next Step - Funding your card</h3>
+          <p style="line-height: 1.6;">You would have received your Rewards card by now. Now is the time to fund your card!</p>
+          <p style="line-height: 1.6;">Visit any Standard Bank or do an EFT from your current bank account and deposit money into the following account:</p>
+          
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 3px;">
+            <p style="margin: 5px 0; color: white;">Name: <strong>CENTRAL PAY</strong></p>
+            <p style="margin: 5px 0; color: white;">Bank: <strong>STANDARD BANK</strong></p>
+            <p style="margin: 5px 0; color: white;">Acc No: <strong>1021 652 7021</strong></p>
+          </div>
+          
+          <div style="background-color: rgba(67,235,62,0.1); padding: 15px; border-left: 4px solid #43EB3E; margin: 20px 0;">
+            <p style="color: white; margin: 0;"><strong>Important!</strong> Use the 8 Digit Number at the back, Card Number on the front, or Your ID Number as reference</p>
+            <p style="color: white; font-weight: bold; margin-top: 10px;">DO NOT USE YOUR NAME!</p>
+          </div>
+        </div>
+
+        <p style="color: white; line-height: 1.6;">
+          Now you can start spending with your card at point-of-sale facilities, use your referral link to earn commission, and engage with our financial partners to get more value for your money!
+        </p>
+
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="color: white; line-height: 1.6;">
+            Please ensure you whitelist the numbers and email addresses where you receive communication from us, so you can always stay in the LOOP! Remember: The Opian Rewards System is designed to empower you financially—whether through savings, earnings, or smart financial choices.
+          </p>
+        </div>
+
+        <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">For assistance, contact our support team:</h3>
+          <p style="line-height: 1.8; color: white !important;">
+            📞 Call: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span><br>
+            💬 WhatsApp: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0635812042" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">063 581 2042</a></span><br>
+            📧 Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:clientservices@opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">clientservices@opianfsgroup.com</a></span>
+          </p>
+        </div>
+
+        <p style="color: white; font-size: 18px; font-weight: bold;">
+          Your biggest financial journey starts now! Let's make it rewarding!
+        </p>
+
+        <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <p style="color: white; margin: 20px 0;">
+            Best regards,<br><br>
+            <img src="https://opian.co.za/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+            <strong>Lance Heynes</strong><br>
+            CEO, Opian Financial Services (Pty) Ltd
+          </p>
+        </div>
+
+        <div style="color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.6; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <p><strong>Opian Financial Services (Pty) Ltd</strong> is an Authorised Financial Services Provider</p>
+          <p>Company Registration Number: 2018/584168/07 FSP No: 50974</p>
+          <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
+          <p style="color: white !important;">
+            Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span> |
+            Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:info@opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">info@opianfsgroup.com</a></span> |
+            Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianfsgroup.com</a></span>
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return { text, html };
+}
+
 export function formatRegistrationEmail(
   firstName: string,
   email: string

@@ -4,7 +4,7 @@ import passport from "passport";
 import { setupAuth, checkAgent, verifyJwtToken } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from "./utils/emailService";
+import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
@@ -1252,6 +1252,73 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       console.error('Error fetching customers:', error);
       res.status(500).json({ 
         error: 'Failed to fetch customers',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } finally {
+      await connection.end();
+    }
+  });
+  
+  // Send fund card follow-up email to a customer
+  app.post("/api/admin/customers/:id/send-fund-card-email", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const { id } = req.params;
+    const connection = await createConnection();
+
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT is_admin FROM users WHERE id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || !adminCheck[0]?.is_admin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get customer details
+      const [customers] = await connection.execute(
+        'SELECT * FROM users WHERE id = ? AND is_admin = 0 AND is_agent = 0',
+        [id]
+      );
+
+      if (!customers || !customers.length) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      const customer = customers[0];
+
+      // Log admin action
+      await logAdminAction({
+        adminId: req.user.id,
+        actionType: "ADMIN_MESSAGE",
+        targetUserId: parseInt(id),
+        details: `Sent fund card follow-up email to ${customer.first_name} ${customer.last_name} (${customer.email})`
+      });
+
+      // Send the fund card email
+      const emailResult = await sendEmail({
+        to: customer.email,
+        subject: "Next STEP: Fund your Opian Rewards card!",
+        ...formatFundCardEmail(customer.first_name),
+        emailType: 'FUND_CARD_FOLLOWUP'
+      });
+
+      if (emailResult) {
+        res.json({ 
+          success: true, 
+          message: `Fund card email has been sent successfully to ${customer.email}` 
+        });
+      } else {
+        res.status(500).json({ error: "Failed to send email" });
+      }
+    } catch (error) {
+      console.error("Error sending fund card email:", error);
+      res.status(500).json({ 
+        error: "Failed to send fund card email",
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     } finally {
