@@ -292,7 +292,7 @@ export function formatRegistrationEmail(
         <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; color: white; margin: 20px 0;">
           <h3 style="color: #43EB3E; margin-top: 0;">Your Next Steps:</h3>
           <ol style="line-height: 1.8;">
-            <li><strong>Sign in:</strong> Visit our platform and log in using your credentials:
+            <li><strong>Sign in:</strong> Sign in at <a href="https://www.opian.co.za" style="color: white !important; text-decoration: underline; mso-color-alt: white; -webkit-text-fill-color: white;">www.opian.co.za</a> using your credentials:
               <div style="background: rgba(255,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 3px;">
                 <span style="color: #43EB3E;">Username:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">${email}</span><br>
                 <span style="color: #43EB3E;">Password:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">123456</span>
@@ -647,13 +647,16 @@ async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
   };
   
   return new Promise<Buffer>((resolve, reject) => {
-    htmlPdf.create(pdfHtml, options).toBuffer((err: any, buffer: Buffer) => {
+    htmlPdf.create(pdfHtml, options).toBuffer((err: Error | null, buffer?: Buffer) => {
       if (err) {
         console.error('PDF generation error:', err);
         // Create a simple fallback buffer with error message instead of failing
         resolve(Buffer.from('PDF generation failed - please check logs', 'utf-8'));
-      } else {
+      } else if (buffer) {
         resolve(buffer);
+      } else {
+        // If buffer is undefined for some reason, send fallback
+        resolve(Buffer.from('PDF generation incomplete - please check logs', 'utf-8'));
       }
     });
   });
