@@ -385,9 +385,6 @@ function getSignatureHTML(): string {
           <p style="color: white; margin: 0 0 5px 0; font-size: 18px;"><strong>Lance Heynes</strong></p>
           <p style="color: white; margin: 0 0 5px 0; font-size: 14px;">Chief Executive Officer</p>
           <p style="color: #43EB3E; margin: 0 0 10px 0; font-size: 12px;">Opian Financial Services (Pty) Ltd</p>
-          <p style="color: white; margin: 0 0 3px 0; font-size: 12px;">📱 <a href="tel:0861263346" style="color: white; text-decoration: none;">0861 263 346</a></p>
-          <p style="color: white; margin: 0 0 3px 0; font-size: 12px;">✉️ <a href="mailto:lance@opianfsgroup.com" style="color: white; text-decoration: none;">lance@opianfsgroup.com</a></p>
-          <p style="color: white; margin: 0; font-size: 12px;">🌐 <a href="https://www.opian.co.za" style="color: white; text-decoration: none;">www.opian.co.za</a></p>
         </td>
       </tr>
     </table>
@@ -429,9 +426,6 @@ export function formatRegistrationEmail(
     Lance Heynes
     Chief Executive Officer
     Opian Financial Services (Pty) Ltd
-    Tel: 0861 263 346
-    Email: lance@opianfsgroup.com
-    Website: www.opian.co.za
 
     Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider
     Company Registration Number: 2018/584168/07 FSP No: 50974
@@ -500,9 +494,6 @@ export function formatRegistrationEmail(
                 <p style="color: white; margin: 0 0 5px 0; font-size: 18px;"><strong>Lance Heynes</strong></p>
                 <p style="color: white; margin: 0 0 5px 0; font-size: 14px;">Chief Executive Officer</p>
                 <p style="color: #43EB3E; margin: 0 0 10px 0; font-size: 12px;">Opian Financial Services (Pty) Ltd</p>
-                <p style="color: white; margin: 0 0 3px 0; font-size: 12px;">📱 <a href="tel:0861263346" style="color: white; text-decoration: none;">0861 263 346</a></p>
-                <p style="color: white; margin: 0 0 3px 0; font-size: 12px;">✉️ <a href="mailto:lance@opianfsgroup.com" style="color: white; text-decoration: none;">lance@opianfsgroup.com</a></p>
-                <p style="color: white; margin: 0; font-size: 12px;">🌐 <a href="https://www.opian.co.za" style="color: white; text-decoration: none;">www.opian.co.za</a></p>
               </td>
             </tr>
           </table>
