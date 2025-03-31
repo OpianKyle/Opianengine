@@ -126,7 +126,7 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
     // Attempt to send the email using our configured transporter
     console.log('Attempting to send email...');
     const mailOptions: any = {
-      from: `"OPIAN Rewards" <admin@opianrewards.com>`,
+      from: `"OPIAN Rewards" <${process.env.SMTP_USER || 'clientservices@opianfsgroup.com'}>`,
       to,
       subject,
       text,
@@ -260,7 +260,7 @@ export function formatRegistrationEmail(
     For assistance, contact our support team:
     📞 Call: 0861 263 346
     💬 WhatsApp: 0861 263 346
-    📧 Email: admin@opianrewards.com
+    📧 Email: clientservices@opianfsgroup.com
 
     Your biggest financial journey starts now! Let's make it rewarding!
 
@@ -317,7 +317,7 @@ export function formatRegistrationEmail(
           <p style="line-height: 1.8; color: white !important;">
             📞 Call: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span><br>
             💬 WhatsApp: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span><br>
-            📧 Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:admin@opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">admin@opianrewards.com</a></span>
+            📧 Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:clientservices@opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">clientservices@opianfsgroup.com</a></span>
           </p>
         </div>
 
@@ -675,7 +675,7 @@ export async function sendAdminRegistrationNotification(customerData: any): Prom
 
     // Use the sendEmail function to ensure consistent email configuration
     return await sendEmail({
-      to: process.env.ADMIN_EMAIL || 'admin@opianrewards.com',
+      to: process.env.ADMIN_EMAIL || 'clientservices@opianfsgroup.com',
       subject: 'New Customer Registration',
       text,
       html,

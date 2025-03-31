@@ -234,7 +234,7 @@ async function sendAdminRegistrationNotification(customerData) {
     
     const result = await transporter.sendMail({
       from: `"OPIAN Rewards" <clientservices@opianfsgroup.com>`,
-      to: 'admin@opianrewards.com',
+      to: process.env.SMTP_USER || 'clientservices@opianfsgroup.com',
       subject: 'New Customer Registration',
       text,
       html,
@@ -293,7 +293,7 @@ async function runTest() {
     
     // Just log success instead of sending
     console.log('Email content and PDF prepared successfully');
-    console.log('Test complete - email would be sent to admin@opianrewards.com');
+    console.log('Test complete - email would be sent to ' + (process.env.SMTP_USER || 'clientservices@opianfsgroup.com'));
     return true;
   } catch (error) {
     console.error('Error in test:', error);
