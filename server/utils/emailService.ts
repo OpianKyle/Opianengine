@@ -278,7 +278,7 @@ export function formatRegistrationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://opian.co.za/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
+        <img src="https://opian.co.za/Opian-white-logo.svg" alt="Opian Rewards Logo" style="max-width: 200px;">
       </div>
 
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
