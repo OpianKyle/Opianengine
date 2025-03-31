@@ -72,7 +72,7 @@ async function generateRegistrationPDF(customerData) {
     <body>
       <div class="container">
         <div class="header">
-          <img src="https://opianfsgroup.com/opian-logo.png" alt="Opian FS Group Logo" class="logo" />
+          <img src="https://www.opian.co.za/opian-logo.png" alt="Opian FS Group Logo" class="logo" />
           <div class="title">New Customer Registration</div>
           <div class="subtitle">Registration Date: ${new Date(customerData.createdAt).toLocaleDateString()}</div>
         </div>
@@ -172,7 +172,7 @@ A complete PDF with all details is attached.
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://opianfsgroup.com/opian-logo-white.png" alt="Opian Logo" class="logo" />
+      <img src="https://www.opian.co.za/opian-logo-white.png" alt="Opian Logo" class="logo" />
       <h1>New Customer Registration by Agent</h1>
     </div>
     
