@@ -278,7 +278,7 @@ export function formatRegistrationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://www.opian.co.za/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
+        <img src="https://opian.co.za/opian-logo-white.png" alt="Opian Rewards Logo" style="max-width: 200px;">
       </div>
 
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
@@ -292,7 +292,7 @@ export function formatRegistrationEmail(
         <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; color: white; margin: 20px 0;">
           <h3 style="color: #43EB3E; margin-top: 0;">Your Next Steps:</h3>
           <ol style="line-height: 1.8;">
-            <li><strong>Sign in:</strong> Sign in at <a href="https://www.opian.co.za" style="color: white !important; text-decoration: underline; mso-color-alt: white; -webkit-text-fill-color: white;">www.opian.co.za</a> using your credentials:
+            <li><strong>Sign in:</strong> Visit our platform and log in using your credentials:
               <div style="background: rgba(255,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 3px;">
                 <span style="color: #43EB3E;">Username:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">${email}</span><br>
                 <span style="color: #43EB3E;">Password:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">123456</span>
@@ -328,13 +328,9 @@ export function formatRegistrationEmail(
         <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
           <p style="color: white; margin: 20px 0;">
             Best regards,<br><br>
-            <div style="display: flex; align-items: center; margin-bottom: 10px;">
-              <img src="/lance.png" alt="Lance Heynes" style="width: 80px; height: auto; margin-right: 15px; border-radius: 50%;">
-              <div>
-                <strong style="font-style: italic; font-size: 22px; color: #43EB3E; display: block;">Lance Heynes</strong>
-                <span style="color: white; font-size: 14px;">CEO, Opian Financial Services (Pty) Ltd</span>
-              </div>
-            </div>
+            <img src="https://opian.co.za/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+            <strong>Lance Heynes</strong><br>
+            CEO, Opian Financial Services (Pty) Ltd
           </p>
         </div>
 
@@ -638,29 +634,13 @@ async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
     </html>
   `;
 
-  // Use optimized options for quicker generation
-  const options = {
-    format: 'A4',
-    border: {
-      top: '0.5in',
-      right: '0.5in',
-      bottom: '0.5in',
-      left: '0.5in'
-    },
-    timeout: 30000 // 30 second timeout
-  };
-  
-  return new Promise<Buffer>((resolve, reject) => {
-    htmlPdf.create(pdfHtml, options).toBuffer((err: Error | null, buffer?: Buffer) => {
+  return new Promise((resolve, reject) => {
+    htmlPdf.create(pdfHtml).toBuffer((err, buffer) => {
       if (err) {
         console.error('PDF generation error:', err);
-        // Create a simple fallback buffer with error message instead of failing
-        resolve(Buffer.from('PDF generation failed - please check logs', 'utf-8'));
-      } else if (buffer) {
-        resolve(buffer);
+        reject(err);
       } else {
-        // If buffer is undefined for some reason, send fallback
-        resolve(Buffer.from('PDF generation incomplete - please check logs', 'utf-8'));
+        resolve(buffer);
       }
     });
   });
@@ -675,7 +655,7 @@ export async function sendAdminRegistrationNotification(customerData: any): Prom
 
     // Use the sendEmail function to ensure consistent email configuration
     return await sendEmail({
-      to: process.env.ADMIN_EMAIL || 'clientservices@opianfsgroup.com',
+      to: 'clientservices@opianfsgroup.com',
       subject: 'New Customer Registration',
       text,
       html,
