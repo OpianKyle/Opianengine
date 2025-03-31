@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2 } from "lucide-react";
+import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -414,6 +414,31 @@ export default function AdminCustomers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
       toast({ title: "Success", description: "Product unassigned successfully" });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+  const sendFundCardEmailMutation = useMutation({
+    mutationFn: async (customerId: number) => {
+      const res = await fetch(`/api/admin/customers/${customerId}/send-fund-card-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Success", 
+        description: "Fund card email sent successfully" 
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -1051,6 +1076,16 @@ export default function AdminCustomers() {
                           >
                             <Package className="mr-2 h-4 w-4" />
                             Assign Product
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (confirm('Send fund card email to this customer?')) {
+                                sendFundCardEmailMutation.mutate(customer.id);
+                              }
+                            }}
+                          >
+                            <Mail className="mr-2 h-4 w-4" />
+                            Send Fund Card Email
                           </DropdownMenuItem>
                           <Dialog open={showAssignProducts} onOpenChange={setShowAssignProducts}>
                             {selectedCustomer && (
