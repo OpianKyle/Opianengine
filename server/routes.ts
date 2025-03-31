@@ -197,7 +197,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       console.log('SMTP_SECURE:', secure ? 'true' : 'false');
       
       // Use query parameter or default to admin email
-      const testEmail = req.query.email as string || 'clientservices@opianfsgroup.com';
+      const testEmail = req.query.email as string || 'admin@opianrewards.com';
       console.log('Recipient email:', testEmail);
       
       // Generate test email content with improved logging
@@ -311,7 +311,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         res.status(200).json({ 
           success: true, 
           message: "Test admin notification with PDF attachment sent successfully",
-          recipient: process.env.SMTP_USER || "clientservices@opianfsgroup.com"
+          recipient: "admin@opianrewards.com"
         });
       } else {
         res.status(500).json({ 
