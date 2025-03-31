@@ -328,9 +328,13 @@ export function formatRegistrationEmail(
         <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
           <p style="color: white; margin: 20px 0;">
             Best regards,<br><br>
-            <img src="https://www.opian.co.za/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
-            <strong>Lance Heynes</strong><br>
-            CEO, Opian Financial Services (Pty) Ltd
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+              <img src="/lance.png" alt="Lance Heynes" style="width: 80px; height: auto; margin-right: 15px; border-radius: 50%;">
+              <div>
+                <strong style="font-style: italic; font-size: 22px; color: #43EB3E; display: block;">Lance Heynes</strong>
+                <span style="color: white; font-size: 14px;">CEO, Opian Financial Services (Pty) Ltd</span>
+              </div>
+            </div>
           </p>
         </div>
 
@@ -671,7 +675,7 @@ export async function sendAdminRegistrationNotification(customerData: any): Prom
 
     // Use the sendEmail function to ensure consistent email configuration
     return await sendEmail({
-      to: 'clientservices@opianfsgroup.com',
+      to: process.env.ADMIN_EMAIL || 'clientservices@opianfsgroup.com',
       subject: 'New Customer Registration',
       text,
       html,
