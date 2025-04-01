@@ -5305,5 +5305,64 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  // New endpoint to test quote request emails
+  app.post("/api/test-quote-email", async (req: Request, res: Response) => {
+    try {
+      const { customerName, customerEmail, productName, adminName } = req.body;
+      
+      if (!customerEmail) {
+        return res.status(400).json({ success: false, message: "Customer email is required" });
+      }
+      
+      // Test customer quote request email
+      const customerQuoteEmail = formatQuoteRequestEmail(
+        customerName || "Test Customer", 
+        productName || "Test Product"
+      );
+      
+      // Send customer email
+      await sendEmail({
+        to: customerEmail,
+        subject: "Your Quote Request Confirmation",
+        html: customerQuoteEmail.html,
+        text: customerQuoteEmail.text,
+        emailType: "QUOTE_REQUEST"
+      });
+      
+      // Test admin quote request email
+      if (adminName) {
+        const adminQuoteEmail = formatAdminQuoteRequestEmail(
+          customerName || "Test Customer",
+          customerEmail,
+          productName || "Test Product",
+          adminName
+        );
+        
+        // Send admin email
+        await sendEmail({
+          to: customerEmail, // Sending to the same email for testing
+          subject: "New Quote Request Notification",
+          html: adminQuoteEmail.html,
+          text: adminQuoteEmail.text,
+          emailType: "ADMIN_QUOTE_REQUEST"
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: "Quote request test emails sent successfully",
+        timestamp: new Date().toISOString(),
+        recipient: customerEmail
+      });
+    } catch (error) {
+      console.error("Failed to send test quote emails:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to send test quote emails",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   return httpServer;
 }
