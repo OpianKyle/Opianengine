@@ -4,7 +4,7 @@ import passport from "passport";
 import { setupAuth, checkAgent, verifyJwtToken } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
+import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
@@ -5258,50 +5258,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       res.status(500).json({ error: 'Failed to create customer' });
     } finally {
       await connection.end();
-    }
-  });
-
-  // Test endpoint for manually verifying email content with mandate acceptance
-  app.post("/api/register-test-email-html", async (req: Request, res: Response) => {
-    try {
-      console.log('Received email HTML test request');
-      
-      // Create sample customer data with mandate_accepted set to true
-      const customerData = {
-        firstName: req.body.first_name || "Test",
-        lastName: req.body.last_name || "Customer",
-        email: req.body.email || "test@example.com",
-        mobileNumber: req.body.phone_number || "27123456789",
-        selectedPackage: req.body.selectedPackage || "Gold",
-        signature: req.body.signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-        isSouthAfrican: req.body.isSouthAfrican !== undefined ? req.body.isSouthAfrican : true,
-        idNumber: req.body.idNumber || "7012345678901",
-        mandate_accepted: req.body.mandate_accepted !== undefined ? req.body.mandate_accepted : true // explicitly set to true for testing
-      };
-      
-      // Generate email content
-      const { text, html } = formatNewCustomerAdminEmail(customerData);
-      
-      // Also generate PDF to check its content
-      console.log('Generating PDF for mandate acceptance test...');
-      const pdfBuffer = await generateRegistrationPDF(customerData);
-      
-      // Return the HTML for inspection
-      res.status(200).json({
-        success: true,
-        message: "Email content generated successfully",
-        mandate_accepted: customerData.mandate_accepted,
-        html: html,
-        text: text,
-        pdf_generated: !!pdfBuffer
-      });
-    } catch (error) {
-      console.error('Error generating email content:', error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to generate email content",
-        error: error instanceof Error ? error.message : String(error)
-      });
     }
   });
 

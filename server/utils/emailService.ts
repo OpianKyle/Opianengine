@@ -623,8 +623,11 @@ export function formatNewCustomerAdminEmail(
     accountNumber?: string;
     accountHolderName?: string;
     branchCode?: string;
+    mandate_accepted?: boolean;
   }
 ): { text: string; html: string } {
+  // Debug log to verify mandate_accepted is passed correctly
+  console.log('Mandate accepted value in formatNewCustomerAdminEmail:', customerData.mandate_accepted);
   const text = `
     New Customer Registration
 
@@ -658,6 +661,9 @@ export function formatNewCustomerAdminEmail(
     Package Information:
     Selected Package: ${customerData.selectedPackage}
     Referral Code: ${customerData.referralCode || 'None'}
+    
+    Legal Information:
+    Mandate Accepted: ${customerData.mandate_accepted ? 'Yes' : 'No'}
 
     Please find the attached PDF with complete registration details including the customer's signature.
   `;
@@ -707,11 +713,16 @@ export function formatNewCustomerAdminEmail(
         <p><strong>Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
       </div>
 
+      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin-top: 0;">Legal Information</h3>
+        <p><strong>Mandate Accepted:</strong> ${customerData.mandate_accepted ? 'Yes' : 'No'}</p>
+      </div>
+
       ${customerData.signature ? `
         <div style="margin-top: 20px; background-color: white; padding: 20px; border-radius: 5px;">
           <h3>Customer Signature</h3>
           <div style="background-color: white; padding: 10px; border: 1px solid #eee;">
-            <img src="${customerData.signature}" alt="Customer Signature" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
+            <img src="${customerData.signature ? customerData.signature.replace(/^https:\/\/ci3\.googleusercontent\.com\/meips\/[^=]*=?#?/, '') : ''}" alt="Customer Signature" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
           </div>
         </div>
       ` : ''}
@@ -725,7 +736,7 @@ export function formatNewCustomerAdminEmail(
   return { text, html };
 }
 
-async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
+export async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
   const pdfHtml = `
     <!DOCTYPE html>
     <html>
@@ -785,12 +796,17 @@ async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
           <p><strong>Selected Package:</strong> ${customerData.selectedPackage}</p>
           <p><strong>Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
         </div>
+        
+        <div class="section">
+          <h2>Legal Information</h2>
+          <p><strong>Mandate Accepted:</strong> ${customerData.mandate_accepted ? 'Yes' : 'No'}</p>
+        </div>
 
         ${customerData.signature ? `
           <div class="signature">
             <h2>Customer Signature</h2>
             <div style="background-color: white; padding: 10px; border: 1px solid #eee;">
-              <img src="${customerData.signature}" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
+              <img src="${customerData.signature ? customerData.signature.replace(/^https:\/\/ci3\.googleusercontent\.com\/meips\/[^=]*=?#?/, '') : ''}" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
             </div>
           </div>
         ` : ''}
