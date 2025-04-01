@@ -26,10 +26,12 @@ interface Referral {
  * Hook for user data retrieval and actions
  */
 export function useUser() {
-  const { user } = useAuth();
+  const { user, isLoading, registerMutation } = useAuth();
   
   return {
     user,
+    isLoading,
+    registerMutation,
   };
 }
 
