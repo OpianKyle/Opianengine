@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 import htmlPdf from 'html-pdf';
 import { promisify } from 'util';
 import mysql from 'mysql2/promise';
-import { OPIAN_LOGO_BASE64, SIGNATURE_BASE64, TRANSPARENT_PIXEL } from './base64Images';
+import { OPIAN_LOGO_BASE64, SIGNATURE_BASE64, TRANSPARENT_PIXEL, OPIAN_LOGO_WHITE_BASE64, LANCE_IMAGE_BASE64 } from './base64Images';
 
 // Create reusable transporter with SMTP configuration
 const createTransporter = () => {
@@ -351,7 +351,16 @@ export function formatFundCardEmail(
         <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
           <p style="color: white; margin: 20px 0;">
             Best regards,<br><br>
-            <img src="${SIGNATURE_BASE64}" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+            <table cellpadding="0" cellspacing="0" style="margin-bottom: 20px;">
+                <tr>
+                  <td style="vertical-align: top; padding-right: 15px;">
+                    <img src="${LANCE_IMAGE_BASE64}" alt="Lance Heynes" style="width: 80px; border-radius: 50%;">
+                  </td>
+                  <td style="vertical-align: middle;">
+                    <img src="${SIGNATURE_BASE64}" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+                  </td>
+                </tr>
+              </table>
             <strong>Lance Heynes</strong><br>
             CEO, Opian Financial Services (Pty) Ltd
           </p>
@@ -380,7 +389,7 @@ function getSignatureHTML(): string {
       <tr>
         <td style="vertical-align: top; width: 150px; padding-right: 15px;">
           <img src="${SIGNATURE_BASE64}" alt="Lance Heynes Signature" style="width: 140px; margin-bottom: 10px;">
-          <img src="${OPIAN_LOGO_BASE64}" alt="Opian Logo" style="width: 100px;">
+          <img src="${OPIAN_LOGO_WHITE_BASE64}" alt="Opian Logo" style="width: 100px;">
         </td>
         <td style="vertical-align: top; border-left: 2px solid #43EB3E; padding-left: 15px;">
           <p style="color: white; margin: 0 0 5px 0; font-size: 18px;"><strong>Lance Heynes</strong></p>
@@ -437,7 +446,7 @@ export function formatRegistrationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${OPIAN_LOGO_BASE64}" alt="Opian Rewards Logo" style="max-width: 200px;">
+        <img src="${OPIAN_LOGO_WHITE_BASE64}" alt="Opian Rewards Logo" style="max-width: 200px;">
       </div>
 
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
@@ -488,8 +497,17 @@ export function formatRegistrationEmail(
           <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 15px; border-collapse: collapse;">
             <tr>
               <td style="vertical-align: top; width: 150px; padding-right: 15px;">
-                <img src="${SIGNATURE_BASE64}" alt="Lance Heynes Signature" style="width: 140px; margin-bottom: 10px;">
-                <img src="${OPIAN_LOGO_BASE64}" alt="Opian Logo" style="width: 100px;">
+                <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 10px;">
+                  <tr>
+                    <td style="vertical-align: top; padding-right: 10px;">
+                      <img src="${LANCE_IMAGE_BASE64}" alt="Lance Heynes" style="width: 50px; border-radius: 50%;">
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <img src="${SIGNATURE_BASE64}" alt="Lance Heynes Signature" style="width: 100px;">
+                    </td>
+                  </tr>
+                </table>
+                <img src="${OPIAN_LOGO_WHITE_BASE64}" alt="Opian Logo" style="width: 100px;">
               </td>
               <td style="vertical-align: top; border-left: 2px solid #43EB3E; padding-left: 15px;">
                 <p style="color: white; margin: 0 0 5px 0; font-size: 18px;"><strong>Lance Heynes</strong></p>
