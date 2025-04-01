@@ -1,71 +1,111 @@
 import { QueryClient } from "@tanstack/react-query";
 
-// Helper function for making API requests
-export async function apiRequest(method: string, url: string, body?: any) {
-  const response = await fetch(url, {
-    method,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    },
-    ...(body ? { body: JSON.stringify(body) } : {})
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error("Please log in to continue");
-    }
-
-    let errorMessage = "An error occurred";
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.error || `${response.status}: ${response.statusText}`;
-    } catch {
-      errorMessage = await response.text() || errorMessage;
-    }
-    throw new Error(errorMessage);
-  }
-
-  return response;
+type FetchOptions = {
+  on401?: 'throw' | 'returnNull';
+  headers?: Record<string, string>;
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 }
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: async ({ queryKey }) => {
-        try {
-          const response = await apiRequest("GET", queryKey[0] as string);
-          return response.json();
-        } catch (error) {
-          // If we get a network error, retry up to 3 times
-          if (error instanceof TypeError && error.message.includes('network')) {
-            return new Promise((resolve, reject) => {
-              setTimeout(() => {
-                apiRequest("GET", queryKey[0] as string)
-                  .then(response => response.json())
-                  .then(resolve)
-                  .catch(reject);
-              }, 1000);
-            });
-          }
-          throw error;
-        }
-      },
-      retry: (failureCount, error) => {
-        // Retry up to 3 times for network errors
-        if (error instanceof TypeError && error.message.includes('network')) {
-          return failureCount < 3;
-        }
-        // Don't retry for other errors
-        return false;
-      },
-      retryDelay: attemptIndex => Math.min(1000 * (2 ** attemptIndex), 30000),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+      retryDelay: 1000,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000 // Data remains fresh for 5 minutes
     },
-    mutations: {
-      retry: false,
-    }
   },
 });
+
+export function getQueryFn({ on401 = 'throw', headers = {}, method = 'GET' }: FetchOptions = {}) {
+  return async ({ queryKey }: { queryKey: (string | object)[] }) => {
+    const endpoint = typeof queryKey[0] === 'string' ? queryKey[0] : '';
+    const params = typeof queryKey[1] === 'object' ? queryKey[1] : undefined;
+    
+    let url = endpoint;
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+    }
+    
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...headers,
+      },
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401 && on401 === 'returnNull') {
+        return null;
+      }
+      
+      let errorMessage = `API error: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (e) {
+        // If the response cannot be parsed as JSON, use the status text
+        errorMessage = response.statusText || errorMessage;
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    return response.json();
+  };
+}
+
+export async function apiRequest(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+  url: string,
+  data?: any,
+  customHeaders?: Record<string, string>
+) {
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...customHeaders,
+    },
+    credentials: 'include',
+  };
+
+  if (data !== undefined && method !== 'GET') {
+    options.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(url, options);
+  
+  if (!response.ok) {
+    let errorMessage = `API error: ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+    } catch (e) {
+      // If the response cannot be parsed as JSON, use the status text
+      errorMessage = response.statusText || errorMessage;
+    }
+    
+    throw new Error(errorMessage);
+  }
+  
+  // For 204 No Content, just return undefined
+  if (response.status === 204) {
+    return response;
+  }
+  
+  return response;
+}

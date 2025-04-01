@@ -126,7 +126,7 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
     // Attempt to send the email using our configured transporter
     console.log('Attempting to send email...');
     const mailOptions: any = {
-      from: `"OPIAN Rewards" <${process.env.SMTP_USER || 'admin@opianrewards.com'}>`,
+      from: `"OPIAN Rewards" <${process.env.SMTP_USER || 'clientservices@opianrewards.com'}>`,
       to,
       subject,
       text,
@@ -264,7 +264,7 @@ export function formatFundCardEmail(
     For assistance, contact our support team:
     📞 Call: 0861 263 346
     💬 WhatsApp: 063 581 2042
-    📧 Email: admin@opianrewards.com
+    📧 Email: clientservices@opianrewards.com
     
     Your biggest financial journey starts now! Let's make it rewarding!
     
@@ -339,7 +339,7 @@ export function formatFundCardEmail(
           <p style="line-height: 1.8; color: white !important;">
             📞 Call: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span><br>
             💬 WhatsApp: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0635812042" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">063 581 2042</a></span><br>
-            📧 Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:admin@opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">admin@opianrewards.com</a></span>
+            📧 Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:clientservices@opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">clientservices@opianrewards.com</a></span>
           </p>
         </div>
 
@@ -417,7 +417,7 @@ export function formatRegistrationEmail(
     For assistance, contact our support team:
     📞 Call: 0861 263 346
     💬 WhatsApp: 0861 263 346
-    📧 Email: admin@opianrewards.com
+    📧 Email: clientservices@opianrewards.com
 
     Your biggest financial journey starts now! Let's make it rewarding!
 
@@ -475,7 +475,7 @@ export function formatRegistrationEmail(
           <p style="line-height: 1.8; color: white !important;">
             📞 Call: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span><br>
             💬 WhatsApp: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span><br>
-            📧 Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:admin@opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">admin@opianrewards.com</a></span>
+            📧 Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:clientservices@opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">clientservices@opianrewards.com</a></span>
           </p>
         </div>
 
@@ -800,12 +800,14 @@ async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
   `;
 
   return new Promise((resolve, reject) => {
-    htmlPdf.create(pdfHtml).toBuffer((err, buffer) => {
+    htmlPdf.create(pdfHtml).toBuffer((err: Error | null, buffer?: Buffer) => {
       if (err) {
         console.error('PDF generation error:', err);
         reject(err);
-      } else {
+      } else if (buffer) {
         resolve(buffer);
+      } else {
+        reject(new Error('PDF generation failed: No buffer returned'));
       }
     });
   });
@@ -820,7 +822,7 @@ export async function sendAdminRegistrationNotification(customerData: any): Prom
 
     // Use the sendEmail function to ensure consistent email configuration
     return await sendEmail({
-      to: 'admin@opianrewards.com',
+      to: 'clientservices@opianrewards.com',
       subject: 'New Customer Registration',
       text,
       html,

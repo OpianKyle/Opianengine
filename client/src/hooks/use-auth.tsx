@@ -32,12 +32,40 @@ export interface LoginData {
 }
 
 // Define the shape of the auth context
+export interface RegisterData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  mobileNumber: string;
+  selectedPackage?: string;
+  referralCode?: string;
+  signature?: string;
+  isSouthAfrican?: boolean;
+  idNumber?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  occupation?: string;
+  industry?: string;
+  addressLine1?: string;
+  suburb?: string;
+  postalCode?: string;
+  hasCreditCard?: boolean;
+  bankName?: string;
+  accountType?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
+  branchCode?: string;
+  mandate_accepted?: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
+  registerMutation: UseMutationResult<User, Error, RegisterData>;
 }
 
 // Create the auth context
@@ -228,6 +256,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  // Register mutation
+  const registerMutation = useMutation<User, Error, RegisterData>({
+    mutationFn: async (userData: RegisterData) => {
+      setIsTransitioning(true);
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(userData),
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to register");
+      }
+
+      const data = await res.json();
+      
+      // Extract the user from the response which might be {user: {...}, token: "..."}
+      if (data && data.user) {
+        return data.user; 
+      }
+      
+      return data;
+    },
+    onSuccess: (userData: User) => {
+      isLoggingOut.current = false;
+
+      // Ensure boolean flags are properly set
+      const normalizedUser = {
+        ...userData,
+        is_admin: Boolean(userData.is_admin),
+        is_super_admin: Boolean(userData.is_super_admin),
+        is_agent: Boolean(userData.is_agent),
+        is_enabled: Boolean(userData.is_enabled)
+      };
+
+      // Set user data in query cache
+      queryClient.setQueryData(["/api/user"], normalizedUser);
+
+      toast({
+        title: "Registration successful",
+        description: "Your account has been created",
+      });
+
+      // Redirect to the appropriate dashboard
+      setTimeout(() => {
+        setLocation('/');
+      }, 0);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setIsTransitioning(false);
+    }
+  });
+
   // Create the context value
   const authContextValue: AuthContextType = {
     user: userQuery.data || null,
@@ -235,6 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error: userQuery.error as Error | null,
     loginMutation,
     logoutMutation,
+    registerMutation,
   };
 
   return (

@@ -1,156 +1,135 @@
-import { useEffect, useRef, useState } from "react";
-import { useUser } from "./use-user";
-import { useToast } from "./use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from 'react';
+import { useWebSocket } from './use-websocket';
+import { useAuth } from './use-auth';
+import { useToast } from './use-toast';
 
-interface BaseNotification {
-  id: string;
-  title: string;
+export interface Notification {
+  id: number;
+  user_id: number;
   message: string;
-  timestamp: string;
+  type: string;
   read: boolean;
-  metadata?: string;
-}
-
-type NotificationType =
-  | 'POINTS_AWARDED'
-  | 'POINTS_DEDUCTED'
-  | 'ADMIN_MESSAGE'
-  | 'SYSTEM_UPDATE'
-  | 'QUOTE_STATUS_CHANGE'
-  | 'CUSTOMER_ASSIGNED'
-  | 'CUSTOMER_REMOVED'
-  | 'PRODUCT_ASSIGNED'
-  | 'PRODUCT_REMOVED'
-  | 'PRODUCT_ACTIVITY'
-  | 'REWARD_REDEMPTION'
-  | 'REFERRAL_COMMISSION';
-
-interface Notification extends BaseNotification {
-  type: NotificationType;
+  created_at: string;
+  data?: any;
 }
 
 export function useNotifications() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
+  const { addMessageHandler, isConnected } = useWebSocket();
+  
   // Fetch notifications from API
-  const { data: notifications = [] } = useQuery<Notification[]>({
-    queryKey: ['notifications'],
-    queryFn: async () => {
-      if (!user) return [];
-
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
       const response = await fetch('/api/notifications', {
         credentials: 'include'
       });
-
-      if (!response.ok) throw new Error('Failed to fetch notifications');
-      return response.json();
-    },
-    enabled: !!user
-  });
-
-  // Setup SSE connection
-  useEffect(() => {
-    if (!user?.id || eventSourceRef.current) return;
-
-    const eventSource = new EventSource('/api/notifications/stream');
-    eventSourceRef.current = eventSource;
-
-    eventSource.onopen = () => {
-      console.log('SSE connection established');
-      setIsConnected(true);
-    };
-
-    eventSource.addEventListener('connected', (event) => {
-      const data = JSON.parse(event.data);
-      console.log('SSE connected:', data);
-    });
-
-    eventSource.addEventListener('notification', (event) => {
-      try {
-        const notification = JSON.parse(event.data) as Notification;
-        console.log('Received notification:', notification);
-
-        // Update notifications cache
-        queryClient.setQueryData(['notifications'], (old: Notification[] = []) => {
-          return [notification, ...old];
-        });
-
-        // Show toast notification
-        const toastConfig = {
-          title: notification.title,
-          description: notification.message,
-          duration: 5000
-        };
-
-        switch (notification.type) {
-          case 'POINTS_AWARDED':
-          case 'PRODUCT_ACTIVITY':
-          case 'REWARD_REDEMPTION':
-          case 'REFERRAL_COMMISSION':
-            toast({ ...toastConfig, variant: 'default' });
-            break;
-          case 'POINTS_DEDUCTED':
-            toast({ ...toastConfig, variant: 'destructive' });
-            break;
-          default:
-            toast(toastConfig);
-        }
-      } catch (error) {
-        console.error('Failed to process notification:', error);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch notifications');
       }
-    });
-
-    eventSource.onerror = (error) => {
-      console.error('SSE error:', error);
-      setIsConnected(false);
-      eventSource.close();
-      eventSourceRef.current = null;
-    };
-
-    return () => {
-      eventSource.close();
-      eventSourceRef.current = null;
-      setIsConnected(false);
-    };
-  }, [user?.id, queryClient, toast]);
-
-  // Mutation for marking notifications as read
-  const markAsRead = useMutation({
-    mutationFn: async (notificationId?: string) => {
-      const response = await fetch('/api/notifications/mark-read', {
+      
+      const data = await response.json();
+      setNotifications(data);
+      setUnreadCount(data.filter((n: Notification) => !n.read).length);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+  
+  // Mark notification as read
+  const markAsRead = useCallback(async (notificationId?: number) => {
+    if (!user) return;
+    
+    try {
+      const url = notificationId
+        ? `/api/notifications/${notificationId}/read`
+        : '/api/notifications/read-all';
+      
+      const response = await fetch(url, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ notificationId })
+        }
       });
-
+      
       if (!response.ok) {
-        throw new Error('Failed to mark notification as read');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to mark notification as read');
       }
-    },
-    onSuccess: (_, notificationId) => {
-      queryClient.setQueryData(['notifications'], (oldData: Notification[] | undefined) => {
-        if (!oldData) return [];
-        return oldData.map(n =>
-          (notificationId ? n.id === notificationId : true)
-            ? { ...n, read: true }
-            : n
+      
+      // Update local state accordingly
+      if (notificationId) {
+        setNotifications(prev => 
+          prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
         );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      } else {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        setUnreadCount(0);
+      }
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : String(err),
+        variant: 'destructive'
       });
     }
-  });
-
+  }, [user, toast]);
+  
+  // Handle WebSocket notifications
+  useEffect(() => {
+    // Register handler for new notifications
+    const removeHandler = addMessageHandler('NOTIFICATION', (data) => {
+      console.log('New notification received:', data);
+      
+      // Add the new notification to state
+      if (data.notification) {
+        setNotifications(prev => [data.notification, ...prev]);
+        setUnreadCount(prev => prev + 1);
+        
+        // Show toast for new notification
+        toast({
+          title: data.notification.type,
+          description: data.notification.message,
+          duration: 5000,
+        });
+      }
+    });
+    
+    return () => {
+      removeHandler();
+    };
+  }, [addMessageHandler, toast]);
+  
+  // Fetch notifications on mount and when WebSocket connects/reconnects
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+    }
+  }, [user, fetchNotifications, isConnected]);
+  
   return {
     notifications,
-    isConnected,
+    unreadCount,
+    isLoading,
+    error,
     markAsRead,
-    unreadCount: notifications.filter(n => !n.read).length
+    refreshNotifications: fetchNotifications
   };
 }

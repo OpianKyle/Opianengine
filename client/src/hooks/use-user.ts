@@ -1,314 +1,159 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { z } from "zod";
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, UseQueryOptions } from "@tanstack/react-query";
+import { useAuth, User } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { cleanupWebSockets } from "@/lib/utils";
 
-const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
-
-// Simplify boolean transformation logic without excessive logging
-const booleanSchema = z.union([z.boolean(), z.number()]).transform(val => !!val);
-
-// Define schema with required fields and transformations
-const userSchema = z.object({
-  id: z.number(),
-  email: z.string().email(),
-  first_name: z.string().default(""),
-  last_name: z.string().default(""),
-  phone_number: z.string().nullable().default(null),
-  is_admin: booleanSchema.default(false),
-  is_agent: booleanSchema.default(false),
-  is_super_admin: booleanSchema.default(false),
-  is_enabled: booleanSchema.default(true),
-  points: z.number().default(0),
-  referral_code: z.string().nullable().default(null),
-  referred_by: z.string().nullable().default(null),
-  created_at: z.string().nullable().default(null),
-  is_south_african: booleanSchema.nullable().default(null),
-  id_number: z.string().nullable().default(null),
-  date_of_birth: z.string().nullable().default(null),
-  address: z.string().nullable().default(null),
-  city: z.string().nullable().default(null),
-  postal_code: z.string().nullable().default(null),
-  industry: z.string().nullable().default(null),
-  occupation: z.string().nullable().default(null),
-  bank_name: z.string().nullable().default(null),
-  account_type: z.enum(accountTypes).nullable().default(null),
-  account_number: z.string().nullable().default(null),
-  account_holder_name: z.string().nullable().default(null),
-  branch_code: z.string().nullable().default(null),
-  selected_package: z.string().nullable().default(null),
-  gender: z.string().nullable().default(null),
-  has_credit_card: booleanSchema.nullable().default(null),
-  signature: z.string().nullable().default(null)
-}).transform(data => ({
-  ...data,
-  // Transform booleans without logging
-  is_admin: !!data.is_admin,
-  is_agent: !!data.is_agent,
-  is_super_admin: !!data.is_super_admin,
-  is_enabled: !!data.is_enabled,
-  is_south_african: data.is_south_african === null ? null : !!data.is_south_african,
-  has_credit_card: data.has_credit_card === null ? null : !!data.has_credit_card
-}));
-
-export type User = z.infer<typeof userSchema>;
-export type AccountType = typeof accountTypes[number];
-
-const TOKEN_STORAGE_KEY = 'auth_token';
-
-// Helper function to safely parse JSON responses
-async function parseResponse(response: Response) {
-  const contentType = response.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    return response.json();
-  }
-  return null;
+// Define interfaces for our API responses
+interface Transaction {
+  id: number;
+  user_id: number;
+  points: number;
+  type: string;
+  description: string;
+  status: string;
+  created_at: string;
 }
 
-// Helper function for making API requests with retries
-async function fetchWithRetry(url: string, options: RequestInit, retries = 3, delay = 1000) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await fetch(url, options);
-
-      // For logout, we don't care about the response content
-      if (url.includes('/api/logout')) {
-        return true;
-      }
-
-      // Handle 401 specifically
-      if (response.status === 401) {
-        return null;
-      }
-
-      if (!response.ok) {
-        const data = await parseResponse(response);
-        throw new Error(data?.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await parseResponse(response);
-      if (!data && !url.includes('/api/logout')) {
-        throw new Error('Invalid response format');
-      }
-
-      return data;
-    } catch (error) {
-      if (i === retries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
-    }
-  }
+interface Referral {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+  points: number;
 }
 
-export function useUser() {
+/**
+ * Hook to update user profile
+ */
+export function useUserProfile() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [token, setToken] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(TOKEN_STORAGE_KEY);
-    } catch (error) {
-      console.error('Error reading token from storage:', error);
-      return null;
-    }
-  });
 
-  useEffect(() => {
-    try {
-      if (token) {
-        localStorage.setItem(TOKEN_STORAGE_KEY, token);
-      } else {
-        localStorage.removeItem(TOKEN_STORAGE_KEY);
-      }
-    } catch (error) {
-      console.error('Error managing token in storage:', error);
-    }
-  }, [token]);
-
-  const { data: user, isLoading, error } = useQuery({
-    queryKey: ['/api/user'],
-    queryFn: async () => {
-      try {
-        const data = await fetchWithRetry('/api/user', {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` })
-          },
-        });
-
-        if (data === null) {
-          setToken(null);
-          return null;
-        }
-
-        return userSchema.parse(data);
-      } catch (error) {
-        console.error('Error fetching user:', error);
-        // Only throw non-auth errors
-        if (error instanceof Error && !error.message.includes('401')) {
-          throw error;
-        }
-        return null;
-      }
-    },
-    retry: (failureCount, error) => {
-      // Don't retry on 401s
-      if (error instanceof Error && error.message.includes('401')) {
-        return false;
-      }
-      return failureCount < 3;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const loginMutation = useMutation({
-    mutationFn: async (credentials: { email: string; password: string }) => {
-      const data = await fetchWithRetry('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
-        credentials: 'include',
-      });
-
-      if (!data) {
-        throw new Error('Login failed');
-      }
-
-      if (data.token) {
-        setToken(data.token);
-      }
-
-      return userSchema.parse(data.user || data);
-    },
-    onSuccess: (user) => {
-      queryClient.setQueryData(['/api/user'], user);
-      toast({
-        title: "Success",
-        description: "Logged in successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to login",
-      });
-    },
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      // First show loading state
-      toast({
-        title: "Logging out",
-        description: "Please wait...",
-      });
-
-      try {
-        // Always cleanup before making the request
-        cleanupWebSockets();
-        queryClient.clear();
-        queryClient.setQueryData(['/api/user'], null);
-        setToken(null);
-
-        // Make the logout request - don't wait for it
-        await fetchWithRetry('/api/logout', {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` })
-          },
-        });
-      } catch (error) {
-        console.error('Logout request failed:', error);
-        // Continue with client-side cleanup even if server request fails
-      }
-
-      // Force a page reload to clear all state
-      window.location.href = '/';
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Logged out successfully",
-      });
-    },
-    onError: (error: Error) => {
-      // Only show error if it's not related to session expiry
-      if (!error.message.includes('401') && !error.message.includes('Invalid response format')) {
-        toast({
-          variant: "destructive",
-          title: "Warning",
-          description: "Some cleanup operations failed, but you have been logged out.",
-        });
-      }
-    },
-  });
-
-  const registerMutation = useMutation({
-    mutationFn: async (userData: any) => {
-      const response = await fetch('/api/register', {
-        method: 'POST',
+  const updateProfileMutation = useMutation({
+    mutationFn: async (userData: Partial<User>) => {
+      const res = await fetch("/api/user/profile", {
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(userData),
-        credentials: 'include',
+        credentials: "include",
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update profile");
       }
 
-      if (data.token) {
-        setToken(data.token);
-      }
-
-      try {
-        // Pre-transform boolean fields before validation
-        const transformedData = {
-          ...data,
-          is_admin: !!data.is_admin,
-          is_super_admin: !!data.is_super_admin,
-          is_enabled: !!data.is_enabled,
-          is_south_african: data.is_south_african === null ? null : !!data.is_south_african,
-          has_credit_card: data.has_credit_card === null ? null : !!data.has_credit_card
-        };
-        return userSchema.parse(transformedData);
-      } catch (error) {
-        console.error('Registration response validation error:', error);
-        throw new Error('Invalid user data received');
-      }
+      return await res.json();
     },
-    onSuccess: (user) => {
-      queryClient.setQueryData(['/api/user'], user);
+    onSuccess: (updatedUser) => {
+      // Update the user data in cache
+      queryClient.setQueryData(["/api/user"], (oldData: User | undefined) => {
+        if (!oldData) return updatedUser;
+        return { ...oldData, ...updatedUser };
+      });
+
       toast({
-        title: "Success",
-        description: "Registration successful",
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
       });
     },
     onError: (error: Error) => {
       toast({
+        title: "Update failed",
+        description: error.message,
         variant: "destructive",
-        title: "Error",
-        description: error.message || "Registration failed",
       });
     },
   });
-
 
   return {
     user,
-    token,
-    isLoading,
-    error,
-    loginMutation,
-    logoutMutation,
-    registerMutation,
+    updateProfile: updateProfileMutation.mutate,
+    isUpdating: updateProfileMutation.isPending,
+    error: updateProfileMutation.error,
+  };
+}
+
+/**
+ * Hook to get user transactions
+ */
+export function useUserTransactions() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const transactionsQuery = useQuery<Transaction[]>({
+    queryKey: ["/api/user/transactions"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/transactions", {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to fetch transactions");
+      }
+
+      return await res.json();
+    },
+    enabled: !!user, // Only fetch if user is logged in
+  });
+
+  // Handle errors separately
+  if (transactionsQuery.error) {
+    toast({
+      title: "Error fetching transactions",
+      description: (transactionsQuery.error as Error).message,
+      variant: "destructive",
+    });
+  }
+
+  return {
+    transactions: transactionsQuery.data || [],
+    isLoading: transactionsQuery.isLoading,
+    error: transactionsQuery.error,
+  };
+}
+
+/**
+ * Hook to get user's referrals
+ */
+export function useUserReferrals() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const referralsQuery = useQuery<Referral[]>({
+    queryKey: ["/api/user/referrals"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/referrals", {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to fetch referrals");
+      }
+
+      return await res.json();
+    },
+    enabled: !!user, // Only fetch if user is logged in
+  });
+  
+  // Handle errors separately
+  if (referralsQuery.error) {
+    toast({
+      title: "Error fetching referrals",
+      description: (referralsQuery.error as Error).message,
+      variant: "destructive",
+    });
+  }
+
+  return {
+    referrals: referralsQuery.data || [],
+    isLoading: referralsQuery.isLoading,
+    error: referralsQuery.error,
+    referralCode: user?.referral_code || "",
   };
 }

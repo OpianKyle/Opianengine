@@ -1,58 +1,128 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
+/**
+ * Utility for combining class names with Tailwind
+ */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
-export function formatTransactionType(type: string): string {
-  return type.split('_').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-  ).join(' ');
+/**
+ * Helper function to safely parse JSON
+ */
+export function safeParseJSON<T>(jsonString: string, fallback: T): T {
+  try {
+    return JSON.parse(jsonString) as T;
+  } catch (error) {
+    console.error('Failed to parse JSON:', error);
+    return fallback;
+  }
 }
 
-// Helper to clean up WebSocket connections
-export function cleanupWebSockets() {
-  // Close and cleanup any existing WebSocket connections
-  if (typeof window !== 'undefined') {
-    const ws = window.WebSocket;
-    if (ws) {
-      // Remove any script tags that might be trying to establish WS connections
-      const wsScripts = document.querySelectorAll('script[src*="ws"]');
-      wsScripts.forEach(script => script.remove());
+/**
+ * Format a date string or timestamp to a localized date string
+ */
+export function formatDate(date: string | number | Date, options?: Intl.DateTimeFormatOptions): string {
+  const dateObject = typeof date === 'string' || typeof date === 'number' 
+    ? new Date(date) 
+    : date;
+  
+  const defaultOptions: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    ...options
+  };
+  
+  return new Intl.DateTimeFormat('en-ZA', defaultOptions).format(dateObject);
+}
 
-      // Force close any open WebSocket connections
-      const wsInstances = Array.from(document.querySelectorAll('[data-ws-connection]'));
-      wsInstances.forEach(ws => ws.remove());
+/**
+ * Format a number as currency
+ */
+export function formatCurrency(amount: number, currency = 'ZAR'): string {
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+/**
+ * Format points with delimiter
+ */
+export function formatPoints(points: number): string {
+  return new Intl.NumberFormat('en-ZA').format(points);
+}
+
+/**
+ * Clean up WebSocket connections
+ */
+export function cleanupWebSockets(): void {
+  // Close global WebSocket instance if it exists
+  if ((window as any).__webSocketInstance) {
+    try {
+      (window as any).__webSocketInstance.close();
+      (window as any).__webSocketInstance = null;
+      console.log('WebSocket connection closed');
+    } catch (err) {
+      console.error('Error closing WebSocket:', err);
     }
   }
 }
 
-// Helper to handle page transitions
-export function handlePageTransition(callback?: () => void) {
-  // Prevent any ongoing network requests
-  window.stop();
-
-  // Clear any pending timeouts
-  const highestTimeoutId = window.setTimeout(() => {}, 0);
-  for (let i = 0; i < highestTimeoutId; i++) {
-    window.clearTimeout(i);
+/**
+ * Generate a random hex string of a given length
+ */
+export function randomHex(length: number): string {
+  const characters = '0123456789abcdef';
+  let result = '';
+  
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
-
-  // Clean up WebSocket connections
-  cleanupWebSockets();
-
-  // Execute any additional cleanup
-  if (callback) {
-    callback();
-  }
-
-  // Give the browser a moment to process cleanup
-  return new Promise(resolve => setTimeout(resolve, 100));
+  
+  return result;
 }
 
-// Helper to ensure clean navigation
-export async function navigateTo(path: string) {
-  await handlePageTransition();
-  window.location.href = path;
+/**
+ * Generate a unique ID with a prefix
+ */
+export function uniqueId(prefix = 'id'): string {
+  return `${prefix}_${Date.now().toString(36)}_${randomHex(6)}`;
+}
+
+/**
+ * Check if two dates are the same day
+ */
+export function isSameDay(date1: Date, date2: Date): boolean {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+}
+
+/**
+ * Truncate a string to a given length and add ellipsis
+ */
+export function truncateString(str: string, maxLength: number): string {
+  if (str.length <= maxLength) return str;
+  return str.substring(0, maxLength - 3) + '...';
+}
+
+/**
+ * Delay execution for a specified time
+ */
+export function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Deep clone an object
+ */
+export function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
 }

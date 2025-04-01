@@ -1,54 +1,104 @@
-import { useEffect, useRef } from 'react';
-import { useLocation } from 'wouter';
-import { useUser } from './use-user';
+import { useEffect, useRef, useCallback } from 'react';
+import { useLocation, useRoute } from 'wouter';
+import { useAuth } from '@/hooks/use-auth';
 
-const TIMEOUT_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+interface SessionTimeoutOptions {
+  timeoutMinutes?: number;
+  warningBeforeMinutes?: number;
+  onWarning?: () => void;
+  ignoredPaths?: string[];
+}
 
-export function useSessionTimeout() {
-  const timeoutRef = useRef<NodeJS.Timeout>();
-  const [, navigate] = useLocation();
-  const { user, logoutMutation } = useUser();
+/**
+ * Hook to handle session timeout
+ * Logs user out after specified period of inactivity
+ */
+export function useSessionTimeout({
+  timeoutMinutes = 30,
+  warningBeforeMinutes = 5,
+  onWarning,
+  ignoredPaths = ['/auth', '/register']
+}: SessionTimeoutOptions = {}) {
+  const { user, logoutMutation } = useAuth();
+  const [location] = useLocation();
+  const timeoutRef = useRef<number | null>(null);
+  const warningTimeoutRef = useRef<number | null>(null);
+  
+  // Convert minutes to milliseconds
+  const timeoutMs = timeoutMinutes * 60 * 1000;
+  const warningMs = (timeoutMinutes - warningBeforeMinutes) * 60 * 1000;
+  
+  // Check if current path should ignore session timeout
+  const shouldIgnoreTimeout = ignoredPaths.some(path => location.startsWith(path));
 
-  const resetTimeout = () => {
+  // Function to reset timers
+  const resetTimer = useCallback(() => {
+    if (shouldIgnoreTimeout || !user) return;
+    
+    // Clear any existing timeouts
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
-
-    if (user) {
-      timeoutRef.current = setTimeout(async () => {
-        try {
-          await logoutMutation.mutateAsync();
-          navigate('/');
-        } catch (error) {
-          console.error('Error during session timeout logout:', error);
-        }
-      }, TIMEOUT_DURATION);
+    
+    if (warningTimeoutRef.current) {
+      window.clearTimeout(warningTimeoutRef.current);
+      warningTimeoutRef.current = null;
     }
-  };
-
+    
+    // Set warning timer
+    warningTimeoutRef.current = window.setTimeout(() => {
+      if (onWarning) onWarning();
+    }, warningMs);
+    
+    // Set logout timer
+    timeoutRef.current = window.setTimeout(() => {
+      console.log('Session timed out after inactivity');
+      logoutMutation.mutate();
+    }, timeoutMs);
+  }, [timeoutMs, warningMs, onWarning, user, logoutMutation, shouldIgnoreTimeout]);
+  
+  // Setup event listeners for user activity
   useEffect(() => {
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-
+    if (shouldIgnoreTimeout || !user) return;
+    
+    const activityEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
+    
+    // Reset timer on user activity
     const handleActivity = () => {
-      resetTimeout();
+      resetTimer();
     };
-
-    // Set up event listeners
-    events.forEach(event => {
-      document.addEventListener(event, handleActivity);
+    
+    // Add event listeners
+    activityEvents.forEach(event => {
+      window.addEventListener(event, handleActivity);
     });
-
-    // Initialize timeout
-    resetTimeout();
-
+    
+    // Initial timer setup
+    resetTimer();
+    
     // Cleanup
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      events.forEach(event => {
-        document.removeEventListener(event, handleActivity);
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, handleActivity);
       });
+      
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+      }
+      
+      if (warningTimeoutRef.current) {
+        window.clearTimeout(warningTimeoutRef.current);
+      }
     };
-  }, [user]);
+  }, [resetTimer, user, shouldIgnoreTimeout]);
+  
+  // Reset timer when user or location changes
+  useEffect(() => {
+    resetTimer();
+  }, [user, location, resetTimer]);
+  
+  return {
+    resetTimer,
+  };
 }
