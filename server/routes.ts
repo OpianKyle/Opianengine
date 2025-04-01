@@ -101,51 +101,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     next();
   });
 
-  // Test route for Fund Card email
-  app.get("/api/test-fund-card-email", async (req: Request, res: Response) => {
-    try {
-      // Use query parameter or default to client services email
-      const testEmail = req.query.email as string || 'clientservices@opianrewards.com';
-      const firstName = req.query.firstName as string || 'Test';
-      
-      console.log('Generating fund card email content...');
-      const { text, html } = formatFundCardEmail(firstName);
-      
-      console.log('Sending fund card test email...');
-      const result = await sendEmail({
-        to: testEmail,
-        subject: 'Fund Your Opian Rewards Card',
-        text,
-        html,
-        emailType: 'FUND_CARD_TEST'
-      });
-      
-      if (result) {
-        console.log('Fund card email sent successfully!');
-        return res.status(200).json({ 
-          success: true,
-          message: 'Fund card email sent successfully',
-          timestamp: new Date().toISOString(),
-          recipient: testEmail,
-          firstName: firstName
-        });
-      } else {
-        console.error('Fund card email sending failed');
-        return res.status(500).json({ 
-          success: false,
-          error: 'Failed to send fund card email',
-          recipient: testEmail
-        });
-      }
-    } catch (error) {
-      console.error('Error in fund card email test:', error);
-      return res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
-
 // SMTP Test route - test connection to SMTP server without sending an email
   app.get("/api/test-smtp", async (req: Request, res: Response) => {
     try {
@@ -5347,39 +5302,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         message: "Failed to generate email content",
         error: error instanceof Error ? error.message : String(error)
       });
-    }
-  });
-
-  // Image proxy route for opian.co.za URLs
-  // This allows email clients to load images from opian.co.za domain
-  app.get("/opian-images/:imageName", async (req, res) => {
-    try {
-      const imageName = req.params.imageName;
-      // Get the file from public directory
-      const imagePath = `${process.cwd()}/client/public/${imageName}`;
-      
-      console.log('Image proxy request:', {
-        imageName,
-        imagePath
-      });
-      
-      // Set headers to ensure proper caching and content type
-      if (imageName.endsWith('.svg')) {
-        res.setHeader('Content-Type', 'image/svg+xml');
-      } else if (imageName.endsWith('.png')) {
-        res.setHeader('Content-Type', 'image/png');
-      } else if (imageName.endsWith('.jpg') || imageName.endsWith('.jpeg')) {
-        res.setHeader('Content-Type', 'image/jpeg');
-      }
-      
-      // Allow caching
-      res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
-      
-      // Send the file
-      res.sendFile(imagePath);
-    } catch (error) {
-      console.error('Error serving image:', error);
-      res.status(404).send('Image not found');
     }
   });
 
