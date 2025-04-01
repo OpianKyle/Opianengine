@@ -101,6 +101,51 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     next();
   });
 
+  // Test route for Fund Card email
+  app.get("/api/test-fund-card-email", async (req: Request, res: Response) => {
+    try {
+      // Use query parameter or default to client services email
+      const testEmail = req.query.email as string || 'clientservices@opianrewards.com';
+      const firstName = req.query.firstName as string || 'Test';
+      
+      console.log('Generating fund card email content...');
+      const { text, html } = formatFundCardEmail(firstName);
+      
+      console.log('Sending fund card test email...');
+      const result = await sendEmail({
+        to: testEmail,
+        subject: 'Fund Your Opian Rewards Card',
+        text,
+        html,
+        emailType: 'FUND_CARD_TEST'
+      });
+      
+      if (result) {
+        console.log('Fund card email sent successfully!');
+        return res.status(200).json({ 
+          success: true,
+          message: 'Fund card email sent successfully',
+          timestamp: new Date().toISOString(),
+          recipient: testEmail,
+          firstName: firstName
+        });
+      } else {
+        console.error('Fund card email sending failed');
+        return res.status(500).json({ 
+          success: false,
+          error: 'Failed to send fund card email',
+          recipient: testEmail
+        });
+      }
+    } catch (error) {
+      console.error('Error in fund card email test:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
 // SMTP Test route - test connection to SMTP server without sending an email
   app.get("/api/test-smtp", async (req: Request, res: Response) => {
     try {
