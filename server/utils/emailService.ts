@@ -182,6 +182,8 @@ export function formatPointsAssignmentEmail(
   description: string,
   currentTier: string
 ): { text: string; html: string } {
+  // Use direct URLs without Google's redirection
+  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
   const text = `
     Dear ${customerName},
 
@@ -214,6 +216,8 @@ export function formatAdminNotificationEmail(
   description: string,
   adminName: string
 ): { text: string; html: string } {
+  // Use direct URLs without Google's redirection
+  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
   const text = `
     Hello ${adminName},
 
@@ -241,6 +245,10 @@ export function formatAdminNotificationEmail(
 export function formatFundCardEmail(
   firstName: string,
 ): { text: string; html: string } {
+  // Use direct URLs without Google's redirection
+  const signatureImageUrl = "https://opian.co.za/lance.png";
+  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
+  
   const text = `
     Dear ${firstName},
     
@@ -286,7 +294,7 @@ export function formatFundCardEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://opian.co.za/Opian-white-logo.svg" alt="Opian Rewards Logo" style="max-width: 200px;">
+        <img src="${logoImageUrl}" alt="Opian Rewards Logo" style="max-width: 200px;">
       </div>
 
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
@@ -354,7 +362,7 @@ export function formatFundCardEmail(
         <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
           <p style="color: white; margin: 20px 0;">
             Best regards,<br><br>
-            <img src="https://opian.co.za/lance.png" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+            <img src="${signatureImageUrl}" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
             <strong>Lance Heynes</strong><br>
             CEO, Opian Financial Services (Pty) Ltd
           </p>
@@ -378,12 +386,16 @@ export function formatFundCardEmail(
 }
 
 function getSignatureHTML(): string {
+  // Use direct URLs without Google's redirection
+  const signatureImageUrl = "https://opian.co.za/lance.png";
+  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
+  
   return `
     <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 15px; border-collapse: collapse;">
       <tr>
         <td style="vertical-align: top; width: 150px; padding-right: 15px;">
-          <img src="https://opian.co.za/lance.png" alt="Lance Heynes Signature" style="width: 140px; margin-bottom: 10px;">
-          <img src="https://opian.co.za/Opian-white-logo.svg" alt="Opian Logo" style="width: 100px;">
+          <img src="${signatureImageUrl}" alt="Lance Heynes Signature" style="width: 140px; margin-bottom: 10px;">
+          <img src="${logoImageUrl}" alt="Opian Logo" style="width: 100px;">
         </td>
         <td style="vertical-align: top; border-left: 2px solid #43EB3E; padding-left: 15px;">
           <p style="color: white; margin: 0 0 5px 0; font-size: 18px;"><strong>Lance Heynes</strong></p>
@@ -399,6 +411,9 @@ export function formatRegistrationEmail(
   firstName: string,
   email: string
 ): { text: string; html: string } {
+  // Use direct URLs without Google's redirection
+  const signatureImageUrl = "https://opian.co.za/lance.png";
+  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
   const text = `
     Dear ${firstName},
 
@@ -440,7 +455,7 @@ export function formatRegistrationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://opian.co.za/Opian-white-logo.svg" alt="Opian Rewards Logo" style="max-width: 200px;">
+        <img src="${logoImageUrl}" alt="Opian Rewards Logo" style="max-width: 200px;">
       </div>
 
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
@@ -491,8 +506,8 @@ export function formatRegistrationEmail(
           <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 15px; border-collapse: collapse;">
             <tr>
               <td style="vertical-align: top; width: 150px; padding-right: 15px;">
-                <img src="https://opian.co.za/lance.png" alt="Lance Heynes Signature" style="width: 140px; margin-bottom: 10px;">
-                <img src="https://opian.co.za/Opian-white-logo.svg" alt="Opian Logo" style="width: 100px;">
+                <img src="${signatureImageUrl}" alt="Lance Heynes Signature" style="width: 140px; margin-bottom: 10px;">
+                <img src="${logoImageUrl}" alt="Opian Logo" style="width: 100px;">
               </td>
               <td style="vertical-align: top; border-left: 2px solid #43EB3E; padding-left: 15px;">
                 <p style="color: white; margin: 0 0 5px 0; font-size: 18px;"><strong>Lance Heynes</strong></p>
@@ -524,6 +539,8 @@ export function formatQuoteRequestEmail(
   customerName: string,
   productName: string
 ): { text: string; html: string } {
+  // Use direct URLs without Google's redirection
+  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
   const text = `
     Dear ${customerName},
 
@@ -567,6 +584,8 @@ export function formatAdminQuoteRequestEmail(
   productName: string,
   adminName: string
 ): { text: string; html: string } {
+  // Use direct URLs without Google's redirection
+  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
   const text = `
     Hello ${adminName},
 
