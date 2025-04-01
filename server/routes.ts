@@ -196,13 +196,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       console.log('SMTP_PASSWORD:', pass ? 'Set (length: ' + (pass.length || 0) + ')' : 'Not set');
       console.log('SMTP_SECURE:', secure ? 'true' : 'false');
       
-      // Use query parameter or default to admin email
-      const testEmail = req.query.email as string || 'admin@opian.co.za';
+      // Use query parameter or default to client services email
+      const testEmail = req.query.email as string || 'clientservices@opianrewards.com';
       console.log('Recipient email:', testEmail);
       
       // Generate test email content with improved logging
       console.log('Generating test email content...');
-      const { text, html } = formatRegistrationEmail('Test User', testEmail);
+      const { text, html } = formatRegistrationEmail('Test User', 'clientservices@opianrewards.com');
       
       console.log('Sending test email using updated transport configuration...');
       try {
@@ -279,6 +279,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     try {
       console.log('Received test registration data:', req.body);
       
+      // Create a structured customer data object from the request body
       const customerData = {
         firstName: req.body.first_name,
         lastName: req.body.last_name,
@@ -304,22 +305,38 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         branchCode: req.body.branchCode
       };
       
+      // Log the admin notification attempt
       console.log('Sending admin registration notification for test user');
+      
+      // This recipient email must match what's used in sendAdminRegistrationNotification function
+      const adminRecipientEmail = 'clientservices@opianrewards.com';
+      
+      console.log('Using admin recipient email:', adminRecipientEmail);
+      
+      // Send the notification
       const result = await sendAdminRegistrationNotification(customerData);
       
       if (result) {
-        res.status(200).json({ 
+        // Create response object with the correct recipient email
+        const responseData = { 
           success: true, 
           message: "Test admin notification with PDF attachment sent successfully",
-          recipient: process.env.SMTP_USER || process.env.OPIAN_SMTP_USER || 'clientservices@opianfsgroup.com'
-        });
+          recipient: adminRecipientEmail
+        };
+        
+        console.log('Sending response with recipient:', responseData.recipient);
+        
+        // Send the response
+        res.status(200).json(responseData);
       } else {
+        // Failure response
         res.status(500).json({ 
           success: false, 
           message: "Failed to send test admin notification" 
         });
       }
     } catch (error) {
+      // Error handling
       console.error("Error sending test admin notification:", error);
       res.status(500).json({ 
         success: false, 

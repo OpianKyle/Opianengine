@@ -8,7 +8,7 @@ const createTransporter = () => {
   // Default to environment variables with specific fallbacks
   const host = process.env.SMTP_HOST || 'mail.opian.co.za';
   const port = parseInt(process.env.SMTP_PORT || '587');
-  const user = process.env.SMTP_USER || 'admin@opian.co.za';
+  const user = process.env.SMTP_USER || 'clientservices@opianrewards.com';
   const pass = process.env.SMTP_PASSWORD;
   
   // Determine if connection should be secure
@@ -126,7 +126,7 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
     // Attempt to send the email using our configured transporter
     console.log('Attempting to send email...');
     const mailOptions: any = {
-      from: `"OPIAN Rewards" <${process.env.SMTP_USER || 'clientservices@opianrewards.com'}>`,
+      from: `"OPIAN Rewards" <clientservices@opianrewards.com>`,
       to,
       subject,
       text,
@@ -822,7 +822,7 @@ export async function sendAdminRegistrationNotification(customerData: any): Prom
 
     // Use the sendEmail function to ensure consistent email configuration
     return await sendEmail({
-      to: 'clientservices@opianrewards.com',
+      to: 'clientservices@opianrewards.com', // This is the actual recipient email
       subject: 'New Customer Registration',
       text,
       html,

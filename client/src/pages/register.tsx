@@ -711,9 +711,9 @@ I / We acknowledge that this Authority may be ceded or assigned to a third party
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={registerMutation.isPending}
+                    disabled={registerMutation.isLoading}
                   >
-                    {registerMutation.isPending ? (
+                    {registerMutation.isLoading ? (
                       <div className="flex items-center justify-center">
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         Creating account...
