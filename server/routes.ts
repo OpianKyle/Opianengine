@@ -5305,5 +5305,38 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  // Image proxy route for opian.co.za URLs
+  // This allows email clients to load images from opian.co.za domain
+  app.get("/opian-images/:imageName", async (req, res) => {
+    try {
+      const imageName = req.params.imageName;
+      // Get the file from public directory
+      const imagePath = `${process.cwd()}/client/public/${imageName}`;
+      
+      console.log('Image proxy request:', {
+        imageName,
+        imagePath
+      });
+      
+      // Set headers to ensure proper caching and content type
+      if (imageName.endsWith('.svg')) {
+        res.setHeader('Content-Type', 'image/svg+xml');
+      } else if (imageName.endsWith('.png')) {
+        res.setHeader('Content-Type', 'image/png');
+      } else if (imageName.endsWith('.jpg') || imageName.endsWith('.jpeg')) {
+        res.setHeader('Content-Type', 'image/jpeg');
+      }
+      
+      // Allow caching
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+      
+      // Send the file
+      res.sendFile(imagePath);
+    } catch (error) {
+      console.error('Error serving image:', error);
+      res.status(404).send('Image not found');
+    }
+  });
+
   return httpServer;
 }
