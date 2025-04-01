@@ -354,10 +354,10 @@ export function formatFundCardEmail(
             <table cellpadding="0" cellspacing="0" style="margin-bottom: 20px;">
                 <tr>
                   <td style="vertical-align: top; padding-right: 15px;">
-                    <img src="${LANCE_IMAGE_BASE64}" alt="Lance Heynes" style="width: 80px; border-radius: 50%;">
+                    <img src="${LANCE_IMAGE_BASE64}" alt="Lance Heynes" style="width: 80px; border-radius: 50%; display: block;" />
                   </td>
                   <td style="vertical-align: middle;">
-                    <img src="${SIGNATURE_BASE64}" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0;"><br>
+                    <img src="${SIGNATURE_BASE64}" alt="Lance Heynes Signature" style="max-width: 200px; margin: 10px 0; display: block;" /><br>
                   </td>
                 </tr>
               </table>
@@ -446,7 +446,7 @@ export function formatRegistrationEmail(
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="${OPIAN_LOGO_WHITE_BASE64}" alt="Opian Rewards Logo" style="max-width: 200px;">
+        <img src="${OPIAN_LOGO_WHITE_BASE64}" alt="Opian Rewards Logo" style="max-width: 200px; display: block; margin: 0 auto;">
       </div>
 
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
@@ -500,14 +500,14 @@ export function formatRegistrationEmail(
                 <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 10px;">
                   <tr>
                     <td style="vertical-align: top; padding-right: 10px;">
-                      <img src="${LANCE_IMAGE_BASE64}" alt="Lance Heynes" style="width: 50px; border-radius: 50%;">
+                      <img src="${LANCE_IMAGE_BASE64}" alt="Lance Heynes" style="width: 50px; border-radius: 50%; display: block;" />
                     </td>
                     <td style="vertical-align: middle;">
-                      <img src="${SIGNATURE_BASE64}" alt="Lance Heynes Signature" style="width: 100px;">
+                      <img src="${SIGNATURE_BASE64}" alt="Lance Heynes Signature" style="width: 100px; display: block;" />
                     </td>
                   </tr>
                 </table>
-                <img src="${OPIAN_LOGO_WHITE_BASE64}" alt="Opian Logo" style="width: 100px;">
+                <img src="${OPIAN_LOGO_WHITE_BASE64}" alt="Opian Logo" style="width: 100px; display: block;">
               </td>
               <td style="vertical-align: top; border-left: 2px solid #43EB3E; padding-left: 15px;">
                 <p style="color: white; margin: 0 0 5px 0; font-size: 18px;"><strong>Lance Heynes</strong></p>
