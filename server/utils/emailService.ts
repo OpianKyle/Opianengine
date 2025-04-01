@@ -182,8 +182,8 @@ export function formatPointsAssignmentEmail(
   description: string,
   currentTier: string
 ): { text: string; html: string } {
-  // Use direct URLs without Google's redirection
-  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
+  // Use Replit domain for images (they actually work)
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
   const text = `
     Dear ${customerName},
 
@@ -216,8 +216,8 @@ export function formatAdminNotificationEmail(
   description: string,
   adminName: string
 ): { text: string; html: string } {
-  // Use direct URLs without Google's redirection
-  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
+  // Use Replit domain for images (they actually work)
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
   const text = `
     Hello ${adminName},
 
@@ -245,9 +245,9 @@ export function formatAdminNotificationEmail(
 export function formatFundCardEmail(
   firstName: string,
 ): { text: string; html: string } {
-  // Use direct URLs without Google's redirection
-  const signatureImageUrl = "https://opian.co.za/lance.png";
-  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
+  // Use Replit domain for images (they actually work)
+  const signatureImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png";
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
   
   const text = `
     Dear ${firstName},
@@ -386,9 +386,9 @@ export function formatFundCardEmail(
 }
 
 function getSignatureHTML(): string {
-  // Use direct URLs without Google's redirection
-  const signatureImageUrl = "https://opian.co.za/lance.png";
-  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
+  // Use Replit domain for images (they actually work)
+  const signatureImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png";
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
   
   return `
     <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 15px; border-collapse: collapse;">
@@ -411,9 +411,9 @@ export function formatRegistrationEmail(
   firstName: string,
   email: string
 ): { text: string; html: string } {
-  // Use direct URLs without Google's redirection
-  const signatureImageUrl = "https://opian.co.za/lance.png";
-  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
+  // Use Replit domain for images (they actually work)
+  const signatureImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png";
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
   const text = `
     Dear ${firstName},
 
@@ -539,8 +539,8 @@ export function formatQuoteRequestEmail(
   customerName: string,
   productName: string
 ): { text: string; html: string } {
-  // Use direct URLs without Google's redirection
-  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
+  // Use Replit domain for images (they actually work)
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
   const text = `
     Dear ${customerName},
 
@@ -584,8 +584,8 @@ export function formatAdminQuoteRequestEmail(
   productName: string,
   adminName: string
 ): { text: string; html: string } {
-  // Use direct URLs without Google's redirection
-  const logoImageUrl = "https://opian.co.za/Opian-white-logo.svg";
+  // Use Replit domain for images (they actually work)
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
   const text = `
     Hello ${adminName},
 
