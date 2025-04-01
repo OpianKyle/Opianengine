@@ -115,6 +115,10 @@ interface EmailParams {
 }
 
 export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL', templateData, attachments }: EmailParams): Promise<boolean> {
+  console.log(`Sending ${emailType} email to: ${to}`);
+  if (attachments?.length) {
+    console.log(`Email has ${attachments.length} attachment(s)`);
+  }
   // Create a fresh transporter using the latest environment variables
   transporter = createTransporter();
   
@@ -722,10 +726,20 @@ export function formatNewCustomerAdminEmail(
         <div style="margin-top: 20px; background-color: white; padding: 20px; border-radius: 5px;">
           <h3>Customer Signature</h3>
           <div style="background-color: white; padding: 10px; border: 1px solid #eee;">
-            <img src="${customerData.signature ? customerData.signature.replace(/^https:\/\/ci3\.googleusercontent\.com\/meips\/[^=]*=?#?/, '') : ''}" alt="Customer Signature" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
+            <img src="${customerData.signature.startsWith('data:') 
+              ? customerData.signature 
+              : (customerData.signature.includes('googleusercontent') 
+                ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' 
+                : customerData.signature)}" 
+              alt="Customer Signature" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
           </div>
         </div>
-      ` : ''}
+      ` : `
+        <div style="margin-top: 20px; background-color: white; padding: 20px; border-radius: 5px;">
+          <h3>Customer Signature</h3>
+          <p>No signature provided.</p>
+        </div>
+      `}
 
       <p style="color: #666; font-size: 12px; margin-top: 20px;">
         A PDF containing complete registration details is attached to this email.
@@ -737,6 +751,14 @@ export function formatNewCustomerAdminEmail(
 }
 
 export async function generateRegistrationPDF(customerData: any): Promise<Buffer> {
+  console.log('Generating registration PDF with signature type:', 
+    customerData.signature 
+      ? (customerData.signature.startsWith('data:') 
+          ? 'data URL' 
+          : (customerData.signature.includes('googleusercontent') 
+              ? 'Google URL (using placeholder image)' 
+              : 'direct URL'))
+      : 'no signature');
   const pdfHtml = `
     <!DOCTYPE html>
     <html>
@@ -806,17 +828,38 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           <div class="signature">
             <h2>Customer Signature</h2>
             <div style="background-color: white; padding: 10px; border: 1px solid #eee;">
-              <img src="${customerData.signature ? customerData.signature.replace(/^https:\/\/ci3\.googleusercontent\.com\/meips\/[^=]*=?#?/, '') : ''}" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
+              <img src="${customerData.signature.startsWith('data:') 
+                ? customerData.signature 
+                : (customerData.signature.includes('googleusercontent')
+                  ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' 
+                  : customerData.signature)}" 
+                style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
             </div>
           </div>
-        ` : ''}
+        ` : `
+          <div class="signature">
+            <h2>Customer Signature</h2>
+            <p>No signature provided.</p>
+          </div>
+        `}
       </div>
     </body>
     </html>
   `;
 
   return new Promise((resolve, reject) => {
-    htmlPdf.create(pdfHtml).toBuffer((err: Error | null, buffer?: Buffer) => {
+    // Create PDF with proper options
+    const pdfOptions = {
+      format: 'A4',
+      border: {
+        top: '10mm',
+        right: '10mm',
+        bottom: '10mm',
+        left: '10mm'
+      }
+    };
+    
+    htmlPdf.create(pdfHtml, pdfOptions).toBuffer((err: Error | null, buffer?: Buffer) => {
       if (err) {
         console.error('PDF generation error:', err);
         reject(err);
