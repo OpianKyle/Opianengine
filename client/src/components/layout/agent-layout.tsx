@@ -103,9 +103,9 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
               variant="outline" 
               className="w-full" 
               onClick={handleLogout}
-              disabled={logoutMutation.isPending}
+              disabled={logoutMutation.isLoading}
             >
-              {logoutMutation.isPending ? (
+              {logoutMutation.isLoading ? (
                 "Logging out..."
               ) : (
                 <>

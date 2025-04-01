@@ -111,9 +111,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               variant="outline"
               className="w-full text-sm md:text-base"
               onClick={handleLogout}
-              disabled={logoutMutation.isPending}
+              disabled={logoutMutation.isLoading}
             >
-              {logoutMutation.isPending ? (
+              {logoutMutation.isLoading ? (
                 <>Loading...</>
               ) : (
                 <>

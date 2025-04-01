@@ -26,12 +26,13 @@ interface Referral {
  * Hook for user data retrieval and actions
  */
 export function useUser() {
-  const { user, isLoading, registerMutation } = useAuth();
+  const { user, isLoading, registerMutation, logoutMutation } = useAuth();
   
   return {
     user,
     isLoading,
     registerMutation,
+    logoutMutation,
   };
 }
 
@@ -85,7 +86,7 @@ export function useUserProfile() {
   return {
     user,
     updateProfile: updateProfileMutation.mutate,
-    isUpdating: updateProfileMutation.isPending,
+    isUpdating: updateProfileMutation.isLoading,
     error: updateProfileMutation.error,
   };
 }
