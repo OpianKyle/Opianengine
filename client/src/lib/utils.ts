@@ -126,3 +126,23 @@ export function delay(ms: number): Promise<void> {
 export function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
+
+/**
+ * Format transaction type for display
+ */
+export function formatTransactionType(type: string): string {
+  const typeMap: { [key: string]: string } = {
+    'POINTS_AWARDED': 'Points Awarded',
+    'POINTS_DEDUCTED': 'Points Deducted',
+    'REFERRAL_BONUS': 'Referral Bonus',
+    'COMMISSION': 'Commission',
+    'SIGNUP_BONUS': 'Signup Bonus',
+    'PRODUCT_PURCHASE': 'Product Purchase',
+    'MANUAL_ADJUSTMENT': 'Manual Adjustment',
+    'SYSTEM_ADJUSTMENT': 'System Adjustment',
+    'REWARD_REDEMPTION': 'Reward Redemption',
+    'ACCOUNT_CREDIT': 'Account Credit'
+  };
+  
+  return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}

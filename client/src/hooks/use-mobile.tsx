@@ -89,3 +89,8 @@ export function useMobile() {
   
   return context;
 }
+
+// Alias for useMobile to maintain backward compatibility
+export function useIsMobile() {
+  return useMobile();
+}

@@ -23,6 +23,17 @@ interface Referral {
 }
 
 /**
+ * Hook for user data retrieval and actions
+ */
+export function useUser() {
+  const { user } = useAuth();
+  
+  return {
+    user,
+  };
+}
+
+/**
  * Hook to update user profile
  */
 export function useUserProfile() {

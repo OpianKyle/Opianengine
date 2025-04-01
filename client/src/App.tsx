@@ -11,6 +11,7 @@ import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { ResponsiveProvider } from "@/hooks/use-mobile";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -102,116 +103,114 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
 
 function Router() {
   return (
-    <SidebarProvider>
-      <Switch>
-        {/* Public Routes */}
-        <Route path="/" >
-          <Home />
-        </Route>
-        <Route path="/login">
-          <Login />
-        </Route>
-        <Route path="/register">
-          <Register />
-        </Route>
-        <Route path="/reset-password">
-          <ResetPassword />
-        </Route>
+    <Switch>
+      {/* Public Routes */}
+      <Route path="/" >
+        <Home />
+      </Route>
+      <Route path="/login">
+        <Login />
+      </Route>
+      <Route path="/register">
+        <Register />
+      </Route>
+      <Route path="/reset-password">
+        <ResetPassword />
+      </Route>
 
-        {/* Admin Routes */}
-        <Route path="/admin">
-          <AdminLayout>
-            <ProtectedRoute component={AdminDashboard} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/customers">
-          <AdminLayout>
-            <ProtectedRoute component={AdminCustomers} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/agents">
-          <AdminLayout>
-            <ProtectedRoute component={AdminAgents} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/email-logs">
-          <AdminLayout>
-            <ProtectedRoute component={EmailLogs} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/products">
-          <AdminLayout>
-            <ProtectedRoute component={AdminProducts} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/rewards">
-          <AdminLayout>
-            <ProtectedRoute component={AdminRewards} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/cash-redemptions">
-          <AdminLayout>
-            <ProtectedRoute component={CashRedemptions} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/manage-users">
-          <AdminLayout>
-            <ProtectedRoute component={ManageUsers} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/logs">
-          <AdminLayout>
-            <ProtectedRoute component={AdminLogs} admin />
-          </AdminLayout>
-        </Route>
-        <Route path="/admin/quote-requests">
-          <AdminLayout>
-            <ProtectedRoute component={AdminQuoteRequests} admin />
-          </AdminLayout>
-        </Route>
+      {/* Admin Routes */}
+      <Route path="/admin">
+        <AdminLayout>
+          <ProtectedRoute component={AdminDashboard} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/customers">
+        <AdminLayout>
+          <ProtectedRoute component={AdminCustomers} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/agents">
+        <AdminLayout>
+          <ProtectedRoute component={AdminAgents} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/email-logs">
+        <AdminLayout>
+          <ProtectedRoute component={EmailLogs} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/products">
+        <AdminLayout>
+          <ProtectedRoute component={AdminProducts} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/rewards">
+        <AdminLayout>
+          <ProtectedRoute component={AdminRewards} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/cash-redemptions">
+        <AdminLayout>
+          <ProtectedRoute component={CashRedemptions} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/manage-users">
+        <AdminLayout>
+          <ProtectedRoute component={ManageUsers} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/logs">
+        <AdminLayout>
+          <ProtectedRoute component={AdminLogs} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/quote-requests">
+        <AdminLayout>
+          <ProtectedRoute component={AdminQuoteRequests} admin />
+        </AdminLayout>
+      </Route>
 
-        {/* Agent Routes */}
-        <Route path="/agent">
-          <AgentLayout>
-            <ProtectedRoute component={AgentDashboard} agent />
-          </AgentLayout>
-        </Route>
-        <Route path="/agent/customers">
-          <AgentLayout>
-            <ProtectedRoute component={AgentCustomers} agent />
-          </AgentLayout>
-        </Route>
+      {/* Agent Routes */}
+      <Route path="/agent">
+        <AgentLayout>
+          <ProtectedRoute component={AgentDashboard} agent />
+        </AgentLayout>
+      </Route>
+      <Route path="/agent/customers">
+        <AgentLayout>
+          <ProtectedRoute component={AgentCustomers} agent />
+        </AgentLayout>
+      </Route>
 
-        {/* Customer Routes */}
-        <Route path="/dashboard">
-          <CustomerLayout>
-            <ProtectedRoute component={CustomerDashboard} />
-          </CustomerLayout>
-        </Route>
-        <Route path="/rewards">
-          <CustomerLayout>
-            <ProtectedRoute component={CustomerRewards} />
-          </CustomerLayout>
-        </Route>
-        <Route path="/referrals">
-          <CustomerLayout>
-            <ProtectedRoute component={ReferralsPage} />
-          </CustomerLayout>
-        </Route>
-        <Route path="/profile">
-          <CustomerLayout>
-            <ProtectedRoute component={ProfilePage} />
-          </CustomerLayout>
-        </Route>
-        <Route path="/products">
-          <CustomerLayout>
-            <ProtectedRoute component={CustomerProducts} />
-          </CustomerLayout>
-        </Route>
+      {/* Customer Routes */}
+      <Route path="/dashboard">
+        <CustomerLayout>
+          <ProtectedRoute component={CustomerDashboard} />
+        </CustomerLayout>
+      </Route>
+      <Route path="/rewards">
+        <CustomerLayout>
+          <ProtectedRoute component={CustomerRewards} />
+        </CustomerLayout>
+      </Route>
+      <Route path="/referrals">
+        <CustomerLayout>
+          <ProtectedRoute component={ReferralsPage} />
+        </CustomerLayout>
+      </Route>
+      <Route path="/profile">
+        <CustomerLayout>
+          <ProtectedRoute component={ProfilePage} />
+        </CustomerLayout>
+      </Route>
+      <Route path="/products">
+        <CustomerLayout>
+          <ProtectedRoute component={CustomerProducts} />
+        </CustomerLayout>
+      </Route>
 
-        <Route component={NotFound} />
-      </Switch>
-    </SidebarProvider>
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
@@ -219,10 +218,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <div className="min-h-screen w-full bg-background">
-          <Router />
-          <Toaster />
-        </div>
+        <ResponsiveProvider>
+          <div className="min-h-screen w-full bg-background">
+            <Router />
+            <Toaster />
+          </div>
+        </ResponsiveProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
