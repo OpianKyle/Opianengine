@@ -183,7 +183,7 @@ export function formatPointsAssignmentEmail(
   currentTier: string
 ): { text: string; html: string } {
   // Use Replit domain for images (they actually work)
-  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
   const text = `
     Dear ${customerName},
 
@@ -217,7 +217,7 @@ export function formatAdminNotificationEmail(
   adminName: string
 ): { text: string; html: string } {
   // Use Replit domain for images (they actually work)
-  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
   const text = `
     Hello ${adminName},
 
@@ -247,7 +247,7 @@ export function formatFundCardEmail(
 ): { text: string; html: string } {
   // Use Replit domain for images (they actually work)
   const signatureImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png";
-  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
   
   const text = `
     Dear ${firstName},
@@ -388,7 +388,7 @@ export function formatFundCardEmail(
 function getSignatureHTML(): string {
   // Use Replit domain for images (they actually work)
   const signatureImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png";
-  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
   
   return `
     <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 15px; border-collapse: collapse;">
@@ -413,7 +413,7 @@ export function formatRegistrationEmail(
 ): { text: string; html: string } {
   // Use Replit domain for images (they actually work)
   const signatureImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png";
-  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
   const text = `
     Dear ${firstName},
 
@@ -540,7 +540,7 @@ export function formatQuoteRequestEmail(
   productName: string
 ): { text: string; html: string } {
   // Use Replit domain for images (they actually work)
-  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
   const text = `
     Dear ${customerName},
 
@@ -585,7 +585,7 @@ export function formatAdminQuoteRequestEmail(
   adminName: string
 ): { text: string; html: string } {
   // Use Replit domain for images (they actually work)
-  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/Opian-white-logo.svg";
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
   const text = `
     Hello ${adminName},
 
