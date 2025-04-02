@@ -648,14 +648,17 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      console.log('User not authenticated');
+  app.get("/api/user", async (req, res) => {
+    // Try to get user from either JWT token or session
+    const user = await getUserFromTokenOrSession(req);
+
+    if (!user) {
+      console.log('User not authenticated via session or token');
       return res.status(401).json({ error: "Not authenticated" });
     }
     
     console.log('User authenticated, returning user data');
-    res.json(req.user);
+    res.json(user);
   });
   
   // Check for existing super admin
@@ -780,6 +783,73 @@ export function verifyToken(token: string): { id: number; isAdmin: boolean; isSu
   }
 }
 
+// Extract token from Authorization header
+function extractBearerToken(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  return authHeader.substring(7); // Remove 'Bearer ' prefix
+}
+
+// Get user from token or session
+export async function getUserFromTokenOrSession(req: Request): Promise<any> {
+  // First try to get user from authorization header
+  const token = extractBearerToken(req);
+  if (token) {
+    console.log('Found Authorization header with Bearer token');
+    const decoded = verifyToken(token);
+    if (decoded) {
+      console.log('Token verified successfully, getting user data');
+      // Get user data from database
+      const connection = await createConnection();
+      try {
+        const [users] = await connection.execute(
+          `SELECT u.*, 
+           CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
+           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+           FROM users u
+           LEFT JOIN admin_users au ON u.id = au.user_id
+           WHERE u.id = ?`,
+          [decoded.id]
+        );
+
+        if (!Array.isArray(users) || users.length === 0) {
+          console.log('User not found for token user ID:', decoded.id);
+          return null;
+        }
+
+        const user = users[0];
+        // Transform user object consistently
+        const transformedUser = {
+          id: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          phone_number: user.phone_number,
+          is_admin: Boolean(user.is_admin),
+          is_super_admin: Boolean(user.is_super_admin),
+          is_agent: Boolean(user.is_agent),
+          is_enabled: Boolean(user.is_enabled),
+          points: user.points || 0,
+          referral_code: user.referral_code,
+          referred_by: user.referred_by
+        };
+
+        return transformedUser;
+      } catch (error) {
+        console.error('Error getting user from token:', error);
+        return null;
+      } finally {
+        await connection.end();
+      }
+    }
+  }
+
+  // Then try to get user from session
+  return await verifySession(req);
+}
+
 export async function verifySession(req: Request): Promise<any> {
   try {
     console.log('Verifying session for request:', {
@@ -871,37 +941,32 @@ export async function verifySession(req: Request): Promise<any> {
 // Add checkAdmin middleware function
 export async function checkAdmin(req: Request, res: Response, next: NextFunction) {
   try {
-    console.log('Running admin check middleware:', {
-      hasSession: !!req.session,
-      hasUser: !!req.user,
-      sessionID: req.sessionID,
-      isAuthenticated: req.isAuthenticated?.()
-    });
+    console.log('Running admin check middleware');
 
-    if (!req.session || !req.session.passport || !req.session.passport.user) {
+    // Get user from token or session
+    const user = await getUserFromTokenOrSession(req);
+    if (!user) {
+      console.log('User not authenticated via session or token');
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await createConnection();
-    const [adminCheck] = await connection.execute(
-      'SELECT role_type FROM admin_users WHERE user_id = ?',
-      [req.session.passport.user]
-    );
-    await connection.end();
-
-    if (!adminCheck || (adminCheck as any[]).length === 0) {
-      console.log('Admin access denied:', {
-        userId: req.session.passport.user,
-        foundAdmin: false
+    // Check if user is an admin
+    if (!user.is_admin) {
+      console.log('Admin access denied for user:', {
+        userId: user.id,
+        isAdmin: user.is_admin
       });
       return res.status(403).json({ error: "Admin access required" });
     }
 
     console.log('Admin access granted:', {
-      userId: req.session.passport.user,
-      roleType: adminCheck[0].role_type
+      userId: user.id,
+      isAdmin: user.is_admin,
+      isSuperAdmin: user.is_super_admin
     });
 
+    // Attach user to request object for later use
+    req.user = user;
     next();
   } catch (error) {
     console.error('Error in admin check:', error);
@@ -909,59 +974,36 @@ export async function checkAdmin(req: Request, res: Response, next: NextFunction
   }
 }
 
-// Add debug logging to checkAgent middleware
+// Updated checkAgent middleware
 export async function checkAgent(req: Request, res: Response, next: NextFunction) {
   try {
-    console.log('Running agent check middleware:', {
-      hasSession: !!req.session,
-      hasUser: !!req.user,
-      sessionID: req.sessionID,
-      isAuthenticated: req.isAuthenticated?.()
-    });
+    console.log('Running agent check middleware');
 
-    if (!req.session || !req.isAuthenticated()) {
-      console.log('Authentication check failed:', {
-        hasSession: !!req.session,
-        isAuthenticated: req.isAuthenticated?.()
-      });
+    // Get user from token or session
+    const user = await getUserFromTokenOrSession(req);
+    if (!user) {
+      console.log('User not authenticated via session or token');
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await createConnection();
-    try {
-      // Check if user exists and is an agent
-      const [users] = await connection.execute(
-        `SELECT id, email, is_agent, is_enabled 
-         FROM users 
-         WHERE id = ?`,
-        [req.user.id]
-      );
-
-      const user = users[0];
-      console.log('Agent check results:', {
-        userId: req.user.id,
-        foundUser: !!user,
-        isAgent: user?.is_agent,
-        isEnabled: user?.is_enabled
-      });
-
-      if (!user || !user.is_agent || !user.is_enabled) {
-        console.log('User is not an agent or is disabled:', {
-          userId: req.user.id,
-          isAgent: user?.is_agent,
-          isEnabled: user?.is_enabled
-        });
-        return res.status(403).json({ error: "Agent access required" });
-      }
-
-      console.log('Agent check passed for user:', {
+    // Check if user is an agent
+    if (!user.is_agent || !user.is_enabled) {
+      console.log('Agent access denied for user:', {
         userId: user.id,
-        email: user.email
+        isAgent: user.is_agent,
+        isEnabled: user.is_enabled
       });
-      next();
-    } finally {
-      await connection.end();
+      return res.status(403).json({ error: "Agent access required" });
     }
+
+    console.log('Agent check passed for user:', {
+      userId: user.id,
+      email: user.email
+    });
+    
+    // Attach user to request object for later use
+    req.user = user;
+    next();
   } catch (error) {
     console.error('Error in agent check:', error);
     res.status(500).json({ error: "Internal server error" });

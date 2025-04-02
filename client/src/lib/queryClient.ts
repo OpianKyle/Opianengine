@@ -21,6 +21,7 @@ export function getQueryFn({ on401 = 'throw', headers = {}, method = 'GET' }: Fe
   return async ({ queryKey }: { queryKey: (string | object)[] }) => {
     const endpoint = typeof queryKey[0] === 'string' ? queryKey[0] : '';
     const params = typeof queryKey[1] === 'object' ? queryKey[1] : undefined;
+    const token = getAuthToken();
     
     let url = endpoint;
     if (params) {
@@ -36,13 +37,21 @@ export function getQueryFn({ on401 = 'throw', headers = {}, method = 'GET' }: Fe
       }
     }
     
+    // Build headers with Authorization if token exists
+    const requestHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...headers,
+    };
+    
+    // Add Authorization header if token exists
+    if (token) {
+      requestHeaders['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(url, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...headers,
-      },
+      headers: requestHeaders,
       credentials: 'include',
     });
     
@@ -67,20 +76,40 @@ export function getQueryFn({ on401 = 'throw', headers = {}, method = 'GET' }: Fe
   };
 }
 
+// Helper to get auth token from localStorage
+function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem("auth_token");
+  } catch (error) {
+    console.error("Error accessing localStorage:", error);
+    return null;
+  }
+}
+
 export async function apiRequest(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
   url: string,
   data?: any,
   customHeaders?: Record<string, string>
 ) {
+  const token = getAuthToken();
+  
+  // Build headers with Authorization if token exists
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...customHeaders,
+  };
+  
+  // Add Authorization header if token exists
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const options: RequestInit = {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      ...customHeaders,
-    },
-    credentials: 'include',
+    headers,
+    credentials: 'include',  // Still include credentials for session cookies
   };
 
   if (data !== undefined && method !== 'GET') {

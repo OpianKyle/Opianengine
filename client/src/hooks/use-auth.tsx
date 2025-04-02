@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext, useState, useCallback, useRef } from "react";
+import { ReactNode, createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -8,6 +8,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { cleanupWebSockets } from "@/lib/utils";
+
+// Key for storing JWT token in localStorage
+const AUTH_TOKEN_KEY = "auth_token";
 
 // Define user interface
 export interface User {
@@ -29,6 +32,12 @@ export interface User {
 export interface LoginData {
   email: string;
   password: string;
+}
+
+// Auth response type including token
+interface AuthResponse {
+  user: User;
+  token: string;
 }
 
 // Define the shape of the auth context
@@ -63,6 +72,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   error: Error | null;
+  token: string | null;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<User, Error, RegisterData>;
@@ -71,29 +81,69 @@ interface AuthContextType {
 // Create the auth context
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Helper to get stored token
+function getStoredToken(): string | null {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  } catch (error) {
+    console.error("Error accessing localStorage:", error);
+    return null;
+  }
+}
+
+// Helper to store token
+function storeToken(token: string | null): void {
+  try {
+    if (token) {
+      localStorage.setItem(AUTH_TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+  } catch (error) {
+    console.error("Error accessing localStorage:", error);
+  }
+}
+
 // Auth provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [token, setToken] = useState<string | null>(getStoredToken());
   const isLoggingOut = useRef(false);
+
+  // Sync token with localStorage
+  useEffect(() => {
+    if (token) {
+      storeToken(token);
+    }
+  }, [token]);
 
   // Query to fetch the current user
   const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
+      const headers: Record<string, string> = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      };
+      
+      // Add token to headers if available
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const res = await fetch("/api/user", {
         credentials: "include",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        }
+        headers
       });
+      
       if (!res.ok) {
         if (res.status === 401) return null;
         throw new Error("Failed to fetch user data");
       }
+      
       return res.json();
     },
     retry: false,
@@ -118,9 +168,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.removeQueries();
     queryClient.setQueryData(["/api/user"], null);
 
+    // Clear token
+    setToken(null);
+    storeToken(null);
+
     // Clear storage
     sessionStorage.clear();
-    localStorage.clear();
+    localStorage.removeItem(AUTH_TOKEN_KEY);
 
     // Clean up connections
     cleanupWebSockets();
@@ -147,6 +201,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await res.json();
+      
+      // Store the token if returned
+      if (data && data.token) {
+        console.log('Received token in response');
+        setToken(data.token);
+      }
       
       // Extract the user from the response which might be {user: {...}, token: "..."}
       if (data && data.user) {
@@ -223,20 +283,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useMutation<void, Error, void>({
     mutationFn: async () => {
       setIsTransitioning(true);
-      // Clear state before making request
-      await clearAuthState();
-
-      const res = await fetch("/api/logout", {
-        method: "POST",
-        credentials: 'include',
-        headers: {
-          "Accept": "application/json"
+      
+      // Include token in the logout request
+      const headers: Record<string, string> = {
+        "Accept": "application/json"
+      };
+      
+      // Add token to headers if available
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      try {
+        const res = await fetch("/api/logout", {
+          method: "POST",
+          credentials: 'include',
+          headers
+        });
+  
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Failed to logout");
         }
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to logout");
+      } catch (error) {
+        console.error("Logout request failed:", error);
+        // Continue with clearing state even if the server request fails
+      } finally {
+        // Clear state after making request (or if it fails)
+        await clearAuthState();
       }
     },
     onError: (error: Error) => {
@@ -276,6 +350,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await res.json();
+      
+      // Store the token if returned
+      if (data && data.token) {
+        console.log('Received token in registration response');
+        setToken(data.token);
+      }
       
       // Extract the user from the response which might be {user: {...}, token: "..."}
       if (data && data.user) {
@@ -326,6 +406,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: userQuery.data || null,
     isLoading: userQuery.isLoading,
     error: userQuery.error as Error | null,
+    token,
     loginMutation,
     logoutMutation,
     registerMutation,

@@ -236,6 +236,54 @@ router.post('/customers/create', async (req: any, res) => {
           ]
         );
       }
+      
+      // Add to agent_commissions table
+      try {
+        // Check if agent_commissions table exists
+        const [tableCheck] = await connection.execute(`
+          SELECT COUNT(*) as count 
+          FROM information_schema.tables 
+          WHERE table_schema = DATABASE() 
+          AND table_name = 'agent_commissions'
+        `);
+
+        if (tableCheck[0].count > 0) {
+          console.log('Adding customer to agent_commissions table');
+          
+          // Calculate commission (7.5% for sign-up)
+          const commissionPercentage = 7.5; // 7.5%
+          const commissionAmount = packagePrice * commissionPercentage / 100;
+          
+          // Insert into agent_commissions
+          await connection.execute(`
+            INSERT INTO agent_commissions (
+              agent_id, 
+              customer_id, 
+              commission_type, 
+              package_type, 
+              premium_amount, 
+              commission_percentage, 
+              commission_amount,
+              status,
+              created_at
+            ) VALUES (?, ?, 'SIGNUP', ?, ?, ?, ?, 'PENDING', NOW())
+          `, [
+            req.user.id,
+            userId,
+            normalizedPackage,
+            packagePrice,
+            commissionPercentage,
+            commissionAmount.toFixed(2)
+          ]);
+          
+          console.log(`Added commission record for new customer ${userId} with agent ${req.user.id}`);
+        } else {
+          console.log('agent_commissions table does not exist, skipping commission record');
+        }
+      } catch (error) {
+        console.error('Error adding to agent_commissions table:', error);
+        // Continue the process even if commission record fails
+      }
 
       await connection.commit();
 

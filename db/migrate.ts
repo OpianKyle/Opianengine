@@ -32,10 +32,10 @@ async function runMigration() {
         agent_id INT NOT NULL,
         customer_id INT NOT NULL,
         commission_type ENUM('SIGNUP', 'RENEWAL') NOT NULL,
-        package_type ENUM('BASIC', 'STANDARD', 'PREMIUM', 'ELITE', 'EXECUTIVE') NOT NULL,
-        premium_amount INT NOT NULL,
-        commission_percentage INT NOT NULL,
-        commission_amount INT NOT NULL,
+        package_type ENUM('BASIC', 'STANDARD', 'PREMIUM', 'ELITE', 'EXECUTIVE', 'OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE') NOT NULL,
+        premium_amount DECIMAL(10,2) NOT NULL,
+        commission_percentage DECIMAL(5,2) NOT NULL,
+        commission_amount DECIMAL(10,2) NOT NULL,
         status ENUM('PENDING', 'PAID') DEFAULT 'PENDING' NOT NULL,
         paid_at TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -57,7 +57,11 @@ async function runMigration() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (signed_up_user_id) REFERENCES users(id) ON DELETE SET NULL
-      );`
+      );`,
+      
+      // Update transaction type to include COMMISSION
+      `ALTER TABLE transactions MODIFY COLUMN type 
+       ENUM('REWARD_REDEMPTION', 'PRODUCT_PURCHASE', 'ADMIN_ADJUSTMENT', 'WELCOME_BONUS', 'REFERRAL_BONUS', 'COMMISSION') NOT NULL`
     ];
 
     console.log('Running migrations...');

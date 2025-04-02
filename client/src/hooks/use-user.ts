@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from "@tanstack/react-query";
 import { useAuth, User } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 // Define interfaces for our API responses
 interface Transaction {
@@ -41,19 +42,16 @@ export function useUser() {
  */
 export function useUserProfile() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { toast } = useToast();
 
   const updateProfileMutation = useMutation({
     mutationFn: async (userData: Partial<User>) => {
-      const res = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-        credentials: "include",
-      });
+      const res = await apiRequest(
+        "PUT",
+        "/api/user/profile",
+        userData
+      );
 
       if (!res.ok) {
         const error = await res.json();
@@ -95,15 +93,13 @@ export function useUserProfile() {
  * Hook to get user transactions
  */
 export function useUserTransactions() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { toast } = useToast();
 
   const transactionsQuery = useQuery<Transaction[]>({
     queryKey: ["/api/user/transactions"],
     queryFn: async () => {
-      const res = await fetch("/api/user/transactions", {
-        credentials: "include",
-      });
+      const res = await apiRequest("GET", "/api/user/transactions");
 
       if (!res.ok) {
         const error = await res.json();
@@ -135,15 +131,13 @@ export function useUserTransactions() {
  * Hook to get user's referrals
  */
 export function useUserReferrals() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { toast } = useToast();
 
   const referralsQuery = useQuery<Referral[]>({
     queryKey: ["/api/user/referrals"],
     queryFn: async () => {
-      const res = await fetch("/api/user/referrals", {
-        credentials: "include",
-      });
+      const res = await apiRequest("GET", "/api/user/referrals");
 
       if (!res.ok) {
         const error = await res.json();
