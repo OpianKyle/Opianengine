@@ -45,12 +45,13 @@ async function getPackagePrice(connection, packageType) {
 async function createConnection() {
   try {
     const connection = await mysql.createConnection({
-      host: process.env.PGHOST,
-      user: process.env.PGUSER,
-      password: process.env.PGPASSWORD,
-      database: process.env.PGDATABASE,
+      host: process.env.MYSQL_HOST || process.env.DB_HOST || process.env.PGHOST || 'localhost', 
+      user: process.env.MYSQL_USER || process.env.DB_USER || process.env.PGUSER || 'root',
+      password: process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD || process.env.PGPASSWORD || '',
+      database: process.env.MYSQL_DATABASE || process.env.DB_NAME || process.env.PGDATABASE || 'opian',
+      port: parseInt(process.env.MYSQL_PORT || process.env.DB_PORT || process.env.PGPORT || '3306'),
       // Add connection timeout and retry configuration
-      connectTimeout: 30000, // 30 seconds timeout
+      connectTimeout: 60000, // 60 seconds timeout
       waitForConnections: true,
       connectionLimit: 10,
       maxIdle: 10,
