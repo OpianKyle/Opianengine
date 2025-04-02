@@ -33,7 +33,8 @@ const TRANSACTION_TYPES = [
   "CASH_REDEMPTION",
   "WELCOME_BONUS",
   "REFERRAL_BONUS",
-  "QUOTE_REQUEST"
+  "QUOTE_REQUEST",
+  "AGENT_COMMISSION"
 ] as const;
 
 const TRANSACTION_STATUS = ["PENDING", "PROCESSED"] as const;
@@ -57,7 +58,13 @@ const ADMIN_ACTION_TYPES = [
   "PRODUCT_UNASSIGNED",
   "QUOTE_REQUEST_UPDATED",
   "QUOTE_REQUEST_COMPLETED",
-  "QUOTE_REQUEST_REJECTED"
+  "QUOTE_REQUEST_REJECTED",
+  "AGENT_CREATED",
+  "AGENT_REMOVED",
+  "AGENT_ENABLED",
+  "AGENT_DISABLED",
+  "REFERRAL_PROCESSED",
+  "COMMISSION_PAID"
 ] as const;
 
 const QUOTE_REQUEST_STATUS = ["PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED"] as const;
@@ -198,6 +205,56 @@ export const notifications = mysqlTable("notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Define the referral lead statuses
+const REFERRAL_LEAD_STATUS = [
+  "NEW",
+  "CONTACTED",
+  "SIGNED_UP",
+  "NOT_INTERESTED"
+] as const;
+
+// Define commission types
+const COMMISSION_TYPES = [
+  "SIGNUP",
+  "RENEWAL"
+] as const;
+
+// Define commission status
+const COMMISSION_STATUS = [
+  "PENDING",
+  "PAID"
+] as const;
+
+// Referral leads table definition
+export const referralLeads = mysqlTable("referral_leads", {
+  id: int("id").primaryKey().autoincrement(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  referralCode: text("referral_code").notNull(),
+  notes: text("notes"),
+  status: mysqlEnum("status", REFERRAL_LEAD_STATUS).default("NEW").notNull(),
+  signedUpUserId: int("signed_up_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Agent commissions table definition
+export const agentCommissions = mysqlTable("agent_commissions", {
+  id: int("id").primaryKey().autoincrement(),
+  agentId: int("agent_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  customerId: int("customer_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  commissionType: mysqlEnum("commission_type", COMMISSION_TYPES).notNull(),
+  packageType: mysqlEnum("package_type", PACKAGE_TYPES).notNull(),
+  premiumAmount: int("premium_amount").notNull(),
+  commissionPercentage: int("commission_percentage").notNull(),
+  commissionAmount: int("commission_amount").notNull(),
+  status: mysqlEnum("status", COMMISSION_STATUS).default("PENDING").notNull(),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const productRelations = relations(products, ({ many }) => ({
   activities: many(productActivities),
@@ -211,6 +268,12 @@ export const userRelations = relations(users, ({ many, one }) => ({
   productAssignments: many(productAssignments),
   quoteRequests: many(quoteRequests),
   notifications: many(notifications),
+  referrals: many(referralLeads, {
+    relationName: 'userReferrals'
+  }),
+  commissions: many(agentCommissions, {
+    relationName: 'agentCommissions'
+  }),
   agent: one(users, {
     fields: [users.agentId],
     references: [users.id],
@@ -241,6 +304,10 @@ export type QuoteRequest = typeof quoteRequests.$inferSelect;
 export type InsertQuoteRequest = typeof quoteRequests.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+export type ReferralLead = typeof referralLeads.$inferSelect;
+export type InsertReferralLead = typeof referralLeads.$inferInsert;
+export type AgentCommission = typeof agentCommissions.$inferSelect;
+export type InsertAgentCommission = typeof agentCommissions.$inferInsert;
 
 // Schema exports
 export const insertProductSchema = createInsertSchema(products);
@@ -259,3 +326,7 @@ export const insertQuoteRequestSchema = createInsertSchema(quoteRequests);
 export const selectQuoteRequestSchema = createSelectSchema(quoteRequests);
 export const insertNotificationSchema = createInsertSchema(notifications);
 export const selectNotificationSchema = createSelectSchema(notifications);
+export const insertReferralLeadSchema = createInsertSchema(referralLeads);
+export const selectReferralLeadSchema = createSelectSchema(referralLeads);
+export const insertAgentCommissionSchema = createInsertSchema(agentCommissions);
+export const selectAgentCommissionSchema = createSelectSchema(agentCommissions);

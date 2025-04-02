@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ResetPassword from "@/pages/reset-password";
+import ReferralPage from "@/pages/referral"; // Import the referral form page
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { Loader2 } from "lucide-react";
@@ -24,7 +25,6 @@ import AdminProducts from "@/pages/admin/products";
 import CashRedemptions from "@/pages/admin/cash-redemptions";
 import AdminQuoteRequests from "@/pages/admin/quote-requests";
 import AdminAgents from "@/pages/admin/agents";
-import AgentCustomers from "@/pages/agent/customers"; // Update import path
 import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
 
 // Customer pages
@@ -38,6 +38,8 @@ import CustomerProducts from "@/pages/customer/products";
 // Agent pages
 import AgentDashboard from "@/pages/agent";
 import AgentLayout from "@/components/layout/agent-layout";
+import AgentCustomers from "@/pages/agent/customers";
+import AgentLeads from "@/pages/agent/leads"; // Import agent referral leads page
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
   const { user, isLoading } = useAuth();
@@ -117,6 +119,9 @@ function Router() {
       <Route path="/reset-password">
         <ResetPassword />
       </Route>
+      <Route path="/referral/:code">
+        <ReferralPage />
+      </Route>
 
       {/* Admin Routes */}
       <Route path="/admin">
@@ -179,6 +184,11 @@ function Router() {
       <Route path="/agent/customers">
         <AgentLayout>
           <ProtectedRoute component={AgentCustomers} agent />
+        </AgentLayout>
+      </Route>
+      <Route path="/agent/leads">
+        <AgentLayout>
+          <ProtectedRoute component={AgentLeads} agent />
         </AgentLayout>
       </Route>
 

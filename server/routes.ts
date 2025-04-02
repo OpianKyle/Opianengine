@@ -952,7 +952,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Mount referral routes
-  app.use('/api/customer', referralRouter);
+  // Mount the referral routes
+  app.use('/api/referral', referralRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
