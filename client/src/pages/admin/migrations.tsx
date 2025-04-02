@@ -6,11 +6,14 @@ import { AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
 import { useMigration } from "@/hooks/use-migration";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 export default function Migrations() {
   const { runAgentCustomersMigration, isLoading, isSuccess, results, error } = useMigration();
   const { toast } = useToast();
   const [isConfirming, setIsConfirming] = useState(false);
+  const [forceProductionMode, setForceProductionMode] = useState(false);
 
   const handleRunMigration = async () => {
     if (!isConfirming) {
@@ -19,7 +22,7 @@ export default function Migrations() {
     }
 
     try {
-      await runAgentCustomersMigration.mutateAsync();
+      await runAgentCustomersMigration.mutateAsync({ forceProductionMode });
       toast({
         title: "Migration executed successfully",
         description: "The agent customers migration has been completed.",
@@ -63,6 +66,20 @@ export default function Migrations() {
               but are not yet in the agent_commissions table, and add them with the appropriate
               commission data.
             </p>
+            
+            <div className="flex items-center space-x-2 mb-6">
+              <Checkbox 
+                id="force-production-mode" 
+                checked={forceProductionMode}
+                onCheckedChange={(checked) => setForceProductionMode(checked as boolean)}
+              />
+              <Label
+                htmlFor="force-production-mode"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Force production mode (apply actual database changes)
+              </Label>
+            </div>
             
             {error && (
               <Alert variant="destructive" className="mb-4">

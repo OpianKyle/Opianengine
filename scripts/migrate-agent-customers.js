@@ -58,7 +58,7 @@ async function createConnection() {
   }
 }
 
-async function migrateAgentCustomers() {
+async function migrateAgentCustomers(options = {}) {
   // Check if running in development mode (Replit)
   const isDev = process.env.NODE_ENV === 'development' || 
                 process.env.REPLIT_ENVIRONMENT === 'development' || 
@@ -67,7 +67,11 @@ async function migrateAgentCustomers() {
                 process.hostname?.includes('replit') ||
                 process.env.HOSTNAME?.includes('replit');
   
-  console.log(`Running migration in ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'} mode`);
+  // Check if force production mode flag is set
+  const forceProductionMode = options.forceProductionMode || process.env.FORCE_PRODUCTION_MODE === 'true';
+  
+  const operatingMode = forceProductionMode ? 'PRODUCTION' : (isDev ? 'DEVELOPMENT' : 'PRODUCTION');
+  console.log(`Running migration in ${operatingMode} mode ${forceProductionMode ? '(forced)' : ''}`);
   
   // Default migration results
   let migrationResults = {
@@ -78,8 +82,8 @@ async function migrateAgentCustomers() {
     errors: []
   };
   
-  // If in development mode, return mock results instead of connecting to DB
-  if (isDev) {
+  // If in development mode and not forcing production mode, return mock results instead of connecting to DB
+  if (isDev && !forceProductionMode) {
     console.log('Development environment detected - Using mock migration data');
     
     // Mock successful migration result for development

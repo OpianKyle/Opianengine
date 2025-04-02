@@ -51,13 +51,17 @@ migrationRouter.post('/agent-customers', async (req: Request, res: Response) => 
     
     console.log('Starting migration of agent customers to agent_commissions table');
     
+    // Check if force production mode flag is set in the request
+    const forceProductionMode = req.body.forceProductionMode === true;
+    console.log(`Force production mode: ${forceProductionMode ? 'ENABLED' : 'DISABLED'}`);
+    
     // Get the migration function dynamically to handle ES Module correctly
     console.log('Dynamically importing migration function');
     const migrateAgentCustomers = await importMigrationScript();
     
-    // Run the migration using the imported function
+    // Run the migration using the imported function with the force production mode option
     console.log('Calling migrateAgentCustomers function');
-    const results = await migrateAgentCustomers();
+    const results = await migrateAgentCustomers({ forceProductionMode });
     console.log('Migration completed with results:', results);
     
     // Log admin action

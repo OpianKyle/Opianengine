@@ -31,10 +31,14 @@ export function useMigration() {
   const { toast } = useToast();
   const isAdmin = user?.is_admin || user?.is_super_admin;
 
-  const runAgentCustomersMutation = useMutation<MigrationResults, Error, void>({
-    mutationFn: async () => {
+  const runAgentCustomersMutation = useMutation<MigrationResults, Error, { forceProductionMode?: boolean }>({
+    mutationFn: async ({ forceProductionMode = false }) => {
+      // Log the migration parameters
+      console.log(`Running migration with forceProductionMode=${forceProductionMode}`);
+      
       // For development mode (Replit environment), return mock results without making API call
-      if (isDev()) {
+      // Only if not forcing production mode
+      if (isDev() && !forceProductionMode) {
         console.log('DEV MODE: Using mock migration in client');
         
         // Simulate network delay
@@ -66,7 +70,7 @@ export function useMigration() {
       const res = await apiRequest(
         "POST",
         "/api/migration/agent-customers",
-        {},
+        { forceProductionMode },
         customHeaders
       );
 
