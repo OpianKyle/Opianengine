@@ -3,8 +3,12 @@ import { createConnection } from '../db';
 import { generateReferralCode } from '../utils/referral';
 import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from '../utils/emailService';
 import { queryCache } from '../utils/query-cache';
+import { checkAgent } from '../auth';
 
 const router = Router();
+
+// Apply checkAgent middleware to all routes in this router
+router.use(checkAgent);
 
 // Helper function to generate a unique referral code
 async function generateUniqueReferralCode(connection: any): Promise<string> {
@@ -40,50 +44,8 @@ async function getPackagePrice(connection: any, packageName: string): Promise<nu
   return prices.length > 0 ? Number(prices[0].premium_amount) : 0;
 }
 
-// Middleware to check if user is an agent
-router.use(async (req: any, res, next) => {
-  console.log('Agent router middleware check:', {
-    isAuthenticated: req.isAuthenticated(),
-    user: req.user ? { id: req.user.id, email: req.user.email } : null,
-    sessionID: req.sessionID,
-    cookies: req.headers.cookie
-  });
-
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-
-  if (!req.user || !req.user.id) {
-    console.error('User object is missing or incomplete:', req.user);
-    return res.status(401).json({ error: "Invalid user session" });
-  }
-
-  const connection = await createConnection();
-  try {
-    // Verify agent status
-    const [agent] = await connection.execute(
-      'SELECT is_agent FROM users WHERE id = ? AND is_agent = 1',
-      [req.user.id]
-    );
-
-    console.log('Agent check result:', {
-      userId: req.user.id,
-      agentResult: agent,
-      isValid: agent && Array.isArray(agent) && agent.length > 0
-    });
-
-    if (!agent || !Array.isArray(agent) || agent.length === 0) {
-      return res.status(403).json({ error: "Not authorized as agent" });
-    }
-
-    next();
-  } catch (error) {
-    console.error('Error checking agent status:', error);
-    res.status(500).json({ error: "Internal server error", details: error.message });
-  } finally {
-    await connection.end();
-  }
-});
+// We are now using the checkAgent middleware imported from '../auth' at the router level
+// This ensures all routes in this router require agent authentication
 
 // Get agent's customers
 router.get('/customers', async (req: any, res) => {
