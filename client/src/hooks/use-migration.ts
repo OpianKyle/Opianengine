@@ -20,16 +20,27 @@ interface MigrationResults {
  * Can only be used by admin users
  */
 export function useMigration() {
-  const { user } = useAuth();
+  // Get user and token from auth context
+  const { user, token } = useAuth();
   const { toast } = useToast();
   const isAdmin = user?.is_admin || user?.is_super_admin;
 
   const runAgentCustomersMutation = useMutation<MigrationResults, Error, void>({
     mutationFn: async () => {
+      // Add authorization header if token is available
+      const customHeaders: Record<string, string> = {};
+      if (token) {
+        console.log("Using token for authorization", { tokenExists: !!token });
+        customHeaders["Authorization"] = `Bearer ${token}`;
+      } else {
+        console.log("No token available for authorization");
+      }
+      
       const res = await apiRequest(
         "POST",
         "/api/migration/agent-customers",
-        {}
+        {},
+        customHeaders
       );
 
       if (!res.ok) {
