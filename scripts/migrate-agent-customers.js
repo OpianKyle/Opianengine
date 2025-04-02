@@ -109,6 +109,26 @@ async function migrateAgentCustomers(options = {}) {
   try {
     connection = await createConnection();
     
+    // First, let's check database tables to debug
+    console.log('Checking database tables...');
+    
+    // Check if users table exists and has records
+    const [userTables] = await connection.execute(`SHOW TABLES LIKE 'users'`);
+    console.log('User table exists?', userTables.length > 0);
+    
+    // Check if agent_commissions table exists 
+    const [commissionTables] = await connection.execute(`SHOW TABLES LIKE 'agent_commissions'`);
+    console.log('Agent commissions table exists?', commissionTables.length > 0);
+    
+    // Check users with agent_id (regardless of existing in commissions table)
+    const [agentUsers] = await connection.execute(`
+      SELECT COUNT(*) as count FROM users WHERE agent_id IS NOT NULL
+    `);
+    console.log('Users with agent_id:', agentUsers[0].count);
+    
+    // Now check the original query
+    console.log('Executing main query to find users for migration...');
+    
     // Find all users who were signed up by an agent but are not in the agent_commissions table
     const [users] = await connection.execute(`
       SELECT u.id, u.email, u.first_name, u.last_name, u.agent_id, u.selected_package 
