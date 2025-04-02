@@ -413,11 +413,22 @@ router.get('/statistics', async (req: any, res) => {
     // Create a direct connection without using the cache first
     const connection = await createConnection();
     try {
+      console.log('Fetching statistics for agent ID:', req.user.id);
+      
+      // First check if there are any customers with this agent_id
+      const [customerCheck] = await connection.execute(
+        'SELECT id, email FROM users WHERE agent_id = ? LIMIT 5', 
+        [req.user.id]
+      );
+      console.log('Customer check results:', JSON.stringify(customerCheck));
+      
       // Query 1: Total customers count for this agent
       const [totalCustomersResult] = await connection.execute(
         'SELECT COUNT(*) as count FROM users WHERE agent_id = ?',
         [req.user.id]
       );
+      console.log('Total customers result:', JSON.stringify(totalCustomersResult));
+      
       const totalCustomers = Array.isArray(totalCustomersResult) && totalCustomersResult.length > 0 
         ? totalCustomersResult[0].count 
         : 0;
