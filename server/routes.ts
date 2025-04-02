@@ -11,6 +11,7 @@ import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
+import agentRouter from './routes/agent';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
@@ -954,6 +955,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   // Mount referral routes
   // Mount the referral routes
   app.use('/api/referral', referralRouter);
+  app.use('/api/agent', agentRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
