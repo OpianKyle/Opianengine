@@ -410,82 +410,105 @@ router.get('/statistics', async (req: any, res) => {
     // Get the cache key based on the agent ID
     const cacheKey = `agent_statistics_${req.user.id}`;
     
-    // Try to get from cache first or generate the data
-    const statistics = await queryCache.getOrFetch(cacheKey, async () => {
-      const connection = await createConnection();
+    // Create a direct connection without using the cache first
+    const connection = await createConnection();
+    try {
+      // Query 1: Total customers count for this agent
+      const [totalCustomersResult] = await connection.execute(
+        'SELECT COUNT(*) as count FROM users WHERE agent_id = ?',
+        [req.user.id]
+      );
+      const totalCustomers = Array.isArray(totalCustomersResult) && totalCustomersResult.length > 0 
+        ? totalCustomersResult[0].count 
+        : 0;
+      
+      // Query 2: Active customers (enabled = 1)
+      const [activeCustomersResult] = await connection.execute(
+        'SELECT COUNT(*) as count FROM users WHERE agent_id = ? AND is_enabled = 1',
+        [req.user.id]
+      );
+      const activeCustomers = Array.isArray(activeCustomersResult) && activeCustomersResult.length > 0 
+        ? activeCustomersResult[0].count 
+        : 0;
+      
+      // Query 3: Total points assigned to customers of this agent
+      const [totalPointsResult] = await connection.execute(
+        'SELECT SUM(points) as total FROM users WHERE agent_id = ?',
+        [req.user.id]
+      );
+      const totalPoints = Array.isArray(totalPointsResult) && totalPointsResult.length > 0 && totalPointsResult[0].total 
+        ? Number(totalPointsResult[0].total) 
+        : 0;
+      
+      // Query 4: Total commission amount (safely)
+      let totalCommissions = 0;
       try {
-        // Query 1: Total customers count for this agent
-        const [totalCustomersResult] = await connection.execute(
-          'SELECT COUNT(*) as count FROM users WHERE agent_id = ?',
-          [req.user.id]
-        );
-        const totalCustomers = Array.isArray(totalCustomersResult) && totalCustomersResult.length > 0 
-          ? totalCustomersResult[0].count 
-          : 0;
-        
-        // Query 2: Active customers (enabled = 1)
-        const [activeCustomersResult] = await connection.execute(
-          'SELECT COUNT(*) as count FROM users WHERE agent_id = ? AND is_enabled = 1',
-          [req.user.id]
-        );
-        const activeCustomers = Array.isArray(activeCustomersResult) && activeCustomersResult.length > 0 
-          ? activeCustomersResult[0].count 
-          : 0;
-        
-        // Query 3: Total points assigned to customers of this agent
-        const [totalPointsResult] = await connection.execute(
-          'SELECT SUM(points) as total FROM users WHERE agent_id = ?',
-          [req.user.id]
-        );
-        const totalPoints = Array.isArray(totalPointsResult) && totalPointsResult.length > 0 && totalPointsResult[0].total 
-          ? Number(totalPointsResult[0].total) 
-          : 0;
-        
-        // Query 4: Total commission amount
-        const [commissionsResult] = await connection.execute(
-          'SELECT SUM(amount) as total FROM agent_commissions WHERE agent_id = ?',
-          [req.user.id]
-        );
-        const totalCommissions = Array.isArray(commissionsResult) && commissionsResult.length > 0 && commissionsResult[0].total 
-          ? Number(commissionsResult[0].total) 
-          : 0;
-          
-        // Query 5: Get all customer packages count
-        const [packageDistributionResult] = await connection.execute(
-          `SELECT selected_package as package, COUNT(*) as count 
-           FROM users 
-           WHERE agent_id = ? 
-           GROUP BY selected_package`,
-          [req.user.id]
+        // Check if the table exists first
+        const [tableExists] = await connection.execute(
+          "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'agent_commissions'"
         );
         
-        // Transform package distribution
-        const packageDistribution: Record<string, number> = {};
-        if (Array.isArray(packageDistributionResult)) {
-          packageDistributionResult.forEach((pkg: any) => {
-            if (pkg.package) {
-              packageDistribution[pkg.package.toLowerCase()] = pkg.count;
-            }
-          });
+        if (Array.isArray(tableExists) && tableExists.length > 0 && tableExists[0].count > 0) {
+          const [commissionsResult] = await connection.execute(
+            'SELECT SUM(commission_amount) as total FROM agent_commissions WHERE agent_id = ?',
+            [req.user.id]
+          );
+          totalCommissions = Array.isArray(commissionsResult) && commissionsResult.length > 0 && commissionsResult[0].total 
+            ? Number(commissionsResult[0].total) 
+            : 0;
+        } else {
+          console.log('agent_commissions table does not exist yet');
         }
-        
-        // Prepare the response object
-        return {
-          totalCustomers,
-          activeCustomers,
-          totalPoints,
-          totalCommissions,
-          packageDistribution
-        };
-      } finally {
-        await connection.end();
+      } catch (error) {
+        console.warn('Error fetching commissions:', error.message);
+        // Continue with totalCommissions = 0
       }
-    });
-    
-    res.json(statistics);
+        
+      // Query 5: Get all customer packages count
+      const [packageDistributionResult] = await connection.execute(
+        `SELECT selected_package as package, COUNT(*) as count 
+         FROM users 
+         WHERE agent_id = ? 
+         GROUP BY selected_package`,
+        [req.user.id]
+      );
+      
+      // Transform package distribution
+      const packageDistribution: Record<string, number> = {};
+      if (Array.isArray(packageDistributionResult)) {
+        packageDistributionResult.forEach((pkg: any) => {
+          if (pkg.package) {
+            packageDistribution[pkg.package.toLowerCase()] = pkg.count;
+          }
+        });
+      }
+      
+      // Prepare the response object
+      const statistics = {
+        totalCustomers,
+        activeCustomers,
+        totalPoints,
+        totalCommissions,
+        packageDistribution
+      };
+      
+      // Store in cache for future requests
+      queryCache.set(cacheKey, statistics);
+      
+      res.json(statistics);
+    } finally {
+      await connection.end();
+    }
   } catch (error) {
     console.error('Error fetching agent statistics:', error);
-    res.status(500).json({ error: 'Failed to fetch agent statistics' });
+    res.status(500).json({ 
+      error: 'Failed to fetch agent statistics',
+      totalCustomers: 0,
+      activeCustomers: 0,
+      totalPoints: 0,
+      totalCommissions: 0,
+      packageDistribution: {}
+    });
   }
 });
 
