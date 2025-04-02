@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { createConnection } from '../db';
 import { verifyReferralCode, formatReferralCode, getAgentByReferralCode } from '../utils/referral';
 import { checkAgent } from '../auth';
+import { queryCache } from '../utils/query-cache';
 
 // Create express router
 const referralRouter = Router();
@@ -159,38 +160,44 @@ referralRouter.get('/agent/leads', checkAgent, async (req: Request, res: Respons
   try {
     const user = req.user as User;
     
-    const connection = await createConnection();
-    try {
-      const [leads] = await connection.execute(
-        `SELECT 
-          id,
-          first_name,
-          last_name,
-          email,
-          phone_number,
-          status,
-          notes,
-          created_at,
-          updated_at
-        FROM referral_leads
-        WHERE agent_id = ?
-        ORDER BY created_at DESC`,
-        [user.id]
-      );
-      
-      return res.status(200).json({
-        success: true,
-        leads
-      });
-    } catch (error) {
-      console.error('Error fetching referral leads:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to fetch referral leads'
-      });
-    } finally {
-      await connection.end();
-    }
+    // Use query cache for better performance
+    const cacheKey = `agent-leads-${user.id}`;
+    
+    const leads = await queryCache.getOrFetch(
+      cacheKey,
+      async () => {
+        const connection = await createConnection();
+        try {
+          const [leads] = await connection.execute(
+            `SELECT 
+              id,
+              first_name,
+              last_name,
+              email,
+              phone_number,
+              status,
+              notes,
+              created_at,
+              updated_at
+            FROM referral_leads
+            WHERE agent_id = ?
+            ORDER BY created_at DESC`,
+            [user.id]
+          );
+          
+          return leads;
+        } finally {
+          await connection.end();
+        }
+      },
+      // Cache for 2 minutes (120000ms) since lead data changes more frequently
+      120000
+    );
+    
+    return res.status(200).json({
+      success: true,
+      leads
+    });
   } catch (error) {
     console.error('Error processing referral leads request:', error);
     return res.status(500).json({
@@ -242,6 +249,9 @@ referralRouter.put('/agent/leads/:leadId', checkAgent, async (req: Request, res:
         WHERE id = ?`,
         [status, notes || '', leadId]
       );
+      
+      // Invalidate the cache for this agent's leads
+      queryCache.invalidate(`agent-leads-${user.id}`);
       
       return res.status(200).json({
         success: true,
@@ -443,6 +453,10 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       // Commit the transaction
       await connection.commit();
       
+      // Invalidate relevant caches
+      queryCache.invalidate(`agent-leads-${user.id}`);
+      queryCache.invalidate(`agent-commissions-${user.id}`);
+      
       return res.status(201).json({
         success: true,
         message: 'Customer registered successfully',
@@ -475,54 +489,62 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
   try {
     const user = req.user as User;
     
-    const connection = await createConnection();
-    try {
-      const [commissions] = await connection.execute(
-        `SELECT 
-          ac.id,
-          ac.package_name,
-          ac.package_price,
-          ac.commission_amount,
-          ac.commission_type,
-          ac.paid,
-          ac.created_at,
-          u.first_name,
-          u.last_name,
-          u.email
-        FROM agent_commissions ac
-        JOIN users u ON ac.customer_id = u.id
-        WHERE ac.agent_id = ?
-        ORDER BY ac.created_at DESC`,
-        [user.id]
-      );
-      
-      // Calculate total earnings and paid/unpaid amounts
-      // @ts-ignore - MySQL2 results structure
-      const totalEarned = Array.isArray(commissions) ? commissions.reduce((sum, c) => sum + parseFloat(c.commission_amount), 0) : 0;
-      
-      // @ts-ignore - MySQL2 results structure
-      const totalPaid = Array.isArray(commissions) ? commissions.reduce((sum, c) => c.paid ? sum + parseFloat(c.commission_amount) : sum, 0) : 0;
-      
-      const totalUnpaid = totalEarned - totalPaid;
-      
-      return res.status(200).json({
-        success: true,
-        commissions,
-        stats: {
-          totalEarned,
-          totalPaid,
-          totalUnpaid
+    // Use query cache for better performance
+    const cacheKey = `agent-commissions-${user.id}`;
+    
+    const result = await queryCache.getOrFetch(
+      cacheKey,
+      async () => {
+        const connection = await createConnection();
+        try {
+          const [commissions] = await connection.execute(
+            `SELECT 
+              ac.id,
+              ac.package_name,
+              ac.package_price,
+              ac.commission_amount,
+              ac.commission_type,
+              ac.paid,
+              ac.created_at,
+              u.first_name,
+              u.last_name,
+              u.email
+            FROM agent_commissions ac
+            JOIN users u ON ac.customer_id = u.id
+            WHERE ac.agent_id = ?
+            ORDER BY ac.created_at DESC`,
+            [user.id]
+          );
+          
+          // Calculate total earnings and paid/unpaid amounts
+          // @ts-ignore - MySQL2 results structure
+          const totalEarned = Array.isArray(commissions) ? commissions.reduce((sum, c) => sum + parseFloat(c.commission_amount), 0) : 0;
+          
+          // @ts-ignore - MySQL2 results structure
+          const totalPaid = Array.isArray(commissions) ? commissions.reduce((sum, c) => c.paid ? sum + parseFloat(c.commission_amount) : sum, 0) : 0;
+          
+          const totalUnpaid = totalEarned - totalPaid;
+          
+          return {
+            commissions,
+            stats: {
+              totalEarned,
+              totalPaid,
+              totalUnpaid
+            }
+          };
+        } finally {
+          await connection.end();
         }
-      });
-    } catch (error) {
-      console.error('Error fetching commissions:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to fetch commissions'
-      });
-    } finally {
-      await connection.end();
-    }
+      },
+      // Cache for 5 minutes (300000ms)
+      300000
+    );
+    
+    return res.status(200).json({
+      success: true,
+      ...result
+    });
   } catch (error) {
     console.error('Error processing commissions request:', error);
     return res.status(500).json({

@@ -16,7 +16,7 @@ interface Commission {
 }
 
 export default function AgentDashboard() {
-  // Query to fetch the agent's commissions
+  // Query to fetch the agent's commissions with optimizations
   const { data: commissions = [], isLoading: isCommissionsLoading } = useQuery({
     queryKey: ['/api/referral/agent/commissions'],
     queryFn: async () => {
@@ -26,6 +26,9 @@ export default function AgentDashboard() {
       }
       return response.json();
     },
+    staleTime: 2 * 60 * 1000, // 2 minutes before refetching (server cache is 5 minutes)
+    gcTime: 5 * 60 * 1000, // 5 minutes before removing from cache (cacheTime is renamed to gcTime in React Query v5)
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
   const calculateTotalCommission = (isRenewal: boolean = false) => {

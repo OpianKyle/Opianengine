@@ -72,7 +72,7 @@ export default function AgentLeadsPage() {
     selectedPackage: '',
   });
 
-  // Query to fetch the referral leads
+  // Query to fetch the referral leads with optimizations
   const { data: leads = [], isLoading: isLeadsLoading } = useQuery({
     queryKey: ['/api/referral/agent/leads'],
     queryFn: async () => {
@@ -82,6 +82,9 @@ export default function AgentLeadsPage() {
       }
       return response.json();
     },
+    staleTime: 2 * 60 * 1000, // 2 minutes before refetching (server cache is 2 minutes)
+    gcTime: 5 * 60 * 1000, // 5 minutes before removing from cache (cacheTime is renamed to gcTime in React Query v5)
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
   // Mutation to update lead status
