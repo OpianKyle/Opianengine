@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createConnection } from '../db';
 import { generateReferralCode } from '../utils/referral';
 import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from '../utils/emailService';
+import { queryCache } from '../utils/query-cache';
 
 const router = Router();
 
@@ -438,6 +439,91 @@ router.put('/customers/:id/update', async (req: any, res) => {
     res.status(500).json({ error: 'Failed to update customer', details: error.message });
   } finally {
     await connection.end();
+  }
+});
+
+// Get agent statistics (total customers, active customers, total points assigned, commissions)
+router.get('/statistics', async (req: any, res) => {
+  try {
+    // Get the cache key based on the agent ID
+    const cacheKey = `agent_statistics_${req.user.id}`;
+    
+    // Try to get from cache first or generate the data
+    const statistics = await queryCache.getOrFetch(cacheKey, async () => {
+      const connection = await createConnection();
+      try {
+        // Query 1: Total customers count for this agent
+        const [totalCustomersResult] = await connection.execute(
+          'SELECT COUNT(*) as count FROM users WHERE agent_id = ?',
+          [req.user.id]
+        );
+        const totalCustomers = Array.isArray(totalCustomersResult) && totalCustomersResult.length > 0 
+          ? totalCustomersResult[0].count 
+          : 0;
+        
+        // Query 2: Active customers (enabled = 1)
+        const [activeCustomersResult] = await connection.execute(
+          'SELECT COUNT(*) as count FROM users WHERE agent_id = ? AND is_enabled = 1',
+          [req.user.id]
+        );
+        const activeCustomers = Array.isArray(activeCustomersResult) && activeCustomersResult.length > 0 
+          ? activeCustomersResult[0].count 
+          : 0;
+        
+        // Query 3: Total points assigned to customers of this agent
+        const [totalPointsResult] = await connection.execute(
+          'SELECT SUM(points) as total FROM users WHERE agent_id = ?',
+          [req.user.id]
+        );
+        const totalPoints = Array.isArray(totalPointsResult) && totalPointsResult.length > 0 && totalPointsResult[0].total 
+          ? Number(totalPointsResult[0].total) 
+          : 0;
+        
+        // Query 4: Total commission amount
+        const [commissionsResult] = await connection.execute(
+          'SELECT SUM(amount) as total FROM agent_commissions WHERE agent_id = ?',
+          [req.user.id]
+        );
+        const totalCommissions = Array.isArray(commissionsResult) && commissionsResult.length > 0 && commissionsResult[0].total 
+          ? Number(commissionsResult[0].total) 
+          : 0;
+          
+        // Query 5: Get all customer packages count
+        const [packageDistributionResult] = await connection.execute(
+          `SELECT selected_package as package, COUNT(*) as count 
+           FROM users 
+           WHERE agent_id = ? 
+           GROUP BY selected_package`,
+          [req.user.id]
+        );
+        
+        // Transform package distribution
+        const packageDistribution: Record<string, number> = {};
+        if (Array.isArray(packageDistributionResult)) {
+          packageDistributionResult.forEach((pkg: any) => {
+            if (pkg.package) {
+              packageDistribution[pkg.package.toLowerCase()] = pkg.count;
+            }
+          });
+        }
+        
+        // Prepare the response object
+        return {
+          totalCustomers,
+          activeCustomers,
+          totalPoints,
+          totalCommissions,
+          packageDistribution
+        };
+      } finally {
+        await connection.end();
+      }
+    });
+    
+    res.json(statistics);
+  } catch (error) {
+    console.error('Error fetching agent statistics:', error);
+    res.status(500).json({ error: 'Failed to fetch agent statistics' });
   }
 });
 

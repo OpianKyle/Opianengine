@@ -15,6 +15,15 @@ interface Commission {
   paidOut: boolean;
 }
 
+// Agent statistics type
+interface AgentStatistics {
+  totalCustomers: number;
+  activeCustomers: number;
+  totalPoints: number;
+  totalCommissions: number;
+  packageDistribution: Record<string, number>;
+}
+
 export default function AgentDashboard() {
   // Query to fetch the agent's commissions with optimizations
   const { data: commissions = [], isLoading: isCommissionsLoading } = useQuery({
@@ -31,17 +40,32 @@ export default function AgentDashboard() {
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
+  // Query to fetch the agent statistics
+  const { data: statistics, isLoading: isStatsLoading } = useQuery<AgentStatistics>({
+    queryKey: ['/api/agent/statistics'],
+    queryFn: async () => {
+      const response = await fetch('/api/agent/statistics');
+      if (!response.ok) {
+        throw new Error('Failed to fetch agent statistics');
+      }
+      return response.json();
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes before refetching
+    gcTime: 5 * 60 * 1000, // 5 minutes before removing from cache
+    refetchOnWindowFocus: false,
+  });
+
   const calculateTotalCommission = (isRenewal: boolean = false) => {
     return commissions
       .filter(commission => commission.isRenewal === isRenewal)
       .reduce((sum, commission) => sum + commission.commissionAmount, 0);
   };
 
-  if (isCommissionsLoading) {
+  if (isCommissionsLoading || isStatsLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading commission data...</span>
+        <span className="ml-2">Loading dashboard data...</span>
       </div>
     );
   }
@@ -56,7 +80,7 @@ export default function AgentDashboard() {
             <CardTitle>Total Customers</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">0</p>
+            <p className="text-2xl font-bold">{statistics?.totalCustomers || 0}</p>
           </CardContent>
         </Card>
 
@@ -65,7 +89,7 @@ export default function AgentDashboard() {
             <CardTitle>Active Customers</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">0</p>
+            <p className="text-2xl font-bold">{statistics?.activeCustomers || 0}</p>
           </CardContent>
         </Card>
 
@@ -74,7 +98,7 @@ export default function AgentDashboard() {
             <CardTitle>Total Points Assigned</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">0</p>
+            <p className="text-2xl font-bold">{statistics?.totalPoints?.toLocaleString() || 0}</p>
           </CardContent>
         </Card>
       </div>
