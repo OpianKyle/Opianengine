@@ -48,7 +48,15 @@ async function createConnection() {
       host: process.env.PGHOST,
       user: process.env.PGUSER,
       password: process.env.PGPASSWORD,
-      database: process.env.PGDATABASE
+      database: process.env.PGDATABASE,
+      // Add connection timeout and retry configuration
+      connectTimeout: 30000, // 30 seconds timeout
+      waitForConnections: true,
+      connectionLimit: 10,
+      maxIdle: 10,
+      idleTimeout: 60000,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000
     });
     console.log('Successfully connected to the database');
     return connection;
