@@ -409,18 +409,51 @@ router.get('/statistics', async (req: any, res) => {
   try {
     // Get the cache key based on the agent ID
     const cacheKey = `agent_statistics_${req.user.id}`;
+    console.log('Agent statistics request for agent ID:', req.user.id);
     
     // Create a direct connection without using the cache first
     const connection = await createConnection();
     try {
-      console.log('Fetching statistics for agent ID:', req.user.id);
+      // Check the agent record in users table
+      const [agentRecord] = await connection.execute(
+        'SELECT id, email, is_agent, referral_code FROM users WHERE id = ?',
+        [req.user.id]
+      );
+      console.log('Agent record:', JSON.stringify(agentRecord));
+      
+      // First check database schema for agent_id column
+      const [columnCheck] = await connection.execute(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'users' 
+         AND COLUMN_NAME = 'agent_id'`
+      );
+      console.log('Column check for agent_id:', JSON.stringify(columnCheck));
       
       // First check if there are any customers with this agent_id
       const [customerCheck] = await connection.execute(
-        'SELECT id, email FROM users WHERE agent_id = ? LIMIT 5', 
+        'SELECT id, email, agent_id, selected_package FROM users WHERE agent_id = ? LIMIT 5', 
         [req.user.id]
       );
       console.log('Customer check results:', JSON.stringify(customerCheck));
+      
+      // Also check for customers that might be referred by this agent's referral code
+      const [agentData] = await connection.execute(
+        'SELECT referral_code FROM users WHERE id = ?',
+        [req.user.id]
+      );
+      
+      let referralCode = '';
+      if (Array.isArray(agentData) && agentData.length > 0 && agentData[0].referral_code) {
+        referralCode = agentData[0].referral_code;
+        console.log('Agent referral code:', referralCode);
+        
+        const [referredCustomers] = await connection.execute(
+          'SELECT id, email, referred_by, selected_package FROM users WHERE referred_by = ?',
+          [referralCode]
+        );
+        console.log('Referred customers:', JSON.stringify(referredCustomers));
+      }
       
       // Query 1: Total customers count for this agent
       const [totalCustomersResult] = await connection.execute(
