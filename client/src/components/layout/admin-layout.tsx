@@ -18,6 +18,7 @@ import {
   UserPlus,
   UserCheck,
   Mail, // Added import for Mail icon
+  RefreshCw, // Added import for RefreshCw icon for migrations
 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "Quote Requests", href: "/admin/quote-requests", icon: <FileText className="h-4 w-4 mr-2" /> },
     { label: "Rewards", href: "/admin/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Cash Redemptions", href: "/admin/cash-redemptions", icon: <DollarSign className="h-4 w-4 mr-2" /> },
+    { label: "Migrations", href: "/admin/migrations", icon: <RefreshCw className="h-4 w-4 mr-2" /> },
     { label: "Action Logs", href: "/admin/logs", icon: <ScrollText className="h-4 w-4 mr-2" /> },
     { label: "Email Logs", href: "/admin/email-logs", icon: <Mail className="h-4 w-4 mr-2" /> },
   ];

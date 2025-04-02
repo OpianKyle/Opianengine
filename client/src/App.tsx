@@ -26,6 +26,7 @@ import CashRedemptions from "@/pages/admin/cash-redemptions";
 import AdminQuoteRequests from "@/pages/admin/quote-requests";
 import AdminAgents from "@/pages/admin/agents";
 import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
+import Migrations from "@/pages/admin/migrations"; // Added import for Migrations
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -172,6 +173,11 @@ function Router() {
       <Route path="/admin/quote-requests">
         <AdminLayout>
           <ProtectedRoute component={AdminQuoteRequests} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/migrations">
+        <AdminLayout>
+          <ProtectedRoute component={Migrations} admin />
         </AdminLayout>
       </Route>
 

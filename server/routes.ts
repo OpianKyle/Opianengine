@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
-import { setupAuth, checkAgent, verifyJwtToken } from "./auth";
+import { setupAuth, checkAgent, checkAdmin, verifyJwtToken } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
@@ -12,6 +12,7 @@ import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
 import agentRouter from './routes/agent';
+import migrationRouter from './routes/migration';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
@@ -956,6 +957,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   // Mount the referral routes
   app.use('/api/referral', referralRouter);
   app.use('/api/agent', agentRouter);
+  app.use('/api/migration', migrationRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
