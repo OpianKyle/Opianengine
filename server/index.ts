@@ -42,6 +42,7 @@ import { db } from "@db";
 import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
 import adminRouter from './routes/admin';
+import migrationRouter from './routes/migration';
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
@@ -144,6 +145,7 @@ app.use((req: any, res, next) => {
     // Register routes
     app.use('/api/agent', agentRouter);
     app.use('/api/admin', adminRouter);
+    app.use('/api/migration', migrationRouter);
     registerRoutes(app, sessionMiddleware);
     console.log('Routes registered');
 

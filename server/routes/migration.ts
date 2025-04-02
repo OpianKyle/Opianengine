@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { logAdminAction } from '../admin-logger';
+import { migrateAgentCustomers } from '../../scripts/migrate-agent-customers.js';
+import { getUserFromTokenOrSession } from '../auth';
 
 const migrationRouter = Router();
 
@@ -11,22 +13,21 @@ const migrationRouter = Router();
  * Requires admin authentication
  */
 migrationRouter.post('/agent-customers', async (req: Request, res: Response) => {
-  if (!req.isAuthenticated()) {
+  // Get user from session or JWT token
+  const user = await getUserFromTokenOrSession(req);
+  
+  if (!user) {
     return res.status(401).json({ error: "Not authenticated" });
   }
   
   try {
-    const user = req.user as any;
     if (!user.is_admin && !user.is_super_admin) {
       return res.status(403).json({ error: "Not authorized" });
     }
     
     console.log('Starting migration of agent customers to agent_commissions table');
     
-    // Import the migration function
-    const { migrateAgentCustomers } = require('../../scripts/migrate-agent-customers');
-    
-    // Run the migration
+    // Run the migration using the imported function
     const results = await migrateAgentCustomers();
     
     // Log admin action

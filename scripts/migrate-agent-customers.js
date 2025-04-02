@@ -8,8 +8,9 @@
  * This script is designed for MariaDB.
  */
 
-const mysql = require('mysql2/promise');
-require('dotenv').config();
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Package pricing structure
 const PACKAGE_PRICING = {
@@ -155,8 +156,8 @@ async function migrateAgentCustomers() {
   return migrationResults;
 }
 
-// If running as standalone script
-if (require.main === module) {
+// If running directly (not imported)
+if (import.meta.url === `file://${process.argv[1]}`) {
   migrateAgentCustomers()
     .then((results) => {
       console.log('Migration results:', results);
@@ -166,7 +167,7 @@ if (require.main === module) {
       console.error('Migration failed:', error);
       process.exit(1);
     });
-} else {
-  // Export for use as a module
-  module.exports = { migrateAgentCustomers };
 }
+
+// Export for use as a module
+export { migrateAgentCustomers };

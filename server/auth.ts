@@ -1021,8 +1021,13 @@ function parseCookie(cookieString: string | undefined): { [key: string]: string 
   if (!cookieString) return {};
   const cookies: { [key: string]: string } = {};
   cookieString.split(';').forEach(cookie => {
-    const [key, value] = cookie.trim().split('=');
-    cookies[key] = value;
+    const parts = cookie.trim().split('=');
+    if (parts.length >= 2) {
+      const key = parts[0];
+      // Join back any parts that got split if there were multiple '=' in the value
+      const value = parts.slice(1).join('=');
+      cookies[key] = decodeURIComponent(value);
+    }
   });
   return cookies;
 }
