@@ -11,8 +11,9 @@
  * 4. Returns detailed results of the migration process
  */
 
-const mysql = require('mysql2/promise');
-require('dotenv').config();
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Package prices for commission calculation
 const PACKAGE_PRICES = {
@@ -145,7 +146,7 @@ async function migrateAgentCustomers() {
 }
 
 // Execute the migration if this script is run directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   migrateAgentCustomers()
     .then(() => {
       process.exit(0);
@@ -154,7 +155,7 @@ if (require.main === module) {
       console.error('Migration failed with error:', error.message);
       process.exit(1);
     });
-} else {
-  // Export for use as a module
-  module.exports = { migrateAgentCustomers };
 }
+
+// Export for use as a module
+export { migrateAgentCustomers };

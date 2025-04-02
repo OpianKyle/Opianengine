@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 
 export default function Migrations() {
   const { runAgentCustomersMigration, isLoading, isSuccess, results, error } = useMigration();
-  const { runManualMigration, isRunning: isManualMigrationRunning, results: manualMigrationResults, isSuccess: isManualMigrationSuccess, error: manualMigrationError } = useManualMigration();
+  const { runManualMigration, isManualMigrationRunning, manualMigrationResults, isManualMigrationSuccess, manualMigrationError } = useManualMigration();
   const { toast } = useToast();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmingManual, setIsConfirmingManual] = useState(false);

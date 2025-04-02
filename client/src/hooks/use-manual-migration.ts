@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 export interface ManualMigrationResponse {
   success: boolean;
@@ -19,6 +19,8 @@ export interface ManualMigrationResponse {
  * Used for cases when standard migrations are experiencing timeout issues
  */
 export function useManualMigration() {
+  const { toast } = useToast();
+  
   // Mutation for agent commission migration
   const {
     mutate: runManualMigration,
