@@ -90,7 +90,7 @@ export default function AgentLeadsPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('leads');
+  const [activeTab, setActiveTab] = useState('commissions');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
@@ -320,10 +320,10 @@ export default function AgentLeadsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Referral Management</h1>
+        <h1 className="text-3xl font-bold">Commissions Dashboard</h1>
       </div>
 
-      <Tabs defaultValue="leads" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs defaultValue="commissions" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="leads">Referral Leads</TabsTrigger>
           <TabsTrigger value="commissions">Commissions</TabsTrigger>
