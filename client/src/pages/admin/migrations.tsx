@@ -69,7 +69,11 @@ export default function Migrations() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Migration Error</AlertTitle>
                 <AlertDescription>
-                  {error.message || "An unknown error occurred during migration"}
+                  {error instanceof Error 
+                    ? error.message 
+                    : typeof error === 'object' && error !== null && 'message' in error
+                      ? String(error.message)
+                      : "An unknown error occurred during migration"}
                 </AlertDescription>
               </Alert>
             )}
@@ -87,8 +91,8 @@ export default function Migrations() {
                       <div className="mt-2">
                         <p className="font-semibold">Errors:</p>
                         <ul className="list-disc pl-5">
-                          {results.errors.map((err: string, i: number) => (
-                            <li key={i}>{err}</li>
+                          {results.errors.map((err: any, i: number) => (
+                            <li key={i}>{typeof err === 'string' ? err : err.error || err.message || JSON.stringify(err)}</li>
                           ))}
                         </ul>
                       </div>

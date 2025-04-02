@@ -1,6 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { logAdminAction } from '../admin-logger';
-import { migrateAgentCustomers } from '../../scripts/migrate-agent-customers.js';
+// Using dynamic import for the migration script to handle ES Module correctly
+const importMigrationScript = async () => {
+  // Import the migration module dynamically
+  const migrationModule = await import('../../scripts/migrate-agent-customers.js');
+  return migrationModule.migrateAgentCustomers;
+};
 import { getUserFromTokenOrSession } from '../auth';
 
 const migrationRouter = Router();
@@ -13,24 +18,50 @@ const migrationRouter = Router();
  * Requires admin authentication
  */
 migrationRouter.post('/agent-customers', async (req: Request, res: Response) => {
+  console.log('Migration endpoint called:', {
+    headers: {
+      auth: req.headers.authorization ? 'present' : 'missing',
+      cookie: req.headers.cookie ? 'present' : 'missing',
+    },
+    method: req.method,
+    url: req.url,
+    body: typeof req.body === 'object' ? 'present' : 'missing',
+  });
+  
   // Get user from session or JWT token
   const user = await getUserFromTokenOrSession(req);
   
   if (!user) {
+    console.log('Authentication failed, no user found');
     return res.status(401).json({ error: "Not authenticated" });
   }
   
+  console.log('User authenticated:', { 
+    id: user.id, 
+    email: user.email,
+    isAdmin: user.is_admin,
+    isSuperAdmin: user.is_super_admin
+  });
+  
   try {
     if (!user.is_admin && !user.is_super_admin) {
+      console.log('Authorization failed, user is not an admin');
       return res.status(403).json({ error: "Not authorized" });
     }
     
     console.log('Starting migration of agent customers to agent_commissions table');
     
+    // Get the migration function dynamically to handle ES Module correctly
+    console.log('Dynamically importing migration function');
+    const migrateAgentCustomers = await importMigrationScript();
+    
     // Run the migration using the imported function
+    console.log('Calling migrateAgentCustomers function');
     const results = await migrateAgentCustomers();
+    console.log('Migration completed with results:', results);
     
     // Log admin action
+    console.log('Logging admin action');
     await logAdminAction({
       adminId: user.id,
       actionType: "ADMIN_MESSAGE",
@@ -38,6 +69,7 @@ migrationRouter.post('/agent-customers', async (req: Request, res: Response) => 
     });
     
     // Return the results
+    console.log('Returning success response');
     return res.status(200).json({
       success: true,
       message: 'Migration completed successfully',
