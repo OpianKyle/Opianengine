@@ -430,62 +430,109 @@ router.get('/statistics', async (req: any, res) => {
       );
       console.log('Column check for agent_id:', JSON.stringify(columnCheck));
       
-      // First check if there are any customers with this agent_id
-      const [customerCheck] = await connection.execute(
-        'SELECT id, email, agent_id, selected_package FROM users WHERE agent_id = ? LIMIT 5', 
-        [req.user.id]
-      );
-      console.log('Customer check results:', JSON.stringify(customerCheck));
+      // Determine which approach to use for counting customers:
+      // 1. If agent_id column exists in users table - count by agent_id
+      // 2. Otherwise, count customers referred by this agent's referral code
       
-      // Also check for customers that might be referred by this agent's referral code
-      const [agentData] = await connection.execute(
-        'SELECT referral_code FROM users WHERE id = ?',
-        [req.user.id]
-      );
-      
+      let useAgentIdField = Array.isArray(columnCheck) && columnCheck.length > 0;
       let referralCode = '';
-      if (Array.isArray(agentData) && agentData.length > 0 && agentData[0].referral_code) {
-        referralCode = agentData[0].referral_code;
-        console.log('Agent referral code:', referralCode);
-        
-        const [referredCustomers] = await connection.execute(
-          'SELECT id, email, referred_by, selected_package FROM users WHERE referred_by = ?',
-          [referralCode]
+      
+      // Get the agent's referral code from the agent record we already retrieved
+      if (Array.isArray(agentRecord) && agentRecord.length > 0 && agentRecord[0].referral_code) {
+        referralCode = agentRecord[0].referral_code;
+      } else {
+        // If no referral code yet found, query again specifically for the referral code
+        const [agentCodeData] = await connection.execute(
+          'SELECT referral_code FROM users WHERE id = ?',
+          [req.user.id]
         );
-        console.log('Referred customers:', JSON.stringify(referredCustomers));
+        if (Array.isArray(agentCodeData) && agentCodeData.length > 0 && agentCodeData[0].referral_code) {
+          referralCode = agentCodeData[0].referral_code;
+        }
+      }
+      console.log('Agent referral code:', referralCode);
+      
+      // Initialize statistics variables
+      let finalTotalCustomers = 0;
+      let finalActiveCustomers = 0;
+      let finalTotalPoints = 0;
+      let finalPackageDistribution: Record<string, number> = {};
+      
+      // Use both methods and combine results to ensure we're counting all customers
+      
+      // Method 1: Check for customers with agent_id
+      let agentIdCustomers: any[] = [];
+      if (useAgentIdField) {
+        // First check if there are any customers with this agent_id
+        const [customerCheck] = await connection.execute(
+          'SELECT id, email, agent_id, selected_package, is_enabled, points FROM users WHERE agent_id = ?', 
+          [req.user.id]
+        );
+        console.log('Agent ID customers check results:', JSON.stringify(customerCheck));
+        
+        if (Array.isArray(customerCheck) && customerCheck.length > 0) {
+          agentIdCustomers = customerCheck;
+          
+          // Count active customers (enabled = 1)
+          const activeCount = agentIdCustomers.filter(c => c.is_enabled === 1).length;
+          finalActiveCustomers += activeCount;
+          
+          // Total points
+          finalTotalPoints += agentIdCustomers.reduce((sum, c) => sum + (Number(c.points) || 0), 0);
+          
+          // Package distribution
+          agentIdCustomers.forEach(customer => {
+            if (customer.selected_package) {
+              const pkg = customer.selected_package.toLowerCase();
+              finalPackageDistribution[pkg] = (finalPackageDistribution[pkg] || 0) + 1;
+            }
+          });
+        }
       }
       
-      // Query 1: Total customers count for this agent
-      const [totalCustomersResult] = await connection.execute(
-        'SELECT COUNT(*) as count FROM users WHERE agent_id = ?',
-        [req.user.id]
-      );
-      console.log('Total customers result:', JSON.stringify(totalCustomersResult));
+      // Method 2: Check for customers referred by this agent's code
+      let referredCustomers: any[] = [];
+      if (referralCode) {
+        const [referredResult] = await connection.execute(
+          'SELECT id, email, referred_by, selected_package, is_enabled, points FROM users WHERE referred_by = ?',
+          [referralCode]
+        );
+        console.log('Referred customers:', JSON.stringify(referredResult));
+        
+        if (Array.isArray(referredResult) && referredResult.length > 0) {
+          referredCustomers = referredResult;
+          
+          // Count active referred customers (enabled = 1)
+          const activeRefCount = referredCustomers.filter(c => c.is_enabled === 1).length;
+          finalActiveCustomers += activeRefCount;
+          
+          // Total points from referred customers
+          finalTotalPoints += referredCustomers.reduce((sum, c) => sum + (Number(c.points) || 0), 0);
+          
+          // Package distribution for referred customers
+          referredCustomers.forEach(customer => {
+            if (customer.selected_package) {
+              const pkg = customer.selected_package.toLowerCase();
+              finalPackageDistribution[pkg] = (finalPackageDistribution[pkg] || 0) + 1;
+            }
+          });
+        }
+      }
       
-      const totalCustomers = Array.isArray(totalCustomersResult) && totalCustomersResult.length > 0 
-        ? totalCustomersResult[0].count 
-        : 0;
+      // Combine and deduplicate customers from both methods
+      const allCustomers = [...agentIdCustomers];
+      referredCustomers.forEach(refCust => {
+        if (!allCustomers.some(c => c.id === refCust.id)) {
+          allCustomers.push(refCust);
+        }
+      });
       
-      // Query 2: Active customers (enabled = 1)
-      const [activeCustomersResult] = await connection.execute(
-        'SELECT COUNT(*) as count FROM users WHERE agent_id = ? AND is_enabled = 1',
-        [req.user.id]
-      );
-      const activeCustomers = Array.isArray(activeCustomersResult) && activeCustomersResult.length > 0 
-        ? activeCustomersResult[0].count 
-        : 0;
+      // Set final total customers count
+      finalTotalCustomers = allCustomers.length;
+      console.log('Final total customers:', finalTotalCustomers);
       
-      // Query 3: Total points assigned to customers of this agent
-      const [totalPointsResult] = await connection.execute(
-        'SELECT SUM(points) as total FROM users WHERE agent_id = ?',
-        [req.user.id]
-      );
-      const totalPoints = Array.isArray(totalPointsResult) && totalPointsResult.length > 0 && totalPointsResult[0].total 
-        ? Number(totalPointsResult[0].total) 
-        : 0;
-      
-      // Query 4: Total commission amount (safely)
-      let totalCommissions = 0;
+      // Query for commissions
+      let finalTotalCommissions = 0;
       try {
         // Check if the table exists first
         const [tableExists] = await connection.execute(
@@ -497,53 +544,44 @@ router.get('/statistics', async (req: any, res) => {
             'SELECT SUM(commission_amount) as total FROM agent_commissions WHERE agent_id = ?',
             [req.user.id]
           );
-          totalCommissions = Array.isArray(commissionsResult) && commissionsResult.length > 0 && commissionsResult[0].total 
+          finalTotalCommissions = Array.isArray(commissionsResult) && commissionsResult.length > 0 && commissionsResult[0].total 
             ? Number(commissionsResult[0].total) 
             : 0;
+          
+          console.log('Total commissions:', finalTotalCommissions);
         } else {
           console.log('agent_commissions table does not exist yet');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.warn('Error fetching commissions:', error.message);
-        // Continue with totalCommissions = 0
-      }
-        
-      // Query 5: Get all customer packages count
-      const [packageDistributionResult] = await connection.execute(
-        `SELECT selected_package as package, COUNT(*) as count 
-         FROM users 
-         WHERE agent_id = ? 
-         GROUP BY selected_package`,
-        [req.user.id]
-      );
-      
-      // Transform package distribution
-      const packageDistribution: Record<string, number> = {};
-      if (Array.isArray(packageDistributionResult)) {
-        packageDistributionResult.forEach((pkg: any) => {
-          if (pkg.package) {
-            packageDistribution[pkg.package.toLowerCase()] = pkg.count;
-          }
-        });
+        // Continue with finalTotalCommissions = 0
       }
       
       // Prepare the response object
       const statistics = {
-        totalCustomers,
-        activeCustomers,
-        totalPoints,
-        totalCommissions,
-        packageDistribution
+        totalCustomers: finalTotalCustomers,
+        activeCustomers: finalActiveCustomers,
+        totalPoints: finalTotalPoints,
+        totalCommissions: finalTotalCommissions,
+        packageDistribution: finalPackageDistribution
       };
       
       // Store in cache for future requests
-      queryCache.set(cacheKey, statistics);
+      try {
+        if (queryCache && typeof queryCache.set === 'function') {
+          queryCache.set(cacheKey, statistics);
+        }
+      } catch (cacheError) {
+        console.warn('Error setting cache:', cacheError);
+      }
       
       res.json(statistics);
     } finally {
-      await connection.end();
+      if (connection) {
+        await connection.end();
+      }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching agent statistics:', error);
     res.status(500).json({ 
       error: 'Failed to fetch agent statistics',

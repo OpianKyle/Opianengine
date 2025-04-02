@@ -1764,6 +1764,10 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }
 
       // Get direct referrals with their package info and nested referrals count
+      // MariaDB doesn't support the JSON_ARRAYAGG in the same way as other MySQL versions
+      // So we'll use a simpler query and build the package stats in JavaScript
+      
+      // First get basic referral tree
       const [referrals] = await connection.execute(
         `WITH RECURSIVE referral_tree AS (
           -- Base case: direct referrals (level 1)
@@ -1805,22 +1809,30 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
             SELECT COUNT(*) 
             FROM users u2 
             WHERE u2.referred_by = rt.referral_code
-          ) as direct_referral_count,
-          (
-            SELECT JSON_ARRAYAGG(
-              JSON_OBJECT(
-                'package', u3.selected_package,
-                'count', COUNT(*)
-              )
-            )
-            FROM users u3
-            WHERE u3.referred_by = rt.referral_code
-            GROUP BY u3.selected_package
-          ) as referral_package_stats
+          ) as direct_referral_count
         FROM referral_tree rt
         ORDER BY rt.level, rt.created_at DESC`,
         [referralCode]
       );
+      
+      // Now let's get the package stats for each referral separately
+      for (const referral of referrals) {
+        // Get package counts for this referral's direct referrals
+        if (referral.referral_code) {
+          const [packageStats] = await connection.execute(
+            `SELECT selected_package as package, COUNT(*) as count
+             FROM users
+             WHERE referred_by = ?
+             GROUP BY selected_package`,
+            [referral.referral_code]
+          );
+          
+          // Add the package stats to the referral object
+          referral.referral_package_stats = packageStats.length > 0 ? JSON.stringify(packageStats) : '[]';
+        } else {
+          referral.referral_package_stats = '[]';
+        }
+      }
 
       // Get package prices for commission calculations
       const [packagePrices] = await connection.execute(
