@@ -124,27 +124,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      // In development environment on Replit, return a mock admin user for testing
+      // Skip automatic login in development mode to allow the home page to be shown first
       if (window.location.hostname.includes('.replit.dev') || 
           window.location.hostname.includes('.repl.co') ||
           window.location.hostname === 'localhost') {
-        console.log('DEV MODE: Using mock admin user for testing in client');
         
-        // Return a mock admin user for development/testing
-        return {
-          id: 17,
-          email: 'kylem@opianfsgroup.com',
-          first_name: 'Kyle',
-          last_name: 'Developer',
-          phone_number: '1234567890',
-          is_agent: false,
-          is_admin: true,
-          is_super_admin: true,
-          is_enabled: true,
-          points: 10000,
-          referral_code: 'DEV12345',
-          referred_by: null
-        };
+        // Check for a URL parameter that enables auto-login for testing
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoLogin = urlParams.get('auto_login');
+        
+        if (autoLogin === 'admin') {
+          console.log('DEV MODE: Using mock admin user for testing in client');
+          
+          // Return a mock admin user for development/testing when requested via URL param
+          return {
+            id: 17,
+            email: 'kylem@opianfsgroup.com',
+            first_name: 'Kyle',
+            last_name: 'Developer',
+            phone_number: '1234567890',
+            is_agent: false,
+            is_admin: true,
+            is_super_admin: true,
+            is_enabled: true,
+            points: 10000,
+            referral_code: 'DEV12345',
+            referred_by: null
+          };
+        }
+        
+        // By default, don't auto-login in development environment to simulate a real startup
+        console.log('DEV MODE: No auto-login, showing home page');
+        return null;
       }
       
       // Normal production code
