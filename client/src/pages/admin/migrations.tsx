@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle, RefreshCw, Wrench } from "lucide-react";
+import { AlertCircle, CheckCircle, RefreshCw, Wrench, Layers } from "lucide-react";
 import { useMigration } from "@/hooks/use-migration";
 import { useManualMigration } from "@/hooks/use-manual-migration";
+import { usePackageTypes } from "@/hooks/use-package-types";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,9 +14,11 @@ import { Label } from "@/components/ui/label";
 export default function Migrations() {
   const { runAgentCustomersMigration, isLoading, isSuccess, results, error } = useMigration();
   const { runManualMigration, isManualMigrationRunning, manualMigrationResults, isManualMigrationSuccess, manualMigrationError } = useManualMigration();
+  const { updatePackageTypes, isUpdating, isSuccess: isPackageTypesSuccess, error: packageTypesError } = usePackageTypes();
   const { toast } = useToast();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmingManual, setIsConfirmingManual] = useState(false);
+  const [isConfirmingPackageTypesUpdate, setIsConfirmingPackageTypesUpdate] = useState(false);
   const [forceProductionMode, setForceProductionMode] = useState(false);
 
   const handleRunMigration = async () => {
@@ -50,6 +53,10 @@ export default function Migrations() {
     setIsConfirmingManual(false);
   };
 
+  const handleCancelPackageTypesUpdate = () => {
+    setIsConfirmingPackageTypesUpdate(false);
+  };
+
   const handleRunManualMigration = () => {
     if (!isConfirmingManual) {
       setIsConfirmingManual(true);
@@ -71,6 +78,30 @@ export default function Migrations() {
       });
     } finally {
       setIsConfirmingManual(false);
+    }
+  };
+
+  const handleUpdatePackageTypes = () => {
+    if (!isConfirmingPackageTypesUpdate) {
+      setIsConfirmingPackageTypesUpdate(true);
+      return;
+    }
+
+    try {
+      updatePackageTypes();
+      toast({
+        title: "Package types update initiated",
+        description: "The standardization of package types has been started. This may take a moment to complete.",
+        variant: "default",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Package types update failed",
+        description: err?.message || "An unknown error occurred during the update process",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirmingPackageTypesUpdate(false);
     }
   };
 
@@ -246,6 +277,81 @@ export default function Migrations() {
                 "Confirm Run Manual Migration"
               ) : (
                 "Run Manual Migration"
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Layers className="h-5 w-5 mr-2" />
+              Package Types Standardization
+            </CardTitle>
+            <CardDescription>
+              Update package types to use consistent naming convention
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4">
+              This migration standardizes package types in the agent_commissions table to use the following naming convention:
+            </p>
+            <ul className="list-disc pl-5 mb-4 space-y-1">
+              <li>OPPORTUNITY (previously BASIC/STANDARD): R350 - 2500 points</li>
+              <li>MOMENTUM: R450 - 5000 points</li>
+              <li>PROSPER (previously PREMIUM): R550 - 7500 points</li>
+              <li>PRESTIGE (previously ELITE): R695 - 10000 points</li>
+              <li>PINNACLE (previously EXECUTIVE): R825 - 12500 points</li>
+            </ul>
+            
+            {packageTypesError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Package Types Update Error</AlertTitle>
+                <AlertDescription>
+                  {packageTypesError instanceof Error 
+                    ? packageTypesError.message 
+                    : "An unknown error occurred during package types update"}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {isPackageTypesSuccess && (
+              <Alert className="mb-4">
+                <CheckCircle className="h-4 w-4" />
+                <AlertTitle>Package Types Update Successful</AlertTitle>
+                <AlertDescription>
+                  <div className="mt-2">
+                    <p>Package types have been successfully standardized across the system.</p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-end space-x-2">
+            {isConfirmingPackageTypesUpdate && (
+              <Button 
+                variant="outline" 
+                onClick={handleCancelPackageTypesUpdate} 
+                disabled={isUpdating}
+              >
+                Cancel
+              </Button>
+            )}
+            <Button 
+              onClick={handleUpdatePackageTypes} 
+              disabled={isUpdating}
+              variant={isConfirmingPackageTypesUpdate ? "destructive" : "default"}
+            >
+              {isUpdating ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Updating Package Types...
+                </>
+              ) : isConfirmingPackageTypesUpdate ? (
+                "Confirm Package Types Update"
+              ) : (
+                "Update Package Types"
               )}
             </Button>
           </CardFooter>

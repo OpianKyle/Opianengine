@@ -14,6 +14,7 @@ import referralRouter from './routes/referral';
 import agentRouter from './routes/agent';
 import migrationRouter from './routes/migration';
 import manualMigrationRouter from './routes/manual-migration';
+import packageTypesRouter from './routes/package-types';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
@@ -960,6 +961,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/agent', agentRouter);
   app.use('/api/migration', migrationRouter);
   app.use('/api/manual-migration', manualMigrationRouter);
+  app.use('/api/package-types', packageTypesRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {

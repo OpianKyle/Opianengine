@@ -32,7 +32,7 @@ async function runMigration() {
         agent_id INT NOT NULL,
         customer_id INT NOT NULL,
         commission_type ENUM('SIGNUP', 'RENEWAL') NOT NULL,
-        package_type ENUM('BASIC', 'STANDARD', 'PREMIUM', 'ELITE', 'EXECUTIVE', 'OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE') NOT NULL,
+        package_type ENUM('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE') NOT NULL,
         premium_amount DECIMAL(10,2) NOT NULL,
         commission_percentage DECIMAL(5,2) NOT NULL,
         commission_amount DECIMAL(10,2) NOT NULL,
@@ -61,7 +61,24 @@ async function runMigration() {
       
       // Update transaction type to include COMMISSION
       `ALTER TABLE transactions MODIFY COLUMN type 
-       ENUM('REWARD_REDEMPTION', 'PRODUCT_PURCHASE', 'ADMIN_ADJUSTMENT', 'WELCOME_BONUS', 'REFERRAL_BONUS', 'COMMISSION') NOT NULL`
+       ENUM('REWARD_REDEMPTION', 'PRODUCT_PURCHASE', 'ADMIN_ADJUSTMENT', 'WELCOME_BONUS', 'REFERRAL_BONUS', 'COMMISSION') NOT NULL`,
+      
+      // Update any agent_commissions records with old package types
+      `UPDATE agent_commissions SET package_type = 'OPPORTUNITY' 
+       WHERE package_type IN ('BASIC', 'STANDARD') 
+       AND package_type NOT IN ('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE')`,
+       
+      `UPDATE agent_commissions SET package_type = 'PROSPER' 
+       WHERE package_type = 'PREMIUM' 
+       AND package_type NOT IN ('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE')`,
+       
+      `UPDATE agent_commissions SET package_type = 'PRESTIGE' 
+       WHERE package_type = 'ELITE' 
+       AND package_type NOT IN ('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE')`,
+       
+      `UPDATE agent_commissions SET package_type = 'PINNACLE' 
+       WHERE package_type = 'EXECUTIVE' 
+       AND package_type NOT IN ('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE')`
     ];
 
     console.log('Running migrations...');
