@@ -6,7 +6,6 @@ import {
 } from 'recharts';
 import { Users, ShoppingBag, TrendingUp, Award } from 'lucide-react';
 import { formatTransactionType } from "@/lib/utils";
-import { getQueryFn } from "@/lib/queryClient";
 
 interface DashboardStats {
   totalCustomers: number;
@@ -28,7 +27,13 @@ interface DashboardStats {
 export default function AdminDashboard() {
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/dashboard/stats"],
-    queryFn: getQueryFn(),
+    queryFn: async () => {
+      const response = await fetch("/api/admin/dashboard/stats");
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard statistics");
+      }
+      return response.json();
+    },
   });
 
   if (isLoading) {

@@ -8,7 +8,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { cleanupWebSockets } from "@/lib/utils";
-import { apiRequest, getQueryFn } from "@/lib/queryClient";
 
 // Key for storing JWT token in localStorage
 const AUTH_TOKEN_KEY = "auth_token";
@@ -125,43 +124,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      // Use the getQueryFn utility to handle 401 responses gracefully
-      try {
-        const headers: Record<string, string> = {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        };
-        
-        // Add token to headers if available
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-        
-        const res = await fetch("/api/user", {
-          credentials: "include",
-          headers
-        });
-        
-        if (!res.ok) {
-          if (res.status === 401) return null;
-          throw new Error("Failed to fetch user data");
-        }
-        
-        return await res.json();
-      } catch (error) {
-        console.error("Error fetching user:", error);
-        return null;
+      // Normal production code
+      const headers: Record<string, string> = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      };
+      
+      // Add token to headers if available
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
       }
+      
+      const res = await fetch("/api/user", {
+        credentials: "include",
+        headers
+      });
+      
+      if (!res.ok) {
+        if (res.status === 401) return null;
+        throw new Error("Failed to fetch user data");
+      }
+      
+      return res.json();
     },
     retry: false,
     enabled: !isLoggingOut.current,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Clear auth state on logout
   const clearAuthState = useCallback(async () => {
     isLoggingOut.current = true;
+
+    // Disable all queries
+    await queryClient.cancelQueries();
+    queryClient.setDefaultOptions({
+      queries: { enabled: false }
+    });
 
     // Clear all caches
     queryClient.clear();
@@ -186,39 +187,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Login mutation started');
       setIsTransitioning(true);
       
-      try {
-        const res = await apiRequest("POST", "/api/login", {
-          email: credentials.email,
-          password: credentials.password
-        });
+      // Normal production code for real login
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(credentials),
+        credentials: "include",
+      });
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Failed to login");
-        }
-
-        const data = await res.json();
-        
-        // Store the token if returned
-        if (data && data.token) {
-          console.log('Received token in response');
-          setToken(data.token);
-        }
-        
-        // Extract the user from the response which might be {user: {...}, token: "..."}
-        if (data && data.user) {
-          console.log('Received nested user object in response');
-          return data.user; 
-        }
-        
-        return data;
-      } catch (error) {
-        console.error("Login error:", error);
-        throw error instanceof Error ? error : new Error("Login failed");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to login");
       }
+
+      const data = await res.json();
+      
+      // Store the token if returned
+      if (data && data.token) {
+        console.log('Received token in response');
+        setToken(data.token);
+      }
+      
+      // Extract the user from the response which might be {user: {...}, token: "..."}
+      if (data && data.user) {
+        console.log('Received nested user object in response');
+        return data.user; 
+      }
+      
+      return data;
     },
     onSuccess: async (userData: User) => {
       console.log('Login mutation success');
+      console.log('User data received:', userData);
       isLoggingOut.current = false;
 
       // Ensure boolean flags are properly set
@@ -230,22 +233,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         is_enabled: Boolean(userData.is_enabled)
       };
 
+      console.log('Normalized user data:', normalizedUser);
+
       // Set user data in query cache
       queryClient.setQueryData(["/api/user"], normalizedUser);
 
-      // Show welcome message
-      toast({
-        title: "Welcome back",
-        description: `Logged in as ${normalizedUser.first_name} ${normalizedUser.last_name}`,
-      });
+      // Show welcome message only if not shown in this session
+      const sessionKey = `welcome_shown_${normalizedUser.id}`;
+      if (!sessionStorage.getItem(sessionKey)) {
+        toast({
+          title: "Welcome back",
+          description: `Logged in as ${normalizedUser.first_name} ${normalizedUser.last_name}`,
+        });
+        sessionStorage.setItem(sessionKey, 'true');
+      }
 
-      // Redirect to the appropriate dashboard
+      // Force direct navigation based on the user role properties received from the server
+      console.log('Direct navigation check - User roles:', { 
+        isAdmin: normalizedUser.is_admin, 
+        isSuperAdmin: normalizedUser.is_super_admin, 
+        isAgent: normalizedUser.is_agent 
+      });
+      
+      // Use a defer pattern to avoid React state update during render
       setTimeout(() => {
+        // Use React router for a smooth transition (no page reload)
         if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+          console.log('Redirecting to admin dashboard');
           setLocation('/admin');
         } else if (normalizedUser.is_agent) {
+          console.log('Redirecting to agent dashboard');
           setLocation('/agent'); 
         } else {
+          console.log('Redirecting to customer dashboard');
           setLocation('/dashboard');
         }
       }, 0);
@@ -267,8 +287,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async () => {
       setIsTransitioning(true);
       
+      // Include token in the logout request
+      const headers: Record<string, string> = {
+        "Accept": "application/json"
+      };
+      
+      // Add token to headers if available
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       try {
-        const res = await apiRequest("POST", "/api/logout");
+        const res = await fetch("/api/logout", {
+          method: "POST",
+          credentials: 'include',
+          headers
+        });
   
         if (!res.ok) {
           const errorData = await res.json();
@@ -304,32 +338,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (userData: RegisterData) => {
       setIsTransitioning(true);
       
-      try {
-        const res = await apiRequest("POST", "/api/register", userData);
+      // Normal production code for real registration
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(userData),
+        credentials: "include",
+      });
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Failed to register");
-        }
-
-        const data = await res.json();
-        
-        // Store the token if returned
-        if (data && data.token) {
-          console.log('Received token in registration response');
-          setToken(data.token);
-        }
-        
-        // Extract the user from the response which might be {user: {...}, token: "..."}
-        if (data && data.user) {
-          return data.user; 
-        }
-        
-        return data;
-      } catch (error) {
-        console.error("Registration error:", error);
-        throw error instanceof Error ? error : new Error("Registration failed");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to register");
       }
+
+      const data = await res.json();
+      
+      // Store the token if returned
+      if (data && data.token) {
+        console.log('Received token in registration response');
+        setToken(data.token);
+      }
+      
+      // Extract the user from the response which might be {user: {...}, token: "..."}
+      if (data && data.user) {
+        return data.user; 
+      }
+      
+      return data;
     },
     onSuccess: (userData: User) => {
       isLoggingOut.current = false;
@@ -351,15 +389,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Your account has been created",
       });
 
-      // Redirect to the appropriate dashboard based on user role
+      // Redirect to the appropriate dashboard
       setTimeout(() => {
-        if (normalizedUser.is_admin) {
-          setLocation('/admin');
-        } else if (normalizedUser.is_agent) {
-          setLocation('/agent');
-        } else {
-          setLocation('/dashboard');
-        }
+        setLocation('/');
       }, 0);
     },
     onError: (error: Error) => {
@@ -377,7 +409,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Create the context value
   const authContextValue: AuthContextType = {
     user: userQuery.data || null,
-    isLoading: userQuery.isLoading || isTransitioning,
+    isLoading: userQuery.isLoading,
     error: userQuery.error as Error | null,
     token,
     loginMutation,
