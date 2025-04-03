@@ -26,19 +26,24 @@ interface AgentStatistics {
 
 export default function AgentDashboard() {
   // Query to fetch the agent's commissions with optimizations
-  const { data: commissions = [], isLoading: isCommissionsLoading } = useQuery({
+  const { data: commissionData, isLoading: isCommissionsLoading } = useQuery({
     queryKey: ['/api/referral/agent/commissions'],
     queryFn: async () => {
       const response = await fetch('/api/referral/agent/commissions');
       if (!response.ok) {
         throw new Error('Failed to fetch commissions');
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Commission data received:', data);
+      return data;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes before refetching (server cache is 5 minutes)
     gcTime: 5 * 60 * 1000, // 5 minutes before removing from cache (cacheTime is renamed to gcTime in React Query v5)
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
+  
+  // Extract commissions from response
+  const commissions = commissionData?.commissions || [];
 
   // Query to fetch the agent statistics
   const { data: statistics, isLoading: isStatsLoading } = useQuery<AgentStatistics>({
