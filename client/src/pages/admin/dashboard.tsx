@@ -27,6 +27,13 @@ interface DashboardStats {
 export default function AdminDashboard() {
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/dashboard/stats"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/dashboard/stats");
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard statistics");
+      }
+      return response.json();
+    },
   });
 
   if (isLoading) {
