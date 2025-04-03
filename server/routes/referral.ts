@@ -390,28 +390,60 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       
       // Record a commission for the agent
       const packagePrices = {
+        // Old package names
         'basic': 350,
         'standard': 450,
         'premium': 550,
         'elite': 695,
-        'executive': 825
+        'executive': 825,
+        // New package names - standardized across the system
+        'opportunity': 350,
+        'momentum': 450,
+        'prosper': 550,
+        'prestige': 695,
+        'pinnacle': 825
       };
       
+      // Map old package names to new standardized names if needed
+      const packageNameMapping = {
+        'basic': 'OPPORTUNITY',
+        'standard': 'MOMENTUM',
+        'premium': 'PROSPER',
+        'elite': 'PRESTIGE',
+        'executive': 'PINNACLE'
+      };
+      
+      // Get the package price and standardized package name
       const packagePrice = packagePrices[selectedPackage.toLowerCase()] || 0;
+      
+      // Map the selected package to a standardized package name
+      const lowercaseSelectedPackage = selectedPackage.toLowerCase();
+      const packageType = 
+        packageNameMapping[lowercaseSelectedPackage] || 
+        (lowercaseSelectedPackage.toUpperCase() === 'OPPORTUNITY' ||
+         lowercaseSelectedPackage.toUpperCase() === 'MOMENTUM' ||
+         lowercaseSelectedPackage.toUpperCase() === 'PROSPER' ||
+         lowercaseSelectedPackage.toUpperCase() === 'PRESTIGE' ||
+         lowercaseSelectedPackage.toUpperCase() === 'PINNACLE' ? 
+         lowercaseSelectedPackage.toUpperCase() : 'OPPORTUNITY');
+      
+      console.log(`Mapping package ${selectedPackage} to standardized type ${packageType}`);
+      
       const commissionAmount = Math.round(packagePrice * 0.3 * 100) / 100; // 30% commission
       
       await connection.execute(
         `INSERT INTO agent_commissions (
           agent_id,
           customer_id,
-          package_name,
-          package_price,
+          package_type,
+          premium_amount,
+          commission_percentage,
           commission_amount,
           commission_type,
-          paid,
+          status,
           created_at
-        ) VALUES (?, ?, ?, ?, ?, 'FIRST_SIGNUP', 0, NOW())`,
-        [user.id, newUserId, selectedPackage, packagePrice, commissionAmount]
+        ) VALUES (?, ?, ?, ?, ?, ?, 'SIGNUP', 'PENDING', NOW())`,
+        [user.id, newUserId, packageType, packagePrice, 30, commissionAmount]
       );
       
       // Assign the package to the new user
@@ -488,9 +520,67 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
 referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: Response) => {
   try {
     const user = req.user as User;
+    console.log('Agent commissions request from:', {
+      userId: user.id,
+      email: user.email,
+      isAgent: user.is_agent
+    });
     
     // Use query cache for better performance
     const cacheKey = `agent-commissions-${user.id}`;
+    
+    // First check if we have any commissions directly in the database
+    const connection = await createConnection();
+    try {
+      console.log('Checking agent commissions in database for agent ID:', user.id);
+      
+      // Check if the table exists and has the right columns
+      const [tableCheck] = await connection.execute(
+        `SELECT COUNT(*) as table_exists 
+         FROM information_schema.tables 
+         WHERE table_schema = DATABASE() 
+         AND table_name = 'agent_commissions'`
+      );
+      
+      // @ts-ignore - MySQL2 results structure
+      if (!tableCheck || !Array.isArray(tableCheck) || tableCheck[0].table_exists === 0) {
+        console.error('agent_commissions table does not exist!');
+        return res.status(500).json({
+          success: false,
+          error: 'Commission tracking system is not properly configured'
+        });
+      }
+      
+      console.log('Fetching commissions for agent ID:', user.id);
+      const [rawCommissions] = await connection.execute(
+        `SELECT 
+          ac.id,
+          ac.package_type as package_name,
+          ac.premium_amount as package_price,
+          ac.commission_amount,
+          ac.commission_type,
+          ac.status = 'PAID' as paid,
+          ac.created_at,
+          u.first_name,
+          u.last_name,
+          u.email
+        FROM agent_commissions ac
+        JOIN users u ON ac.customer_id = u.id
+        WHERE ac.agent_id = ?
+        ORDER BY ac.created_at DESC`,
+        [user.id]
+      );
+      
+      console.log('Raw commission result:', {
+        count: Array.isArray(rawCommissions) ? rawCommissions.length : 0,
+        sample: Array.isArray(rawCommissions) && rawCommissions.length > 0 ? rawCommissions[0] : null
+      });
+      
+      await connection.end();
+    } catch (error) {
+      console.error('Error in direct database check for commissions:', error);
+      await connection.end();
+    }
     
     const result = await queryCache.getOrFetch(
       cacheKey,
@@ -500,11 +590,11 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
           const [commissions] = await connection.execute(
             `SELECT 
               ac.id,
-              ac.package_name,
-              ac.package_price,
+              ac.package_type as package_name,
+              ac.premium_amount as package_price,
               ac.commission_amount,
               ac.commission_type,
-              ac.paid,
+              ac.status = 'PAID' as paid,
               ac.created_at,
               u.first_name,
               u.last_name,
@@ -515,6 +605,11 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
             ORDER BY ac.created_at DESC`,
             [user.id]
           );
+          
+          console.log('Agent commissions found:', {
+            count: Array.isArray(commissions) ? commissions.length : 0,
+            agentId: user.id
+          });
           
           // Calculate total earnings and paid/unpaid amounts
           // @ts-ignore - MySQL2 results structure
@@ -540,6 +635,12 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
       // Cache for 5 minutes (300000ms)
       300000
     );
+    
+    console.log('Returning commissions data:', {
+      success: true,
+      commissionCount: result.commissions ? result.commissions.length : 0,
+      stats: result.stats
+    });
     
     return res.status(200).json({
       success: true,

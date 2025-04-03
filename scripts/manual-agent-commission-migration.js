@@ -74,12 +74,31 @@ async function migrateAgentCustomers() {
     for (const user of users) {
       try {
         // Calculate commission amount based on package
-        const packageType = user.selected_package;
+        let packageType = user.selected_package;
+        
+        // Map old package types to new package types if needed
+        if (packageType) {
+          packageType = packageType.toUpperCase();
+          // Map old package types to new ones
+          const packageMapping = {
+            'BASIC': 'OPPORTUNITY',
+            'STANDARD': 'MOMENTUM',
+            'PREMIUM': 'PROSPER',
+            'ELITE': 'PRESTIGE',
+            'EXECUTIVE': 'PINNACLE'
+          };
+          
+          if (packageMapping[packageType]) {
+            console.log(`Mapping package type from ${packageType} to ${packageMapping[packageType]}`);
+            packageType = packageMapping[packageType];
+          }
+        }
+        
         const packagePrice = PACKAGE_PRICES[packageType] || 0;
         
         if (!packagePrice) {
-          console.log(`Skipping user ${user.id}, unknown package type: ${packageType}`);
-          results.output += `Skipping user ${user.id}, unknown package type: ${packageType}\n`;
+          console.log(`Skipping user ${user.id}, unknown package type: ${packageType} (original: ${user.selected_package})`);
+          results.output += `Skipping user ${user.id}, unknown package type: ${packageType} (original: ${user.selected_package})\n`;
           results.usersSkipped++;
           continue;
         }
