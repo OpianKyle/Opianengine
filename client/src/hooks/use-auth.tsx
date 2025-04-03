@@ -225,26 +225,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (window.location.hostname.includes('.replit.dev') || 
           window.location.hostname.includes('.repl.co') ||
           window.location.hostname === 'localhost') {
-        console.log('DEV MODE: Using mock login in client');
+        console.log('DEV MODE: Using mock login for', credentials.email);
         
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Mock response with an admin user
-        const mockUser: User = {
-          id: 17,
-          email: 'kylem@opianfsgroup.com',
-          first_name: 'Kyle',
-          last_name: 'Developer',
-          phone_number: '1234567890',
-          is_agent: false,
-          is_admin: true,
-          is_super_admin: true,
-          is_enabled: true,
-          points: 10000,
-          referral_code: 'DEV12345',
-          referred_by: null
-        };
+        // Mock user based on email pattern to support different user types
+        let mockUser: User;
+        
+        // Check email to determine user type
+        if (credentials.email.includes('admin')) {
+          // Admin user
+          mockUser = {
+            id: 17,
+            email: credentials.email,
+            first_name: 'Admin',
+            last_name: 'User',
+            phone_number: '1234567890',
+            is_agent: false,
+            is_admin: true,
+            is_super_admin: true,
+            is_enabled: true,
+            points: 10000,
+            referral_code: 'ADM12345',
+            referred_by: null
+          };
+        } else if (credentials.email.includes('agent')) {
+          // Agent user
+          mockUser = {
+            id: 18,
+            email: credentials.email,
+            first_name: 'Agent',
+            last_name: 'User',
+            phone_number: '2345678901',
+            is_agent: true,
+            is_admin: false,
+            is_super_admin: false,
+            is_enabled: true,
+            points: 8000,
+            referral_code: 'AGT12345',
+            referred_by: null
+          };
+        } else {
+          // Regular customer
+          mockUser = {
+            id: 19,
+            email: credentials.email,
+            first_name: 'Customer',
+            last_name: 'User',
+            phone_number: '3456789012',
+            is_agent: false,
+            is_admin: false,
+            is_super_admin: false,
+            is_enabled: true,
+            points: 2500,
+            referral_code: 'CUS12345',
+            referred_by: null
+          };
+        }
+        
+        console.log('Mock user created:', mockUser);
         
         // Set mock token
         const mockToken = "dev-mock-token-12345";
