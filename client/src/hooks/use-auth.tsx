@@ -124,37 +124,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      // First check if we have stored user data from localStorage
-      try {
-        const storedUserData = localStorage.getItem('auth_user_data');
-        if (storedUserData) {
-          const userData = JSON.parse(storedUserData);
-          console.log('Retrieved user data from localStorage:', userData);
-          return userData;
-        }
-      } catch (error) {
-        console.error('Error retrieving user data from localStorage:', error);
-        // Continue with normal flow if localStorage retrieval fails
-      }
-      
-      // Skip automatic login in development mode to allow the home page to be shown first
+      // In development environment on Replit, return a mock admin user for testing
       if (window.location.hostname.includes('.replit.dev') || 
           window.location.hostname.includes('.repl.co') ||
           window.location.hostname === 'localhost') {
+        console.log('DEV MODE: Using mock admin user for testing in client');
         
-        // Check for a URL parameter that enables auto-login for testing
-        const urlParams = new URLSearchParams(window.location.search);
-        const autoLogin = urlParams.get('auto_login');
-        
-        if (autoLogin === 'admin') {
-          console.log('DEV MODE: Accessing API for admin login even in dev mode');
-          // No more mock users - always fetch from the database
-          // Will continue with normal flow below to make a real API request
-        }
-        
-        // By default, don't auto-login in development environment to simulate a real startup
-        console.log('DEV MODE: No auto-login, showing home page');
-        return null;
+        // Return a mock admin user for development/testing
+        return {
+          id: 17,
+          email: 'kylem@opianfsgroup.com',
+          first_name: 'Kyle',
+          last_name: 'Developer',
+          phone_number: '1234567890',
+          is_agent: false,
+          is_admin: true,
+          is_super_admin: true,
+          is_enabled: true,
+          points: 10000,
+          referral_code: 'DEV12345',
+          referred_by: null
+        };
       }
       
       // Normal production code
@@ -168,31 +158,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers["Authorization"] = `Bearer ${token}`;
       }
       
-      try {
-        const res = await fetch("/api/user", {
-          credentials: "include",
-          headers
-        });
-        
-        if (!res.ok) {
-          if (res.status === 401) return null;
-          throw new Error("Failed to fetch user data");
-        }
-        
-        const userData = await res.json();
-        
-        // Store fetched user data in localStorage
-        try {
-          localStorage.setItem('auth_user_data', JSON.stringify(userData));
-        } catch (error) {
-          console.error('Error saving user data to localStorage:', error);
-        }
-        
-        return userData;
-      } catch (error) {
-        console.error('Error fetching user data from API:', error);
-        throw error;
+      const res = await fetch("/api/user", {
+        credentials: "include",
+        headers
+      });
+      
+      if (!res.ok) {
+        if (res.status === 401) return null;
+        throw new Error("Failed to fetch user data");
       }
+      
+      return res.json();
     },
     retry: false,
     enabled: !isLoggingOut.current,
@@ -233,6 +209,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (credentials: LoginData) => {
       console.log('Login mutation started');
       setIsTransitioning(true);
+      
+      // In development environment on Replit, use a mock login response
+      if (window.location.hostname.includes('.replit.dev') || 
+          window.location.hostname.includes('.repl.co') ||
+          window.location.hostname === 'localhost') {
+        console.log('DEV MODE: Using mock login in client');
+        
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Mock response with an admin user
+        const mockUser: User = {
+          id: 17,
+          email: 'kylem@opianfsgroup.com',
+          first_name: 'Kyle',
+          last_name: 'Developer',
+          phone_number: '1234567890',
+          is_agent: false,
+          is_admin: true,
+          is_super_admin: true,
+          is_enabled: true,
+          points: 10000,
+          referral_code: 'DEV12345',
+          referred_by: null
+        };
+        
+        // Set mock token
+        const mockToken = "dev-mock-token-12345";
+        setToken(mockToken);
+        
+        return mockUser;
+      }
       
       // Normal production code for real login
       const res = await fetch("/api/login", {
@@ -295,54 +303,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem(sessionKey, 'true');
       }
 
-      // Get the current URL path to determine if we need to redirect
-      const currentPath = window.location.pathname;
-      
       // Force direct navigation based on the user role properties received from the server
       console.log('Direct navigation check - User roles:', { 
         isAdmin: normalizedUser.is_admin, 
         isSuperAdmin: normalizedUser.is_super_admin, 
-        isAgent: normalizedUser.is_agent,
-        currentPath
+        isAgent: normalizedUser.is_agent 
       });
       
-      // First, make sure token is persisted
-      try {
-        if (token) {
-          localStorage.setItem(AUTH_TOKEN_KEY, token);
-          console.log('Auth token saved to localStorage before redirect');
-          
-          // Also store the user data in localStorage for immediate retrieval
-          localStorage.setItem('auth_user_data', JSON.stringify(normalizedUser));
-          console.log('User data saved to localStorage before redirect');
-        }
-      } catch (error) {
-        console.error('Error saving auth data to localStorage:', error);
-      }
-
       // Use a defer pattern to avoid React state update during render
-      // with a slight delay to ensure token is properly saved
       setTimeout(() => {
-        // If already at the home page, don't redirect
-        if (currentPath === '/') {
-          console.log('Already at home page, not redirecting');
-          return;
-        }
-        
-        // Always redirect to the appropriate dashboard based on role
-        // This ensures the user always goes to the right place regardless of current path
+        // Use React router for a smooth transition (no page reload)
         if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
           console.log('Redirecting to admin dashboard');
-          // Using direct window location for more reliable redirect
-          window.location.href = '/admin';
+          setLocation('/admin');
         } else if (normalizedUser.is_agent) {
           console.log('Redirecting to agent dashboard');
-          window.location.href = '/agent'; 
+          setLocation('/agent'); 
         } else {
           console.log('Redirecting to customer dashboard');
-          window.location.href = '/dashboard';
+          setLocation('/dashboard');
         }
-      }, 100);
+      }, 0);
     },
     onError: (error: Error) => {
       toast({
@@ -400,20 +381,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSettled: () => {
       setIsTransitioning(false);
       // Use setTimeout to avoid React state update during render
-      // Make sure to clear localStorage before redirecting
-      try {
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-        localStorage.removeItem('auth_user_data');
-        console.log('Auth data cleared from localStorage before redirect');
-      } catch (error) {
-        console.error('Error clearing auth data from localStorage:', error);
-      }
-      
       setTimeout(() => {
-        // Navigate to home with a full page reload to ensure fresh state
-        console.log('Redirecting to home page after logout');
-        window.location.href = '/';
-      }, 100);
+        // Navigate to home without a page reload
+        setLocation('/');
+      }, 0);
     }
   });
 
@@ -421,6 +392,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerMutation = useMutation<User, Error, RegisterData>({
     mutationFn: async (userData: RegisterData) => {
       setIsTransitioning(true);
+      
+      // In development environment on Replit, use a mock registration response
+      if (window.location.hostname.includes('.replit.dev') || 
+          window.location.hostname.includes('.repl.co') ||
+          window.location.hostname === 'localhost') {
+        console.log('DEV MODE: Using mock registration in client');
+        
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Mock response with newly registered user
+        const mockUser: User = {
+          id: 999,
+          email: userData.email,
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          phone_number: userData.mobileNumber,
+          is_agent: false,
+          is_admin: false,
+          is_super_admin: false,
+          is_enabled: true,
+          points: 2500, // Default points for new user
+          referral_code: 'NEW12345',
+          referred_by: userData.referralCode || null
+        };
+        
+        // Set mock token
+        const mockToken = "dev-mock-token-register-12345";
+        setToken(mockToken);
+        
+        return mockUser;
+      }
       
       // Normal production code for real registration
       const res = await fetch("/api/register", {
@@ -473,33 +476,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Your account has been created",
       });
 
-      // First, make sure token and user data is persisted
-      try {
-        if (token) {
-          localStorage.setItem(AUTH_TOKEN_KEY, token);
-          console.log('Auth token saved to localStorage before redirect');
-          
-          // Also store the user data in localStorage for immediate retrieval
-          localStorage.setItem('auth_user_data', JSON.stringify(normalizedUser));
-          console.log('User data saved to localStorage before redirect');
-        }
-      } catch (error) {
-        console.error('Error saving auth data to localStorage:', error);
-      }
-      
-      // Redirect to the appropriate dashboard based on user type with slight delay
+      // Redirect to the appropriate dashboard
       setTimeout(() => {
-        if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
-          console.log('Redirecting new admin to admin dashboard');
-          window.location.href = '/admin';
-        } else if (normalizedUser.is_agent) {
-          console.log('Redirecting new agent to agent dashboard');
-          window.location.href = '/agent'; 
-        } else {
-          console.log('Redirecting new customer to customer dashboard');
-          window.location.href = '/dashboard';
-        }
-      }, 100);
+        setLocation('/');
+      }, 0);
     },
     onError: (error: Error) => {
       toast({

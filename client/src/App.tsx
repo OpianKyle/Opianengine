@@ -85,21 +85,15 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   // Redirect users to their appropriate dashboards if they try to access routes not for their role
-  // Allow all users to access the home page (/)
   if (!admin && !agent && user) {
-    const currentPath = window.location.pathname;
-    
-    // Allow access to home page (/) for all users
-    if (currentPath === '/') {
-      return <Component {...rest} />;
-    }
-    
     if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
+      const currentPath = window.location.pathname;
       if (!currentPath.startsWith('/admin')) {
         console.log('Admin user accessing non-admin route, redirecting to admin dashboard');
         return <Redirect to="/admin" />;
       }
     } else if (Boolean(user.is_agent)) {
+      const currentPath = window.location.pathname;
       if (!currentPath.startsWith('/agent')) {
         console.log('Agent user accessing non-agent route, redirecting to agent dashboard');
         return <Redirect to="/agent" />;
