@@ -124,6 +124,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
+      // First check if we have stored user data from localStorage
+      try {
+        const storedUserData = localStorage.getItem('auth_user_data');
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          console.log('Retrieved user data from localStorage:', userData);
+          return userData;
+        }
+      } catch (error) {
+        console.error('Error retrieving user data from localStorage:', error);
+        // Continue with normal flow if localStorage retrieval fails
+      }
+      
       // Skip automatic login in development mode to allow the home page to be shown first
       if (window.location.hostname.includes('.replit.dev') || 
           window.location.hostname.includes('.repl.co') ||
@@ -169,17 +182,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers["Authorization"] = `Bearer ${token}`;
       }
       
-      const res = await fetch("/api/user", {
-        credentials: "include",
-        headers
-      });
-      
-      if (!res.ok) {
-        if (res.status === 401) return null;
-        throw new Error("Failed to fetch user data");
+      try {
+        const res = await fetch("/api/user", {
+          credentials: "include",
+          headers
+        });
+        
+        if (!res.ok) {
+          if (res.status === 401) return null;
+          throw new Error("Failed to fetch user data");
+        }
+        
+        const userData = await res.json();
+        
+        // Store fetched user data in localStorage
+        try {
+          localStorage.setItem('auth_user_data', JSON.stringify(userData));
+        } catch (error) {
+          console.error('Error saving user data to localStorage:', error);
+        }
+        
+        return userData;
+      } catch (error) {
+        console.error('Error fetching user data from API:', error);
+        throw error;
       }
-      
-      return res.json();
     },
     retry: false,
     enabled: !isLoggingOut.current,
@@ -365,7 +392,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         currentPath
       });
       
+      // First, make sure token is persisted
+      try {
+        if (token) {
+          localStorage.setItem(AUTH_TOKEN_KEY, token);
+          console.log('Auth token saved to localStorage before redirect');
+          
+          // Also store the user data in localStorage for immediate retrieval
+          localStorage.setItem('auth_user_data', JSON.stringify(normalizedUser));
+          console.log('User data saved to localStorage before redirect');
+        }
+      } catch (error) {
+        console.error('Error saving auth data to localStorage:', error);
+      }
+
       // Use a defer pattern to avoid React state update during render
+      // with a slight delay to ensure token is properly saved
       setTimeout(() => {
         // If already at the home page, don't redirect
         if (currentPath === '/') {
@@ -386,7 +428,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('Redirecting to customer dashboard');
           window.location.href = '/dashboard';
         }
-      }, 0);
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -444,11 +486,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSettled: () => {
       setIsTransitioning(false);
       // Use setTimeout to avoid React state update during render
+      // Make sure to clear localStorage before redirecting
+      try {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem('auth_user_data');
+        console.log('Auth data cleared from localStorage before redirect');
+      } catch (error) {
+        console.error('Error clearing auth data from localStorage:', error);
+      }
+      
       setTimeout(() => {
         // Navigate to home with a full page reload to ensure fresh state
         console.log('Redirecting to home page after logout');
         window.location.href = '/';
-      }, 0);
+      }, 100);
     }
   });
 
@@ -540,7 +591,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Your account has been created",
       });
 
-      // Redirect to the appropriate dashboard based on user type
+      // First, make sure token and user data is persisted
+      try {
+        if (token) {
+          localStorage.setItem(AUTH_TOKEN_KEY, token);
+          console.log('Auth token saved to localStorage before redirect');
+          
+          // Also store the user data in localStorage for immediate retrieval
+          localStorage.setItem('auth_user_data', JSON.stringify(normalizedUser));
+          console.log('User data saved to localStorage before redirect');
+        }
+      } catch (error) {
+        console.error('Error saving auth data to localStorage:', error);
+      }
+      
+      // Redirect to the appropriate dashboard based on user type with slight delay
       setTimeout(() => {
         if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
           console.log('Redirecting new admin to admin dashboard');
@@ -552,7 +617,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('Redirecting new customer to customer dashboard');
           window.location.href = '/dashboard';
         }
-      }, 0);
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
