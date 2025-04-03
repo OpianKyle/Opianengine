@@ -124,29 +124,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      // In development environment on Replit, return a mock admin user for testing
-      if (window.location.hostname.includes('.replit.dev') || 
-          window.location.hostname.includes('.repl.co') ||
-          window.location.hostname === 'localhost') {
-        console.log('DEV MODE: Using mock admin user for testing in client');
-        
-        // Return a mock admin user for development/testing
-        return {
-          id: 17,
-          email: 'kylem@opianfsgroup.com',
-          first_name: 'Kyle',
-          last_name: 'Developer',
-          phone_number: '1234567890',
-          is_agent: false,
-          is_admin: true,
-          is_super_admin: true,
-          is_enabled: true,
-          points: 10000,
-          referral_code: 'DEV12345',
-          referred_by: null
-        };
-      }
-      
       // Normal production code
       const headers: Record<string, string> = {
         "Accept": "application/json",
@@ -209,38 +186,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (credentials: LoginData) => {
       console.log('Login mutation started');
       setIsTransitioning(true);
-      
-      // In development environment on Replit, use a mock login response
-      if (window.location.hostname.includes('.replit.dev') || 
-          window.location.hostname.includes('.repl.co') ||
-          window.location.hostname === 'localhost') {
-        console.log('DEV MODE: Using mock login in client');
-        
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Mock response with an admin user
-        const mockUser: User = {
-          id: 17,
-          email: 'kylem@opianfsgroup.com',
-          first_name: 'Kyle',
-          last_name: 'Developer',
-          phone_number: '1234567890',
-          is_agent: false,
-          is_admin: true,
-          is_super_admin: true,
-          is_enabled: true,
-          points: 10000,
-          referral_code: 'DEV12345',
-          referred_by: null
-        };
-        
-        // Set mock token
-        const mockToken = "dev-mock-token-12345";
-        setToken(mockToken);
-        
-        return mockUser;
-      }
       
       // Normal production code for real login
       const res = await fetch("/api/login", {
@@ -392,38 +337,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerMutation = useMutation<User, Error, RegisterData>({
     mutationFn: async (userData: RegisterData) => {
       setIsTransitioning(true);
-      
-      // In development environment on Replit, use a mock registration response
-      if (window.location.hostname.includes('.replit.dev') || 
-          window.location.hostname.includes('.repl.co') ||
-          window.location.hostname === 'localhost') {
-        console.log('DEV MODE: Using mock registration in client');
-        
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Mock response with newly registered user
-        const mockUser: User = {
-          id: 999,
-          email: userData.email,
-          first_name: userData.firstName,
-          last_name: userData.lastName,
-          phone_number: userData.mobileNumber,
-          is_agent: false,
-          is_admin: false,
-          is_super_admin: false,
-          is_enabled: true,
-          points: 2500, // Default points for new user
-          referral_code: 'NEW12345',
-          referred_by: userData.referralCode || null
-        };
-        
-        // Set mock token
-        const mockToken = "dev-mock-token-register-12345";
-        setToken(mockToken);
-        
-        return mockUser;
-      }
       
       // Normal production code for real registration
       const res = await fetch("/api/register", {
