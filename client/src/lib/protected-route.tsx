@@ -1,65 +1,85 @@
-import { useEffect } from 'react';
-import { Route, useLocation, Redirect } from 'wouter';
-import { useAuth } from '@/hooks/use-auth';
-import { Loader2 } from 'lucide-react';
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
+import { Redirect, Route } from "wouter";
 
-type ProtectedRouteProps = {
-  component: React.ComponentType<any>;
-  path: string;
-  admin?: boolean;
-  agent?: boolean;
-};
-
-/**
- * Protected route component that checks if the user is authenticated
- * and has the right permissions before rendering the component.
- */
 export function ProtectedRoute({
-  component: Component,
   path,
+  component: Component,
   admin = false,
   agent = false,
-}: ProtectedRouteProps) {
+  ...rest
+}: {
+  path: string;
+  component: React.ComponentType<any>;
+  admin?: boolean;
+  agent?: boolean;
+  [key: string]: any;
+}) {
   const { user, isLoading } = useAuth();
-  const [, setLocation] = useLocation();
 
-  // Redirect to home if not logged in
-  useEffect(() => {
-    if (!isLoading && !user) {
-      setLocation('/');
+  if (isLoading) {
+    return (
+      <Route path={path}>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-border" />
+        </div>
+      </Route>
+    );
+  }
+
+  if (!user) {
+    console.log('No user found, redirecting to auth page');
+    return (
+      <Route path={path}>
+        <Redirect to="/auth" />
+      </Route>
+    );
+  }
+
+  console.log('ProtectedRoute checking user role:', { 
+    isAdmin: Boolean(user.is_admin), 
+    isSuperAdmin: Boolean(user.is_super_admin), 
+    isAgent: Boolean(user.is_agent),
+    requestingAdminRoute: admin,
+    requestingAgentRoute: agent
+  });
+
+  // Handle routing based on user role
+  if (admin && !(user.is_admin || user.is_super_admin)) {
+    console.log('User lacks admin privileges, redirecting to appropriate dashboard');
+    if (user.is_agent) {
+      return (
+        <Route path={path}>
+          <Redirect to="/agent" />
+        </Route>
+      );
     }
-  }, [user, isLoading, setLocation]);
+    return (
+      <Route path={path}>
+        <Redirect to="/dashboard" />
+      </Route>
+    );
+  }
+
+  if (agent && !user.is_agent) {
+    console.log('User lacks agent privileges, redirecting to appropriate dashboard');
+    if (user.is_admin || user.is_super_admin) {
+      return (
+        <Route path={path}>
+          <Redirect to="/admin" />
+        </Route>
+      );
+    }
+    return (
+      <Route path={path}>
+        <Redirect to="/dashboard" />
+      </Route>
+    );
+  }
 
   return (
     <Route path={path}>
-      {(params) => {
-        // Show loading spinner while checking auth
-        if (isLoading) {
-          return (
-            <div className="flex items-center justify-center min-h-screen">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          );
-        }
-
-        // Redirect if not authenticated
-        if (!user) {
-          return <Redirect to="/" />;
-        }
-
-        // Check admin permission
-        if (admin && !user.is_admin) {
-          return <Redirect to="/" />;
-        }
-
-        // Check agent permission
-        if (agent && !user.is_agent && !user.is_admin) {
-          return <Redirect to="/" />;
-        }
-
-        // Render the protected component
-        return <Component params={params} />;
-      }}
+      <Component {...rest} />
     </Route>
   );
 }

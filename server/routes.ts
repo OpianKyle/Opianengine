@@ -2663,7 +2663,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/admin/users", async (req, res) => {
+  app.get("/api/admin/users", checkAdmin, async (req, res) => {
     console.log('Admin users request:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.user ? {
@@ -4871,7 +4871,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Add new route for admin dashboard stats
-  app.get("/api/admin/dashboard/stats", async (req, res) => {
+  app.get("/api/admin/dashboard/stats", checkAdmin, async (req, res) => {
     console.log('Admin dashboard stats request:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.user ? {
@@ -4968,10 +4968,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/admin/users", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
+  app.get("/api/admin/users", checkAdmin, async (req, res) => {
 
     const connection = await createConnection();
     try {
