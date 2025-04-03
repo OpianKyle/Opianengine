@@ -19,9 +19,9 @@ dotenv.config();
 const PACKAGE_PRICES = {
   'OPPORTUNITY': 350,
   'MOMENTUM': 450,
-  'PREMIUM': 550,
-  'ELITE': 695,
-  'EXECUTIVE': 825
+  'PROSPER': 550,
+  'PRESTIGE': 695,
+  'PINNACLE': 825
 };
 
 // Commission rates
@@ -85,26 +85,27 @@ async function migrateAgentCustomers() {
         }
         
         const commissionAmount = packagePrice * COMMISSION_RATE_FIRST_TIME;
-        const commissionPoints = Math.round(commissionAmount); // 1 rand = 1 point
         
         // Insert record in agent_commissions table
         await connection.execute(`
           INSERT INTO agent_commissions (
-            agent_id, customer_id, commission_type, commission_amount, 
-            points_awarded, package_type, created_at, updated_at
+            agent_id, customer_id, commission_type, package_type,
+            premium_amount, commission_percentage, commission_amount,
+            status, created_at
           ) VALUES (
-            ?, ?, 'FIRST_TIME', ?, ?, ?, NOW(), NOW()
+            ?, ?, 'SIGNUP', ?, ?, ?, ?, 'PENDING', NOW()
           )
         `, [
           user.agent_id, 
           user.id, 
-          commissionAmount, 
-          commissionPoints,
-          packageType
+          packageType,
+          packagePrice,
+          COMMISSION_RATE_FIRST_TIME * 100, // Convert to percentage (0.3 -> 30)
+          commissionAmount
         ]);
         
-        console.log(`Migrated user ${user.id} with package ${packageType}, commission: R${commissionAmount}, points: ${commissionPoints}`);
-        results.output += `Migrated user ${user.id} with package ${packageType}, commission: R${commissionAmount}, points: ${commissionPoints}\n`;
+        console.log(`Migrated user ${user.id} with package ${packageType}, commission: R${commissionAmount}, percentage: ${COMMISSION_RATE_FIRST_TIME * 100}%`);
+        results.output += `Migrated user ${user.id} with package ${packageType}, commission: R${commissionAmount}, percentage: ${COMMISSION_RATE_FIRST_TIME * 100}%\n`;
         results.usersMigrated++;
       } catch (error) {
         console.error(`Error processing user ${user.id}:`, error.message);
