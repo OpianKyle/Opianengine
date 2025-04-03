@@ -620,8 +620,32 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
           
           const totalUnpaid = totalEarned - totalPaid;
           
+          // Transform data to match client expectations
+          const formattedCommissions = Array.isArray(commissions) ? commissions.map(c => {
+            // Create a customer name from first and last name
+            const customerName = `${c.first_name} ${c.last_name}`;
+            
+            // Determine if it's a renewal based on commission_type
+            const isRenewal = c.commission_type === 'RENEWAL';
+            
+            // Format the data to match client-side Commission interface
+            return {
+              id: c.id,
+              customerName,
+              // Important: Map package_name (the SQL alias) to packageName (what frontend expects)
+              packageName: c.package_name,
+              isRenewal,
+              commissionAmount: parseFloat(c.commission_amount),
+              commissionDate: c.created_at,
+              paidOut: c.paid,
+              // Include other fields as needed by the client
+              packagePrice: parseFloat(c.package_price),
+              email: c.email
+            };
+          }) : [];
+          
           return {
-            commissions,
+            commissions: formattedCommissions,
             stats: {
               totalEarned,
               totalPaid,
