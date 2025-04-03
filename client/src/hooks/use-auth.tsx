@@ -303,25 +303,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem(sessionKey, 'true');
       }
 
+      // Get the current URL path to determine if we need to redirect
+      const currentPath = window.location.pathname;
+      
       // Force direct navigation based on the user role properties received from the server
       console.log('Direct navigation check - User roles:', { 
         isAdmin: normalizedUser.is_admin, 
         isSuperAdmin: normalizedUser.is_super_admin, 
-        isAgent: normalizedUser.is_agent 
+        isAgent: normalizedUser.is_agent,
+        currentPath
       });
       
       // Use a defer pattern to avoid React state update during render
       setTimeout(() => {
-        // Use React router for a smooth transition (no page reload)
-        if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
-          console.log('Redirecting to admin dashboard');
-          setLocation('/admin');
-        } else if (normalizedUser.is_agent) {
-          console.log('Redirecting to agent dashboard');
-          setLocation('/agent'); 
-        } else {
-          console.log('Redirecting to customer dashboard');
-          setLocation('/dashboard');
+        // If already at the home page, don't redirect
+        if (currentPath === '/') {
+          console.log('Already at home page, not redirecting');
+          return;
+        }
+        
+        // If at the login page, redirect to appropriate dashboard based on role
+        if (currentPath === '/login' || currentPath === '/auth') {
+          // Use React router for a smooth transition (no page reload)
+          if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+            console.log('Redirecting to admin dashboard');
+            setLocation('/admin');
+          } else if (normalizedUser.is_agent) {
+            console.log('Redirecting to agent dashboard');
+            setLocation('/agent'); 
+          } else {
+            console.log('Redirecting to customer dashboard');
+            setLocation('/dashboard');
+          }
         }
       }, 0);
     },
