@@ -4692,101 +4692,54 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
   // Unified API endpoint that handles both session-based and JWT token-based authentication
-  app.get("/api/user", (req, res) => {
-    console.log('User request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? { id: req.user.id, email: req.user.email } : null,
-      hasAuthHeader: !!req.headers.authorization
-    });
+  app.get("/api/user", async (req, res) => {
+    try {
+      console.log('User request:', {
+        isAuthenticated: req.isAuthenticated(),
+        user: req.user ? { id: req.user.id, email: req.user.email } : null,
+        hasAuthHeader: !!req.headers.authorization
+      });
 
-    // First check session authentication
-    if (req.isAuthenticated()) {
-      // Get complete user details from database if authenticated via session
-      const connection = createConnection()
-        .then(conn => {
-          conn.execute(
-            `SELECT 
-              u.id,
-              u.email,
-              u.first_name,
-              u.last_name,
-              u.phone_number,
-              u.is_admin,
-              u.is_super_admin,
-              u.is_agent,
-              u.is_enabled,
-              u.points,
-              u.referral_code,
-              u.referred_by,
-              u.created_at,
-              u.is_south_african,
-              u.id_number,
-              u.date_of_birth,
-              u.address,
-              u.city,
-              u.postal_code,
-              u.industry,
-              u.occupation,
-              u.bank_name,
-              u.account_type,
-              u.account_number,
-              u.account_holder_name,
-              u.branch_code,
-              u.selected_package,
-              u.gender,
-              u.has_credit_card,
-              u.signature
-            FROM users u
-            WHERE u.id = ?`,
-            [req.user.id]
-          )
-          .then(([users]: any) => {
-            if (users && users.length > 0) {
-              const user = users[0];
-              // Format dates properly
-              if (user.created_at) {
-                user.created_at = new Date(user.created_at).toISOString();
-              }
-              if (user.date_of_birth) {
-                user.date_of_birth = new Date(user.date_of_birth).toISOString().split('T')[0];
-              }
-              res.json(user);
-            } else {
-              res.status(404).json({ error: "User not found" });
-            }
-            return conn;
-          })
-          .catch(error => {
-            console.error('Error fetching user details:', error);
-            res.status(500).json({ error: 'Failed to fetch user details' });
-            return conn;
-          })
-          .then(conn => conn.end());
-        })
-        .catch(error => {
-          console.error('DB connection error:', error);
-          res.status(500).json({ error: 'Database connection error' });
-        });
-      
-      return;
-    }
-    
-    // Then try JWT token authentication
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      try {
-        const decoded = verifyJwtToken(token);
-        if (decoded) {
-          return res.json(decoded);
-        }
-      } catch (err) {
-        console.error('JWT verification error:', err);
+      // Try to get user from either JWT token or session using the helper function
+      const user = await getUserFromTokenOrSession(req);
+
+      if (!user) {
+        console.log('User not authenticated via session or token');
+        return res.status(401).json({ error: "Not authenticated" });
       }
+      
+      console.log('User authenticated, returning user data');
+      
+      // Format the response to match what the frontend expects
+      const response = {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phone_number: user.phone_number,
+        phoneNumber: user.phone_number,
+        is_admin: Boolean(user.is_admin),
+        is_super_admin: Boolean(user.is_super_admin),
+        is_agent: Boolean(user.is_agent),
+        is_enabled: Boolean(user.is_enabled),
+        isAdmin: Boolean(user.is_admin),
+        isSuperAdmin: Boolean(user.is_super_admin),
+        isAgent: Boolean(user.is_agent),
+        isEnabled: Boolean(user.is_enabled),
+        points: parseFloat(user.points || '0'),
+        referral_code: user.referral_code,
+        referralCode: user.referral_code,
+        referred_by: user.referred_by,
+        referredBy: user.referred_by
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('Error in /api/user endpoint:', error);
+      res.status(500).json({ error: 'Failed to fetch user data' });
     }
-    
-    // If neither authentication method succeeded
-    return res.status(401).json({ error: "Unauthorized" });
   });
 
   app.post("/api/admin/products/assign", async (req, res) => {
@@ -4871,7 +4824,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Add new route for admin dashboard stats
-  app.get("/api/admin/dashboard/stats", async (req, res) => {
+  app.get("/api/admin/dashboard/stats", checkAdmin, async (req, res) => {
     console.log('Admin dashboard stats request:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.user ? {

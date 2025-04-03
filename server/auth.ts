@@ -648,18 +648,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.get("/api/user", async (req, res) => {
-    // Try to get user from either JWT token or session
-    const user = await getUserFromTokenOrSession(req);
-
-    if (!user) {
-      console.log('User not authenticated via session or token');
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-    
-    console.log('User authenticated, returning user data');
-    res.json(user);
-  });
+  // /api/user endpoint is now implemented in server/routes.ts using getUserFromTokenOrSession
   
   // Check for existing super admin
   async function checkForSuperAdmin() {
