@@ -277,8 +277,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             referral_code: 'ADM12345',
             referred_by: null
           };
-        } else if (credentials.email.includes('agent')) {
-          // Agent user
+        } else if (credentials.email.includes('agent') || credentials.email.includes('shaunk@opianrewards.com')) {
+          // Agent user (specifically including shaunK's email)
+          console.log('Creating mock AGENT user for email:', credentials.email);
           mockUser = {
             id: 18,
             email: credentials.email,
@@ -295,6 +296,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
         } else {
           // Regular customer
+          console.log('Creating mock CUSTOMER user for email:', credentials.email);
           mockUser = {
             id: 19,
             email: credentials.email,
