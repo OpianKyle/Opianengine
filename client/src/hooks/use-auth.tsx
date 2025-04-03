@@ -373,19 +373,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         
-        // If at the login page, redirect to appropriate dashboard based on role
-        if (currentPath === '/login' || currentPath === '/auth') {
-          // Use React router for a smooth transition (no page reload)
-          if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
-            console.log('Redirecting to admin dashboard');
-            setLocation('/admin');
-          } else if (normalizedUser.is_agent) {
-            console.log('Redirecting to agent dashboard');
-            setLocation('/agent'); 
-          } else {
-            console.log('Redirecting to customer dashboard');
-            setLocation('/dashboard');
-          }
+        // Always redirect to the appropriate dashboard based on role
+        // This ensures the user always goes to the right place regardless of current path
+        if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+          console.log('Redirecting to admin dashboard');
+          // Using direct window location for more reliable redirect
+          window.location.href = '/admin';
+        } else if (normalizedUser.is_agent) {
+          console.log('Redirecting to agent dashboard');
+          window.location.href = '/agent'; 
+        } else {
+          console.log('Redirecting to customer dashboard');
+          window.location.href = '/dashboard';
         }
       }, 0);
     },
@@ -446,8 +445,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsTransitioning(false);
       // Use setTimeout to avoid React state update during render
       setTimeout(() => {
-        // Navigate to home without a page reload
-        setLocation('/');
+        // Navigate to home with a full page reload to ensure fresh state
+        console.log('Redirecting to home page after logout');
+        window.location.href = '/';
       }, 0);
     }
   });
@@ -540,9 +540,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Your account has been created",
       });
 
-      // Redirect to the appropriate dashboard
+      // Redirect to the appropriate dashboard based on user type
       setTimeout(() => {
-        setLocation('/');
+        if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+          console.log('Redirecting new admin to admin dashboard');
+          window.location.href = '/admin';
+        } else if (normalizedUser.is_agent) {
+          console.log('Redirecting new agent to agent dashboard');
+          window.location.href = '/agent'; 
+        } else {
+          console.log('Redirecting new customer to customer dashboard');
+          window.location.href = '/dashboard';
+        }
       }, 0);
     },
     onError: (error: Error) => {
