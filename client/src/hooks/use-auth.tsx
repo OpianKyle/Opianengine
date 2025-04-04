@@ -120,29 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [token]);
 
-  // Ensure we clear stale data on initialization
-  useEffect(() => {
-    // Check if token is valid on component mount
-    if (!token) {
-      // If no token, ensure all auth data is cleared
-      clearAuthState();
-    }
-  }, []);
-  
   // Query to fetch the current user
   const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      console.log('User query function executing, token status:', !!token);
-      
-      // Skip if no token exists
-      if (!token) {
-        console.log('No token available, skipping user query');
-        return null;
-      }
-      
-      console.log('Fetching user data with token:', token.substring(0, 10) + '...');
-      
       // Normal production code
       const headers: Record<string, string> = {
         "Accept": "application/json",
@@ -150,74 +131,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       
       // Add token to headers if available
-      headers["Authorization"] = `Bearer ${token}`;
-      
-      try {
-        console.log('Making fetch request to /api/user with session cookies and auth header');
-        const res = await fetch("/api/user", {
-          credentials: "include", // Include cookies for session auth
-          headers
-        });
-        
-        console.log('Response status:', res.status);
-        
-        if (!res.ok) {
-          if (res.status === 401) {
-            // If 401 unauthorized, clear token and auth state
-            console.log('Unauthorized (401): Clearing auth state');
-            await clearAuthState();
-            return null;
-          }
-          const errorText = await res.text();
-          console.error('API error response:', errorText);
-          throw new Error(`Failed to fetch user data: ${res.status} ${errorText}`);
-        }
-        
-        const userData = await res.json();
-        console.log('Raw user data received:', userData);
-        
-        // Validate user data - ensure we got a proper user object
-        if (!userData || !userData.id || !userData.email) {
-          console.log('Invalid user data received:', userData);
-          await clearAuthState();
-          return null;
-        }
-        
-        console.log('Valid user data received for ID:', userData.id);
-        
-        // Ensure boolean flags are properly set
-        const normalizedUser = {
-          ...userData,
-          is_admin: Boolean(userData.is_admin),
-          is_super_admin: Boolean(userData.is_super_admin),
-          is_agent: Boolean(userData.is_agent),
-          is_enabled: Boolean(userData.is_enabled)
-        };
-        
-        console.log('Normalized user object with proper boolean flags:', normalizedUser);
-        
-        // Store the user in localStorage as a backup (but never the token)
-        try {
-          localStorage.setItem('user_data_cache', JSON.stringify(normalizedUser));
-        } catch (e) {
-          console.warn('Could not save user data to localStorage:', e);
-        }
-        
-        return normalizedUser;
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        // If network error or other issue, also clear auth state
-        await clearAuthState();
-        return null;
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
       }
+      
+      const res = await fetch("/api/user", {
+        credentials: "include",
+        headers
+      });
+      
+      if (!res.ok) {
+        if (res.status === 401) return null;
+        throw new Error("Failed to fetch user data");
+      }
+      
+      return res.json();
     },
-    retry: 1, // Only retry once to avoid looping issues
-    retryDelay: 1000, // Wait 1 second before retry
-    enabled: !isLoggingOut.current && !!token,
-    staleTime: 30 * 1000, // 30 seconds to ensure frequent validation
-    refetchOnWindowFocus: true, // Check auth status on tab focus
-    refetchOnMount: true, // Check auth status when component mounts
-    refetchOnReconnect: true, // Check auth when network reconnects
+    retry: false,
+    enabled: !isLoggingOut.current,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Clear auth state on logout
@@ -323,24 +257,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Use a defer pattern to avoid React state update during render
       setTimeout(() => {
-        // Only redirect on login, not when the app is loaded
-        const currentPath = window.location.pathname;
-        
-        // If user is on home, login or register pages, we can redirect
-        if (currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
-          // Use React router for a smooth transition (no page reload)
-          if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
-            console.log('Redirecting to admin dashboard');
-            setLocation('/admin');
-          } else if (normalizedUser.is_agent) {
-            console.log('Redirecting to agent dashboard');
-            setLocation('/agent'); 
-          } else {
-            console.log('Redirecting to customer dashboard');
-            setLocation('/dashboard');
-          }
+        // Use React router for a smooth transition (no page reload)
+        if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+          console.log('Redirecting to admin dashboard');
+          setLocation('/admin');
+        } else if (normalizedUser.is_agent) {
+          console.log('Redirecting to agent dashboard');
+          setLocation('/agent'); 
         } else {
-          console.log('Not redirecting as user is already on a specific page:', currentPath);
+          console.log('Redirecting to customer dashboard');
+          setLocation('/dashboard');
         }
       }, 0);
     },
@@ -463,26 +389,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Your account has been created",
       });
 
-      // Redirect to the appropriate dashboard based on user role
+      // Redirect to the appropriate dashboard
       setTimeout(() => {
-        const currentPath = window.location.pathname;
-        
-        // If user is on home, login or register pages, redirect to appropriate dashboard
-        if (currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
-          if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
-            console.log('Redirecting new admin to admin dashboard');
-            setLocation('/admin');
-          } else if (normalizedUser.is_agent) {
-            console.log('Redirecting new agent to agent dashboard');
-            setLocation('/agent'); 
-          } else {
-            console.log('Redirecting new customer to customer dashboard');
-            setLocation('/dashboard');
-          }
-        } else {
-          // Otherwise, stay on the current page
-          console.log('Not redirecting newly registered user, keeping them on:', currentPath);
-        }
+        setLocation('/');
       }, 0);
     },
     onError: (error: Error) => {

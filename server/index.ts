@@ -73,8 +73,9 @@ app.use(fileUpload({
 }));
 
 // Session configuration with enhanced security
-const sessionStore = new MemoryStore();
-console.log('Configuring session store')
+const sessionStore = new MemoryStore({
+  checkPeriod: 86400000 // prune expired entries every 24h
+});
 
 console.log('Configuring session with secret length:', process.env.SESSION_SECRET?.length);
 
@@ -160,16 +161,10 @@ app.use((req: any, res, next) => {
     }
 
     // Start the server
-    // Use a different port for production to avoid conflicts
-    const PORT = process.env.NODE_ENV === 'production' 
-      ? (process.env.PORT || 10000) 
-      : (process.env.PORT || 5000);
-      
-    const parsedPort = parseInt(PORT.toString());
-    server.listen(parsedPort, '0.0.0.0', () => {
-      console.log(`Server running on port ${parsedPort} at ${new Date().toISOString()}`);
-      console.log(`Server URL: http://0.0.0.0:${parsedPort}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
+      console.log(`Server URL: http://0.0.0.0:${PORT}`);
     });
   } catch (error: any) {
     console.error('Server startup error:', error);

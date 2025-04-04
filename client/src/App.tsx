@@ -44,15 +44,9 @@ import AgentCustomers from "@/pages/agent/customers";
 import AgentLeads from "@/pages/agent/leads"; // Import agent referral leads page
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
-  const { user, isLoading, token } = useAuth(); // Include token state
-  
-  // Double-check token validity - both from hook state and localStorage
-  const hasLocalStorageToken = !!localStorage.getItem("auth_token");
-  
-  // Consider token valid only if it exists in both places
-  const isTokenValid = !!token && hasLocalStorageToken;
-  
-  // If loading, show loading spinner
+  const { user, isLoading } = useAuth();
+  // Session timeout functionality has been removed to prevent automatic logouts
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -61,85 +55,53 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     );
   }
 
-  // Authentication check
-  // Require BOTH a user object with role information AND a valid token
-  if (!user || !user.id || !isTokenValid) {
-    console.log('Authentication check failed:', { 
-      hasUser: !!user, 
-      hasUserId: user?.id, 
-      hasToken: !!token,
-      hasLocalStorageToken 
-    });
-    
-    // Clear any potentially stale data
-    localStorage.removeItem("auth_token");
-    queryClient.setQueryData(["/api/user"], null);
-    
+  if (!user) {
+    console.log('No user found, redirecting to login');
     return <Redirect to="/login" />;
   }
 
-  // Validate user role information
-  const isAdmin = Boolean(user.is_admin);
-  const isSuperAdmin = Boolean(user.is_super_admin);
-  const isAgent = Boolean(user.is_agent);
-  
   console.log('ProtectedRoute checking user role:', { 
-    isAdmin, 
-    isSuperAdmin, 
-    isAgent,
+    isAdmin: Boolean(user.is_admin), 
+    isSuperAdmin: Boolean(user.is_super_admin), 
+    isAgent: Boolean(user.is_agent),
     requestingAdminRoute: admin,
-    requestingAgentRoute: agent,
-    hasToken: isTokenValid,
-    userId: user.id
+    requestingAgentRoute: agent
   });
 
-  // Handle routing based on user role for admin routes
-  if (admin && !(isAdmin || isSuperAdmin)) {
+  // Handle routing based on user role
+  if (admin && !(Boolean(user.is_admin) || Boolean(user.is_super_admin))) {
     console.log('User lacks admin privileges, redirecting to appropriate dashboard');
-    if (isAgent) {
+    if (Boolean(user.is_agent)) {
       return <Redirect to="/agent" />;
     }
     return <Redirect to="/dashboard" />;
   }
 
-  // Handle routing based on user role for agent routes
-  if (agent && !isAgent) {
+  if (agent && !Boolean(user.is_agent)) {
     console.log('User lacks agent privileges, redirecting to appropriate dashboard');
-    if (isAdmin || isSuperAdmin) {
+    if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
       return <Redirect to="/admin" />;
     }
     return <Redirect to="/dashboard" />;
   }
 
-  // For non-admin, non-agent routes (customer routes)
-  // We still need to respect user roles to prevent access to unintended areas
+  // Redirect users to their appropriate dashboards if they try to access routes not for their role
   if (!admin && !agent && user) {
-    const currentPath = window.location.pathname;
-    
-    // Skip role-based redirection for public routes
-    // IMPORTANT: For customer routes ONLY - not for home page or auth pages
-    const isPublicRoute = currentPath === '/' || 
-                          currentPath === '/login' || 
-                          currentPath === '/register' || 
-                          currentPath === '/reset-password' || 
-                          currentPath.startsWith('/referral');
-    
-    if (!isPublicRoute) {
-      if (isAdmin || isSuperAdmin) {
-        if (!currentPath.startsWith('/admin')) {
-          console.log('Admin user accessing customer route, redirecting to admin dashboard');
-          return <Redirect to="/admin" />;
-        }
-      } else if (isAgent) {
-        if (!currentPath.startsWith('/agent')) {
-          console.log('Agent user accessing customer route, redirecting to agent dashboard');
-          return <Redirect to="/agent" />;
-        }
+    if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
+      const currentPath = window.location.pathname;
+      if (!currentPath.startsWith('/admin')) {
+        console.log('Admin user accessing non-admin route, redirecting to admin dashboard');
+        return <Redirect to="/admin" />;
+      }
+    } else if (Boolean(user.is_agent)) {
+      const currentPath = window.location.pathname;
+      if (!currentPath.startsWith('/agent')) {
+        console.log('Agent user accessing non-agent route, redirecting to agent dashboard');
+        return <Redirect to="/agent" />;
       }
     }
   }
 
-  // If all checks pass, render the requested component
   return <Component {...rest} />;
 }
 

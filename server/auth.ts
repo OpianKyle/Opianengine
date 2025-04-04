@@ -782,131 +782,76 @@ function extractBearerToken(req: Request): string | null {
 }
 
 // Get user from token or session
-// Helper function to get fresh user data from the database
-async function getFreshUserData(userId: number): Promise<any> {
-  console.log('Getting fresh user data for ID:', userId);
-  const connection = await createConnection();
-  try {
-    const [users] = await connection.execute(
-      `SELECT u.*, 
-       CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-       CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
-       FROM users u
-       LEFT JOIN admin_users au ON u.id = au.user_id
-       WHERE u.id = ?`,
-      [userId]
-    );
-
-    if (!Array.isArray(users) || users.length === 0) {
-      console.log('User not found for ID:', userId);
-      return null;
-    }
-
-    const user = users[0];
-    console.log('Found fresh user data:', {
-      id: user.id,
-      email: user.email,
-      is_admin: Boolean(user.is_admin),
-      is_super_admin: Boolean(user.is_super_admin),
-      is_agent: Boolean(user.is_agent)
-    });
-    
-    // Transform user object consistently
-    const transformedUser = {
-      id: user.id,
-      email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      phone_number: user.phone_number,
-      is_admin: Boolean(user.is_admin),
-      is_super_admin: Boolean(user.is_super_admin),
-      is_agent: Boolean(user.is_agent),
-      is_enabled: Boolean(user.is_enabled),
-      points: user.points || 0,
-      referral_code: user.referral_code,
-      referred_by: user.referred_by
-    };
-
-    return transformedUser;
-  } catch (error) {
-    console.error('Error getting fresh user data:', error);
-    return null;
-  } finally {
-    await connection.end();
-  }
-}
-
 export async function getUserFromTokenOrSession(req: Request): Promise<any> {
-  // Track whether we're using token or session for analytics
-  let authMethod = 'none';
-  let userId = null;
-
-  // First try to get user from token header
+  // First try to get user from authorization header
   const token = extractBearerToken(req);
   if (token) {
-    authMethod = 'token';
     console.log('Found Authorization header with Bearer token');
+    console.log('Token starts with:', token.substring(0, 10) + '...');
     const decoded = verifyToken(token);
     if (decoded) {
-      console.log('Token verified successfully, ID:', decoded.id);
-      userId = decoded.id;
+      console.log('Token verified successfully, getting user data for ID:', decoded.id);
       
-      // Get fresh data from database
-      const userData = await getFreshUserData(decoded.id);
-      if (userData) {
-        console.log('Found user data for token auth:', userData.email);
-        
-        // If session exists but has different user, update session to match token
-        if (req.session && req.isAuthenticated() && req.user && req.user.id !== userData.id) {
-          console.log('Session user different from token user. Updating session.');
-          req.login(userData, (err) => {
-            if (err) console.error('Error updating session user:', err);
-            else console.log('Session user updated to match token user');
-          });
+      // No mock authentication - always use actual database authentication
+      
+      // Production mode - get user data from database
+      const connection = await createConnection();
+      try {
+        const [users] = await connection.execute(
+          `SELECT u.*, 
+           CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
+           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+           FROM users u
+           LEFT JOIN admin_users au ON u.id = au.user_id
+           WHERE u.id = ?`,
+          [decoded.id]
+        );
+
+        if (!Array.isArray(users) || users.length === 0) {
+          console.log('User not found for token user ID:', decoded.id);
+          return null;
         }
+
+        const user = users[0];
+        console.log('Found user from token:', {
+          id: user.id,
+          email: user.email,
+          is_admin: Boolean(user.is_admin),
+          is_super_admin: Boolean(user.is_super_admin)
+        });
         
-        return userData;
-      } else {
-        console.log('No user found for token ID:', decoded.id);
+        // Transform user object consistently
+        const transformedUser = {
+          id: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          phone_number: user.phone_number,
+          is_admin: Boolean(user.is_admin),
+          is_super_admin: Boolean(user.is_super_admin),
+          is_agent: Boolean(user.is_agent),
+          is_enabled: Boolean(user.is_enabled),
+          points: user.points || 0,
+          referral_code: user.referral_code,
+          referred_by: user.referred_by
+        };
+
+        return transformedUser;
+      } catch (error) {
+        console.error('Error getting user from token:', error);
+        return null;
+      } finally {
+        await connection.end();
       }
     } else {
       console.log('Token verification failed');
     }
+  } else {
+    console.log('No Authorization header with Bearer token found');
   }
 
-  // If token auth failed, try session auth
-  if (req.isAuthenticated() && req.user) {
-    authMethod = 'session';
-    userId = req.user.id;
-    console.log('User authenticated via session:', req.user.id, req.user.email);
-    
-    // To ensure fresh data, get user from database
-    const userData = await getFreshUserData(req.user.id);
-    if (userData) {
-      console.log('Found fresh data for session user:', userData.email);
-      
-      // If data changed, update session
-      if (JSON.stringify(req.user) !== JSON.stringify(userData)) {
-        console.log('Updating session with fresh user data');
-        req.login(userData, (err) => {
-          if (err) console.error('Error updating session with fresh data:', err);
-          else console.log('Session updated with fresh user data');
-        });
-      }
-      
-      return userData;
-    } else {
-      console.log('No fresh data found for session user ID:', req.user.id);
-      // Invalid session user, log them out
-      req.logout((err) => {
-        if (err) console.error('Error logging out invalid session user:', err);
-      });
-      return null;
-    }
-  }
-
-  console.log('User not authenticated via token or session');
-  return null;
+  // Then try to get user from session
+  return await verifySession(req);
 }
 
 export async function verifySession(req: Request): Promise<any> {
