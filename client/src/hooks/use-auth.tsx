@@ -120,10 +120,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [token]);
 
+  // Ensure we clear stale data on initialization
+  useEffect(() => {
+    // Check if token is valid on component mount
+    if (!token) {
+      // If no token, ensure all auth data is cleared
+      clearAuthState();
+    }
+  }, []);
+  
   // Query to fetch the current user
   const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
+      // Skip if no token exists
+      if (!token) {
+        return null;
+      }
+      
       // Normal production code
       const headers: Record<string, string> = {
         "Accept": "application/json",
@@ -131,27 +145,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       
       // Add token to headers if available
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
+      
+      try {
+        const res = await fetch("/api/user", {
+          credentials: "include",
+          headers
+        });
+        
+        if (!res.ok) {
+          if (res.status === 401) {
+            // If 401 unauthorized, clear token and auth state
+            console.log('Unauthorized: Clearing auth state');
+            await clearAuthState();
+            return null;
+          }
+          throw new Error("Failed to fetch user data");
+        }
+        
+        return res.json();
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        // If network error or other issue, also clear auth state
+        await clearAuthState();
+        return null;
       }
-      
-      const res = await fetch("/api/user", {
-        credentials: "include",
-        headers
-      });
-      
-      if (!res.ok) {
-        if (res.status === 401) return null;
-        throw new Error("Failed to fetch user data");
-      }
-      
-      return res.json();
     },
     retry: false,
-    enabled: !isLoggingOut.current,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    enabled: !isLoggingOut.current && !!token,
+    staleTime: 1 * 60 * 1000, // 1 minute (reduced from 5 min to ensure frequent validation)
+    refetchOnWindowFocus: true, // Changed to true to check auth status on tab focus
+    refetchOnMount: true, // Changed to true to check auth status when component mounts
   });
 
   // Clear auth state on logout
