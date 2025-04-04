@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: opian-rewards-system
+    env: node
+    buildCommand: npm run build
+    startCommand: node --require dotenv/config dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
