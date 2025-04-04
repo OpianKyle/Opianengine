@@ -2,24 +2,21 @@ import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as schema from "@db/schema";
 
-console.log('Creating database connection pool...');
-
 // Create a connection pool for better performance and connection management
 const poolConnection = mysql.createPool({
-  host: process.env.DB_HOST || 'dedi1350.jnb1.host-h.net',
-  user: process.env.DB_USER || 'admin',
-  password: process.env.DB_PASSWORD || '8E33U976qa800F',
-  database: process.env.DB_NAME || 'opianrewards',
-  port: parseInt(process.env.DB_PORT || '3306'),
+  host: 'dedi1350.jnb1.host-h.net',
+  user: 'admin',
+  password: '8E33U976qa800F',
+  database: 'opianrewards',
+  port: 3306,
   ssl: {
     rejectUnauthorized: false
   },
-  // Simplified connection pool settings
   waitForConnections: true,
-  connectionLimit: 2, // Reduced to minimize startup connections
+  connectionLimit: 10,
+  queueLimit: 0,
   enableKeepAlive: true,
-  keepAliveInitialDelay: 10000,
-  connectTimeout: 30000, // 30 seconds timeout
+  keepAliveInitialDelay: 0
 });
 
 // Initialize drizzle with the connection pool
@@ -32,23 +29,15 @@ export const db = drizzle(poolConnection, {
 // Export the pool for direct queries if needed
 export const pool = poolConnection;
 
-// Add connection test function with retry capability
-export async function testConnection(retries = 3, delay = 5000) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      console.log(`Database connection attempt ${attempt} of ${retries}...`);
-      const connection = await poolConnection.getConnection();
-      console.log('Database connection successful');
-      connection.release();
-      return true;
-    } catch (error) {
-      console.error(`Database connection attempt ${attempt} failed:`, error);
-      if (attempt < retries) {
-        console.log(`Retrying connection in ${delay/1000} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
+// Add connection test function
+export async function testConnection() {
+  try {
+    const connection = await poolConnection.getConnection();
+    console.log('Database connection successful');
+    connection.release();
+    return true;
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    return false;
   }
-  console.error(`Database connection failed after ${retries} attempts`);
-  return false;
 }

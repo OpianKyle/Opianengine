@@ -1,5 +1,35 @@
-// Import only essential environment variables - full validation in env.ts
-import { SESSION_SECRET } from './env.js';
+// Load environment variables first (must be before other imports)
+import * as dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get the current file's directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env file from the root directory
+const result = dotenv.config({
+  path: path.resolve(__dirname, '..', '.env')
+});
+
+// Check if dotenv loaded successfully
+if (result.error) {
+  console.error('Error loading .env file:', result.error);
+  process.exit(1);
+}
+
+// Validate critical environment variables
+if (!process.env.SESSION_SECRET) {
+  console.error('Fatal: SESSION_SECRET environment variable is missing');
+  process.exit(1);
+}
+
+console.log('Environment validated:', {
+  sessionSecret: process.env.SESSION_SECRET?.substring(0, 10) + '...',
+  dbHost: process.env.DB_HOST,
+  hasDbUrl: !!process.env.DATABASE_URL,
+  envPath: path.resolve(__dirname, '..', '.env')
+});
 
 // Rest of imports
 import express, { type Request, Response, NextFunction } from "express";
@@ -9,6 +39,7 @@ import cors from "cors";
 import fileUpload from 'express-fileupload';
 import { setupAuth } from "./auth.js";
 import { db } from "@db";
+import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
 import adminRouter from './routes/admin';
 import migrationRouter from './routes/migration';
@@ -41,11 +72,15 @@ app.use(fileUpload({
   },
 }));
 
-// Session configuration with minimal settings for faster startup
-const sessionStore = new MemoryStore();
+// Session configuration with enhanced security
+const sessionStore = new MemoryStore({
+  checkPeriod: 86400000 // prune expired entries every 24h
+});
+
+console.log('Configuring session with secret length:', process.env.SESSION_SECRET?.length);
 
 const sessionMiddleware = session({
-  secret: SESSION_SECRET,
+  secret: process.env.SESSION_SECRET!,
   store: sessionStore,
   resave: false,
   saveUninitialized: false,
@@ -58,54 +93,86 @@ const sessionMiddleware = session({
   name: 'connect.sid'
 });
 
-// Initialize session and passport right away
+// Initialize session and passport
 app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Start the server immediately
-const PORT = parseInt(process.env.PORT || '5000');
-
-// Setup authentication (no logging)
-setupAuth(app);
-
-// Register routes (minimal routes first for faster startup)
-app.use('/api/user', (req, res) => {
-  if (!req.isAuthenticated() && !req.headers.authorization) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  
-  // If user is authenticated through session or token
-  if (req.user) {
-    return res.json(req.user);
-  } else {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+// Add comprehensive session debug middleware
+app.use((req: any, res, next) => {
+  console.log('Session debug:', {
+    hasSession: !!req.session,
+    sessionID: req.sessionID,
+    isAuthenticated: req.isAuthenticated(),
+    user: req.user ? {
+      id: req.user.id,
+      email: req.user.email
+    } : null,
+    cookies: req.headers.cookie
+  });
+  next();
 });
 
-// More route registration in background
-setTimeout(() => {
-  app.use('/api/agent', agentRouter);
-  app.use('/api/admin', adminRouter);
-  app.use('/api/migration', migrationRouter);
-  registerRoutes(app, sessionMiddleware);
-}, 1000);
+(async () => {
+  try {
+    console.log('Starting database initialization...');
 
-// Start server immediately, then setup Vite/static in background
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-  
-  // Setup Vite/static in background
-  setTimeout(async () => {
+    // Test database connection
     try {
-      if (process.env.NODE_ENV !== "production") {
-        await setupVite(app, server);
-      } else {
-        serveStatic(app);
-      }
-      console.log('Server fully initialized');
-    } catch (err) {
-      console.error('Error in delayed initialization:', err);
+      const connection = await mysql.createConnection({
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        port: parseInt(process.env.DB_PORT || '3306'),
+        ssl: {
+          rejectUnauthorized: false
+        }
+      });
+
+      console.log('Database connection successful');
+      await connection.end();
+    } catch (dbError) {
+      console.error('Database connection test failed:', dbError);
+      throw dbError;
     }
-  }, 500);
-});;
+
+    // Setup authentication
+    console.log('Setting up authentication...');
+    setupAuth(app);
+    console.log('Authentication setup complete');
+
+    // Register routes
+    app.use('/api/agent', agentRouter);
+    app.use('/api/admin', adminRouter);
+    app.use('/api/migration', migrationRouter);
+    registerRoutes(app, sessionMiddleware);
+    console.log('Routes registered');
+
+    // Setup appropriate server based on environment
+    if (process.env.NODE_ENV !== "production") {
+      console.log('Setting up Vite development server...');
+      await setupVite(app, server);
+      console.log('Vite setup complete');
+    } else {
+      console.log('Setting up static file serving...');
+      serveStatic(app);
+      console.log('Static serving setup complete');
+    }
+
+    // Start the server
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
+      console.log(`Server URL: http://0.0.0.0:${PORT}`);
+    });
+  } catch (error: any) {
+    console.error('Server startup error:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    process.exit(1);
+  }
+})();

@@ -22,18 +22,43 @@ import { PackageIcon as LucidePackageIcon } from "lucide-react";
 
 interface ReferralStats {
   referralCode: string;
-  level1Count: number;
-  level2Count: number;
-  level3Count: number;
-  referrals: Array<{
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    createdAt: string;
-    referral_code: string;
-    referralCount: number;
-  }>;
+  referralCount: number;
+  packagePrices: Record<string, number>;
+  packageStatsByLevel: {
+    [key: number]: {
+      [key: string]: {
+        count: number;
+        totalReferrals: number;
+        referralsByPackage: {
+          BEGINNER: number;
+          NOVICE: number;
+          ACTIVE: number;
+          PROFESSIONAL: number;
+          EXPERT: number;
+        };
+        commission: {
+          percentage: number;
+          baseAmount: number;
+        };
+      };
+    };
+  };
+  referralsByLevel: {
+    [key: number]: Array<{
+      id: number;
+      firstName: string;
+      lastName: string;
+      email: string;
+      selectedPackage: string;
+      createdAt: string;
+      directReferralCount: number;
+      commission: {
+        percentage: number;
+        randValue: string;
+        points: number;
+      };
+    }>;
+  };
 }
 
 const packageColors = {
@@ -128,12 +153,18 @@ export default function ReferralsPage() {
     }
   };
 
-  const referralCount = referralStats ? referralStats.level1Count : 0;
-  
+  // Calculate total commission for each level
+  const calculateLevelCommission = (level: number) => {
+    if (!referralStats?.referralsByLevel[level]) return 0;
+    return referralStats.referralsByLevel[level].reduce((sum, ref) => {
+      return sum + Number(ref.commission.randValue);
+    }, 0);
+  };
+
   const badges = referralStats ? referralBadges.map(badge => ({
     ...badge,
-    earned: referralCount >= badge.requirement,
-    progress: Math.min(referralCount, badge.requirement)
+    earned: referralStats.referralCount >= badge.requirement,
+    progress: Math.min(referralStats.referralCount, badge.requirement)
   })) : [];
 
   if (error) {
@@ -158,94 +189,73 @@ export default function ReferralsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>My Referral Network</CardTitle>
+          <CardTitle>Monthly Commission Summary</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Summary of your referral network at different levels.
+              Your commission earnings based on your referral network's packages.
             </p>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="py-3">
-                  <CardTitle className="text-sm font-medium">Level 1 (Direct)</CardTitle>
+                  <CardTitle className="text-sm font-medium">Level 1 (7.5%)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {referralStats?.level1Count || 0}
+                    R{calculateLevelCommission(1).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    People you directly referred
+                    From {referralStats?.referralsByLevel[1]?.length || 0} direct referrals
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="py-3">
-                  <CardTitle className="text-sm font-medium">Level 2</CardTitle>
+                  <CardTitle className="text-sm font-medium">Level 2 (5%)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {referralStats?.level2Count || 0}
+                    R{calculateLevelCommission(2).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Referrals made by your direct referrals
+                    From {referralStats?.referralsByLevel[2]?.length || 0} indirect referrals
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="py-3">
-                  <CardTitle className="text-sm font-medium">Level 3</CardTitle>
+                  <CardTitle className="text-sm font-medium">Level 3 (2.5%)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {referralStats?.level3Count || 0}
+                    R{calculateLevelCommission(3).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Referrals made by your level 2 referrals
+                    From {referralStats?.referralsByLevel[3]?.length || 0} level 3 referrals
                   </p>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Referral Link</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Share this link with others to earn rewards when they sign up!
-            </p>
-            <div className="flex gap-2">
-              <Input value={referralLink} readOnly className="flex-1" />
-              <Button onClick={copyToClipboard} size="icon" className="flex-shrink-0">
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 pt-4">
-              <a href={socialShareUrls.twitter} target="_blank" rel="noopener noreferrer" className="rounded-full p-2 bg-zinc-100 hover:bg-zinc-200 transition-colors">
-                <TwitterIcon className="w-5 h-5" />
-              </a>
-              <a href={socialShareUrls.facebook} target="_blank" rel="noopener noreferrer" className="rounded-full p-2 bg-zinc-100 hover:bg-zinc-200 transition-colors">
-                <FacebookIcon className="w-5 h-5" />
-              </a>
-              <a href={socialShareUrls.linkedin} target="_blank" rel="noopener noreferrer" className="rounded-full p-2 bg-zinc-100 hover:bg-zinc-200 transition-colors">
-                <LinkedInIcon className="w-5 h-5" />
-              </a>
-              <a href={socialShareUrls.whatsapp} target="_blank" rel="noopener noreferrer" className="rounded-full p-2 bg-zinc-100 hover:bg-zinc-200 transition-colors">
-                <WhatsAppIcon className="w-5 h-5" />
-              </a>
-              <a href={socialShareUrls.telegram} target="_blank" rel="noopener noreferrer" className="rounded-full p-2 bg-zinc-100 hover:bg-zinc-200 transition-colors">
-                <TelegramIcon className="w-5 h-5" />
-              </a>
-              <a href={socialShareUrls.email} className="rounded-full p-2 bg-zinc-100 hover:bg-zinc-200 transition-colors">
-                <EmailIcon className="w-5 h-5" />
-              </a>
+              <Card className="bg-primary/5">
+                <CardHeader className="py-3">
+                  <CardTitle className="text-sm font-medium">Total Commission</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-white">
+                    R{(
+                      calculateLevelCommission(1) +
+                      calculateLevelCommission(2) +
+                      calculateLevelCommission(3)
+                    ).toFixed(2)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Paid out monthly
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </CardContent>
@@ -258,7 +268,7 @@ export default function ReferralsPage() {
         <CardContent>
           <ScrollArea className="h-[400px]">
             <div className="space-y-4">
-              {referralStats?.referrals?.map((referral) => (
+              {referralStats?.referralsByLevel[1]?.map((referral) => (
                 <div
                   key={referral.id}
                   className="flex items-center justify-between p-4 border rounded-lg"
@@ -274,12 +284,20 @@ export default function ReferralsPage() {
                       Joined: {new Date(referral.createdAt).toLocaleDateString()}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Their Referrals: {referral.referralCount || 0}
+                      Direct Referrals: {referral.directReferralCount}
                     </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="outline" className={packageColors[referral.selectedPackage as keyof typeof packageColors]}>
+                      Package: {referral.selectedPackage || 'None'}
+                    </Badge>
+                    <Badge className="bg-primary text-white">
+                      Commission: R{referral.commission.randValue}
+                    </Badge>
                   </div>
                 </div>
               ))}
-              {(!referralStats?.referrals || referralStats.referrals.length === 0) && (
+              {(!referralStats?.referralsByLevel[1] || referralStats.referralsByLevel[1].length === 0) && (
                 <p className="text-center text-muted-foreground py-4">
                   No referrals yet. Share your referral link to get started!
                 </p>
@@ -288,6 +306,32 @@ export default function ReferralsPage() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {[1, 2, 3].map(level => (
+        <Card key={level}>
+          <CardHeader>
+            <CardTitle>Level {level} Referral Stats</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Overview of your level {level} referrals by package type and their subsequent referrals.
+              </p>
+              <div className="grid grid-cols-5 gap-4">
+                {Object.entries(referralStats?.packageStatsByLevel[level] || {}).map(([packageType, stats]) => (
+                  <PackageEmblem
+                    key={packageType}
+                    type={packageType}
+                    count={stats.count}
+                    totalReferrals={stats.totalReferrals}
+                    level={level}
+                  />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
 
       <Card>
         <CardHeader>

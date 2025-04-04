@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
-import { setupAuth, checkAgent, checkAdmin, verifyJwtToken, getUserFromTokenOrSession } from "./auth";
+import { setupAuth, checkAgent, checkAdmin, verifyJwtToken } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
@@ -1739,22 +1739,20 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   app.get("/api/customer/referral", async (req, res) => {
-    // Get user either from session or token
-    const user = await getUserFromTokenOrSession(req);
-    if (!user) {
-      return res.status(401).json({ error: "Not authenticated" });
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     const connection = await createConnection();
     try {
-      console.log('Fetching referral info for user:', user.id);
+      console.log('Fetching referral info for user:', req.user.id);
 
       // First get user's referral code
       const [userInfo] = await connection.execute(
         `SELECT referral_code, first_name, last_name 
          FROM users 
          WHERE id = ?`,
-        [user.id]
+        [req.user.id]
       );
 
       if (!userInfo || userInfo.length === 0) {
@@ -1764,10 +1762,10 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       // Generate referral code if none exists
       let referralCode = userInfo[0].referral_code;
       if (!referralCode) {
-        referralCode = `REF${user.id}${Date.now().toString(36)}`;
+        referralCode = `REF${req.user.id}${Date.now().toString(36)}`;
         await connection.execute(
           'UPDATE users SET referral_code = ? WHERE id = ?',
-          [referralCode, user.id]
+          [referralCode, req.user.id]
         );
       }
 
@@ -3847,27 +3845,75 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  // REMOVED DUPLICATE ENDPOINTS - USING COMPLETE IMPLEMENTATION BELOW
+  // REMOVED DUPLICATE ENDPOINTS - USING EARLIER DEFINITIONS INSTEAD
+
+  // Customer referrals endpoint - moved from previous duplicate implementation
+  app.get("/api/customer/referrals", async (req, res) => {
+    if (!req.user) return res.status(401).json({error: "Unauthorized"});
+
+    const connection = await createConnection();
+    try {
+      console.log('Fetching referral information for user:', req.user.id);
+      const [userData] = await connection.execute(
+        `SELECT referral_code FROM users WHERE id = ?`,
+        [req.user.id]
+      );
+
+      if (!userData || userData.length === 0) {
+        console.log('No user found with ID:', req.user.id);
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      let currentReferralCode = userData[0].referral_code;
+      if (!currentReferralCode) {
+        currentReferralCode = randomBytes(8).toString("hex");
+        await connection.execute(
+          `UPDATE users SET referral_code = ? WHERE id = ?`,
+          [currentReferralCode, req.user.id]
+        );
+        console.log('Generated new referral code:', currentReferralCode);
+      }
+
+      const referrals = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.referred_by, currentReferralCode))
+        .orderBy(desc(users.createdAt))
+        .execute();
+
+      res.json({
+        referralCode: currentReferralCode,
+        referralCount: referrals.length,
+        referrals,
+      });
+    } catch (error) {
+      console.error('Error fetching referral info:', error);
+      res.status(500).json({ error: 'Failed to fetch referral information' });
+    }
+  });
 
   app.get("/api/customer/referrals", async (req, res) => {
-    // Get user either from session or token
-    const user = await getUserFromTokenOrSession(req);
-    if (!user) {
+    if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
     const connection = await createConnection();
     try {
-      console.log("Fetching referral stats for user:", user.id);
+      console.log("Fetching referral stats for user:", req.user.id);
       
       // Get user with referral code
       const [userData] = await connection.execute(
         `SELECT * FROM users WHERE id = ?`,
-        [user.id]
+        [req.user.id]
       );
 
       if (!userData || userData.length === 0) {
-        console.log('No user found with ID:', user.id);
+        console.log('No user found with ID:', req.user.id);
         return res.status(404).json({ error: "User not found" });
       }
 

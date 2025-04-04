@@ -887,7 +887,9 @@ export async function verifySession(req: Request): Promise<any> {
     console.log('Found session ID:', sessionId);
 
     return new Promise((resolve) => {
-      const sessionStore = new MemoryStore();
+      const sessionStore = new MemoryStore({
+        checkPeriod: 86400000 as any
+      });
       
       sessionStore.get(sessionId, async (err: any, sessionData: any) => {
         if (err || !sessionData) {
