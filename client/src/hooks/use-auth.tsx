@@ -133,13 +133,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const userQuery = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
+      console.log('User query function executing, token status:', !!token);
+      
       // Skip if no token exists
       if (!token) {
         console.log('No token available, skipping user query');
         return null;
       }
       
-      console.log('Fetching user data with token');
+      console.log('Fetching user data with token:', token.substring(0, 10) + '...');
       
       // Normal production code
       const headers: Record<string, string> = {
@@ -151,10 +153,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers["Authorization"] = `Bearer ${token}`;
       
       try {
+        console.log('Making fetch request to /api/user with session cookies and auth header');
         const res = await fetch("/api/user", {
           credentials: "include", // Include cookies for session auth
           headers
         });
+        
+        console.log('Response status:', res.status);
         
         if (!res.ok) {
           if (res.status === 401) {
@@ -163,10 +168,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await clearAuthState();
             return null;
           }
-          throw new Error("Failed to fetch user data");
+          const errorText = await res.text();
+          console.error('API error response:', errorText);
+          throw new Error(`Failed to fetch user data: ${res.status} ${errorText}`);
         }
         
         const userData = await res.json();
+        console.log('Raw user data received:', userData);
         
         // Validate user data - ensure we got a proper user object
         if (!userData || !userData.id || !userData.email) {
@@ -185,6 +193,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           is_agent: Boolean(userData.is_agent),
           is_enabled: Boolean(userData.is_enabled)
         };
+        
+        console.log('Normalized user object with proper boolean flags:', normalizedUser);
+        
+        // Store the user in localStorage as a backup (but never the token)
+        try {
+          localStorage.setItem('user_data_cache', JSON.stringify(normalizedUser));
+        } catch (e) {
+          console.warn('Could not save user data to localStorage:', e);
+        }
         
         return normalizedUser;
       } catch (error) {
