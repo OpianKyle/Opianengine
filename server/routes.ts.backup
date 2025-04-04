@@ -1,27 +1,21 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
-import { setupAuth, checkAgent, checkAdmin, verifyJwtToken } from "./auth";
+import { setupAuth, checkAgent, verifyJwtToken } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
+import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
-import agentRouter from './routes/agent';
-import migrationRouter from './routes/migration';
-import manualMigrationRouter from './routes/manual-migration';
-import packageTypesRouter from './routes/package-types';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { logAdminAction } from './admin-logger';
 import nodemailer from 'nodemailer';
-import jwt from 'jsonwebtoken';
-import mysql from 'mysql2/promise';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -958,12 +952,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Mount referral routes
-  // Mount the referral routes
-  app.use('/api/referral', referralRouter);
-  app.use('/api/agent', agentRouter);
-  app.use('/api/migration', migrationRouter);
-  app.use('/api/manual-migration', manualMigrationRouter);
-  app.use('/api/package-types', packageTypesRouter);
+  app.use('/api/customer', referralRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
@@ -1772,10 +1761,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }
 
       // Get direct referrals with their package info and nested referrals count
-      // MariaDB doesn't support the JSON_ARRAYAGG in the same way as other MySQL versions
-      // So we'll use a simpler query and build the package stats in JavaScript
-      
-      // First get basic referral tree
       const [referrals] = await connection.execute(
         `WITH RECURSIVE referral_tree AS (
           -- Base case: direct referrals (level 1)
@@ -1817,30 +1802,22 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
             SELECT COUNT(*) 
             FROM users u2 
             WHERE u2.referred_by = rt.referral_code
-          ) as direct_referral_count
+          ) as direct_referral_count,
+          (
+            SELECT JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'package', u3.selected_package,
+                'count', COUNT(*)
+              )
+            )
+            FROM users u3
+            WHERE u3.referred_by = rt.referral_code
+            GROUP BY u3.selected_package
+          ) as referral_package_stats
         FROM referral_tree rt
         ORDER BY rt.level, rt.created_at DESC`,
         [referralCode]
       );
-      
-      // Now let's get the package stats for each referral separately
-      for (const referral of referrals) {
-        // Get package counts for this referral's direct referrals
-        if (referral.referral_code) {
-          const [packageStats] = await connection.execute(
-            `SELECT selected_package as package, COUNT(*) as count
-             FROM users
-             WHERE referred_by = ?
-             GROUP BY selected_package`,
-            [referral.referral_code]
-          );
-          
-          // Add the package stats to the referral object
-          referral.referral_package_stats = packageStats.length > 0 ? JSON.stringify(packageStats) : '[]';
-        } else {
-          referral.referral_package_stats = '[]';
-        }
-      }
 
       // Get package prices for commission calculations
       const [packagePrices] = await connection.execute(
@@ -4694,125 +4671,101 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
   // Unified API endpoint that handles both session-based and JWT token-based authentication
-  app.get("/api/user", async (req, res) => {
-    try {
-      console.log('User request:', {
-        isAuthenticated: req.isAuthenticated(),
-        user: req.user ? { id: req.user.id, email: req.user.email } : null,
-        hasAuthHeader: !!req.headers.authorization
-      });
+  app.get("/api/user", (req, res) => {
+    console.log('User request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, email: req.user.email } : null,
+      hasAuthHeader: !!req.headers.authorization
+    });
 
-      // Check for JWT token in Authorization header
-      let user = null;
-      if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-        console.log('Authorization header found, checking JWT token');
-        const token = req.headers.authorization.split(' ')[1];
-        try {
-          // Verify token using the imported function from auth.ts
-          const tokenData = verifyJwtToken(token);
-          if (tokenData) {
-            console.log('Valid JWT token, fetching user data');
-            const connection = await createConnection();
-            try {
-              // Fetch complete user data from database
-              const [users] = await connection.execute(
-                `SELECT u.*, 
-                CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-                CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
-                FROM users u
-                LEFT JOIN admin_users au ON u.id = au.user_id
-                WHERE u.id = ?`,
-                [tokenData.id]
-              );
-
-              if (Array.isArray(users) && users.length > 0) {
-                user = users[0];
-                console.log('User found via JWT token:', { id: user.id });
+    // First check session authentication
+    if (req.isAuthenticated()) {
+      // Get complete user details from database if authenticated via session
+      const connection = createConnection()
+        .then(conn => {
+          conn.execute(
+            `SELECT 
+              u.id,
+              u.email,
+              u.first_name,
+              u.last_name,
+              u.phone_number,
+              u.is_admin,
+              u.is_super_admin,
+              u.is_agent,
+              u.is_enabled,
+              u.points,
+              u.referral_code,
+              u.referred_by,
+              u.created_at,
+              u.is_south_african,
+              u.id_number,
+              u.date_of_birth,
+              u.address,
+              u.city,
+              u.postal_code,
+              u.industry,
+              u.occupation,
+              u.bank_name,
+              u.account_type,
+              u.account_number,
+              u.account_holder_name,
+              u.branch_code,
+              u.selected_package,
+              u.gender,
+              u.has_credit_card,
+              u.signature
+            FROM users u
+            WHERE u.id = ?`,
+            [req.user.id]
+          )
+          .then(([users]: any) => {
+            if (users && users.length > 0) {
+              const user = users[0];
+              // Format dates properly
+              if (user.created_at) {
+                user.created_at = new Date(user.created_at).toISOString();
               }
-            } finally {
-              await connection.end();
+              if (user.date_of_birth) {
+                user.date_of_birth = new Date(user.date_of_birth).toISOString().split('T')[0];
+              }
+              res.json(user);
+            } else {
+              res.status(404).json({ error: "User not found" });
             }
-          }
-        } catch (tokenError) {
-          console.error('JWT token verification failed:', tokenError);
-        }
-      } else if (req.isAuthenticated() && req.user) {
-        // Use session authentication if available
-        console.log('Using session authentication');
-        user = req.user;
-      } else {
-        // Try to verify session manually as a fallback
-        console.log('No Authorization header with Bearer token found');
-        try {
-          console.log('Verifying session for request:', {
-            url: req.url,
-            headers: {
-              cookie: req.headers.cookie,
-              'sec-websocket-protocol': req.headers['sec-websocket-protocol']
-            }
-          });
-          
-          // Parse session cookie
-          if (req.headers.cookie) {
-            const cookies = req.headers.cookie.split(';')
-              .map(cookie => cookie.trim())
-              .reduce((acc, cookie) => {
-                const [key, value] = cookie.split('=');
-                acc[key] = decodeURIComponent(value);
-                return acc;
-              }, {} as Record<string, string>);
-              
-            console.log('Parsed cookies:', cookies);
-            
-            // Check for session ID
-            if (cookies['connect.sid']) {
-              console.log('Found session ID:', cookies['connect.sid']);
-              // Session parsing would go here in a real implementation
-              // But we'll skip it for now as it's complex and requires the session store
-            }
-          }
-        } catch (sessionError) {
-          console.log('Session not found or error:', sessionError);
-        }
-      }
-
-      if (!user) {
-        console.log('User not authenticated via session or token');
-        return res.status(401).json({ error: "Not authenticated" });
-      }
+            return conn;
+          })
+          .catch(error => {
+            console.error('Error fetching user details:', error);
+            res.status(500).json({ error: 'Failed to fetch user details' });
+            return conn;
+          })
+          .then(conn => conn.end());
+        })
+        .catch(error => {
+          console.error('DB connection error:', error);
+          res.status(500).json({ error: 'Database connection error' });
+        });
       
-      console.log('User authenticated, returning user data');
-      
-      // Format the response to match what the frontend expects
-      const response = {
-        id: user.id,
-        email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        phone_number: user.phone_number,
-        phoneNumber: user.phone_number,
-        is_admin: Boolean(user.is_admin),
-        is_super_admin: Boolean(user.is_super_admin),
-        is_agent: Boolean(user.is_agent),
-        is_enabled: Boolean(user.is_enabled),
-        isAdmin: Boolean(user.is_admin),
-        isSuperAdmin: Boolean(user.is_super_admin),
-        isAgent: Boolean(user.is_agent),
-        isEnabled: Boolean(user.is_enabled),
-        points: parseFloat(user.points || '0'),
-        referral_code: user.referral_code,
-        referralCode: user.referral_code,
-        referred_by: user.referred_by,
-        referredBy: user.referred_by
-      };
-
-      res.json(response);
-    } catch (error) {
-      console.error('Error in /api/user endpoint:', error);
-      res.status(500).json({ error: 'Failed to fetch user data' });
+      return;
     }
+    
+    // Then try JWT token authentication
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = verifyJwtToken(token);
+        if (decoded) {
+          return res.json(decoded);
+        }
+      } catch (err) {
+        console.error('JWT verification error:', err);
+      }
+    }
+    
+    // If neither authentication method succeeded
+    return res.status(401).json({ error: "Unauthorized" });
   });
 
   app.post("/api/admin/products/assign", async (req, res) => {
@@ -4897,7 +4850,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Add new route for admin dashboard stats
-  app.get("/api/admin/dashboard/stats", checkAdmin, async (req, res) => {
+  app.get("/api/admin/dashboard/stats", async (req, res) => {
     console.log('Admin dashboard stats request:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.user ? {
@@ -5308,108 +5261,5 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  // Test endpoint for manually verifying email content with mandate acceptance
-  app.post("/api/register-test-email-html", async (req: Request, res: Response) => {
-    try {
-      console.log('Received email HTML test request');
-      
-      // Create sample customer data with mandate_accepted set to true
-      const customerData = {
-        firstName: req.body.first_name || "Test",
-        lastName: req.body.last_name || "Customer",
-        email: req.body.email || "test@example.com",
-        mobileNumber: req.body.phone_number || "27123456789",
-        selectedPackage: req.body.selectedPackage || "Gold",
-        signature: req.body.signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-        isSouthAfrican: req.body.isSouthAfrican !== undefined ? req.body.isSouthAfrican : true,
-        idNumber: req.body.idNumber || "7012345678901",
-        mandate_accepted: req.body.mandate_accepted !== undefined ? req.body.mandate_accepted : true // explicitly set to true for testing
-      };
-      
-      // Generate email content
-      const { text, html } = formatNewCustomerAdminEmail(customerData);
-      
-      // Also generate PDF to check its content
-      console.log('Generating PDF for mandate acceptance test...');
-      const pdfBuffer = await generateRegistrationPDF(customerData);
-      
-      // Return the HTML for inspection
-      res.status(200).json({
-        success: true,
-        message: "Email content generated successfully",
-        mandate_accepted: customerData.mandate_accepted,
-        html: html,
-        text: text,
-        pdf_generated: !!pdfBuffer
-      });
-    } catch (error) {
-      console.error('Error generating email content:', error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to generate email content",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  // New endpoint to test quote request emails
-  app.post("/api/test-quote-email", async (req: Request, res: Response) => {
-    try {
-      const { customerName, customerEmail, productName, adminName } = req.body;
-      
-      if (!customerEmail) {
-        return res.status(400).json({ success: false, message: "Customer email is required" });
-      }
-      
-      // Test customer quote request email
-      const customerQuoteEmail = formatQuoteRequestEmail(
-        customerName || "Test Customer", 
-        productName || "Test Product"
-      );
-      
-      // Send customer email
-      await sendEmail({
-        to: customerEmail,
-        subject: "Your Quote Request Confirmation",
-        html: customerQuoteEmail.html,
-        text: customerQuoteEmail.text,
-        emailType: "QUOTE_REQUEST"
-      });
-      
-      // Test admin quote request email
-      if (adminName) {
-        const adminQuoteEmail = formatAdminQuoteRequestEmail(
-          customerName || "Test Customer",
-          customerEmail,
-          productName || "Test Product",
-          adminName
-        );
-        
-        // Send admin email
-        await sendEmail({
-          to: customerEmail, // Sending to the same email for testing
-          subject: "New Quote Request Notification",
-          html: adminQuoteEmail.html,
-          text: adminQuoteEmail.text,
-          emailType: "ADMIN_QUOTE_REQUEST"
-        });
-      }
-      
-      res.json({
-        success: true,
-        message: "Quote request test emails sent successfully",
-        timestamp: new Date().toISOString(),
-        recipient: customerEmail
-      });
-    } catch (error) {
-      console.error("Failed to send test quote emails:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to send test quote emails",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-  
   return httpServer;
 }
