@@ -27,6 +27,17 @@ import { queryClient } from "@/lib/queryClient";
 // Helper function to get package color
 function getPackageColor(packageName: string) {
   switch (packageName?.toUpperCase()) {
+    case 'OPPORTUNITY':
+      return 'bg-blue-100 text-blue-800';
+    case 'MOMENTUM':
+      return 'bg-green-100 text-green-800';
+    case 'PROSPER':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'PRESTIGE':
+      return 'bg-purple-100 text-purple-800';
+    case 'PINNACLE':
+      return 'bg-red-100 text-red-800';
+    // Legacy package names for backward compatibility
     case 'BEGINNER':
       return 'bg-blue-100 text-blue-800';
     case 'NOVICE':

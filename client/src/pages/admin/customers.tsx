@@ -43,7 +43,7 @@ const userSchema = z.object({
   accountNumber: z.string().optional(),
   accountHolderName: z.string().optional(),
   branchCode: z.string().optional(),
-  selectedPackage: z.enum(["BEGINNER", "NOVICE", "ACTIVE", "PROFESSIONAL", "EXPERT"]).optional(),
+  selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]).optional(),
   gender: z.enum(genderEnum).nullable(),
   hasCreditCard: z.boolean().optional(),
   isSouthAfrican: z.boolean().optional(),
@@ -312,7 +312,7 @@ export default function AdminCustomers() {
       accountNumber: "",
       accountHolderName: "",
       branchCode: "",
-      selectedPackage: "BEGINNER",
+      selectedPackage: "OPPORTUNITY",
       gender: null,
       hasCreditCard: false,
       isSouthAfrican: false,
@@ -341,7 +341,7 @@ export default function AdminCustomers() {
       accountNumber: customer.accountNumber || "",
       accountHolderName: customer.accountHolderName || "",
       branchCode: customer.branchCode || "",
-      selectedPackage: (customer.selectedPackage?.toUpperCase() as "BEGINNER" | "NOVICE" | "ACTIVE" | "PROFESSIONAL" | "EXPERT") || "BEGINNER",
+      selectedPackage: (customer.selectedPackage?.toUpperCase() as "OPPORTUNITY" | "MOMENTUM" | "PROSPER" | "PRESTIGE" | "PINNACLE") || "OPPORTUNITY",
       gender: (customer.gender as typeof genderEnum[number]) || null,
       hasCreditCard: Boolean(customer.hasCreditCard),
       isSouthAfrican: Boolean(customer.isSouthAfrican),
@@ -748,11 +748,11 @@ export default function AdminCustomers() {
                                               {...field}
                                               className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
                                             >
-                                              <option value="BEGINNER">BEGINNER</option>
-                                              <option value="NOVICE">NOVICE</option>
-                                              <option value="ACTIVE">ACTIVE</option>
-                                              <option value="PROFESSIONAL">PROFESSIONAL</option>
-                                              <option value="EXPERT">EXPERT</option>
+                                              <option value="OPPORTUNITY">OPPORTUNITY</option>
+                                              <option value="MOMENTUM">MOMENTUM</option>
+                                              <option value="PROSPER">PROSPER</option>
+                                              <option value="PRESTIGE">PRESTIGE</option>
+                                              <option value="PINNACLE">PINNACLE</option>
                                             </select>
                                           </FormControl>
                                           <FormMessage />
