@@ -161,15 +161,16 @@ app.use((req: any, res, next) => {
     }
 
     // Start the server
-    const PORT = process.env.PORT || 5000;
+    // Render specifically looks for port 10000 in their environment
+    const PORT = process.env.PORT || 10000;
     console.log(`Starting server on port ${PORT}, environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`PORT environment variable: ${process.env.PORT}`);
     
-    // Ensure port is a number
-    const portNumber = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;
+    // Force port to be exactly 10000 for Render
+    const portNumber = 10000;
     
     // Log port binding attempts for debugging
-    console.log(`Attempting to bind to port ${portNumber} as number type: ${typeof portNumber}`);
+    console.log(`RENDER DEPLOYMENT: Binding to port ${portNumber} (number type: ${typeof portNumber})`);
     
     server.listen(portNumber, '0.0.0.0', () => {
       console.log(`Server running on port ${portNumber} at ${new Date().toISOString()}`);
