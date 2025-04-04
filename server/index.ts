@@ -162,9 +162,13 @@ app.use((req: any, res, next) => {
 
     // Start the server
     const PORT = process.env.PORT || 5000;
+    console.log(`Starting server on port ${PORT}, environment: ${process.env.NODE_ENV}`);
+    
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
       console.log(`Server URL: http://0.0.0.0:${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV}`);
+      console.log(`Process ID: ${process.pid}`);
     });
   } catch (error: any) {
     console.error('Server startup error:', error);
