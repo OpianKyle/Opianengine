@@ -9,7 +9,8 @@ import Register from "@/pages/register";
 import ResetPassword from "@/pages/reset-password";
 import ReferralPage from "@/pages/referral"; // Import the referral form page
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
-import { useSessionTimeout } from "@/hooks/use-session-timeout";
+// Session timeout functionality has been removed
+// import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ResponsiveProvider } from "@/hooks/use-mobile";
@@ -44,7 +45,7 @@ import AgentLeads from "@/pages/agent/leads"; // Import agent referral leads pag
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
   const { user, isLoading } = useAuth();
-  useSessionTimeout();
+  // Session timeout functionality has been removed to prevent automatic logouts
 
   if (isLoading) {
     return (

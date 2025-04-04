@@ -4701,7 +4701,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       });
 
       // Try to get user from either JWT token or session using the helper function
-      const user = await getUserFromTokenOrSession(req);
+      let user;
+      try {
+        user = await getUserFromTokenOrSession(req);
+      } catch (error) {
+        console.error('Error in getUserFromTokenOrSession:', error);
+        return res.status(401).json({ error: "Authentication error" });
+      }
 
       if (!user) {
         console.log('User not authenticated via session or token');
