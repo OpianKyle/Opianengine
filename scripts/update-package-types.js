@@ -112,8 +112,8 @@ async function updatePackageTypes() {
   }
 }
 
-// Execute the function if running this script directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Execute the function if running this script directly and not in production
+if (import.meta.url === `file://${process.argv[1]}` && process.env.NODE_ENV !== 'production') {
   updatePackageTypes()
     .then(() => {
       console.log('Package type update script completed successfully');
@@ -123,6 +123,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.error('Package type update script failed:', error.message);
       process.exit(1);
     });
+} else if (import.meta.url === `file://${process.argv[1]}` && process.env.NODE_ENV === 'production') {
+  console.log('Package type update script skipped in production environment');
+  process.exit(0);
 }
 
 // Export for use as a module
