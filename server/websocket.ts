@@ -15,57 +15,77 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
           return done(true);
         }
 
-        // Apply session middleware to get session data
-        await new Promise((resolve) => {
-          sessionMiddleware(info.req, {} as any, resolve);
-        });
+        // Apply session middleware to get session data - handled with a timeout
+        try {
+          await Promise.race([
+            new Promise((resolve) => {
+              sessionMiddleware(info.req, {} as any, resolve);
+            }),
+            new Promise((_, reject) => setTimeout(() => {
+              reject(new Error('Session middleware timeout'));
+            }, 5000)) // 5 seconds timeout
+          ]);
+        } catch (e) {
+          console.error('Session middleware error or timeout:', e);
+          // Continue anyway and check for auth headers 
+        }
 
         console.log('WebSocket connection attempt:', {
           hasSession: !!info.req.session,
-          sessionID: info.req.sessionID,
+          sessionID: info.req.sessionID || 'none',
           hasPassport: !!info.req.session?.passport,
-          cookies: info.req.headers.cookie,
-          headers: info.req.headers
         });
 
         // Check for authenticated session
         if (info.req.session?.passport?.user) {
           info.req.user = info.req.session.passport.user;
-          console.log('WebSocket authenticated via passport:', {
-            userId: info.req.user.id,
-            email: info.req.user.email,
-            method: 'passport'
-          });
+          console.log('WebSocket authenticated via passport');
           return done(true);
         }
 
         // Fallback to session user if available
         if (info.req.session?.user) {
           info.req.user = info.req.session.user;
-          console.log('WebSocket authenticated via session:', {
-            userId: info.req.user.id,
-            email: info.req.user.email,
-            method: 'session'
-          });
+          console.log('WebSocket authenticated via session');
           return done(true);
         }
 
-        console.error('WebSocket authentication failed: No valid session');
-        return done(false, 401, 'Authentication required');
+        // Allow connection without authentication for client error handling
+        // The actual user validation will happen on the connection event
+        console.log('Allowing WebSocket connection without authentication');
+        return done(true);
 
       } catch (error) {
         console.error('WebSocket authentication error:', error);
-        return done(false, 500, 'Internal Server Error');
+        // Allow connection anyway but it will be limited
+        return done(true);
       }
     }
   });
 
   wss.on('connection', async (ws: WebSocket, req: any) => {
     try {
+      // Check if we have a user in the request
+      if (!req.user) {
+        console.log('WebSocket client connected without authentication');
+        
+        // Send an error message to the client
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: 'Authentication required'
+        }));
+        
+        // Set a timeout to close the connection after sending the error
+        setTimeout(() => {
+          ws.close(1008, 'Authentication required');
+        }, 1000);
+        
+        return;
+      }
+      
       const user = req.user as User;
       console.log('WebSocket client connected:', {
         userId: user.id,
-        email: user.email,
         timestamp: new Date().toISOString()
       });
 
@@ -97,19 +117,27 @@ export function setupWebSocketServer(server: Server, sessionMiddleware: any) {
 
       // Handle client disconnection
       ws.on('close', () => {
-        console.log('WebSocket client disconnected:', { 
-          userId: user.id,
-          timestamp: new Date().toISOString()
-        });
-        NotificationService.removeClient(user.id, ws);
+        if (user && user.id) {
+          console.log('WebSocket client disconnected:', { 
+            userId: user.id,
+            timestamp: new Date().toISOString()
+          });
+          NotificationService.removeClient(user.id, ws);
+        } else {
+          console.log('Unauthenticated WebSocket client disconnected');
+        }
       });
 
       // Handle client errors
       ws.on('error', (error) => {
-        console.error('WebSocket client error:', {
-          userId: user.id,
-          error: error.message
-        });
+        if (user && user.id) {
+          console.error('WebSocket client error:', {
+            userId: user.id,
+            error: error.message
+          });
+        } else {
+          console.error('Unauthenticated WebSocket client error:', error.message);
+        }
       });
 
     } catch (error) {
