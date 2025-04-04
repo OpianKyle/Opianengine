@@ -21,7 +21,6 @@ import { promisify } from "util";
 import { logAdminAction } from './admin-logger';
 import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
-import mysql from 'mysql2/promise';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
