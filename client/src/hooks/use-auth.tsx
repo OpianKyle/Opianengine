@@ -135,8 +135,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       // Skip if no token exists
       if (!token) {
+        console.log('No token available, skipping user query');
         return null;
       }
+      
+      console.log('Fetching user data with token');
       
       // Normal production code
       const headers: Record<string, string> = {
@@ -149,21 +152,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       try {
         const res = await fetch("/api/user", {
-          credentials: "include",
+          credentials: "include", // Include cookies for session auth
           headers
         });
         
         if (!res.ok) {
           if (res.status === 401) {
             // If 401 unauthorized, clear token and auth state
-            console.log('Unauthorized: Clearing auth state');
+            console.log('Unauthorized (401): Clearing auth state');
             await clearAuthState();
             return null;
           }
           throw new Error("Failed to fetch user data");
         }
         
-        return res.json();
+        const userData = await res.json();
+        
+        // Validate user data - ensure we got a proper user object
+        if (!userData || !userData.id || !userData.email) {
+          console.log('Invalid user data received:', userData);
+          await clearAuthState();
+          return null;
+        }
+        
+        console.log('Valid user data received for ID:', userData.id);
+        
+        // Ensure boolean flags are properly set
+        const normalizedUser = {
+          ...userData,
+          is_admin: Boolean(userData.is_admin),
+          is_super_admin: Boolean(userData.is_super_admin),
+          is_agent: Boolean(userData.is_agent),
+          is_enabled: Boolean(userData.is_enabled)
+        };
+        
+        return normalizedUser;
       } catch (error) {
         console.error('Error fetching user data:', error);
         // If network error or other issue, also clear auth state
@@ -171,11 +194,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
     },
-    retry: false,
+    retry: 1, // Only retry once to avoid looping issues
+    retryDelay: 1000, // Wait 1 second before retry
     enabled: !isLoggingOut.current && !!token,
-    staleTime: 1 * 60 * 1000, // 1 minute (reduced from 5 min to ensure frequent validation)
-    refetchOnWindowFocus: true, // Changed to true to check auth status on tab focus
-    refetchOnMount: true, // Changed to true to check auth status when component mounts
+    staleTime: 30 * 1000, // 30 seconds to ensure frequent validation
+    refetchOnWindowFocus: true, // Check auth status on tab focus
+    refetchOnMount: true, // Check auth status when component mounts
+    refetchOnReconnect: true, // Check auth when network reconnects
   });
 
   // Clear auth state on logout

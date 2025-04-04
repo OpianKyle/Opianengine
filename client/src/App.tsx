@@ -44,10 +44,13 @@ import AgentCustomers from "@/pages/agent/customers";
 import AgentLeads from "@/pages/agent/leads"; // Import agent referral leads page
 
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, token } = useAuth(); // Include token state
   
-  // Check localStorage to ensure there's no stale user data
+  // Double-check token validity - both from hook state and localStorage
   const hasLocalStorageToken = !!localStorage.getItem("auth_token");
+  
+  // Consider token valid only if it exists in both places
+  const isTokenValid = !!token && hasLocalStorageToken;
   
   // If loading, show loading spinner
   if (isLoading) {
@@ -58,39 +61,51 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     );
   }
 
-  // If no user, redirect to login
-  if (!user || !hasLocalStorageToken) {
-    console.log('No authenticated user or token found, redirecting to login');
-    // Clear any stale data
-    localStorage.removeItem("auth_token");
+  // Authentication check
+  // Require BOTH a user object with role information AND a valid token
+  if (!user || !user.id || !isTokenValid) {
+    console.log('Authentication check failed:', { 
+      hasUser: !!user, 
+      hasUserId: user?.id, 
+      hasToken: !!token,
+      hasLocalStorageToken 
+    });
     
-    // Clear any stale user data from react-query cache
+    // Clear any potentially stale data
+    localStorage.removeItem("auth_token");
     queryClient.setQueryData(["/api/user"], null);
     
     return <Redirect to="/login" />;
   }
 
+  // Validate user role information
+  const isAdmin = Boolean(user.is_admin);
+  const isSuperAdmin = Boolean(user.is_super_admin);
+  const isAgent = Boolean(user.is_agent);
+  
   console.log('ProtectedRoute checking user role:', { 
-    isAdmin: Boolean(user.is_admin), 
-    isSuperAdmin: Boolean(user.is_super_admin), 
-    isAgent: Boolean(user.is_agent),
+    isAdmin, 
+    isSuperAdmin, 
+    isAgent,
     requestingAdminRoute: admin,
     requestingAgentRoute: agent,
-    hasToken: hasLocalStorageToken
+    hasToken: isTokenValid,
+    userId: user.id
   });
 
-  // Handle routing based on user role - only for protected routes
-  if (admin && !(Boolean(user.is_admin) || Boolean(user.is_super_admin))) {
+  // Handle routing based on user role for admin routes
+  if (admin && !(isAdmin || isSuperAdmin)) {
     console.log('User lacks admin privileges, redirecting to appropriate dashboard');
-    if (Boolean(user.is_agent)) {
+    if (isAgent) {
       return <Redirect to="/agent" />;
     }
     return <Redirect to="/dashboard" />;
   }
 
-  if (agent && !Boolean(user.is_agent)) {
+  // Handle routing based on user role for agent routes
+  if (agent && !isAgent) {
     console.log('User lacks agent privileges, redirecting to appropriate dashboard');
-    if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
+    if (isAdmin || isSuperAdmin) {
       return <Redirect to="/admin" />;
     }
     return <Redirect to="/dashboard" />;
@@ -101,16 +116,21 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   if (!admin && !agent && user) {
     const currentPath = window.location.pathname;
     
+    // Skip role-based redirection for public routes
     // IMPORTANT: For customer routes ONLY - not for home page or auth pages
-    if (currentPath !== '/' && currentPath !== '/login' && currentPath !== '/register' && 
-        currentPath !== '/reset-password' && !currentPath.startsWith('/referral')) {
-      
-      if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
+    const isPublicRoute = currentPath === '/' || 
+                          currentPath === '/login' || 
+                          currentPath === '/register' || 
+                          currentPath === '/reset-password' || 
+                          currentPath.startsWith('/referral');
+    
+    if (!isPublicRoute) {
+      if (isAdmin || isSuperAdmin) {
         if (!currentPath.startsWith('/admin')) {
           console.log('Admin user accessing customer route, redirecting to admin dashboard');
           return <Redirect to="/admin" />;
         }
-      } else if (Boolean(user.is_agent)) {
+      } else if (isAgent) {
         if (!currentPath.startsWith('/agent')) {
           console.log('Agent user accessing customer route, redirecting to agent dashboard');
           return <Redirect to="/agent" />;
@@ -119,6 +139,7 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     }
   }
 
+  // If all checks pass, render the requested component
   return <Component {...rest} />;
 }
 

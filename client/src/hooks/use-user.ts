@@ -25,15 +25,32 @@ interface Referral {
 
 /**
  * Hook for user data retrieval and actions
+ * 
+ * This hook provides access to the authenticated user data and related actions.
+ * It normalizes boolean flags for role information to ensure consistent behavior.
  */
 export function useUser() {
-  const { user, isLoading, registerMutation, logoutMutation } = useAuth();
+  const { user, isLoading, registerMutation, logoutMutation, token } = useAuth();
+  
+  // Create normalized user role flags to make role-checking more reliable
+  const normalizedUser = user ? {
+    ...user,
+    // Ensure these are always boolean values
+    is_admin: Boolean(user.is_admin),
+    is_super_admin: Boolean(user.is_super_admin),
+    is_agent: Boolean(user.is_agent),
+    is_enabled: Boolean(user.is_enabled)
+  } : null;
   
   return {
-    user,
+    user: normalizedUser,
     isLoading,
     registerMutation,
     logoutMutation,
+    isAuthenticated: !!normalizedUser && !!token,
+    isAdmin: normalizedUser ? Boolean(normalizedUser.is_admin) : false,
+    isSuperAdmin: normalizedUser ? Boolean(normalizedUser.is_super_admin) : false,
+    isAgent: normalizedUser ? Boolean(normalizedUser.is_agent) : false,
   };
 }
 
