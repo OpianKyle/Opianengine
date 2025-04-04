@@ -3,7 +3,8 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import session, { MemoryStore } from 'express-session';
+import { MemoryStore } from 'express-session';
+import session from 'express-session';
 import { createConnection } from './db';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
@@ -319,6 +320,18 @@ export function setupAuth(app: Express) {
     }
   });
 
+  app.get("/api/user", (req, res) => {
+    console.log('GET /api/user request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, email: req.user.email } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    res.json(req.user);
+  });
 
   // Keep existing imports and configurations...
 
@@ -512,6 +525,49 @@ export function setupAuth(app: Express) {
         await connection.commit();
         console.log('Registration transaction committed successfully');
 
+        // Send welcome email and admin notification
+        try {
+          const { formatRegistrationEmail, sendEmail, sendAdminRegistrationNotification } = await import('./utils/emailService');
+          const { text, html } = formatRegistrationEmail(req.body.firstName, req.body.email);
+          await sendEmail({
+            to: req.body.email,
+            subject: "Welcome to OPIAN Rewards!",
+            text,
+            html
+          });
+          console.log('Welcome email sent successfully to:', req.body.email);
+
+          // Send admin notification
+          await sendAdminRegistrationNotification({
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            email: req.body.email,
+            mobileNumber: req.body.mobileNumber,
+            selectedPackage: selectedPackage,
+            referralCode: req.body.referralCode,
+            signature: req.body.signature,
+            isSouthAfrican: req.body.isSouthAfrican,
+            idNumber: req.body.idNumber,
+            dateOfBirth: req.body.dateOfBirth,
+            gender: req.body.gender,
+            occupation: req.body.occupation,
+            industry: req.body.industry,
+            address: req.body.addressLine1,
+            city: req.body.suburb,
+            postalCode: req.body.postalCode,
+            hasCreditCard: req.body.hasCreditCard,
+            bankName: req.body.bankName,
+            accountType: req.body.accountType,
+            accountNumber: req.body.accountNumber,
+            accountHolderName: req.body.accountHolderName,
+            branchCode: req.body.branchCode
+          });
+          console.log('Admin notification sent successfully');
+        } catch (emailError) {
+          console.error('Failed to send emails:', emailError);
+          // Don't fail registration if email fails
+        }
+
         // Fetch complete user data
         const [newUserCheck] = await connection.execute(
           'SELECT * FROM users WHERE id = ?',
@@ -535,81 +591,29 @@ export function setupAuth(app: Express) {
           has_credit_card: Boolean(safeUser.has_credit_card)
         };
 
-        // Log in the user and send response
         req.login(transformedUser, (err) => {
           if (err) {
             console.error('Login error after registration:', err);
-            // Still return success to the client even if login fails
-            res.status(201).json({
-              id: userId,
-              email: req.body.email,
-              firstName: req.body.firstName,
-              lastName: req.body.lastName
-            });
-          } else {
-            console.log('Registration complete. User details:', {
-              id: transformedUser.id,
-              email: transformedUser.email,
-              points: transformedUser.points,
-              selected_package: transformedUser.selected_package,
-              referral_code: transformedUser.referral_code,
-              referred_by: transformedUser.referred_by
-            });
-
-            res.status(201).json(transformedUser);
+            return res.status(500).json({ error: "Registration successful but login failed" });
           }
-          
-          // Send welcome email and admin notification asynchronously after response is sent
-          // This prevents the client from waiting for email delivery
-          setTimeout(async () => {
-            try {
-              const { formatRegistrationEmail, sendEmail, sendAdminRegistrationNotification } = await import('./utils/emailService');
-              const { text, html } = formatRegistrationEmail(req.body.firstName, req.body.email);
-              await sendEmail({
-                to: req.body.email,
-                subject: "Welcome to OPIAN Rewards!",
-                text,
-                html
-              });
-              console.log('Welcome email sent successfully to:', req.body.email);
 
-              // Send admin notification
-              await sendAdminRegistrationNotification({
-                firstName: req.body.firstName,
-                lastName: req.body.lastName,
-                email: req.body.email,
-                mobileNumber: req.body.mobileNumber,
-                selectedPackage: selectedPackage,
-                referralCode: req.body.referralCode,
-                signature: req.body.signature,
-                isSouthAfrican: req.body.isSouthAfrican,
-                idNumber: req.body.idNumber,
-                dateOfBirth: req.body.dateOfBirth,
-                gender: req.body.gender,
-                occupation: req.body.occupation,
-                industry: req.body.industry,
-                address: req.body.addressLine1,
-                city: req.body.suburb,
-                postalCode: req.body.postalCode,
-                hasCreditCard: req.body.hasCreditCard,
-                bankName: req.body.bankName,
-                accountType: req.body.accountType,
-                accountNumber: req.body.accountNumber,
-                accountHolderName: req.body.accountHolderName,
-                branchCode: req.body.branchCode
-              });
-              console.log('Admin notification sent successfully');
-            } catch (emailError) {
-              console.error('Failed to send emails:', emailError);
-              // Don't fail registration if email fails
-            }
-          }, 100);
+          console.log('Registration complete. User details:', {
+            id: transformedUser.id,
+            email: transformedUser.email,
+            points: transformedUser.points,
+            selected_package: transformedUser.selected_package,
+            referral_code: transformedUser.referral_code,
+            referred_by: transformedUser.referred_by
+          });
+
+          res.status(201).json(transformedUser);
         });
 
       } catch (error) {
         await connection.rollback();
         throw error;
       }
+
     } catch (error) {
       console.error('Registration error:', error);
       if (!res.headersSent) {
@@ -648,8 +652,20 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // /api/user endpoint is now implemented in server/routes.ts using getUserFromTokenOrSession
-  
+  app.get("/api/user", (req, res) => {
+    console.log('GET /api/user request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, email: req.user.email } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    res.json(req.user);
+  });
+
+
   // Check for existing super admin
   async function checkForSuperAdmin() {
     const connection = await createConnection();
@@ -670,10 +686,37 @@ export function setupAuth(app: Express) {
       await connection.end();
     }
   }
+
+
+  app.post("/api/logout", (req, res) => {
+    console.log('Logout request received');
+
+    // Clear session cookie
+    res.clearCookie('session', {
+      path: '/',
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax'
+    });
+
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+        }
+        req.logout(() => {
+          res.status(200).json({ message: "Logged out successfully" });
+        });
+      });
+    } else {
+      res.status(200).json({ message: "Logged out successfully" });
+    }
+  });
+
+  return app;
 }
 
-// User admin status checker function - moved to global scope
-export async function checkUserAdminStatus(userId: number) {
+async function checkUserAdminStatus(userId: number) {
   const connection = await createConnection();
   try {
     console.log('Checking admin status for user:', userId);
@@ -703,11 +746,35 @@ export async function checkUserAdminStatus(userId: number) {
 }
 
 // JWT token verification helper
-export function verifyJwtToken(token: string): { id: number; is_admin: boolean; is_super_admin: boolean } | null {
+export async function getUserFromTokenOrSession(req: Request): Promise<any> {
+  // First check if the user is in the session
+  if (req.isAuthenticated() && req.user) {
+    return req.user;
+  }
+  
+  // If not in session, try to get from JWT token
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = verifyJwtToken(token);
+      if (decoded) {
+        return decoded;
+      }
+    } catch (err) {
+      console.error('JWT verification error:', err);
+    }
+  }
+  
+  // No valid authentication found
+  return null;
+}
+
+export function verifyJwtToken(token: string): { id: number, is_admin: boolean, is_super_admin: boolean } | null {
   try {
     return jwt.verify(token, process.env.JWT_SECRET!) as { 
-      id: number; 
-      is_admin: boolean; 
+      id: number, 
+      is_admin: boolean, 
       is_super_admin: boolean 
     };
   } catch (error) {
@@ -737,7 +804,7 @@ export function generateToken(user: Express.User): string {
   return token;
 }
 
-export function verifyToken(token: string): { id: number; isAdmin: boolean; isSuperAdmin: boolean } | null {
+export function verifyToken(token: string): { id: number, isAdmin: boolean, isSuperAdmin: boolean } | null {
   try {
     console.log('Verifying token:', {
       tokenLength: token.length,
@@ -745,10 +812,10 @@ export function verifyToken(token: string): { id: number; isAdmin: boolean; isSu
     });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      id: number;
-      isAdmin: boolean;
-      isSuperAdmin: boolean;
-      exp?: number;
+      id: number,
+      isAdmin: boolean,
+      isSuperAdmin: boolean,
+      exp?: number
     };
 
     console.log('Token verified successfully:', {
@@ -772,88 +839,6 @@ export function verifyToken(token: string): { id: number; isAdmin: boolean; isSu
   }
 }
 
-// Extract token from Authorization header
-function extractBearerToken(req: Request): string | null {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-  return authHeader.substring(7); // Remove 'Bearer ' prefix
-}
-
-// Get user from token or session
-export async function getUserFromTokenOrSession(req: Request): Promise<any> {
-  // First try to get user from authorization header
-  const token = extractBearerToken(req);
-  if (token) {
-    console.log('Found Authorization header with Bearer token');
-    console.log('Token starts with:', token.substring(0, 10) + '...');
-    const decoded = verifyToken(token);
-    if (decoded) {
-      console.log('Token verified successfully, getting user data for ID:', decoded.id);
-      
-      // No mock authentication - always use actual database authentication
-      
-      // Production mode - get user data from database
-      const connection = await createConnection();
-      try {
-        const [users] = await connection.execute(
-          `SELECT u.*, 
-           CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
-           FROM users u
-           LEFT JOIN admin_users au ON u.id = au.user_id
-           WHERE u.id = ?`,
-          [decoded.id]
-        );
-
-        if (!Array.isArray(users) || users.length === 0) {
-          console.log('User not found for token user ID:', decoded.id);
-          return null;
-        }
-
-        const user = users[0];
-        console.log('Found user from token:', {
-          id: user.id,
-          email: user.email,
-          is_admin: Boolean(user.is_admin),
-          is_super_admin: Boolean(user.is_super_admin)
-        });
-        
-        // Transform user object consistently
-        const transformedUser = {
-          id: user.id,
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          phone_number: user.phone_number,
-          is_admin: Boolean(user.is_admin),
-          is_super_admin: Boolean(user.is_super_admin),
-          is_agent: Boolean(user.is_agent),
-          is_enabled: Boolean(user.is_enabled),
-          points: user.points || 0,
-          referral_code: user.referral_code,
-          referred_by: user.referred_by
-        };
-
-        return transformedUser;
-      } catch (error) {
-        console.error('Error getting user from token:', error);
-        return null;
-      } finally {
-        await connection.end();
-      }
-    } else {
-      console.log('Token verification failed');
-    }
-  } else {
-    console.log('No Authorization header with Bearer token found');
-  }
-
-  // Then try to get user from session
-  return await verifySession(req);
-}
-
 export async function verifySession(req: Request): Promise<any> {
   try {
     console.log('Verifying session for request:', {
@@ -873,8 +858,6 @@ export async function verifySession(req: Request): Promise<any> {
       console.log('No cookie found in request');
       return null;
     }
-    
-    // No mock authentication - always use actual database authentication
 
     const cookies = parseCookie(req.headers.cookie);
     const sessionId = cookies['connect.sid'];
@@ -887,12 +870,20 @@ export async function verifySession(req: Request): Promise<any> {
     console.log('Found session ID:', sessionId);
 
     return new Promise((resolve) => {
-      const sessionStore = new MemoryStore({
-        checkPeriod: 86400000 as any
-      });
-      
-      sessionStore.get(sessionId, async (err: any, sessionData: any) => {
-        if (err || !sessionData) {
+      session({
+        secret: process.env.SESSION_SECRET || 'development-secret',
+        cookie: {
+          maxAge: 86400000,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        },
+        store: new MemoryStore({
+          checkPeriod: 86400000
+        }),
+        resave: false,
+        saveUninitialized: false
+      }).store.get(sessionId, async (err: any, session: any) => {
+        if (err || !session) {
           console.log('Session not found or error:', err);
           resolve(null);
           return;
@@ -900,12 +891,12 @@ export async function verifySession(req: Request): Promise<any> {
 
         try {
           console.log('Retrieved session data:', {
-            ...sessionData,
+            ...session,
             cookie: '[Redacted]',
-            passport: sessionData.passport ? { user: sessionData.passport.user } : undefined
+            passport: session.passport ? { user: session.passport.user } : undefined
           });
 
-          const userId = sessionData.passport?.user;
+          const userId = session.passport?.user;
           if (!userId) {
             console.log('No user ID in session');
             resolve(null);
@@ -947,32 +938,37 @@ export async function verifySession(req: Request): Promise<any> {
 // Add checkAdmin middleware function
 export async function checkAdmin(req: Request, res: Response, next: NextFunction) {
   try {
-    console.log('Running admin check middleware');
+    console.log('Running admin check middleware:', {
+      hasSession: !!req.session,
+      hasUser: !!req.user,
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated?.()
+    });
 
-    // Get user from token or session
-    const user = await getUserFromTokenOrSession(req);
-    if (!user) {
-      console.log('User not authenticated via session or token');
+    if (!req.session || !req.session.passport || !req.session.passport.user) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    // Check if user is an admin
-    if (!user.is_admin) {
-      console.log('Admin access denied for user:', {
-        userId: user.id,
-        isAdmin: user.is_admin
+    const connection = await createConnection();
+    const [adminCheck] = await connection.execute(
+      'SELECT role_type FROM admin_users WHERE user_id = ?',
+      [req.session.passport.user]
+    );
+    await connection.end();
+
+    if (!adminCheck || (adminCheck as any[]).length === 0) {
+      console.log('Admin access denied:', {
+        userId: req.session.passport.user,
+        foundAdmin: false
       });
       return res.status(403).json({ error: "Admin access required" });
     }
 
     console.log('Admin access granted:', {
-      userId: user.id,
-      isAdmin: user.is_admin,
-      isSuperAdmin: user.is_super_admin
+      userId: req.session.passport.user,
+      roleType: adminCheck[0].role_type
     });
 
-    // Attach user to request object for later use
-    req.user = user;
     next();
   } catch (error) {
     console.error('Error in admin check:', error);
@@ -980,36 +976,59 @@ export async function checkAdmin(req: Request, res: Response, next: NextFunction
   }
 }
 
-// Updated checkAgent middleware
+// Add debug logging to checkAgent middleware
 export async function checkAgent(req: Request, res: Response, next: NextFunction) {
   try {
-    console.log('Running agent check middleware');
+    console.log('Running agent check middleware:', {
+      hasSession: !!req.session,
+      hasUser: !!req.user,
+      sessionID: req.sessionID,
+      isAuthenticated: req.isAuthenticated?.()
+    });
 
-    // Get user from token or session
-    const user = await getUserFromTokenOrSession(req);
-    if (!user) {
-      console.log('User not authenticated via session or token');
+    if (!req.session || !req.isAuthenticated()) {
+      console.log('Authentication check failed:', {
+        hasSession: !!req.session,
+        isAuthenticated: req.isAuthenticated?.()
+      });
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    // Check if user is an agent
-    if (!user.is_agent || !user.is_enabled) {
-      console.log('Agent access denied for user:', {
-        userId: user.id,
-        isAgent: user.is_agent,
-        isEnabled: user.is_enabled
-      });
-      return res.status(403).json({ error: "Agent access required" });
-    }
+    const connection = await createConnection();
+    try {
+      // Check if user exists and is an agent
+      const [users] = await connection.execute(
+        `SELECT id, email, is_agent, is_enabled 
+         FROM users 
+         WHERE id = ?`,
+        [req.user.id]
+      );
 
-    console.log('Agent check passed for user:', {
-      userId: user.id,
-      email: user.email
-    });
-    
-    // Attach user to request object for later use
-    req.user = user;
-    next();
+      const user = users[0];
+      console.log('Agent check results:', {
+        userId: req.user.id,
+        foundUser: !!user,
+        isAgent: user?.is_agent,
+        isEnabled: user?.is_enabled
+      });
+
+      if (!user || !user.is_agent || !user.is_enabled) {
+        console.log('User is not an agent or is disabled:', {
+          userId: req.user.id,
+          isAgent: user?.is_agent,
+          isEnabled: user?.is_enabled
+        });
+        return res.status(403).json({ error: "Agent access required" });
+      }
+
+      console.log('Agent check passed for user:', {
+        userId: user.id,
+        email: user.email
+      });
+      next();
+    } finally {
+      await connection.end();
+    }
   } catch (error) {
     console.error('Error in agent check:', error);
     res.status(500).json({ error: "Internal server error" });
@@ -1027,15 +1046,8 @@ function parseCookie(cookieString: string | undefined): { [key: string]: string 
   if (!cookieString) return {};
   const cookies: { [key: string]: string } = {};
   cookieString.split(';').forEach(cookie => {
-    const parts = cookie.trim().split('=');
-    if (parts.length >= 2) {
-      const key = parts[0];
-      // Join back any parts that got split if there were multiple '=' in the value
-      const value = parts.slice(1).join('=');
-      // Properly decode connect.sid which contains URL-encoded characters
-      cookies[key] = key === 'connect.sid' ? decodeURIComponent(value) : value;
-    }
+    const [key, value] = cookie.trim().split('=');
+    cookies[key] = value;
   });
-  console.log('Parsed cookies:', cookies);
   return cookies;
 }

@@ -1,25 +1,20 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
-import { setupAuth, checkAgent, checkAdmin, verifyJwtToken } from "./auth";
+import { setupAuth, checkAgent, verifyJwtToken } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
+import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
-import agentRouter from './routes/agent';
-import migrationRouter from './routes/migration';
-import manualMigrationRouter from './routes/manual-migration';
-import packageTypesRouter from './routes/package-types';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { logAdminAction } from './admin-logger';
-import nodemailer from 'nodemailer';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -105,302 +100,175 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     next();
   });
 
-// SMTP Test route - test connection to SMTP server without sending an email
-  app.get("/api/test-smtp", async (req: Request, res: Response) => {
+
+
+
+  // Registration endpoint with enhanced validation and field handling
+  app.post("/api/register", async (req: Request, res: Response) => {
+    const connection = await createConnection();
     try {
-      // Get SMTP settings with fallbacks
-      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
-      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
-      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
-      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
-      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-      
-      // Create a nodemailer transporter with the SMTP settings
-      console.log('=== SMTP CONNECTION TEST ===');
-      console.log('SMTP_HOST:', host ? 'Set' : 'Not set');
-      console.log('SMTP_PORT:', port);
-      console.log('SMTP_USER:', user ? 'Set' : 'Not set');
-      console.log('SMTP_PASSWORD:', pass ? 'Set (length: ' + (pass.length || 0) + ')' : 'Not set');
-      console.log('SMTP_SECURE:', secure ? 'true' : 'false');
-      
-      const transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure, // true for 465, false for other ports
-        auth: {
-          user,
-          pass
-        },
-        debug: true,
-        logger: true,
-        tls: {
-          rejectUnauthorized: false // Accept all certificates (less secure but useful for testing)
-        }
+      // Debug log for signature data
+      console.log('Registration signature debug:', {
+        signatureType: typeof req.body.signature,
+        signatureValue: req.body.signature?.substring(0, 100),
+        signatureLength: req.body.signature?.length,
+        isBase64: req.body.signature?.match(/^data:image\/[^;]+;base64,/),
+        mandateAccepted: req.body.acceptMandate
       });
 
-      console.log('Attempting to verify SMTP connection...');
-      const verificationResult = await transporter.verify();
-      
-      return res.status(200).json({
-        success: true,
-        message: 'SMTP connection verified successfully',
-        details: {
-          verificationResult,
-          smtp: {
-            host: host ? 'Configured (hidden)' : 'Missing',
-            port: port.toString(),
-            user: user ? 'Configured (hidden)' : 'Missing',
-            password: pass ? 'Configured (hidden)' : 'Missing',
-            secure: secure ? 'Yes' : 'No'
-          },
-          timestamp: new Date().toISOString()
-        }
-      });
-    } catch (error) {
-      console.error('SMTP Connection Test Error:', error);
-      // Variables in the catch block lose scope, so let's get our settings again
-      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
-      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
-      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
-      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
-      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-      
-      return res.status(500).json({
-        success: false,
-        message: 'SMTP connection test failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        errorDetails: error,
-        smtp: {
-          host: host ? 'Configured (hidden)' : 'Missing',
-          port: port.toString(),
-          user: user ? 'Configured (hidden)' : 'Missing',
-          password: pass ? 'Configured (hidden)' : 'Missing',
-          secure: secure ? 'Yes' : 'No'
-        },
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
+      // Input validation
+      if (!req.body.email || !req.body.password || !req.body.firstName || !req.body.lastName) {
+        return res.status(400).json({ error: "Required fields missing" });
+      }
 
-  // Email test route (temporary for testing) - UPDATED WITH NEW ENVIRONMENT VARIABLES
-  app.get("/api/test-email", async (req: Request, res: Response) => {
-    try {
-      // Get SMTP settings with fallbacks
-      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
-      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
-      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
-      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
-      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-      
-      // Email configuration check
-      console.log('=== EMAIL CONFIG CHECK ===');
-      console.log('SMTP_HOST:', host ? 'Set' : 'Not set');
-      console.log('SMTP_PORT:', port);
-      console.log('SMTP_USER:', user ? 'Set' : 'Not set');
-      console.log('SMTP_PASSWORD:', pass ? 'Set (length: ' + (pass.length || 0) + ')' : 'Not set');
-      console.log('SMTP_SECURE:', secure ? 'true' : 'false');
-      
-      // Use query parameter or default to client services email
-      const testEmail = req.query.email as string || 'clientservices@opianrewards.com';
-      console.log('Recipient email:', testEmail);
-      
-      // Generate test email content with improved logging
-      console.log('Generating test email content...');
-      const { text, html } = formatRegistrationEmail('Test User', 'clientservices@opianrewards.com');
-      
-      console.log('Sending test email using updated transport configuration...');
+      // Validate signature format
+      if (!req.body.signature || typeof req.body.signature !== 'string' || !req.body.signature.startsWith('data:image/')) {
+        return res.status(400).json({ error: "Valid signature image data is required" });
+      }
+
+      // Check for existing user
+      const [existingUsers] = await connection.execute(
+        'SELECT id FROM users WHERE email = ?',
+        [req.body.email]
+      );
+
+      if (Array.isArray(existingUsers) && existingUsers.length > 0) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+
+      // Hash password
+      const hashedPassword = await crypto.hash(req.body.password);
+      const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
+
+      // Calculate initial points
+      let initialPoints = 0;
+      const selectedPackage = req.body.selectedPackage?.toUpperCase();
+      switch (selectedPackage) {
+        case 'OPPORTUNITY': initialPoints = 2500; break;
+        case 'MOMENTUM': initialPoints = 5000; break;
+        case 'PROSPER': initialPoints = 7500; break;
+        case 'PRESTIGE': initialPoints = 10000; break;
+        case 'PINNACLE': initialPoints = 12500; break;
+        default: initialPoints = 2500;
+      }
+
+      await connection.beginTransaction();
+
       try {
-        // Try to send email with detailed error capturing
-        const result = await sendEmail({
-          to: testEmail,
-          subject: 'Test Email from Opian Rewards',
-          text,
-          html,
-          emailType: 'TEST'
+        // Debug the SQL query parameters
+        const queryParams = [
+          req.body.email,
+          hashedPassword,
+          req.body.firstName,
+          req.body.lastName,
+          req.body.mobileNumber,
+          req.body.isSouthAfrican ? 1 : 0,
+          req.body.idNumber,
+          req.body.dateOfBirth,
+          req.body.gender,
+          req.body.occupation,
+          req.body.industry,
+          req.body.addressLine1,
+          req.body.suburb,
+          req.body.postalCode,
+          selectedPackage,
+          req.body.bankName,
+          req.body.accountType,
+          req.body.accountNumber,
+          req.body.accountHolderName,
+          req.body.branchCode,
+          req.body.hasCreditCard ? 1 : 0,
+          req.body.signature,
+          initialPoints,
+          newReferralCode,
+          req.body.referralCode || null,
+          req.body.acceptMandate ? 1 : 0,
+          new Date()
+        ];
+
+        console.log('Registration insert parameters:', {
+          ...queryParams,
+          password: '[REDACTED]',
+          signatureLength: queryParams[21]?.length || 0,
+          signaturePreview: queryParams[21]?.substring(0, 50) + '...'
         });
-        
-        if (result) {
-          console.log('Email sent successfully!');
-          return res.status(200).json({ 
-            success: true,
-            message: 'Test email sent successfully',
-            config: {
-              host: host ? 'Configured' : 'Missing',
-              port: port.toString(),
-              user: user ? 'Configured' : 'Missing',
-              password: pass ? 'Configured' : 'Missing',
-              smtp_secure: secure ? 'Yes' : 'No'
-            },
-            timestamp: new Date().toISOString(),
-            recipient: testEmail
-          });
-        } else {
-          console.error('Email sending returned false');
-          return res.status(500).json({ 
-            success: false,
-            error: 'Failed to send test email',
-            config: {
-              host: host ? 'Configured' : 'Missing',
-              port: port.toString(),
-              user: user ? 'Configured' : 'Missing',
-              password: pass ? 'Configured' : 'Missing',
-              smtp_secure: secure ? 'Yes' : 'No'
-            },
-            timestamp: new Date().toISOString(),
-            recipient: testEmail
-          });
+
+        // Insert user with explicit column names
+        const [userResult] = await connection.execute(
+          `INSERT INTO users (
+            email, password, first_name, last_name, phone_number,
+            is_south_african, id_number, date_of_birth, gender,
+            occupation, industry, address, city, postal_code,
+            selected_package, bank_name, account_type, account_number,
+            account_holder_name, branch_code, has_credit_card,
+            signature, points, referral_code, referred_by,
+            mandate_accepted, mandate_accepted_at, is_enabled,
+            created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
+          queryParams
+        );
+
+        const userId = (userResult as any).insertId;
+
+        // Verify the user data was saved
+        const [savedUser] = await connection.execute(
+          'SELECT id, signature IS NOT NULL as has_signature, CHAR_LENGTH(signature) as signature_length, points, mandate_accepted FROM users WHERE id = ?',
+          [userId]
+        );
+
+        console.log('Saved user verification:', {
+          userId,
+          hasSignature: !!(savedUser as any)[0]?.has_signature,
+          signatureLength: (savedUser as any)[0]?.signature_length,
+          points: (savedUser as any)[0]?.points,
+          mandateAccepted: (savedUser as any)[0]?.mandate_accepted
+        });
+
+        // Record points transaction
+        if (initialPoints > 0) {
+          await connection.execute(
+            `INSERT INTO transactions (
+              user_id, points, type, description, status,
+              created_at
+            ) VALUES (?, ?, ?, ?, ?, NOW())`,
+            [
+              userId,
+              initialPoints,
+              'WELCOME_BONUS',
+              `Initial points allocation for ${selectedPackage} package`,
+              'PROCESSED'
+            ]
+          );
         }
-      } catch (emailError) {
-        console.error('Detailed email sending error:', emailError);
-        return res.status(500).json({ 
-          success: false,
-          error: 'Failed to send test email', 
-          details: emailError instanceof Error ? emailError.message : 'Unknown error',
-          config: {
-            host: host ? 'Configured' : 'Missing',
-            port: port.toString(),
-            user: user ? 'Configured' : 'Missing',
-            password: pass ? 'Configured' : 'Missing',
-            smtp_secure: secure ? 'Yes' : 'No'
-          },
-          timestamp: new Date().toISOString(),
-          recipient: testEmail
-        });
-      }
-    } catch (error) {
-      console.error('Test email route error:', error);
-      return res.status(500).json({ 
-        success: false,
-        error: 'Failed to process email test',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
 
-  // Test route for admin notification emails with PDF attachment
-  app.post("/api/register-test", async (req: Request, res: Response) => {
-    try {
-      console.log('Received test registration data:', req.body);
-      
-      // Create a structured customer data object from the request body
-      const customerData = {
-        firstName: req.body.first_name,
-        lastName: req.body.last_name,
-        email: req.body.email,
-        mobileNumber: req.body.phone_number,
-        selectedPackage: req.body.selectedPackage,
-        referralCode: req.body.referralCode,
-        signature: req.body.signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-        isSouthAfrican: req.body.isSouthAfrican !== undefined ? req.body.isSouthAfrican : true,
-        idNumber: req.body.idNumber,
-        dateOfBirth: req.body.dateOfBirth,
-        gender: req.body.gender,
-        occupation: req.body.occupation,
-        industry: req.body.industry,
-        address: req.body.address,
-        city: req.body.city,
-        postalCode: req.body.postalCode,
-        hasCreditCard: req.body.hasCreditCard,
-        bankName: req.body.bankName,
-        accountType: req.body.accountType,
-        accountNumber: req.body.accountNumber,
-        accountHolderName: req.body.accountHolderName,
-        branchCode: req.body.branchCode,
-        mandate_accepted: req.body.mandate_accepted || false
-      };
-      
-      // Log the admin notification attempt
-      console.log('Sending admin registration notification for test user');
-      
-      // This recipient email must match what's used in sendAdminRegistrationNotification function
-      const adminRecipientEmail = 'clientservices@opianrewards.com';
-      
-      console.log('Using admin recipient email:', adminRecipientEmail);
-      
-      // Send the notification
-      const result = await sendAdminRegistrationNotification(customerData);
-      
-      if (result) {
-        // Create response object with the correct recipient email
-        const responseData = { 
-          success: true, 
-          message: "Test admin notification with PDF attachment sent successfully",
-          recipient: adminRecipientEmail
-        };
-        
-        console.log('Sending response with recipient:', responseData.recipient);
-        
-        // Send the response
-        res.status(200).json(responseData);
-      } else {
-        // Failure response
-        res.status(500).json({ 
-          success: false, 
-          message: "Failed to send test admin notification" 
+        await connection.commit();
+
+        res.status(201).json({
+          id: userId,
+          email: req.body.email,
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          points: initialPoints,
+          selectedPackage,
+          mandateAccepted: true,
+          hasSignature: true
         });
+
+      } catch (error) {
+        await connection.rollback();
+        console.error('Registration transaction error:', error);
+        throw error;
       }
     } catch (error) {
-      // Error handling
-      console.error("Error sending test admin notification:", error);
+      console.error('Registration error:', error);
       res.status(500).json({ 
-        success: false, 
-        message: "Error sending test admin notification", 
-        error: error instanceof Error ? error.message : String(error)
+        error: "Registration failed. Please try again.",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
+    } finally {
+      await connection.end();
     }
   });
-
-  // Test endpoint for manually verifying email content with mandate acceptance
-  app.post("/api/register-test-email-html", async (req: Request, res: Response) => {
-    try {
-      console.log('Received email HTML test request');
-      
-      // Create sample customer data with mandate_accepted set to true
-      const customerData = {
-        firstName: req.body.first_name || "Test",
-        lastName: req.body.last_name || "Customer",
-        email: req.body.email || "test@example.com",
-        mobileNumber: req.body.phone_number || "27123456789",
-        selectedPackage: req.body.selectedPackage || "Gold",
-        signature: req.body.signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-        isSouthAfrican: req.body.isSouthAfrican !== undefined ? req.body.isSouthAfrican : true,
-        idNumber: req.body.idNumber || "7012345678901",
-        mandate_accepted: req.body.mandate_accepted !== undefined ? req.body.mandate_accepted : true // explicitly set to true for testing
-      };
-      
-      // Generate email content
-      const { text, html } = formatNewCustomerAdminEmail(customerData);
-      
-      // Also generate PDF to check its content
-      console.log('Generating PDF for mandate acceptance test...');
-      const pdfBuffer = await generateRegistrationPDF(customerData);
-      
-      // Return the HTML for inspection
-      res.status(200).json({
-        success: true,
-        message: "Email content generated successfully",
-        mandate_accepted: customerData.mandate_accepted,
-        html: html,
-        text: text,
-        pdf_generated: !!pdfBuffer
-      });
-    } catch (error) {
-      console.error('Error generating email content:', error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to generate email content",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-
-  /* Registration endpoint functionality moved to auth.ts
-   * The setupAuth function in auth.ts now handles user registration
-   * with proper crypto, database transaction, and signature validation.
-   * See auth.ts for the complete implementation.
-   */
 
   // Login endpoint uses imported passport instance
   // Global error handler
@@ -956,12 +824,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Mount referral routes
-  // Mount the referral routes
-  app.use('/api/referral', referralRouter);
-  app.use('/api/agent', agentRouter);
-  app.use('/api/migration', migrationRouter);
-  app.use('/api/manual-migration', manualMigrationRouter);
-  app.use('/api/package-types', packageTypesRouter);
+  app.use('/api/customer', referralRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
@@ -1323,73 +1186,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       console.error('Error fetching customers:', error);
       res.status(500).json({ 
         error: 'Failed to fetch customers',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    } finally {
-      await connection.end();
-    }
-  });
-  
-  // Send fund card follow-up email to a customer
-  app.post("/api/admin/customers/:id/send-fund-card-email", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    const { id } = req.params;
-    const connection = await createConnection();
-
-    try {
-      // Check admin status
-      const [adminCheck] = await connection.execute(
-        'SELECT is_admin FROM users WHERE id = ?',
-        [req.user.id]
-      );
-
-      if (!adminCheck || !adminCheck[0]?.is_admin) {
-        return res.status(403).json({ error: "Admin access required" });
-      }
-
-      // Get customer details
-      const [customers] = await connection.execute(
-        'SELECT * FROM users WHERE id = ? AND is_admin = 0 AND is_agent = 0',
-        [id]
-      );
-
-      if (!customers || !customers.length) {
-        return res.status(404).json({ error: "Customer not found" });
-      }
-
-      const customer = customers[0];
-
-      // Log admin action
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "ADMIN_MESSAGE",
-        targetUserId: parseInt(id),
-        details: `Sent fund card follow-up email to ${customer.first_name} ${customer.last_name} (${customer.email})`
-      });
-
-      // Send the fund card email
-      const emailResult = await sendEmail({
-        to: customer.email,
-        subject: "Next STEP: Fund your Opian Rewards card!",
-        ...formatFundCardEmail(customer.first_name),
-        emailType: 'FUND_CARD_FOLLOWUP'
-      });
-
-      if (emailResult) {
-        res.json({ 
-          success: true, 
-          message: `Fund card email has been sent successfully to ${customer.email}` 
-        });
-      } else {
-        res.status(500).json({ error: "Failed to send email" });
-      }
-    } catch (error) {
-      console.error("Error sending fund card email:", error);
-      res.status(500).json({ 
-        error: "Failed to send fund card email",
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     } finally {
@@ -1770,10 +1566,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }
 
       // Get direct referrals with their package info and nested referrals count
-      // MariaDB doesn't support the JSON_ARRAYAGG in the same way as other MySQL versions
-      // So we'll use a simpler query and build the package stats in JavaScript
-      
-      // First get basic referral tree
       const [referrals] = await connection.execute(
         `WITH RECURSIVE referral_tree AS (
           -- Base case: direct referrals (level 1)
@@ -1815,30 +1607,22 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
             SELECT COUNT(*) 
             FROM users u2 
             WHERE u2.referred_by = rt.referral_code
-          ) as direct_referral_count
+          ) as direct_referral_count,
+          (
+            SELECT JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'package', u3.selected_package,
+                'count', COUNT(*)
+              )
+            )
+            FROM users u3
+            WHERE u3.referred_by = rt.referral_code
+            GROUP BY u3.selected_package
+          ) as referral_package_stats
         FROM referral_tree rt
         ORDER BY rt.level, rt.created_at DESC`,
         [referralCode]
       );
-      
-      // Now let's get the package stats for each referral separately
-      for (const referral of referrals) {
-        // Get package counts for this referral's direct referrals
-        if (referral.referral_code) {
-          const [packageStats] = await connection.execute(
-            `SELECT selected_package as package, COUNT(*) as count
-             FROM users
-             WHERE referred_by = ?
-             GROUP BY selected_package`,
-            [referral.referral_code]
-          );
-          
-          // Add the package stats to the referral object
-          referral.referral_package_stats = packageStats.length > 0 ? JSON.stringify(packageStats) : '[]';
-        } else {
-          referral.referral_package_stats = '[]';
-        }
-      }
 
       // Get package prices for commission calculations
       const [packagePrices] = await connection.execute(
@@ -3147,6 +2931,94 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  app.get("/api/admin/customers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Fetch users with their product assignments and activities
+      const [customers] = await connection.execute(
+        `SELECT 
+          u.*,
+          JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'id', pa.id,
+              'product', JSON_OBJECT(
+                'id', p.id,
+                'name', p.name,
+                'description', p.description,
+                'activities', (
+                  SELECT JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                      'id', act.id,
+                      'type', act.type,
+                      'pointsValue', act.points_value
+                    )
+                  )
+                  FROM product_activities act
+                  WHERE act.product_id = p.id
+                )
+              )
+            )
+          ) as product_assignments
+        FROM users u
+        LEFT JOIN product_assignments pa ON u.id = pa.user_id
+        LEFT JOIN products p ON pa.product_id = p.id
+        GROUP BY u.id
+        ORDER BY u.created_at DESC`
+      );
+
+      // Transform the data
+      const transformedCustomers = customers.map(customer => {
+        let productAssignments = [];
+        try {
+          productAssignments = customer.product_assignments ? 
+            JSON.parse(customer.product_assignments.replace(/null/g, '[]')) : [];
+        } catch (e) {
+          console.error('Error parsing product assignments:', e);
+        }
+
+        return {
+          id: customer.id,
+          email: customer.email,
+          firstName: customer.first_name,
+          lastName: customer.last_name,
+          phoneNumber: customer.phone_number,
+          isEnabled: Boolean(customer.is_enabled),
+          points: customer.points || 0,
+          createdAt: customer.created_at,
+          productAssignments: productAssignments.filter(pa => pa.id) // Filter out null assignments
+        };
+      });
+
+      console.log('Fetched customers with product activities:', 
+        transformedCustomers.map(c => ({
+          id: c.id,
+          assignmentsCount: c.productAssignments.length,
+          sampleActivities: c.productAssignments[0]?.product.activities?.length || 0
+        }))
+      );
+
+      res.json(transformedCustomers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    } finally {
+      await connection.end();
+    }
+  });
 
   app.put("/api/products/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -3845,33 +3717,72 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  // REMOVED DUPLICATE ENDPOINTS - USING EARLIER DEFINITIONS INSTEAD
-
-  // Customer referrals endpoint - moved from previous duplicate implementation
-  app.get("/api/customer/referrals", async (req, res) => {
+  app.get("/api/customer/points", async (req, res) => {
     if (!req.user) return res.status(401).json({error: "Unauthorized"});
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, req.user.id),
+    });
+    res.json(user);
+  });
 
-    const connection = await createConnection();
+  // Add the customer transactions endpoint
+  app.get("/api/customer/transactions", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     try {
-      console.log('Fetching referral information for user:', req.user.id);
-      const [userData] = await connection.execute(
-        `SELECT referral_code FROM users WHERE id = ?`,
+      console.log('Fetching transactions for user:', req.user.id);
+
+      const transactions = await db.execute(
+        `SELECT 
+          t.*,
+          DATE_FORMAT(t.created_at, '%Y-%m-%dT%H:%i:%s.000Z') as created_at
+        FROM transactions t
+        WHERE t.user_id = ?
+        ORDER BY t.created_at DESC`,
         [req.user.id]
       );
 
-      if (!userData || userData.length === 0) {
-        console.log('No user found with ID:', req.user.id);
+      // Transform the data to match the expected format
+      const formattedTransactions = transactions[0].map((t: any) => ({
+        id: t.id,
+        points: t.points,
+        description: t.description,
+        type: t.type,
+        createdAt: t.created_at
+      }));
+
+      res.json(formattedTransactions);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      res.status(500).json({ error: 'Failed to fetch transactions' });
+    }
+  });
+
+  app.get("/api/customer/referral", async (req, res) => {
+    if (!req.user) return res.status(401).json({error: "Unauthorized"});
+
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, req.user.id))
+        .limit(1)
+        .execute();
+
+      if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      let currentReferralCode = userData[0].referral_code;
+      let currentReferralCode = user.referral_code;
       if (!currentReferralCode) {
         currentReferralCode = randomBytes(8).toString("hex");
-        await connection.execute(
-          `UPDATE users SET referral_code = ? WHERE id = ?`,
-          [currentReferralCode, req.user.id]
-        );
-        console.log('Generated new referral code:', currentReferralCode);
+        await db
+          .update(users)
+          .set({ referral_code: currentReferralCode })
+          .where(eq(users.id, req.user.id))
+          .execute();
       }
 
       const referrals = await db
@@ -3898,105 +3809,100 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   app.get("/api/customer/referrals", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
+    if (!req.user) return res.status(401).json({error: "Unauthorized"});
 
-    const connection = await createConnection();
     try {
       console.log("Fetching referral stats for user:", req.user.id);
-      
-      // Get user with referral code
-      const [userData] = await connection.execute(
-        `SELECT * FROM users WHERE id = ?`,
-        [req.user.id]
-      );
 
-      if (!userData || userData.length === 0) {
-        console.log('No user found with ID:', req.user.id);
+      const [currentUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, req.user.id))
+        .limit(1)
+        .execute();
+
+      if (!currentUser) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const currentUser = userData[0];
-      
-      // Get level 1 referrals (direct referrals)
-      const [level1ReferralsData] = await connection.execute(
-        `SELECT 
-          id, 
-          first_name as firstName, 
-          last_name as lastName, 
-          email, 
-          created_at as createdAt, 
-          referral_code 
-        FROM users 
-        WHERE referred_by = ?`,
-        [currentUser.referral_code]
-      );
-      
-      // Get counts for level 2 referrals (referrals of referrals)
-      let level2Count = 0;
-      let level2Referrals = [];
-      let level3Count = 0;
-      
-      if (level1ReferralsData.length > 0) {
-        const referralCodes = level1ReferralsData.map(ref => `'${ref.referral_code}'`).join(',');
-        
-        const [level2Data] = await connection.execute(
-          `SELECT COUNT(*) as count FROM users WHERE referred_by IN (${referralCodes || "''"})`,
-        );
-        level2Count = level2Data[0]?.count || 0;
-        
-        const [level2RefData] = await connection.execute(
-          `SELECT referral_code FROM users WHERE referred_by IN (${referralCodes || "''"})`,
-        );
-        level2Referrals = level2RefData;
-        
-        if (level2Referrals.length > 0) {
-          const level2Codes = level2Referrals.map(ref => `'${ref.referral_code}'`).join(',');
-          const [level3Data] = await connection.execute(
-            `SELECT COUNT(*) as count FROM users WHERE referred_by IN (${level2Codes || "''"})`,
-          );
-          level3Count = level3Data[0]?.count || 0;
-        }
-      }
-      
-      // Add referral counts to each level 1 referral
+      const level1Referrals = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          createdAt: users.createdAt,
+          referral_code: users.referral_code
+        })
+        .from(users)
+        .where(eq(users.referred_by, currentUser.referral_code))
+        .execute();
+
+      const level2Count = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(
+          inArray(
+            users.referred_by,
+            level1Referrals.map(r => r.referral_code)
+          )
+        )
+        .execute();
+
+      const level2Referrals = await db
+        .select({ referral_code: users.referral_code })
+        .from(users)
+        .where(
+          inArray(
+            users.referred_by,
+            level1Referrals.map(r => r.referral_code)
+          )
+        )
+        .execute();
+
+      const level3Count = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(
+          inArray(
+            users.referred_by,
+            level2Referrals.map(r => r.referral_code)
+          )
+        )
+        .execute();
+
       const referralsWithCounts = await Promise.all(
-        level1ReferralsData.map(async (referral) => {
-          const [countData] = await connection.execute(
-            `SELECT COUNT(*) as count FROM users WHERE referred_by = ?`,
-            [referral.referral_code]
-          );
-          
+        level1Referrals.map(async (referral) => {
+          const referralCount = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(users)
+            .where(eq(users.referred_by, referral.referral_code))
+            .execute();
+
           return {
             ...referral,
-            referralCount: countData[0]?.count || 0,
+            referralCount: Number(referralCount[0]?.count || 0),
           };
         })
       );
 
       console.log("Sending referral stats:", {
         referralCode: currentUser.referral_code,
-        level1Count: level1ReferralsData.length,
-        level2Count: level2Count,
-        level3Count: level3Count,
+        level1Count: level1Referrals.length,
+        level2Count: Number(level2Count[0]?.count || 0),
+        level3Count: Number(level3Count[0]?.count || 0),
       });
 
       res.json({
         referralCode: currentUser.referral_code,
-        level1Count: level1ReferralsData.length,
-        level2Count: level2Count,
-        level3Count: level3Count,
+        level1Count: level1Referrals.length,
+        level2Count: Number(level2Count[0]?.count || 0),
+        level3Count: Number(level3Count[0]?.count || 0),
         referrals: referralsWithCounts,
       });
     } catch (error) {
       console.error("Error fetching referral stats:", error);
-      res.status(500).json({ 
-        error: "Failed to fetch referral stats",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    } finally {
-      await connection.end();
+      res.status(500).json({ error: "Failed to fetch referral stats" });
     }
   });
 
@@ -4307,93 +4213,58 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/notifications", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
+  app.get("/api/notifications", async (req, res) => {    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
-    
-    const connection = await createConnection();
+
     try {
-      console.log('Fetching notifications for user:', req.user.id);
-      
-      const [notifications] = await connection.execute(
-        `SELECT *
-         FROM notifications
-         WHERE user_id = ?
-         ORDER BY created_at DESC 
-         LIMIT 50`,
-        [req.user.id]
-      );
-      
-      // Transform data to match client expectations
-      const transformedNotifications = notifications.map(notification => ({
-        id: notification.id,
-        userId: notification.user_id,
-        title: notification.title,
-        message: notification.message,
-        type: notification.type,
-        read: Boolean(notification.read),
-        createdAt: notification.created_at,
-        metadata: notification.metadata ? JSON.parse(notification.metadata) : null
-      }));
-      
-      console.log(`Found ${transformedNotifications.length} notifications for user ${req.user.id}`);
-      res.json(transformedNotifications);
+      const userNotifications = await db.query.notifications.findMany({
+        where: eq(notifications.userId, req.user.id),
+        orderBy: desc(notifications.createdAt),
+        limit: 50 
+      });
+
+      res.json(userNotifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
-      res.status(500).json({ 
-        error: "Failed to fetch notifications",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    } finally {
-      await connection.end();
+      res.status(500).json({ error: 'Failed to fetch notifications' });
     }
   });
 
   app.post("/api/notifications/mark-read", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
     const { notificationId } = req.body;
-    const connection = await createConnection();
-    
+
     try {
-      console.log('Marking notification(s) as read for user:', req.user.id);
-      
       if (notificationId) {
-        // Mark specific notification as read (delete it)
-        const [result] = await connection.execute(
-          `DELETE FROM notifications 
-           WHERE id = ? AND user_id = ?`,
-          [notificationId, req.user.id]
-        );
-        
-        if (!result || result.affectedRows === 0) {
-          console.log('Notification not found:', notificationId);
-          return res.status(404).json({ error: "Notification not found" });
+        const [deletedNotification] = await db
+          .delete(notifications)
+          .where(
+            and(
+              eq(notifications.id, parseInt(notificationId)),
+              eq(notifications.userId, req.user.id)
+            )
+          )
+          .returning()
+          .execute();
+
+        if (!deletedNotification) {
+          return res.status(404).json({ error:"Notification not found" });
         }
-        
-        console.log(`Marked notification ${notificationId} as read`);
       } else {
-        // Mark all notifications as read (delete all)
-        const [result] = await connection.execute(
-          `DELETE FROM notifications WHERE user_id = ?`,
-          [req.user.id]
-        );
-        
-        console.log(`Marked all notifications as read for user ${req.user.id}, deleted ${result.affectedRows} notifications`);
+        await db
+          .delete(notifications)
+          .where(eq(notifications.userId, req.user.id))
+          .execute();
       }
 
       res.json({ success: true });
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      res.status(500).json({ 
-        error: "Failed to mark notification as read",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    } finally {
-      await connection.end();
+      res.status(500).json({ error: 'Failed to mark notification as read' });
     }
   });
 
@@ -4501,12 +4372,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   app.put("/api/user", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const connection = await createConnection();
-    try {
+    try{
       const {
         firstName,
         lastName,
@@ -4523,229 +4393,155 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         bankName,
         accountType,
         accountNumber,
-        hasCreditCard,
-        password
+        hasCreditCard
+        
       } = req.body;
 
-      // Check if user exists
-      const [userCheck] = await connection.execute(
-        'SELECT id FROM users WHERE id = ?',
-        [req.user.id]
-      );
-      
-      if (!userCheck || userCheck.length === 0) {
+      const updates: any = {
+        firstName,
+        lastName,
+        phoneNumber,
+        address,
+        city,
+        postalCode,
+        idNumber,
+        dateOfBirth,
+        industry,
+        occupation,
+        isSouthAfrican,
+        selectedPackage,
+        bankName,
+        accountType,
+        accountNumber,
+        hasCreditCard
+      };
+
+      if (password) {
+        const hashedPassword = await crypto.hash(password);
+        updates.password = hashedPassword;
+      }
+
+      const [updatedUser] = await db
+        .update(users)
+        .set(updates)
+        .where(eq(users.id, req.user.id))
+        .returning()
+        .execute();
+
+      if (!updatedUser) {
         return res.status(404).json({ error: "User not found" });
       }
-      
-      // Build update SQL with only the fields that are provided
-      let updateFields = [];
-      let updateParams = [];
-      
-      if (firstName !== undefined) {
-        updateFields.push('first_name = ?');
-        updateParams.push(firstName);
-      }
-      
-      if (lastName !== undefined) {
-        updateFields.push('last_name = ?');
-        updateParams.push(lastName);
-      }
-      
-      if (phoneNumber !== undefined) {
-        updateFields.push('phone_number = ?');
-        updateParams.push(phoneNumber);
-      }
-      
-      if (address !== undefined) {
-        updateFields.push('address = ?');
-        updateParams.push(address);
-      }
-      
-      if (city !== undefined) {
-        updateFields.push('city = ?');
-        updateParams.push(city);
-      }
-      
-      if (postalCode !== undefined) {
-        updateFields.push('postal_code = ?');
-        updateParams.push(postalCode);
-      }
-      
-      if (idNumber !== undefined) {
-        updateFields.push('id_number = ?');
-        updateParams.push(idNumber);
-      }
-      
-      if (dateOfBirth !== undefined) {
-        updateFields.push('date_of_birth = ?');
-        updateParams.push(dateOfBirth);
-      }
-      
-      if (industry !== undefined) {
-        updateFields.push('industry = ?');
-        updateParams.push(industry);
-      }
-      
-      if (occupation !== undefined) {
-        updateFields.push('occupation = ?');
-        updateParams.push(occupation);
-      }
-      
-      if (isSouthAfrican !== undefined) {
-        updateFields.push('is_south_african = ?');
-        updateParams.push(isSouthAfrican);
-      }
-      
-      if (selectedPackage !== undefined) {
-        updateFields.push('selected_package = ?');
-        updateParams.push(selectedPackage);
-      }
-      
-      if (bankName !== undefined) {
-        updateFields.push('bank_name = ?');
-        updateParams.push(bankName);
-      }
-      
-      if (accountType !== undefined) {
-        updateFields.push('account_type = ?');
-        updateParams.push(accountType);
-      }
-      
-      if (accountNumber !== undefined) {
-        updateFields.push('account_number = ?');
-        updateParams.push(accountNumber);
-      }
-      
-      if (hasCreditCard !== undefined) {
-        updateFields.push('has_credit_card = ?');
-        updateParams.push(hasCreditCard);
-      }
-      
-      if (password !== undefined) {
-        updateFields.push('password = ?');
-        const hashedPassword = await hashPassword(password);
-        updateParams.push(hashedPassword);
-      }
-      
-      // Add user id as the last parameter
-      updateParams.push(req.user.id);
-      
-      if (updateFields.length === 0) {
-        return res.status(400).json({ error: "No fields to update" });
-      }
-      
-      const updateQuery = `
-        UPDATE users
-        SET ${updateFields.join(', ')}
-        WHERE id = ?
-      `;
-      
-      const [updateResult] = await connection.execute(updateQuery, updateParams);
-      
-      // Get updated user data
-      const [updatedUserData] = await connection.execute(
-        `SELECT 
-          id,
-          email,
-          first_name,
-          last_name,
-          phone_number,
-          is_admin,
-          is_super_admin,
-          is_agent,
-          is_enabled,
-          points,
-          referral_code,
-          referred_by,
-          is_south_african,
-          id_number,
-          date_of_birth,
-          address,
-          city,
-          postal_code,
-          industry,
-          occupation,
-          bank_name,
-          account_type,
-          account_number,
-          selected_package,
-          has_credit_card
-        FROM users
-        WHERE id = ?`,
-        [req.user.id]
-      );
-      
-      if (!updatedUserData || updatedUserData.length === 0) {
-        return res.status(404).json({ error: "Failed to retrieve updated user data" });
-      }
-      
-      console.log(`Updated user profile for user ${req.user.id}`);
-      res.json(updatedUserData[0]);
+
+      res.json(updatedUser);
     } catch (error) {
       console.error('Error updating user profile:', error);
       res.status(500).json({ 
         error: 'Failed to update profile',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error instanceof Error ? error.message : 'An unexpected error occurred'
       });
-    } finally {
-      await connection.end();
     }
   });
-  // Unified API endpoint that handles both session-based and JWT token-based authentication
-  app.get("/api/user", async (req, res) => {
-    try {
-      console.log('User request:', {
-        isAuthenticated: req.isAuthenticated(),
-        user: req.user ? { id: req.user.id, email: req.user.email } : null,
-        hasAuthHeader: !!req.headers.authorization
-      });
+  // Endpoint removed to prevent conflict with the one in auth.ts
+  /* Former duplicate endpoint removed:
+  app.get("/api/user", (req, res) => {
+    console.log('User request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, email: req.user.email } : null,
+      hasAuthHeader: !!req.headers.authorization
+    });
+  });
+  */
 
-      // Try to get user from either JWT token or session using the helper function
-      let user;
-      try {
-        user = await getUserFromTokenOrSession(req);
-      } catch (error) {
-        console.error('Error in getUserFromTokenOrSession:', error);
-        return res.status(401).json({ error: "Authentication error" });
-      }
-
-      if (!user) {
-        console.log('User not authenticated via session or token');
-        return res.status(401).json({ error: "Not authenticated" });
-      }
+  // Consolidated API endpoint for user information
+  app.get("/api/user", (req, res) => {
+    // First check session authentication
+    if (req.isAuthenticated()) {
+      // Get complete user details from database if authenticated via session
+      const connection = createConnection()
+        .then(conn => {
+          conn.execute(
+            `SELECT 
+              u.id,
+              u.email,
+              u.first_name,
+              u.last_name,
+              u.phone_number,
+              u.is_admin,
+              u.is_super_admin,
+              u.is_agent,
+              u.is_enabled,
+              u.points,
+              u.referral_code,
+              u.referred_by,
+              u.created_at,
+              u.is_south_african,
+              u.id_number,
+              u.date_of_birth,
+              u.address,
+              u.city,
+              u.postal_code,
+              u.industry,
+              u.occupation,
+              u.bank_name,
+              u.account_type,
+              u.account_number,
+              u.account_holder_name,
+              u.branch_code,
+              u.selected_package,
+              u.gender,
+              u.has_credit_card,
+              u.signature
+            FROM users u
+            WHERE u.id = ?`,
+            [req.user.id]
+          )
+          .then(([users]: any) => {
+            if (users && users.length > 0) {
+              const user = users[0];
+              // Format dates properly
+              if (user.created_at) {
+                user.created_at = new Date(user.created_at).toISOString();
+              }
+              if (user.date_of_birth) {
+                user.date_of_birth = new Date(user.date_of_birth).toISOString().split('T')[0];
+              }
+              res.json(user);
+            } else {
+              res.status(404).json({ error: "User not found" });
+            }
+            return conn;
+          })
+          .catch(error => {
+            console.error('Error fetching user details:', error);
+            res.status(500).json({ error: 'Failed to fetch user details' });
+            return conn;
+          })
+          .then(conn => conn.end());
+        })
+        .catch(error => {
+          console.error('DB connection error:', error);
+          res.status(500).json({ error: 'Database connection error' });
+        });
       
-      console.log('User authenticated, returning user data');
-      
-      // Format the response to match what the frontend expects
-      const response = {
-        id: user.id,
-        email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        phone_number: user.phone_number,
-        phoneNumber: user.phone_number,
-        is_admin: Boolean(user.is_admin),
-        is_super_admin: Boolean(user.is_super_admin),
-        is_agent: Boolean(user.is_agent),
-        is_enabled: Boolean(user.is_enabled),
-        isAdmin: Boolean(user.is_admin),
-        isSuperAdmin: Boolean(user.is_super_admin),
-        isAgent: Boolean(user.is_agent),
-        isEnabled: Boolean(user.is_enabled),
-        points: parseFloat(user.points || '0'),
-        referral_code: user.referral_code,
-        referralCode: user.referral_code,
-        referred_by: user.referred_by,
-        referredBy: user.referred_by
-      };
-
-      res.json(response);
-    } catch (error) {
-      console.error('Error in /api/user endpoint:', error);
-      res.status(500).json({ error: 'Failed to fetch user data' });
+      return;
     }
+    
+    // Then try JWT token authentication
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = verifyJwtToken(token);
+        if (decoded) {
+          return res.json(decoded);
+        }
+      } catch (err) {
+        console.error('JWT verification error:', err);
+      }
+    }
+    
+    // If neither authentication method succeeded
+    return res.status(401).json({ error: "Unauthorized" });
   });
 
   app.post("/api/admin/products/assign", async (req, res) => {
@@ -4830,7 +4626,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Add new route for admin dashboard stats
-  app.get("/api/admin/dashboard/stats", checkAdmin, async (req, res) => {
+  app.get("/api/admin/dashboard/stats", async (req, res) => {
     console.log('Admin dashboard stats request:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.user ? {
@@ -4976,6 +4772,130 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  app.get("/api/admin/customers", async (req, res) => {
+    console.log('Admin customers request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email
+      } : null
+    });
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        console.log('User not found in admin_users:', req.user.id);
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // First, get all customers (non-admin users)
+      const [customers] = await connection.execute(
+        `SELECT DISTINCT u.*
+         FROM users u
+         LEFT JOIN admin_users au ON u.id = au.user_id
+         WHERE au.user_id IS NULL
+         ORDER BY u.created_at DESC`
+      );
+
+      // Then, for each customer, get their assigned products and activities
+      const transformedCustomers = await Promise.all(customers.map(async (customer) => {
+        // Get assigned products with their activities
+        const [assignments] = await connection.execute(
+          `SELECT 
+            p.id as product_id,
+            p.name as product_name,
+            p.description as product_description,
+            p.is_enabled as product_is_enabled,
+            pa.id as assignment_id,
+            GROUP_CONCAT(
+              JSON_OBJECT(
+                'id', pact.id,
+                'type', pact.type,
+                'pointsValue', pact.points_value
+              )
+            ) as activities
+           FROM product_assignments pa
+           JOIN products p ON pa.product_id = p.id
+           LEFT JOIN product_activities pact ON p.id = pact.product_id
+           WHERE pa.user_id = ?
+           GROUP BY p.id, pa.id`,
+          [customer.id]
+        );
+
+        // Get referral count
+        const [referrals] = await connection.execute(
+          'SELECT COUNT(*) as count FROM users WHERE referred_by = ?',
+          [customer.referral_code]
+        );
+
+        // Transform assignments into the expected format
+        const productAssignments = assignments.map(assignment => ({
+          id: assignment.assignment_id,
+          product: {
+            id: assignment.product_id,
+            name: assignment.product_name,
+            description: assignment.product_description,
+            isEnabled: Boolean(assignment.product_is_enabled),
+            activities: assignment.activities ? 
+              assignment.activities.split(',').map(activity => {
+                try {
+                  return JSON.parse(activity);
+                } catch (e) {
+                  console.error('Error parsing activity:', e);
+                  return null;
+                }
+              }).filter(Boolean) : []
+          }
+        }));
+
+        return {
+          id: customer.id,
+          email: customer.email,
+          firstName: customer.first_name,
+          lastName: customer.last_name,
+          phoneNumber: customer.phone_number,
+          isEnabled: Boolean(customer.is_enabled),
+          isSouthAfrican: Boolean(customer.is_south_african),
+          hasCreditCard: Boolean(customer.has_credit_card),
+          points: Number(customer.points || 0),
+          createdAt: customer.created_at,
+          selectedPackage: customer.selected_package,
+          industry: customer.industry,
+          occupation: customer.occupation,
+          address: customer.address,
+          city: customer.city,
+          postalCode: customer.postal_code,
+          bankName: customer.bank_name,
+          accountType: customer.account_type,
+          accountNumber: customer.account_number,
+          accountHolderName: customer.account_holder_name,
+          branchCode: customer.branch_code,
+          referralCode: customer.referral_code,
+          referredBy: customer.referred_by,
+          productAssignments: productAssignments,
+          referralCount: Number(referrals[0].count || 0)
+        };
+      }));
+
+      console.log(`Found ${transformedCustomers.length} customers`);
+      res.json(transformedCustomers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    } finally {
+      await connection.end();
+    }
+  });
 
   // Add this endpoint after other routes
   app.post("/api/agent/customers/create", async (req, res) => {
@@ -5241,108 +5161,5 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  // Test endpoint for manually verifying email content with mandate acceptance
-  app.post("/api/register-test-email-html", async (req: Request, res: Response) => {
-    try {
-      console.log('Received email HTML test request');
-      
-      // Create sample customer data with mandate_accepted set to true
-      const customerData = {
-        firstName: req.body.first_name || "Test",
-        lastName: req.body.last_name || "Customer",
-        email: req.body.email || "test@example.com",
-        mobileNumber: req.body.phone_number || "27123456789",
-        selectedPackage: req.body.selectedPackage || "Gold",
-        signature: req.body.signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-        isSouthAfrican: req.body.isSouthAfrican !== undefined ? req.body.isSouthAfrican : true,
-        idNumber: req.body.idNumber || "7012345678901",
-        mandate_accepted: req.body.mandate_accepted !== undefined ? req.body.mandate_accepted : true // explicitly set to true for testing
-      };
-      
-      // Generate email content
-      const { text, html } = formatNewCustomerAdminEmail(customerData);
-      
-      // Also generate PDF to check its content
-      console.log('Generating PDF for mandate acceptance test...');
-      const pdfBuffer = await generateRegistrationPDF(customerData);
-      
-      // Return the HTML for inspection
-      res.status(200).json({
-        success: true,
-        message: "Email content generated successfully",
-        mandate_accepted: customerData.mandate_accepted,
-        html: html,
-        text: text,
-        pdf_generated: !!pdfBuffer
-      });
-    } catch (error) {
-      console.error('Error generating email content:', error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to generate email content",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  // New endpoint to test quote request emails
-  app.post("/api/test-quote-email", async (req: Request, res: Response) => {
-    try {
-      const { customerName, customerEmail, productName, adminName } = req.body;
-      
-      if (!customerEmail) {
-        return res.status(400).json({ success: false, message: "Customer email is required" });
-      }
-      
-      // Test customer quote request email
-      const customerQuoteEmail = formatQuoteRequestEmail(
-        customerName || "Test Customer", 
-        productName || "Test Product"
-      );
-      
-      // Send customer email
-      await sendEmail({
-        to: customerEmail,
-        subject: "Your Quote Request Confirmation",
-        html: customerQuoteEmail.html,
-        text: customerQuoteEmail.text,
-        emailType: "QUOTE_REQUEST"
-      });
-      
-      // Test admin quote request email
-      if (adminName) {
-        const adminQuoteEmail = formatAdminQuoteRequestEmail(
-          customerName || "Test Customer",
-          customerEmail,
-          productName || "Test Product",
-          adminName
-        );
-        
-        // Send admin email
-        await sendEmail({
-          to: customerEmail, // Sending to the same email for testing
-          subject: "New Quote Request Notification",
-          html: adminQuoteEmail.html,
-          text: adminQuoteEmail.text,
-          emailType: "ADMIN_QUOTE_REQUEST"
-        });
-      }
-      
-      res.json({
-        success: true,
-        message: "Quote request test emails sent successfully",
-        timestamp: new Date().toISOString(),
-        recipient: customerEmail
-      });
-    } catch (error) {
-      console.error("Failed to send test quote emails:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to send test quote emails",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-  
   return httpServer;
 }

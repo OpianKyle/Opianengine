@@ -5,4 +5,4 @@ pkill -f "tsx server/index.ts" || true
 sleep 2
 
 # Start in production mode
-cd dist && NODE_ENV=production node index.js
+NODE_ENV=production node dist/server/server/index.js
