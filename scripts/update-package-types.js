@@ -112,8 +112,8 @@ async function updatePackageTypes() {
   }
 }
 
-// Execute the function if running this script directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Execute the function if running this script directly (but not when in production build)
+if (import.meta.url === `file://${process.argv[1]}` && process.env.NODE_ENV !== 'production') {
   updatePackageTypes()
     .then(() => {
       console.log('Package type update script completed successfully');
