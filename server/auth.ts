@@ -859,85 +859,38 @@ export async function verifySession(req: Request): Promise<any> {
     console.log('Verifying session for request:', {
       url: req.url,
       headers: {
-        cookie: req.headers.cookie,
+        cookie: req.headers.cookie ? 'Present' : 'Not present',
         'sec-websocket-protocol': req.headers['sec-websocket-protocol']
       }
     });
 
+    // If we already have a user in the request object, return it
     if (req.user) {
       console.log('Using existing session user:', req.user);
       return req.user;
     }
 
+    // No cookies means no session
     if (!req.headers.cookie) {
       console.log('No cookie found in request');
       return null;
     }
     
-    // No mock authentication - always use actual database authentication
-
+    // In this version, we'll rely primarily on JWT token authentication
+    // rather than trying to access the session store directly
+    console.log('Session verification relying on token-based auth as primary method.');
+    
+    // Extract session ID from cookies
     const cookies = parseCookie(req.headers.cookie);
     const sessionId = cookies['connect.sid'];
-
+    
     if (!sessionId) {
       console.log('No session ID found in cookies');
       return null;
     }
-
-    console.log('Found session ID:', sessionId);
-
-    return new Promise((resolve) => {
-      const sessionStore = new MemoryStore({
-        checkPeriod: 86400000 as any
-      });
-      
-      sessionStore.get(sessionId, async (err: any, sessionData: any) => {
-        if (err || !sessionData) {
-          console.log('Session not found or error:', err);
-          resolve(null);
-          return;
-        }
-
-        try {
-          console.log('Retrieved session data:', {
-            ...sessionData,
-            cookie: '[Redacted]',
-            passport: sessionData.passport ? { user: sessionData.passport.user } : undefined
-          });
-
-          const userId = sessionData.passport?.user;
-          if (!userId) {
-            console.log('No user ID in session');
-            resolve(null);
-            return;
-          }
-
-          console.log('Found user ID in session:', userId);
-
-          const connection = await createConnection();
-          const [user] = await connection.execute(
-            'SELECT * FROM users WHERE id = ?',
-            [userId]
-          );
-          await connection.end();
-
-          if (!user) {
-            console.log('User not found in database');
-            resolve(null);
-            return;
-          }
-
-          const adminStatus = await checkUserAdminStatus(userId);
-
-          const { password: _, ...safeUser } = user[0];
-          console.log('Session verified for user:', safeUser.id);
-          resolve({ ...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin });
-        } catch (error) {
-          console.error('Error verifying session:', error);
-          resolve(null);
-        }
-      });
-    });
+    
+    console.log('Found session ID in cookies, but using token auth instead');
+    return null;
   } catch (error) {
     console.error('Error in verifySession:', error);
     return null;
