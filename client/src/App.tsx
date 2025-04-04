@@ -85,19 +85,24 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     return <Redirect to="/dashboard" />;
   }
 
-  // Redirect users to their appropriate dashboards if they try to access routes not for their role
+  // Only redirect users to their appropriate dashboards if they try to access specific customer routes
+  // not home or login/registration routes
   if (!admin && !agent && user) {
-    if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
-      const currentPath = window.location.pathname;
-      if (!currentPath.startsWith('/admin')) {
-        console.log('Admin user accessing non-admin route, redirecting to admin dashboard');
-        return <Redirect to="/admin" />;
-      }
-    } else if (Boolean(user.is_agent)) {
-      const currentPath = window.location.pathname;
-      if (!currentPath.startsWith('/agent')) {
-        console.log('Agent user accessing non-agent route, redirecting to agent dashboard');
-        return <Redirect to="/agent" />;
+    const currentPath = window.location.pathname;
+    // Only redirect if user is trying to access specific customer routes, not the home page
+    if (currentPath !== '/' && currentPath !== '/login' && currentPath !== '/register' && 
+        currentPath !== '/reset-password' && !currentPath.startsWith('/referral')) {
+      
+      if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
+        if (!currentPath.startsWith('/admin')) {
+          console.log('Admin user accessing non-admin route, redirecting to admin dashboard');
+          return <Redirect to="/admin" />;
+        }
+      } else if (Boolean(user.is_agent)) {
+        if (!currentPath.startsWith('/agent')) {
+          console.log('Agent user accessing non-agent route, redirecting to agent dashboard');
+          return <Redirect to="/agent" />;
+        }
       }
     }
   }

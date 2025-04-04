@@ -257,16 +257,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Use a defer pattern to avoid React state update during render
       setTimeout(() => {
-        // Use React router for a smooth transition (no page reload)
-        if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
-          console.log('Redirecting to admin dashboard');
-          setLocation('/admin');
-        } else if (normalizedUser.is_agent) {
-          console.log('Redirecting to agent dashboard');
-          setLocation('/agent'); 
+        // Only redirect on login, not when the app is loaded
+        const currentPath = window.location.pathname;
+        
+        // If user is on home, login or register pages, we can redirect
+        if (currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
+          // Use React router for a smooth transition (no page reload)
+          if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+            console.log('Redirecting to admin dashboard');
+            setLocation('/admin');
+          } else if (normalizedUser.is_agent) {
+            console.log('Redirecting to agent dashboard');
+            setLocation('/agent'); 
+          } else {
+            console.log('Redirecting to customer dashboard');
+            setLocation('/dashboard');
+          }
         } else {
-          console.log('Redirecting to customer dashboard');
-          setLocation('/dashboard');
+          console.log('Not redirecting as user is already on a specific page:', currentPath);
         }
       }, 0);
     },
@@ -389,9 +397,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Your account has been created",
       });
 
-      // Redirect to the appropriate dashboard
+      // Redirect to the appropriate dashboard based on user role
       setTimeout(() => {
-        setLocation('/');
+        const currentPath = window.location.pathname;
+        
+        // If user is on home, login or register pages, redirect to appropriate dashboard
+        if (currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
+          if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+            console.log('Redirecting new admin to admin dashboard');
+            setLocation('/admin');
+          } else if (normalizedUser.is_agent) {
+            console.log('Redirecting new agent to agent dashboard');
+            setLocation('/agent'); 
+          } else {
+            console.log('Redirecting new customer to customer dashboard');
+            setLocation('/dashboard');
+          }
+        } else {
+          // Otherwise, stay on the current page
+          console.log('Not redirecting newly registered user, keeping them on:', currentPath);
+        }
       }, 0);
     },
     onError: (error: Error) => {
