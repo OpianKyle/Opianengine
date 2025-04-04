@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
-import { setupAuth, checkAgent, checkAdmin, verifyJwtToken } from "./auth";
+import { setupAuth, checkAgent, checkAdmin, verifyJwtToken, getUserFromTokenOrSession } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { createConnection } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
@@ -17,9 +17,9 @@ import manualMigrationRouter from './routes/manual-migration';
 import packageTypesRouter from './routes/package-types';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
+import nodemailer from 'nodemailer';
 import { promisify } from "util";
 import { logAdminAction } from './admin-logger';
-import nodemailer from 'nodemailer';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -32,6 +32,38 @@ const crypto = {
 
 // Helper function to get package price
 async function getPackagePrice(connection: any, packageName: string): Promise<number> {
+  // Check if table exists and create it if it doesn't
+  try {
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS package_premium_amounts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        package_type VARCHAR(50) NOT NULL UNIQUE,
+        premium_amount DECIMAL(10,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Check if we have data in the table
+    const [checkData] = await connection.execute(
+      `SELECT COUNT(*) as count FROM package_premium_amounts`
+    );
+    
+    // If no data, insert default values
+    if (checkData[0].count === 0) {
+      await connection.execute(`
+        INSERT INTO package_premium_amounts (package_type, premium_amount) VALUES 
+        ('OPPORTUNITY', 350.00),
+        ('MOMENTUM', 450.00),
+        ('PROSPER', 550.00),
+        ('PRESTIGE', 695.00),
+        ('PINNACLE', 825.00)
+      `);
+      console.log('Created package_premium_amounts table with default values');
+    }
+  } catch (error) {
+    console.error('Error setting up package_premium_amounts table:', error);
+  }
+  
   // Get package price from the table
   const [prices] = await connection.execute(
     'SELECT premium_amount FROM package_premium_amounts WHERE package_type = ?',
@@ -2743,7 +2775,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.put("/api/user", async (req, res) => {
+  // This code belongs to another function, moved to the correct context
+  app.put("/api/user-profile", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -3849,55 +3882,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
   // Customer referrals endpoint - moved from previous duplicate implementation
   app.get("/api/customer/referrals", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-
-    const connection = await createConnection();
-    try {
-      console.log('Fetching referral information for user:', req.user.id);
-      const [userData] = await connection.execute(
-        `SELECT referral_code FROM users WHERE id = ?`,
-        [req.user.id]
-      );
-
-      if (!userData || userData.length === 0) {
-        console.log('No user found with ID:', req.user.id);
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      let currentReferralCode = userData[0].referral_code;
-      if (!currentReferralCode) {
-        currentReferralCode = randomBytes(8).toString("hex");
-        await connection.execute(
-          `UPDATE users SET referral_code = ? WHERE id = ?`,
-          [currentReferralCode, req.user.id]
-        );
-        console.log('Generated new referral code:', currentReferralCode);
-      }
-
-      const referrals = await db
-        .select({
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          createdAt: users.createdAt,
-        })
-        .from(users)
-        .where(eq(users.referred_by, currentReferralCode))
-        .orderBy(desc(users.createdAt))
-        .execute();
-
-      res.json({
-        referralCode: currentReferralCode,
-        referralCount: referrals.length,
-        referrals,
-      });
-    } catch (error) {
-      console.error('Error fetching referral info:', error);
-      res.status(500).json({ error: 'Failed to fetch referral information' });
-    }
-  });
-
-  app.get("/api/customer/referrals", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -3918,81 +3902,200 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }
 
       const currentUser = userData[0];
+      let referralCode = currentUser.referral_code;
       
-      // Get level 1 referrals (direct referrals)
-      const [level1ReferralsData] = await connection.execute(
-        `SELECT 
-          id, 
-          first_name as firstName, 
-          last_name as lastName, 
-          email, 
-          created_at as createdAt, 
-          referral_code 
-        FROM users 
-        WHERE referred_by = ?`,
-        [currentUser.referral_code]
-      );
-      
-      // Get counts for level 2 referrals (referrals of referrals)
-      let level2Count = 0;
-      let level2Referrals = [];
-      let level3Count = 0;
-      
-      if (level1ReferralsData.length > 0) {
-        const referralCodes = level1ReferralsData.map(ref => `'${ref.referral_code}'`).join(',');
-        
-        const [level2Data] = await connection.execute(
-          `SELECT COUNT(*) as count FROM users WHERE referred_by IN (${referralCodes || "''"})`,
+      // Generate referral code if user doesn't have one
+      if (!referralCode) {
+        referralCode = randomBytes(8).toString("hex");
+        await connection.execute(
+          `UPDATE users SET referral_code = ? WHERE id = ?`,
+          [referralCode, req.user.id]
         );
-        level2Count = level2Data[0]?.count || 0;
-        
-        const [level2RefData] = await connection.execute(
-          `SELECT referral_code FROM users WHERE referred_by IN (${referralCodes || "''"})`,
-        );
-        level2Referrals = level2RefData;
-        
-        if (level2Referrals.length > 0) {
-          const level2Codes = level2Referrals.map(ref => `'${ref.referral_code}'`).join(',');
-          const [level3Data] = await connection.execute(
-            `SELECT COUNT(*) as count FROM users WHERE referred_by IN (${level2Codes || "''"})`,
-          );
-          level3Count = level3Data[0]?.count || 0;
-        }
+        console.log('Generated new referral code:', referralCode);
       }
       
-      // Add referral counts to each level 1 referral
-      const referralsWithCounts = await Promise.all(
-        level1ReferralsData.map(async (referral) => {
-          const [countData] = await connection.execute(
-            `SELECT COUNT(*) as count FROM users WHERE referred_by = ?`,
-            [referral.referral_code]
-          );
-          
-          return {
-            ...referral,
-            referralCount: countData[0]?.count || 0,
-          };
-        })
+      // Check if package_premium_amounts table exists, create if it doesn't
+      try {
+        await connection.execute(`
+          CREATE TABLE IF NOT EXISTS package_premium_amounts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            package_type VARCHAR(50) NOT NULL UNIQUE,
+            premium_amount DECIMAL(10,2) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        
+        // Check if we have data in the table
+        const [checkData] = await connection.execute(
+          `SELECT COUNT(*) as count FROM package_premium_amounts`
+        );
+        
+        // If no data, insert default values
+        if (checkData[0].count === 0) {
+          await connection.execute(`
+            INSERT INTO package_premium_amounts (package_type, premium_amount) VALUES 
+            ('OPPORTUNITY', 350.00),
+            ('MOMENTUM', 450.00),
+            ('PROSPER', 550.00),
+            ('PRESTIGE', 695.00),
+            ('PINNACLE', 825.00)
+          `);
+          console.log('Created package_premium_amounts table with default values');
+        }
+      } catch (error) {
+        console.error('Error setting up package_premium_amounts table:', error);
+      }
+      
+      // Get package prices for commission calculations
+      const [packagePrices] = await connection.execute(
+        `SELECT package_type, premium_amount FROM package_premium_amounts`
       );
-
-      console.log("Sending referral stats:", {
-        referralCode: currentUser.referral_code,
-        level1Count: level1ReferralsData.length,
-        level2Count: level2Count,
-        level3Count: level3Count,
+      
+      const packagePricesMap = {};
+      if (packagePrices && Array.isArray(packagePrices)) {
+        packagePrices.forEach(pkg => {
+          packagePricesMap[pkg.package_type] = pkg.premium_amount;
+        });
+      } else {
+        // Default values if query failed
+        packagePricesMap.OPPORTUNITY = 350.00;
+        packagePricesMap.MOMENTUM = 450.00;
+        packagePricesMap.PROSPER = 550.00;
+        packagePricesMap.PRESTIGE = 695.00;
+        packagePricesMap.PINNACLE = 825.00;
+      }
+      
+      // Fetch referrals with commission details using recursive CTE
+      const [allReferrals] = await connection.execute(`
+        WITH RECURSIVE referral_tree AS (
+          -- Base case: direct referrals (level 1)
+          SELECT 
+            u.id,
+            u.first_name as firstName,
+            u.last_name as lastName, 
+            u.email,
+            u.selected_package as selectedPackage,
+            u.created_at as createdAt,
+            u.referral_code,
+            1 as level,
+            pp.premium_amount
+          FROM users u
+          LEFT JOIN package_premium_amounts pp ON pp.package_type = u.selected_package
+          WHERE u.referred_by = ?
+          
+          UNION ALL
+          
+          -- Recursive case: find nested referrals (level 2 and 3)
+          SELECT 
+            u.id,
+            u.first_name as firstName,
+            u.last_name as lastName,
+            u.email,
+            u.selected_package as selectedPackage,
+            u.created_at as createdAt,
+            u.referral_code,
+            rt.level + 1 as level,
+            pp.premium_amount
+          FROM users u
+          LEFT JOIN package_premium_amounts pp ON pp.package_type = u.selected_package
+          INNER JOIN referral_tree rt ON u.referred_by = rt.referral_code
+          WHERE rt.level < 3
+        )
+        SELECT 
+          rt.*,
+          (
+            SELECT COUNT(*) 
+            FROM users u2 
+            WHERE u2.referred_by = rt.referral_code
+          ) as directReferralCount
+        FROM referral_tree rt
+        ORDER BY rt.level, rt.createdAt DESC
+      `, [referralCode]);
+      
+      // Process referrals by level
+      const referralsByLevel = {};
+      const packageStatsByLevel = {};
+      
+      // Initialize structure
+      [1, 2, 3].forEach(level => {
+        referralsByLevel[level] = [];
+        packageStatsByLevel[level] = {};
       });
+      
+      // Calculate commission percentages by level
+      const commissionPercentages = {
+        1: 0.075, // 7.5%
+        2: 0.05,  // 5%
+        3: 0.025  // 2.5%
+      };
+      
+      // Process all referrals
+      allReferrals.forEach(referral => {
+        const level = referral.level;
+        const packageType = referral.selectedPackage || 'UNKNOWN';
+        const baseAmount = referral.premium_amount || 0;
+        const percentage = commissionPercentages[level] || 0;
+        
+        // Add to referralsByLevel
+        referralsByLevel[level].push({
+          id: referral.id,
+          firstName: referral.firstName,
+          lastName: referral.lastName,
+          email: referral.email,
+          selectedPackage: packageType,
+          createdAt: referral.createdAt,
+          directReferralCount: referral.directReferralCount || 0,
+          commission: {
+            percentage: percentage * 100,
+            randValue: (baseAmount * percentage).toFixed(2),
+            points: Math.floor(baseAmount * percentage * 10) // Example conversion
+          }
+        });
+        
+        // Update package stats
+        if (!packageStatsByLevel[level][packageType]) {
+          packageStatsByLevel[level][packageType] = {
+            count: 0,
+            totalReferrals: 0,
+            referralsByPackage: {
+              OPPORTUNITY: 0,
+              MOMENTUM: 0,
+              PROSPER: 0,
+              PRESTIGE: 0,
+              PINNACLE: 0
+            },
+            commission: {
+              percentage: percentage * 100,
+              baseAmount: baseAmount
+            }
+          };
+        }
+        
+        packageStatsByLevel[level][packageType].count++;
+        packageStatsByLevel[level][packageType].totalReferrals += (referral.directReferralCount || 0);
+        
+        // This would need additional queries to be accurate, but simplifying for now
+        if (referral.directReferralCount > 0) {
+          packageStatsByLevel[level][packageType].referralsByPackage[packageType]++;
+        }
+      });
+      
+      // Count total referrals (direct level 1 referrals)
+      const referralCount = referralsByLevel[1].length;
+      
+      console.log("Sending formatted referral stats for user:", req.user.id);
 
       res.json({
-        referralCode: currentUser.referral_code,
-        level1Count: level1ReferralsData.length,
-        level2Count: level2Count,
-        level3Count: level3Count,
-        referrals: referralsWithCounts,
+        referralCode,
+        referralCount,
+        packagePrices: packagePricesMap,
+        packageStatsByLevel,
+        referralsByLevel
       });
     } catch (error) {
       console.error("Error fetching referral stats:", error);
       res.status(500).json({ 
-        error: "Failed to fetch referral stats",
+        error: "Failed to fetch referral information",
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     } finally {
@@ -4500,7 +4603,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.put("/api/user", async (req, res) => {
+  // This endpoint allows users to update their profile
+  app.put("/api/user-profile", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }

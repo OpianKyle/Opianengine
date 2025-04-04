@@ -49,7 +49,7 @@ export function useUserProfile() {
     mutationFn: async (userData: Partial<User>) => {
       const res = await apiRequest(
         "PUT",
-        "/api/user/profile",
+        "/api/user-profile",
         userData
       );
 

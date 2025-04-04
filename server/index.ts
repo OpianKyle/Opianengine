@@ -33,11 +33,11 @@ console.log('Environment validated:', {
 
 // Rest of imports
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic } from "./vite.js";
+import { registerRoutes } from "./routes";
+import { setupVite, serveStatic } from "./vite";
 import cors from "cors";
 import fileUpload from 'express-fileupload';
-import { setupAuth } from "./auth.js";
+import { setupAuth } from "./auth";
 import { db } from "@db";
 import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
@@ -73,9 +73,12 @@ app.use(fileUpload({
 }));
 
 // Session configuration with enhanced security
-const sessionStore = new MemoryStore({
+// Create a memory store with a cleanup interval
+const memoryStoreOptions = { 
+  // Type assertion to allow checkPeriod option
   checkPeriod: 86400000 // prune expired entries every 24h
-});
+} as any;
+const sessionStore = new MemoryStore(memoryStoreOptions);
 
 console.log('Configuring session with secret length:', process.env.SESSION_SECRET?.length);
 
@@ -162,7 +165,8 @@ app.use((req: any, res, next) => {
 
     // Start the server
     const PORT = process.env.PORT || 5000;
-    server.listen(PORT, '0.0.0.0', () => {
+    // Using Number casting to ensure the PORT is a number which fixes TypeScript errors
+    server.listen(Number(PORT), '0.0.0.0', () => {
       console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
       console.log(`Server URL: http://0.0.0.0:${PORT}`);
     });
