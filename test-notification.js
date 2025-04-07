@@ -26,11 +26,17 @@ function createTransporter() {
   // Use environment variables with fallbacks
   const host = process.env.SMTP_HOST || 'mail.opian.co.za';
   const port = parseInt(process.env.SMTP_PORT || '587');
-  const user = process.env.SMTP_USER || 'admin@opian.co.za';
+  const user = process.env.SMTP_USER || 'clientservices@opianrewards.com';
   const pass = process.env.SMTP_PASSWORD;
   const secure = process.env.SMTP_SECURE === 'true' || port === 465;
   
-  console.log(`Creating transporter with: ${host}:${port}, user: ${user}, secure: ${secure}`);
+  // Enhanced logging for SMTP configuration
+  console.log('========== SMTP CONFIGURATION ==========');
+  console.log('Host:', host);
+  console.log('Port:', port);
+  console.log('Secure:', secure);
+  console.log('User:', user);
+  console.log('Password provided:', pass ? 'Yes' : 'No');
   
   return nodemailer.createTransport({
     host,

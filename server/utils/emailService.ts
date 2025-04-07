@@ -5,7 +5,7 @@ import mysql from 'mysql2/promise';
 
 // Create reusable transporter with SMTP configuration
 const createTransporter = () => {
-  // Default to environment variables with specific fallbacks
+  // Use environment variables with fallbacks 
   const host = process.env.SMTP_HOST || 'mail.opian.co.za';
   const port = parseInt(process.env.SMTP_PORT || '587');
   const user = process.env.SMTP_USER || 'clientservices@opianrewards.com';
@@ -14,15 +14,15 @@ const createTransporter = () => {
   // Determine if connection should be secure
   const secure = process.env.SMTP_SECURE === 'true' || port === 465;
   
-  // For debugging
-  console.log('Email transporter configuration:', {
-    host,
-    port,
-    secure,
-    user,
-    passProvided: pass ? 'Yes' : 'No'
-  });
+  // Enhanced logging for email configuration
+  console.log('========== EMAIL CONFIGURATION ==========');
+  console.log('Host:', host);
+  console.log('Port:', port);
+  console.log('Secure:', secure);
+  console.log('User:', user);
+  console.log('Password provided:', pass ? 'Yes' : 'No');
   
+  // Create transporter with configured settings
   return nodemailer.createTransport({
     host,
     port, 

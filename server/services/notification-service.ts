@@ -31,8 +31,7 @@ export class NotificationService {
             message TEXT NOT NULL,
             is_read BOOLEAN DEFAULT FALSE,
             metadata TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
         `);
         console.log('Notifications table created successfully');
@@ -107,7 +106,18 @@ export class NotificationService {
         throw new Error('Failed to create notification: could not retrieve created record');
       }
 
-      const newNotification = notifications[0];
+      // Cast to the expected type structure
+      const newNotification = notifications[0] as {
+        id: number;
+        user_id: number;
+        type: string;
+        title: string;
+        message: string;
+        is_read: number | boolean;
+        metadata: string | null;
+        created_at: Date | string;
+      };
+
       console.log('Successfully created notification:', newNotification);
 
       // Transform notification for response
@@ -147,12 +157,28 @@ export class NotificationService {
         [userId]
       );
 
-      const transformedNotifications = Array.isArray(notifications) ? notifications.map(n => ({
+      // Define the expected structure and cast the result
+      type NotificationRecord = {
+        id: number;
+        user_id: number;
+        type: string;
+        title: string;
+        message: string;
+        is_read: number | boolean;
+        metadata: string | null;
+        created_at: Date | string;
+      };
+
+      const typedNotifications = Array.isArray(notifications) 
+        ? notifications as NotificationRecord[]
+        : [];
+      
+      const transformedNotifications = typedNotifications.map(n => ({
         ...n,
         isRead: Boolean(n.is_read),
         createdAt: n.created_at,
         metadata: n.metadata ? JSON.parse(n.metadata) : null
-      })) : [];
+      }));
 
       console.log(`Found ${transformedNotifications.length} unread notifications for user ${userId}`);
       return transformedNotifications;
