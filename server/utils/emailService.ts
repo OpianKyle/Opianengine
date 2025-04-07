@@ -2,25 +2,12 @@ import nodemailer from 'nodemailer';
 import htmlPdf from 'html-pdf';
 import { promisify } from 'util';
 import mysql from 'mysql2/promise';
+import { getSmtpConfig, logSmtpConfig } from './emailConfig';
 
 // Create reusable transporter with SMTP configuration
 const createTransporter = () => {
-  // Use environment variables with fallbacks 
-  const host = process.env.SMTP_HOST || 'mail.opian.co.za';
-  const port = parseInt(process.env.SMTP_PORT || '587');
-  const user = process.env.SMTP_USER || 'clientservices@opianrewards.com';
-  const pass = process.env.SMTP_PASSWORD;
-  
-  // Determine if connection should be secure
-  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-  
-  // Enhanced logging for email configuration
-  console.log('========== EMAIL CONFIGURATION ==========');
-  console.log('Host:', host);
-  console.log('Port:', port);
-  console.log('Secure:', secure);
-  console.log('User:', user);
-  console.log('Password provided:', pass ? 'Yes' : 'No');
+  // Use centralized email configuration
+  const { host, port, user, pass, secure } = logSmtpConfig('EMAIL');
   
   // Create transporter with configured settings
   return nodemailer.createTransport({

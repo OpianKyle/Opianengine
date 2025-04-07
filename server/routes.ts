@@ -18,6 +18,8 @@ import packageTypesRouter from './routes/package-types';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
+import { getSmtpConfig, logSmtpConfig } from './utils/emailConfig';
+import { testEmailConfig, sendTestEmail } from './test-email-config';
 import { promisify } from "util";
 import { logAdminAction } from './admin-logger';
 
@@ -140,20 +142,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 // SMTP Test route - test connection to SMTP server without sending an email
   app.get("/api/test-smtp", async (req: Request, res: Response) => {
     try {
-      // Get SMTP settings with fallbacks
-      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
-      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
-      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
-      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
-      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-      
-      // Create a nodemailer transporter with the SMTP settings
-      console.log('=== SMTP CONNECTION TEST ===');
-      console.log('SMTP_HOST:', host ? 'Set' : 'Not set');
-      console.log('SMTP_PORT:', port);
-      console.log('SMTP_USER:', user ? 'Set' : 'Not set');
-      console.log('SMTP_PASSWORD:', pass ? 'Set (length: ' + (pass.length || 0) + ')' : 'Not set');
-      console.log('SMTP_SECURE:', secure ? 'true' : 'false');
+      // Get SMTP settings from centralized config
+      const { host, port, user, pass, secure } = logSmtpConfig('SMTP CONNECTION TEST');
       
       const transporter = nodemailer.createTransport({
         host,
@@ -217,20 +207,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   // Email test route (temporary for testing) - UPDATED WITH NEW ENVIRONMENT VARIABLES
   app.get("/api/test-email", async (req: Request, res: Response) => {
     try {
-      // Get SMTP settings with fallbacks
-      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
-      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
-      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
-      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
-      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-      
-      // Email configuration check
-      console.log('=== EMAIL CONFIG CHECK ===');
-      console.log('SMTP_HOST:', host ? 'Set' : 'Not set');
-      console.log('SMTP_PORT:', port);
-      console.log('SMTP_USER:', user ? 'Set' : 'Not set');
-      console.log('SMTP_PASSWORD:', pass ? 'Set (length: ' + (pass.length || 0) + ')' : 'Not set');
-      console.log('SMTP_SECURE:', secure ? 'true' : 'false');
+      // Get SMTP settings from centralized config
+      const { host, port, user, pass, secure } = logSmtpConfig('EMAIL TEST');
       
       // Use query parameter or default to client services email
       const testEmail = req.query.email as string || 'clientservices@opianrewards.com';
@@ -304,6 +282,77 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       return res.status(500).json({ 
         success: false,
         error: 'Failed to process email test',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+  
+  // Enhanced email configuration test route
+  app.get("/api/test-email-config", async (req: Request, res: Response) => {
+    try {
+      console.log('Testing email configuration...');
+      const configResult = await testEmailConfig();
+      
+      return res.status(200).json({
+        success: true,
+        configLoaded: configResult.configLoaded,
+        configDetails: {
+          host: configResult.configDetails?.host ? 'Configured (hidden)' : 'Missing',
+          port: configResult.configDetails?.port,
+          user: configResult.configDetails?.user ? 'Configured (hidden)' : 'Missing',
+          secure: configResult.configDetails?.secure,
+        },
+        error: configResult.error,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error testing email configuration:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to test email configuration',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+  
+  // Send test email with enhanced diagnostics
+  app.post("/api/send-test-email", async (req: Request, res: Response) => {
+    try {
+      // Get recipient email from request body or query parameter
+      const recipientEmail = req.body.email || req.query.email as string;
+      
+      if (!recipientEmail) {
+        return res.status(400).json({
+          success: false,
+          error: 'Recipient email is required',
+          message: 'Please provide an email address in the request body or as a query parameter'
+        });
+      }
+      
+      console.log(`Sending test email to ${recipientEmail}...`);
+      const sendResult = await sendTestEmail(recipientEmail);
+      
+      if (sendResult.sent) {
+        return res.status(200).json({
+          success: true,
+          message: `Test email sent successfully to ${recipientEmail}`,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to send test email',
+          details: sendResult.error,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to process send test email request',
         details: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       });
