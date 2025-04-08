@@ -801,14 +801,18 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
               : 'direct URL'))
       : 'no signature');
   
-  // Define logo URL - using a Replit-hosted image
-  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
+  // Define local backup logo as embedded base64 data
+  const logoBase64 = "data:image/png;base64,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";
   
   const pdfHtml = `
     <!DOCTYPE html>
     <html>
     <head>
       <style>
+        @page {
+          margin: 20px;
+          size: A4;
+        }
         body { 
           font-family: Arial, sans-serif; 
           color: white; 
@@ -816,26 +820,29 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           margin: 0;
           padding: 0;
           background-color: #011d3d;
-          font-size: 13px;
+          font-size: 12px;
         }
         .container { 
-          max-width: 800px; 
+          width: 100%; 
+          max-width: 100%;
           margin: 0 auto; 
-          padding: 20px;
+          padding: 15px;
+          box-sizing: border-box;
         }
         .header { 
           background-color: rgba(255,255,255,0.05); 
           color: white; 
           text-align: center; 
-          padding: 25px 15px; 
-          margin-bottom: 20px;
+          padding: 20px 15px; 
+          margin-bottom: 15px;
           border-radius: 5px;
           border: 1px solid rgba(255,255,255,0.1);
+          page-break-after: avoid;
         }
         .header h1 {
           color: white;
           margin: 10px 0;
-          font-size: 20px;
+          font-size: 18px;
         }
         .header p {
           color: #43EB3E;
@@ -843,42 +850,47 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           font-size: 14px;
         }
         .logo {
-          max-width: 160px;
-          margin-bottom: 15px;
+          max-width: 140px;
+          max-height: 50px;
+          margin-bottom: 10px;
         }
         .section { 
           background-color: rgba(255,255,255,0.05); 
-          margin: 15px 0; 
-          padding: 18px;
+          margin: 12px 0; 
+          padding: 15px;
           border-radius: 5px;
           border: 1px solid rgba(255,255,255,0.1);
+          page-break-inside: avoid;
         }
         .section h2 { 
           color: #43EB3E; 
           border-bottom: 1px solid rgba(255,255,255,0.2); 
           padding-bottom: 8px; 
           margin-top: 0;
-          font-size: 16px;
+          margin-bottom: 10px;
+          font-size: 15px;
         }
         .section p { 
-          margin: 8px 0; 
+          margin: 6px 0; 
         }
         .section strong { 
           color: #43EB3E; 
         }
         .signature { 
           background-color: rgba(255,255,255,0.05); 
-          margin-top: 15px; 
-          padding: 18px;
+          margin-top: 12px; 
+          padding: 15px;
           border-radius: 5px;
           border: 1px solid rgba(255,255,255,0.1);
+          page-break-inside: avoid;
         }
         .signature h2 { 
           color: #43EB3E; 
           border-bottom: 1px solid rgba(255,255,255,0.2); 
           padding-bottom: 8px; 
           margin-top: 0;
-          font-size: 16px;
+          margin-bottom: 10px;
+          font-size: 15px;
         }
         .highlight {
           color: #43EB3E;
@@ -886,32 +898,49 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
         }
         .footer {
           text-align: center;
-          font-size: 11px;
+          font-size: 10px;
           color: rgba(255,255,255,0.7);
-          margin-top: 30px;
-          padding-top: 15px;
+          margin-top: 20px;
+          padding-top: 10px;
           border-top: 1px solid rgba(255,255,255,0.1);
+          page-break-inside: avoid;
+        }
+        /* Two column layout for some sections */
+        .row {
+          display: flex;
+          flex-wrap: wrap;
+        }
+        .col {
+          flex: 1;
+          min-width: 45%;
+          padding-right: 10px;
         }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <img src="https://opianfsgroup.com/opian-logo-white.png" alt="Opian FS Group Logo" class="logo" />
+          <img src="${logoBase64}" alt="Opian FS Group Logo" class="logo" />
           <h1>OPIAN Rewards - Customer Registration</h1>
           <p>Registration Date: ${new Date().toLocaleDateString()}</p>
         </div>
 
         <div class="section">
           <h2>Personal Details</h2>
-          <p><strong>First Name:</strong> ${customerData.firstName}</p>
-          <p><strong>Last Name:</strong> ${customerData.lastName}</p>
-          <p><strong>Email:</strong> ${customerData.email}</p>
-          <p><strong>Mobile Number:</strong> ${customerData.mobileNumber}</p>
-          <p><strong>ID Number:</strong> ${customerData.idNumber || 'Not provided'}</p>
-          <p><strong>Date of Birth:</strong> ${customerData.dateOfBirth || 'Not provided'}</p>
-          <p><strong>Gender:</strong> ${customerData.gender || 'Not provided'}</p>
-          <p><strong>South African Resident:</strong> ${customerData.isSouthAfrican ? 'Yes' : 'No'}</p>
+          <div class="row">
+            <div class="col">
+              <p><strong>First Name:</strong> ${customerData.firstName}</p>
+              <p><strong>Last Name:</strong> ${customerData.lastName}</p>
+              <p><strong>Email:</strong> ${customerData.email}</p>
+              <p><strong>Mobile Number:</strong> ${customerData.mobileNumber}</p>
+            </div>
+            <div class="col">
+              <p><strong>ID Number:</strong> ${customerData.idNumber || 'Not provided'}</p>
+              <p><strong>Date of Birth:</strong> ${customerData.dateOfBirth || 'Not provided'}</p>
+              <p><strong>Gender:</strong> ${customerData.gender || 'Not provided'}</p>
+              <p><strong>South African Resident:</strong> ${customerData.isSouthAfrican ? 'Yes' : 'No'}</p>
+            </div>
+          </div>
         </div>
 
         <div class="section">
@@ -929,12 +958,18 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
 
         <div class="section">
           <h2>Banking Details</h2>
-          <p><strong>Has Credit Card:</strong> ${customerData.hasCreditCard ? 'Yes' : 'No'}</p>
-          <p><strong>Bank Name:</strong> ${customerData.bankName || 'Not provided'}</p>
-          <p><strong>Account Type:</strong> ${customerData.accountType || 'Not provided'}</p>
-          <p><strong>Account Number:</strong> ${customerData.accountNumber || 'Not provided'}</p>
-          <p><strong>Account Holder Name:</strong> ${customerData.accountHolderName || 'Not provided'}</p>
-          <p><strong>Branch Code:</strong> ${customerData.branchCode || 'Not provided'}</p>
+          <div class="row">
+            <div class="col">
+              <p><strong>Has Credit Card:</strong> ${customerData.hasCreditCard ? 'Yes' : 'No'}</p>
+              <p><strong>Bank Name:</strong> ${customerData.bankName || 'Not provided'}</p>
+              <p><strong>Account Type:</strong> ${customerData.accountType || 'Not provided'}</p>
+            </div>
+            <div class="col">
+              <p><strong>Account Number:</strong> ${customerData.accountNumber || 'Not provided'}</p>
+              <p><strong>Account Holder Name:</strong> ${customerData.accountHolderName || 'Not provided'}</p>
+              <p><strong>Branch Code:</strong> ${customerData.branchCode || 'Not provided'}</p>
+            </div>
+          </div>
         </div>
 
         <div class="section">
