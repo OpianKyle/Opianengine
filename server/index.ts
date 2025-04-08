@@ -173,6 +173,32 @@ app.use((req: any, res, next) => {
       console.log('Static serving setup complete');
     }
 
+    // Add catch-all route to serve the frontend for any unhandled routes
+    app.get('*', (req, res) => {
+      console.log('Catch-all route handling request for:', req.originalUrl);
+      if (process.env.NODE_ENV !== "production") {
+        // In development, the Vite middleware should handle this
+        res.status(200).send(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>OPIAN Rewards</title>
+            </head>
+            <body>
+              <div id="root"></div>
+              <script type="module" src="/src/main.tsx"></script>
+            </body>
+          </html>
+        `);
+      } else {
+        // In production, serve the built index.html
+        const indexPath = path.resolve(__dirname, '..', 'client', 'dist', 'index.html');
+        res.sendFile(indexPath);
+      }
+    });
+
     // Server is already started above
     console.log('Server initialization complete');
   } catch (error: any) {

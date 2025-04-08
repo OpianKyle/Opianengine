@@ -876,9 +876,8 @@ export async function verifySession(req: Request): Promise<any> {
       return null;
     }
     
-    // In this version, we'll rely primarily on JWT token authentication
-    // rather than trying to access the session store directly
-    console.log('Session verification relying on token-based auth as primary method.');
+    // Try to use both token and session-based authentication
+    console.log('Checking session state');
     
     // Extract session ID from cookies
     const cookies = parseCookie(req.headers.cookie);
@@ -889,7 +888,63 @@ export async function verifySession(req: Request): Promise<any> {
       return null;
     }
     
-    console.log('Found session ID in cookies, but using token auth instead');
+    // Check if session exists and contains user info
+    if (req.session && req.session.passport && req.session.passport.user) {
+      const userId = req.session.passport.user;
+      console.log('Found user ID in session:', userId);
+      
+      // Fetch user from database
+      const connection = await createConnection();
+      try {
+        const [users] = await connection.execute(
+          `SELECT u.*, 
+           CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
+           CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+           FROM users u
+           LEFT JOIN admin_users au ON u.id = au.user_id
+           WHERE u.id = ?`,
+          [userId]
+        );
+
+        if (!Array.isArray(users) || users.length === 0) {
+          console.log('User not found for session user ID:', userId);
+          return null;
+        }
+
+        const user = users[0];
+        console.log('Found user from session:', {
+          id: user.id,
+          email: user.email,
+          is_admin: Boolean(user.is_admin),
+          is_super_admin: Boolean(user.is_super_admin)
+        });
+        
+        // Transform user object consistently
+        const transformedUser = {
+          id: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          phone_number: user.phone_number,
+          is_admin: Boolean(user.is_admin),
+          is_super_admin: Boolean(user.is_super_admin),
+          is_agent: Boolean(user.is_agent),
+          is_enabled: Boolean(user.is_enabled),
+          points: user.points || 0,
+          referral_code: user.referral_code,
+          referred_by: user.referred_by
+        };
+
+        return transformedUser;
+      } catch (error) {
+        console.error('Error getting user from session:', error);
+        return null;
+      } finally {
+        await connection.end();
+      }
+    }
+    
+    console.log('No user found in session');
     return null;
   } catch (error) {
     console.error('Error in verifySession:', error);
