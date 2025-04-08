@@ -24,19 +24,13 @@ const pool = createPool({
 // Configure mailer
 function createTransporter() {
   // Use environment variables with fallbacks
-  const host = process.env.SMTP_HOST || 'smtp.opianrewards.com';
-  const port = parseInt(process.env.SMTP_PORT || '465');
-  const user = process.env.SMTP_USER || 'clientservices@opianrewards.com';
+  const host = process.env.SMTP_HOST || 'mail.opian.co.za';
+  const port = parseInt(process.env.SMTP_PORT || '587');
+  const user = process.env.SMTP_USER || 'admin@opian.co.za';
   const pass = process.env.SMTP_PASSWORD;
   const secure = process.env.SMTP_SECURE === 'true' || port === 465;
   
-  // Enhanced logging for SMTP configuration
-  console.log('========== SMTP CONFIGURATION ==========');
-  console.log('Host:', host);
-  console.log('Port:', port);
-  console.log('Secure:', secure);
-  console.log('User:', user);
-  console.log('Password provided:', pass ? 'Yes' : 'No');
+  console.log(`Creating transporter with: ${host}:${port}, user: ${user}, secure: ${secure}`);
   
   return nodemailer.createTransport({
     host,
@@ -226,8 +220,8 @@ async function sendAdminRegistrationNotification(customerData) {
     const transporter = createTransporter();
     
     const result = await transporter.sendMail({
-      from: `"OPIAN Rewards" <clientservices@opianrewards.com>`,
-      to: 'clientservices@opianrewards.com',
+      from: `"OPIAN Rewards" <clientservices@opianfsgroup.com>`,
+      to: 'clientservices@opianfsgroup.com',
       subject: 'New Customer Registration',
       text,
       html,

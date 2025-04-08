@@ -47,7 +47,6 @@ import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
 import { createServer } from 'http';
-import { ensureEmailLogsTable } from './utils/ensure-email-logs-table';
 
 const app = express();
 const server = createServer(app);
@@ -132,35 +131,19 @@ app.use((req: any, res, next) => {
     // Test database connection (now happening after server starts)
     console.log('Testing database connection...');
     try {
-      const dbConfig = {
-        host: process.env.DB_HOST || 'dedi1350.jnb1.host-h.net',
-        user: process.env.DB_USER || 'admin',
+      const connection = await mysql.createConnection({
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME || 'opianrewards',
+        database: process.env.DB_NAME,
         port: parseInt(process.env.DB_PORT || '3306'),
         ssl: {
           rejectUnauthorized: false
         }
-      };
-      console.log('Using database config:', {
-        host: dbConfig.host,
-        user: dbConfig.user,
-        database: dbConfig.database,
-        port: dbConfig.port
       });
-      const connection = await mysql.createConnection(dbConfig);
 
       console.log('Database connection successful');
       await connection.end();
-      
-      // Ensure the email_logs table exists
-      console.log('Ensuring email_logs table exists...');
-      const emailLogsTableResult = await ensureEmailLogsTable();
-      if (emailLogsTableResult) {
-        console.log('Email logs table check completed successfully');
-      } else {
-        console.warn('Warning: Email logs table check failed, email logging might not work correctly');
-      }
     } catch (dbError) {
       console.error('Database connection test failed:', dbError);
       // Don't throw error - continue initialization
