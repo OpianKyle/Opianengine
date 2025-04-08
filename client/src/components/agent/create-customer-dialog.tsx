@@ -263,7 +263,7 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                   control={form.control}
                   name="isSouthAfrican"
                   render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6 checkbox-centered">
+                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6">
                       <FormControl>
                         <Checkbox
                           checked={field.value}
@@ -424,7 +424,7 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                   control={form.control}
                   name="hasCreditCard"
                   render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6 checkbox-centered">
+                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6">
                       <FormControl>
                         <Checkbox
                           checked={field.value}
@@ -533,7 +533,7 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                   control={form.control}
                   name="mandateAgreement"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2 checkbox-centered">
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
                       <FormControl>
                         <Checkbox
                           checked={field.value}
