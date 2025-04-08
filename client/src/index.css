@@ -37,6 +37,7 @@
     --e-global-color-be70a18: #43EB3E;
     --e-global-color-8608cda: #01152b;
   }
+  
   * {
     @apply border-border;
   }
@@ -51,10 +52,36 @@
   }
 }
 
+/* Custom scrollbar styles for modals */
+.bg-\[#011d3d\]::-webkit-scrollbar {
+  width: 8px;
+}
+
+.bg-\[#011d3d\]::-webkit-scrollbar-track {
+  background: rgba(1, 29, 61, 0.6);
+  border-radius: 4px;
+}
+
+.bg-\[#011d3d\]::-webkit-scrollbar-thumb {
+  background: #43EB3E;
+  border-radius: 4px;
+}
+
+.bg-\[#011d3d\]::-webkit-scrollbar-thumb:hover {
+  background: #2dd129;
+}
+
+/* For Firefox */
+.bg-\[#011d3d\] {
+  scrollbar-width: thin;
+  scrollbar-color: #43EB3E rgba(1, 29, 61, 0.6);
+}
+
 @layer components {
   .btn-gradient {
     @apply bg-gradient-to-r from-[var(--e-global-color-be70a18)] to-[var(--e-global-color-8608cda)] text-white hover:opacity-90 transition-opacity;
   }
+  
   .card {
     @apply bg-[#011d3d] border-[#022b5c] shadow-lg;
   }
