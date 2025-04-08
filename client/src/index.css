@@ -58,4 +58,30 @@
   .card {
     @apply bg-[#011d3d] border-[#022b5c] shadow-lg;
   }
+  
+  /* Custom scrollbar styles */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-[#022b5c] rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-[#43EB3E] rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-[#3acf36];
+  }
+  
+  /* Center-aligned checkbox container */
+  .checkbox-centered .form-item {
+    @apply flex flex-col items-center justify-center;
+  }
+  
+  .checkbox-centered .form-control {
+    @apply flex justify-center;
+  }
 }

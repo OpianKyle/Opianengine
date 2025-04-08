@@ -266,7 +266,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
                   control={form.control}
                   name="isSouthAfrican"
                   render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6">
+                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6 checkbox-centered">
                       <FormControl>
                         <Checkbox
                           checked={field.value}
@@ -427,7 +427,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
                   control={form.control}
                   name="hasCreditCard"
                   render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6">
+                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6 checkbox-centered">
                       <FormControl>
                         <Checkbox
                           checked={field.value}
