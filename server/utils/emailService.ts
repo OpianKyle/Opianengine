@@ -812,16 +812,15 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
         @page {
           margin: 20px;
           size: A4;
-          background-color: #011d3d;
         }
         html, body { 
           font-family: 'Inter', sans-serif;
           font-weight: 300;
-          color: white; 
+          color: #333; 
           line-height: 1.4;
           margin: 0;
           padding: 0;
-          background-color: #011d3d;
+          background-color: white;
           font-size: 12px;
           height: 100%;
         }
@@ -836,20 +835,20 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           margin: 0 auto; 
           padding: 15px;
           box-sizing: border-box;
-          background-color: #011d3d;
+          background-color: white;
         }
         .header { 
-          background-color: rgba(255,255,255,0.05); 
-          color: white; 
+          background-color: #f5f5f5; 
+          color: #333; 
           text-align: center; 
           padding: 30px 15px; 
           margin-bottom: 15px;
           border-radius: 5px;
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid #e0e0e0;
           page-break-after: avoid;
         }
         .header h1 {
-          color: white;
+          color: #333;
           margin: 0;
           font-size: 24px;
           font-weight: 600;
@@ -863,16 +862,16 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           font-weight: 300;
         }
         .section { 
-          background-color: rgba(255,255,255,0.05); 
+          background-color: #f5f5f5; 
           margin: 12px 0; 
           padding: 15px;
           border-radius: 5px;
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid #e0e0e0;
           page-break-inside: avoid;
         }
         .section h2 { 
-          color: #43EB3E; 
-          border-bottom: 1px solid rgba(255,255,255,0.2); 
+          color: #011d3d; 
+          border-bottom: 1px solid #e0e0e0; 
           padding-bottom: 8px; 
           margin-top: 0;
           margin-bottom: 10px;
@@ -884,20 +883,24 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           margin: 6px 0; 
         }
         .section strong { 
-          color: #43EB3E; 
+          color: #011d3d; 
           font-weight: 600;
         }
+        /* Add extra margin above the banking details section */
+        .banking-details {
+          margin-top: 30px;
+        }
         .signature { 
-          background-color: rgba(255,255,255,0.05); 
+          background-color: #f5f5f5; 
           margin-top: 12px; 
           padding: 15px;
           border-radius: 5px;
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid #e0e0e0;
           page-break-inside: avoid;
         }
         .signature h2 { 
-          color: #43EB3E; 
-          border-bottom: 1px solid rgba(255,255,255,0.2); 
+          color: #011d3d; 
+          border-bottom: 1px solid #e0e0e0; 
           padding-bottom: 8px; 
           margin-top: 0;
           margin-bottom: 10px;
@@ -911,10 +914,10 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
         .footer {
           text-align: center;
           font-size: 10px;
-          color: rgba(255,255,255,0.7);
+          color: #777;
           margin-top: 20px;
           padding-top: 10px;
-          border-top: 1px solid rgba(255,255,255,0.1);
+          border-top: 1px solid #e0e0e0;
           page-break-inside: avoid;
         }
         /* Two column layout for some sections */
@@ -967,7 +970,7 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           <p><strong>Postal Code:</strong> ${customerData.postalCode || 'Not provided'}</p>
         </div>
 
-        <div class="section">
+        <div class="section banking-details">
           <h2>Banking Details</h2>
           <div class="row">
             <div class="col">
@@ -997,13 +1000,13 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
         ${customerData.signature ? `
           <div class="signature">
             <h2>Customer Signature</h2>
-            <div style="background-color: rgba(255,255,255,0.1); padding: 15px; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px;">
+            <div style="background-color: #f9f9f9; padding: 15px; border: 1px solid #e0e0e0; border-radius: 5px;">
               <img src="${customerData.signature.startsWith('data:') 
                 ? customerData.signature 
                 : (customerData.signature.includes('googleusercontent')
                   ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' 
                   : customerData.signature)}" 
-                style="max-width: 240px; filter: invert(1); -webkit-filter: invert(1);"/>
+                style="max-width: 240px;"/>
             </div>
           </div>
         ` : `
