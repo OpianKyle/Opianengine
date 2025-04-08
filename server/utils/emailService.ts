@@ -807,15 +807,12 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
     <html>
     <head>
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
-        
         @page {
           margin: 20px;
           size: A4;
         }
         body { 
-          font-family: 'Inter', Arial, sans-serif; 
-          font-weight: 300; /* Light for main body text */
+          font-family: Arial, sans-serif; 
           color: white; 
           line-height: 1.4;
           margin: 0;
@@ -841,18 +838,19 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           page-break-after: avoid;
         }
         .header h1 {
-          font-family: 'Inter', Arial, sans-serif;
-          font-weight: 600; /* Semi-Bold for main title */
           color: white;
           margin: 10px 0;
           font-size: 18px;
         }
         .header p {
-          font-family: 'Inter', Arial, sans-serif;
-          font-weight: 300; /* Light for supportive text */
           color: #43EB3E;
           margin: 8px 0;
           font-size: 14px;
+        }
+        .logo {
+          max-width: 140px;
+          max-height: 50px;
+          margin-bottom: 10px;
         }
         .section { 
           background-color: rgba(255,255,255,0.05); 
@@ -863,8 +861,6 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           page-break-inside: avoid;
         }
         .section h2 { 
-          font-family: 'Inter', Arial, sans-serif;
-          font-weight: 600; /* Semi-Bold for section headings */
           color: #43EB3E; 
           border-bottom: 1px solid rgba(255,255,255,0.2); 
           padding-bottom: 8px; 
@@ -873,12 +869,9 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           font-size: 15px;
         }
         .section p { 
-          font-family: 'Inter', Arial, sans-serif;
-          font-weight: 300; /* Light for paragraph text */
           margin: 6px 0; 
         }
         .section strong { 
-          font-weight: 600; /* Semi-Bold for strong text */
           color: #43EB3E; 
         }
         .signature { 
@@ -890,8 +883,6 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           page-break-inside: avoid;
         }
         .signature h2 { 
-          font-family: 'Inter', Arial, sans-serif;
-          font-weight: 600; /* Semi-Bold for signature heading */
           color: #43EB3E; 
           border-bottom: 1px solid rgba(255,255,255,0.2); 
           padding-bottom: 8px; 
@@ -901,11 +892,9 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
         }
         .highlight {
           color: #43EB3E;
-          font-weight: 600; /* Semi-Bold for highlighted text */
+          font-weight: bold;
         }
         .footer {
-          font-family: 'Inter', Arial, sans-serif;
-          font-weight: 300; /* Light for footer */
           text-align: center;
           font-size: 10px;
           color: rgba(255,255,255,0.7);
@@ -929,6 +918,7 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
     <body>
       <div class="container">
         <div class="header">
+          <img src="/opian-logo-white.png" alt="Opian FS Group Logo" class="logo" />
           <h1>OPIAN Rewards - Customer Registration</h1>
           <p>Registration Date: ${new Date().toLocaleDateString()}</p>
         </div>
