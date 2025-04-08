@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Admin Registration Email</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      color: #011d3d;
+      text-align: center;
+    }
+    form {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #011d3d;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin-top: 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #043873;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+      background-color: #e8f4ff;
+      display: none;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test Admin Registration Email</h1>
+  <p>Use this form to test the admin registration email with the updated styling and PDF generation.</p>
+  
+  <form id="testForm">
+    <label for="first_name">First Name</label>
+    <input type="text" id="first_name" name="first_name" value="John" required>
+    
+    <label for="last_name">Last Name</label>
+    <input type="text" id="last_name" name="last_name" value="Doe" required>
+    
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" value="john.doe@example.com" required>
+    
+    <label for="phone_number">Phone Number</label>
+    <input type="text" id="phone_number" name="phone_number" value="+27123456789">
+    
+    <label for="selectedPackage">Package</label>
+    <select id="selectedPackage" name="selectedPackage">
+      <option value="OPPORTUNITY">OPPORTUNITY</option>
+      <option value="MOMENTUM">MOMENTUM</option>
+      <option value="PROSPER" selected>PROSPER</option>
+      <option value="PRESTIGE">PRESTIGE</option>
+      <option value="PINNACLE">PINNACLE</option>
+    </select>
+    
+    <label for="mandate_accepted">Mandate Accepted</label>
+    <select id="mandate_accepted" name="mandate_accepted">
+      <option value="true" selected>Yes</option>
+      <option value="false">No</option>
+    </select>
+    
+    <button type="submit">Send Test Email</button>
+  </form>
+  
+  <div id="result" class="result"></div>
+  
+  <script>
+    document.getElementById('testForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      const resultDiv = document.getElementById('result');
+      
+      // Convert FormData to JSON
+      const data = {};
+      formData.forEach((value, key) => {
+        // Convert string "true"/"false" to actual boolean
+        if (value === "true") value = true;
+        if (value === "false") value = false;
+        data[key] = value;
+      });
+      
+      try {
+        resultDiv.classList.remove('success', 'error');
+        resultDiv.textContent = 'Sending test email...';
+        resultDiv.style.display = 'block';
+        
+        const response = await fetch('/api/register-test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          resultDiv.classList.add('success');
+          resultDiv.innerHTML = `<strong>Success!</strong> Test email sent to ${result.recipient || 'clientservices@opianrewards.com'}`;
+        } else {
+          resultDiv.classList.add('error');
+          resultDiv.innerHTML = `<strong>Error:</strong> ${result.message || 'Failed to send test email'}`;
+          if (result.error) {
+            resultDiv.innerHTML += `<br>Details: ${result.error}`;
+          }
+        }
+      } catch (error) {
+        resultDiv.classList.add('error');
+        resultDiv.textContent = `Error: ${error.message || 'Something went wrong'}`;
+      }
+    });
+  </script>
+</body>
+</html>
