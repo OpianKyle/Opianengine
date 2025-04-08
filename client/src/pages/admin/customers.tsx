@@ -725,7 +725,7 @@ export default function AdminCustomers() {
                                 Edit Details
                               </DropdownMenuItem>
                             </DialogTrigger>
-                            <DialogContent className="max-w-2xl bg-[#011d3d] border-[#022b5c] text-white">
+                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
                               <DialogHeader>
                                 <DialogTitle className="text-[#43EB3E]">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
                               </DialogHeader>
@@ -733,7 +733,7 @@ export default function AdminCustomers() {
                                 <form onSubmit={editDetailsForm.handleSubmit((data) =>
                                   updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
                                 )}>
-                                  <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-4">
+                                  <div className="grid grid-cols-3 gap-4 max-h-[70vh] overflow-y-auto p-4">
                                     <div className="col-span-2">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
                                     </div>

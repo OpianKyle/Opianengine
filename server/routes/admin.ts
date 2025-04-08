@@ -297,4 +297,104 @@ router.get('/agents/:id/customers', async (req: any, res) => {
   }
 });
 
+// Export customers to CSV
+router.get('/customers/export', async (req: any, res) => {
+  const connection = await pool.getConnection();
+  try {
+    console.log('Exporting customers to CSV');
+
+    // Get all regular customers with complete details
+    const [customers] = await connection.execute(
+      `SELECT 
+        u.id,
+        u.email,
+        u.first_name,
+        u.last_name,
+        u.phone_number,
+        u.is_south_african,
+        u.id_number,
+        u.date_of_birth,
+        u.gender,
+        u.occupation,
+        u.industry,
+        u.address,
+        u.city,
+        u.postal_code,
+        u.selected_package,
+        u.bank_name,
+        u.account_type,
+        u.account_number,
+        u.account_holder_name,
+        u.branch_code,
+        u.has_credit_card,
+        u.is_enabled,
+        u.points,
+        u.created_at,
+        u.referral_code,
+        u.referred_by,
+        a.first_name as agent_first_name,
+        a.last_name as agent_last_name,
+        a.email as agent_email
+      FROM users u
+      LEFT JOIN users a ON u.agent_id = a.id
+      WHERE u.is_admin = 0 AND u.is_agent = 0
+      ORDER BY u.created_at DESC`
+    );
+
+    // Convert to CSV
+    const { stringify } = require('csv-stringify/sync');
+    
+    // Transform data for CSV
+    const csvData = (customers as any).map((customer: any) => ({
+      'ID': customer.id,
+      'Email': customer.email,
+      'First Name': customer.first_name,
+      'Last Name': customer.last_name,
+      'Phone Number': customer.phone_number,
+      'South African': customer.is_south_african ? 'Yes' : 'No',
+      'ID Number': customer.id_number,
+      'Date of Birth': customer.date_of_birth ? new Date(customer.date_of_birth).toISOString().split('T')[0] : '',
+      'Gender': customer.gender,
+      'Occupation': customer.occupation,
+      'Industry': customer.industry,
+      'Address': customer.address,
+      'City': customer.city,
+      'Postal Code': customer.postal_code,
+      'Package': customer.selected_package,
+      'Bank Name': customer.bank_name,
+      'Account Type': customer.account_type,
+      'Account Number': customer.account_number,
+      'Account Holder Name': customer.account_holder_name,
+      'Branch Code': customer.branch_code,
+      'Has Credit Card': customer.has_credit_card ? 'Yes' : 'No',
+      'Status': customer.is_enabled ? 'Active' : 'Disabled',
+      'Points': customer.points,
+      'Registration Date': customer.created_at ? new Date(customer.created_at).toISOString() : '',
+      'Referral Code': customer.referral_code,
+      'Referred By': customer.referred_by,
+      'Agent': customer.agent_first_name && customer.agent_last_name ? 
+        `${customer.agent_first_name} ${customer.agent_last_name}` : '',
+      'Agent Email': customer.agent_email || ''
+    }));
+
+    const csvString = stringify(csvData, { header: true });
+
+    // Set response headers
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=customers.csv');
+
+    // Send CSV data
+    res.send(csvString);
+
+    console.log('Exported customers to CSV:', {
+      customerCount: (customers as any).length
+    });
+  } catch (error) {
+    console.error('Error exporting customers:', error);
+    res.status(500).json({ error: 'Failed to export customers' });
+  } finally {
+    connection.release();
+  }
+});
+
 export default router;
