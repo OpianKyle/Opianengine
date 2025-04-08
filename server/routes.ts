@@ -5448,5 +5448,56 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
   
+  // Test endpoint to generate and download a PDF sample for testing
+  app.get("/api/test-registration-pdf", async (req: Request, res: Response) => {
+    try {
+      console.log('Generating test registration PDF...');
+      
+      // Import the necessary function
+      const { generateRegistrationPDF } = await import('./utils/emailService');
+      
+      // Create sample customer data for testing
+      const customerData = {
+        firstName: "Test",
+        lastName: "Customer",
+        email: "test@example.com",
+        mobileNumber: "1234567890",
+        selectedPackage: "PROSPER",
+        idNumber: "1234567890",
+        dateOfBirth: "1990-01-01",
+        gender: "Male",
+        isSouthAfrican: true,
+        occupation: "Software Developer",
+        industry: "Technology",
+        address: "123 Test Street",
+        city: "Test City",
+        postalCode: "12345",
+        hasCreditCard: true,
+        bankName: "Test Bank",
+        accountType: "SAVINGS",
+        accountNumber: "123456789",
+        accountHolderName: "Test Customer",
+        branchCode: "12345",
+        mandate_accepted: true,
+        signature: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+      };
+      
+      // Generate the PDF buffer
+      const pdfBuffer = await generateRegistrationPDF(customerData);
+      
+      // Send PDF as download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=test-registration.pdf');
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  });
+  
   return httpServer;
 }

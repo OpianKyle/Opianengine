@@ -651,6 +651,10 @@ export function formatNewCustomerAdminEmail(
 ): { text: string; html: string } {
   // Debug log to verify mandate_accepted is passed correctly
   console.log('Mandate accepted value in formatNewCustomerAdminEmail:', customerData.mandate_accepted);
+  
+  // Use Replit domain for images (they actually work)
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
+  
   const text = `
     New Customer Registration
 
@@ -692,77 +696,95 @@ export function formatNewCustomerAdminEmail(
   `;
 
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>New Customer Registration</h2>
-
-      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">Personal Details</h3>
-        <p><strong>First Name:</strong> ${customerData.firstName}</p>
-        <p><strong>Last Name:</strong> ${customerData.lastName}</p>
-        <p><strong>Email:</strong> ${customerData.email}</p>
-        <p><strong>Mobile Number:</strong> ${customerData.mobileNumber}</p>
-        <p><strong>ID Number:</strong> ${customerData.idNumber || 'Not provided'}</p>
-        <p><strong>Date of Birth:</strong> ${customerData.dateOfBirth || 'Not provided'}</p>
-        <p><strong>Gender:</strong> ${customerData.gender || 'Not provided'}</p>
-        <p><strong>South African Resident:</strong> ${customerData.isSouthAfrican ? 'Yes' : 'No'}</p>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${logoImageUrl}" alt="Opian Rewards Logo" style="max-width: 200px;">
       </div>
 
-      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">Professional Information</h3>
-        <p><strong>Occupation:</strong> ${customerData.occupation || 'Not provided'}</p>
-        <p><strong>Industry:</strong> ${customerData.industry || 'Not provided'}</p>
-      </div>
+      <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
+        <h2 style="color: white; margin-top: 0;">Admin Notification</h2>
+        <h1 style="color: #43EB3E;">New Customer Registration</h1>
 
-      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">Address Information</h3>
-        <p><strong>Address:</strong> ${customerData.address || 'Not provided'}</p>
-        <p><strong>City:</strong> ${customerData.city || 'Not provided'}</p>
-        <p><strong>Postal Code:</strong> ${customerData.postalCode || 'Not provided'}</p>
-      </div>
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Personal Details</h3>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">First Name:</strong> ${customerData.firstName}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Last Name:</strong> ${customerData.lastName}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Email:</strong> ${customerData.email}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Mobile Number:</strong> ${customerData.mobileNumber}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">ID Number:</strong> ${customerData.idNumber || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Date of Birth:</strong> ${customerData.dateOfBirth || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Gender:</strong> ${customerData.gender || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">South African Resident:</strong> ${customerData.isSouthAfrican ? 'Yes' : 'No'}</p>
+        </div>
 
-      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">Banking Details</h3>
-        <p><strong>Has Credit Card:</strong> ${customerData.hasCreditCard ? 'Yes' : 'No'}</p>
-        <p><strong>Bank Name:</strong> ${customerData.bankName || 'Not provided'}</p>
-        <p><strong>Account Type:</strong> ${customerData.accountType || 'Not provided'}</p>
-        <p><strong>Account Number:</strong> ${customerData.accountNumber || 'Not provided'}</p>
-        <p><strong>Account Holder Name:</strong> ${customerData.accountHolderName || 'Not provided'}</p>
-        <p><strong>Branch Code:</strong> ${customerData.branchCode || 'Not provided'}</p>
-      </div>
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Professional Information</h3>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Occupation:</strong> ${customerData.occupation || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Industry:</strong> ${customerData.industry || 'Not provided'}</p>
+        </div>
 
-      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">Package Information</h3>
-        <p><strong>Selected Package:</strong> ${customerData.selectedPackage}</p>
-        <p><strong>Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
-      </div>
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Address Information</h3>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Address:</strong> ${customerData.address || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">City:</strong> ${customerData.city || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Postal Code:</strong> ${customerData.postalCode || 'Not provided'}</p>
+        </div>
 
-      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">Legal Information</h3>
-        <p><strong>Mandate Accepted:</strong> ${customerData.mandate_accepted ? 'Yes' : 'No'}</p>
-      </div>
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Banking Details</h3>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Has Credit Card:</strong> ${customerData.hasCreditCard ? 'Yes' : 'No'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Bank Name:</strong> ${customerData.bankName || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Account Type:</strong> ${customerData.accountType || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Account Number:</strong> ${customerData.accountNumber || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Account Holder Name:</strong> ${customerData.accountHolderName || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Branch Code:</strong> ${customerData.branchCode || 'Not provided'}</p>
+        </div>
 
-      ${customerData.signature ? `
-        <div style="margin-top: 20px; background-color: white; padding: 20px; border-radius: 5px;">
-          <h3>Customer Signature</h3>
-          <div style="background-color: white; padding: 10px; border: 1px solid #eee;">
-            <img src="${customerData.signature.startsWith('data:') 
-              ? customerData.signature 
-              : (customerData.signature.includes('googleusercontent') 
-                ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' 
-                : customerData.signature)}" 
-              alt="Customer Signature" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Package Information</h3>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Selected Package:</strong> ${customerData.selectedPackage}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
+        </div>
+
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Legal Information</h3>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Mandate Accepted:</strong> ${customerData.mandate_accepted ? 'Yes' : 'No'}</p>
+        </div>
+
+        ${customerData.signature ? `
+          <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="color: #43EB3E; margin-top: 0;">Customer Signature</h3>
+            <div style="background-color: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+              <img src="${customerData.signature.startsWith('data:') 
+                ? customerData.signature 
+                : (customerData.signature.includes('googleusercontent') 
+                  ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' 
+                  : customerData.signature)}" 
+                alt="Customer Signature" style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
+            </div>
           </div>
-        </div>
-      ` : `
-        <div style="margin-top: 20px; background-color: white; padding: 20px; border-radius: 5px;">
-          <h3>Customer Signature</h3>
-          <p>No signature provided.</p>
-        </div>
-      `}
+        ` : `
+          <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="color: #43EB3E; margin-top: 0;">Customer Signature</h3>
+            <p>No signature provided.</p>
+          </div>
+        `}
 
-      <p style="color: #666; font-size: 12px; margin-top: 20px;">
-        A PDF containing complete registration details is attached to this email.
-      </p>
+        <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+          A PDF containing complete registration details is attached to this email.
+        </p>
+        
+        <div style="color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.6; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <p><strong>Opian Financial Services (Pty) Ltd</strong> is an Authorised Financial Services Provider</p>
+          <p>Company Registration Number: 2018/584168/07 FSP No: 50974</p>
+          <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
+          <p style="color: white !important;">
+            Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span> |
+            Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:info@opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">info@opianfsgroup.com</a></span> |
+            Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianfsgroup.com</a></span>
+          </p>
+        </div>
+      </div>
     </div>
   `;
 
@@ -778,21 +800,104 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
               ? 'Google URL (using placeholder image)' 
               : 'direct URL'))
       : 'no signature');
+  
+  // Define logo URL - using a Replit-hosted image
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
+  
   const pdfHtml = `
     <!DOCTYPE html>
     <html>
     <head>
       <style>
-        body { font-family: Arial, sans-serif; }
-        .container { padding: 20px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .section { margin: 20px 0; padding: 15px; background-color: #f5f5f5; }
-        .signature { margin-top: 30px; background-color: white; padding: 20px; }
+        body { 
+          font-family: Arial, sans-serif; 
+          color: white; 
+          line-height: 1.4;
+          margin: 0;
+          padding: 0;
+          background-color: #011d3d;
+          font-size: 13px;
+        }
+        .container { 
+          max-width: 800px; 
+          margin: 0 auto; 
+          padding: 20px;
+        }
+        .header { 
+          background-color: rgba(255,255,255,0.05); 
+          color: white; 
+          text-align: center; 
+          padding: 25px 15px; 
+          margin-bottom: 20px;
+          border-radius: 5px;
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+        .header h1 {
+          color: white;
+          margin: 10px 0;
+          font-size: 20px;
+        }
+        .header p {
+          color: #43EB3E;
+          margin: 8px 0;
+          font-size: 14px;
+        }
+        .logo {
+          max-width: 160px;
+          margin-bottom: 15px;
+        }
+        .section { 
+          background-color: rgba(255,255,255,0.05); 
+          margin: 15px 0; 
+          padding: 18px;
+          border-radius: 5px;
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+        .section h2 { 
+          color: #43EB3E; 
+          border-bottom: 1px solid rgba(255,255,255,0.2); 
+          padding-bottom: 8px; 
+          margin-top: 0;
+          font-size: 16px;
+        }
+        .section p { 
+          margin: 8px 0; 
+        }
+        .section strong { 
+          color: #43EB3E; 
+        }
+        .signature { 
+          background-color: rgba(255,255,255,0.05); 
+          margin-top: 15px; 
+          padding: 18px;
+          border-radius: 5px;
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+        .signature h2 { 
+          color: #43EB3E; 
+          border-bottom: 1px solid rgba(255,255,255,0.2); 
+          padding-bottom: 8px; 
+          margin-top: 0;
+          font-size: 16px;
+        }
+        .highlight {
+          color: #43EB3E;
+          font-weight: bold;
+        }
+        .footer {
+          text-align: center;
+          font-size: 11px;
+          color: rgba(255,255,255,0.7);
+          margin-top: 30px;
+          padding-top: 15px;
+          border-top: 1px solid rgba(255,255,255,0.1);
+        }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
+          <img src="https://opianfsgroup.com/opian-logo-white.png" alt="Opian FS Group Logo" class="logo" />
           <h1>OPIAN Rewards - Customer Registration</h1>
           <p>Registration Date: ${new Date().toLocaleDateString()}</p>
         </div>
@@ -834,7 +939,7 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
 
         <div class="section">
           <h2>Package Information</h2>
-          <p><strong>Selected Package:</strong> ${customerData.selectedPackage}</p>
+          <p><strong>Selected Package:</strong> <span class="highlight">${customerData.selectedPackage}</span></p>
           <p><strong>Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
         </div>
         
@@ -846,13 +951,13 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
         ${customerData.signature ? `
           <div class="signature">
             <h2>Customer Signature</h2>
-            <div style="background-color: white; padding: 10px; border: 1px solid #eee;">
+            <div style="background-color: rgba(255,255,255,0.1); padding: 15px; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px;">
               <img src="${customerData.signature.startsWith('data:') 
                 ? customerData.signature 
                 : (customerData.signature.includes('googleusercontent')
                   ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' 
                   : customerData.signature)}" 
-                style="max-width: 300px; filter: invert(1); -webkit-filter: invert(1);"/>
+                style="max-width: 240px; filter: invert(1); -webkit-filter: invert(1);"/>
             </div>
           </div>
         ` : `
@@ -861,6 +966,12 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
             <p>No signature provided.</p>
           </div>
         `}
+        
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} Opian Financial Services Group. All rights reserved.</p>
+          <p>Company Registration Number: 2018/584168/07 | FSP No: 50974</p>
+          <p>260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
+        </div>
       </div>
     </body>
     </html>
