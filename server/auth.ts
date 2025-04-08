@@ -702,13 +702,35 @@ export async function checkUserAdminStatus(userId: number) {
   }
 }
 
-// JWT token verification helper
+// JWT token verification helper - standard version using is_admin pattern
 export function verifyJwtToken(token: string): { id: number; is_admin: boolean; is_super_admin: boolean } | null {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET!) as { 
-      id: number; 
-      is_admin: boolean; 
-      is_super_admin: boolean 
+    // Validate input
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      console.error('Invalid token format');
+      return null;
+    }
+    
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      id: number;
+      isAdmin?: boolean;
+      isSuperAdmin?: boolean;
+      is_admin?: boolean;
+      is_super_admin?: boolean;
+    };
+    
+    // Ensure we have required fields
+    if (!decoded || typeof decoded !== 'object' || !decoded.id) {
+      console.error('Invalid token payload');
+      return null;
+    }
+    
+    // Support both camelCase and snake_case variants for backwards compatibility
+    return {
+      id: decoded.id,
+      is_admin: Boolean(decoded.is_admin || decoded.isAdmin),
+      is_super_admin: Boolean(decoded.is_super_admin || decoded.isSuperAdmin)
     };
   } catch (error) {
     console.error('JWT verification failed:', error);
@@ -717,17 +739,26 @@ export function verifyJwtToken(token: string): { id: number; is_admin: boolean; 
 }
 
 export function generateToken(user: Express.User): string {
+  // Support accessing user properties with different naming patterns (is_admin or isAdmin)
+  // since we have mixed cases in the codebase
+  const userId = user.id;
+  const isAdmin = user.is_admin !== undefined ? user.is_admin : user.isAdmin;
+  const isSuperAdmin = user.is_super_admin !== undefined ? user.is_super_admin : user.isSuperAdmin;
+  
   console.log('Generating token for user:', {
-    userId: user.id,
-    isAdmin: user.isAdmin,
-    isSuperAdmin: user.isSuperAdmin
+    userId,
+    isAdmin,
+    isSuperAdmin
   });
 
+  // Provide both snake_case and camelCase to support all our use cases
   const token = jwt.sign(
     {
-      id: user.id,
-      isAdmin: user.isAdmin,
-      isSuperAdmin: user.isSuperAdmin
+      id: userId,
+      isAdmin: isAdmin,
+      isSuperAdmin: isSuperAdmin,
+      is_admin: isAdmin,  
+      is_super_admin: isSuperAdmin
     },
     process.env.JWT_SECRET!,
     { expiresIn: '24h' }
@@ -739,34 +770,49 @@ export function generateToken(user: Express.User): string {
 
 export function verifyToken(token: string): { id: number; isAdmin: boolean; isSuperAdmin: boolean } | null {
   try {
+    // Validate token input
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      console.error('Invalid token format provided');
+      return null;
+    }
+    
     console.log('Verifying token:', {
       tokenLength: token.length,
       firstChars: token.substring(0, 10) + '...',
     });
 
+    // Verify the token with JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
       id: number;
-      isAdmin: boolean;
-      isSuperAdmin: boolean;
+      isAdmin: boolean | undefined;
+      isSuperAdmin: boolean | undefined;
+      is_admin?: boolean;
+      is_super_admin?: boolean;
       exp?: number;
     };
 
+    // Handle potential field name mismatches between JWT and database
+    const result = {
+      id: decoded.id,
+      isAdmin: Boolean(decoded.isAdmin || decoded.is_admin),
+      isSuperAdmin: Boolean(decoded.isSuperAdmin || decoded.is_super_admin)
+    };
+
     console.log('Token verified successfully:', {
-      userId: decoded.id,
-      isAdmin: decoded.isAdmin,
+      userId: result.id,
+      isAdmin: result.isAdmin,
+      isSuperAdmin: result.isSuperAdmin,
       exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
     });
 
-    return {
-      id: decoded.id,
-      isAdmin: decoded.isAdmin,
-      isSuperAdmin: decoded.isSuperAdmin
-    };
+    return result;
   } catch (error) {
+    // Enhanced error logging with token details
     console.error('Token verification failed:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       name: error instanceof Error ? error.name : 'Unknown error type',
-      tokenLength: token?.length
+      tokenLength: token?.length,
+      tokenStart: token && token.length > 10 ? token.substring(0, 10) + '...' : '(invalid)'
     });
     return null;
   }
@@ -859,23 +905,26 @@ export async function verifySession(req: Request): Promise<any> {
     console.log('Verifying session for request:', {
       url: req.url,
       headers: {
-        cookie: req.headers.cookie,
+        cookie: req.headers.cookie ? 'Present' : 'Not present',
         'sec-websocket-protocol': req.headers['sec-websocket-protocol']
       }
     });
 
+    // If the user is already authenticated in the request, use that
     if (req.user) {
       console.log('Using existing session user:', req.user);
       return req.user;
     }
 
+    // If there's no cookie header, we can't retrieve the session
     if (!req.headers.cookie) {
       console.log('No cookie found in request');
       return null;
     }
     
-    // No mock authentication - always use actual database authentication
+    console.log('Session verification relying on token-based auth as primary method.');
 
+    // Parse the cookies
     const cookies = parseCookie(req.headers.cookie);
     const sessionId = cookies['connect.sid'];
 
@@ -884,60 +933,12 @@ export async function verifySession(req: Request): Promise<any> {
       return null;
     }
 
-    console.log('Found session ID:', sessionId);
-
-    return new Promise((resolve) => {
-      const sessionStore = new MemoryStore({
-        checkPeriod: 86400000 as any
-      });
-      
-      sessionStore.get(sessionId, async (err: any, sessionData: any) => {
-        if (err || !sessionData) {
-          console.log('Session not found or error:', err);
-          resolve(null);
-          return;
-        }
-
-        try {
-          console.log('Retrieved session data:', {
-            ...sessionData,
-            cookie: '[Redacted]',
-            passport: sessionData.passport ? { user: sessionData.passport.user } : undefined
-          });
-
-          const userId = sessionData.passport?.user;
-          if (!userId) {
-            console.log('No user ID in session');
-            resolve(null);
-            return;
-          }
-
-          console.log('Found user ID in session:', userId);
-
-          const connection = await createConnection();
-          const [user] = await connection.execute(
-            'SELECT * FROM users WHERE id = ?',
-            [userId]
-          );
-          await connection.end();
-
-          if (!user) {
-            console.log('User not found in database');
-            resolve(null);
-            return;
-          }
-
-          const adminStatus = await checkUserAdminStatus(userId);
-
-          const { password: _, ...safeUser } = user[0];
-          console.log('Session verified for user:', safeUser.id);
-          resolve({ ...safeUser, is_admin: adminStatus.isAdmin, is_super_admin: adminStatus.isSuperAdmin });
-        } catch (error) {
-          console.error('Error verifying session:', error);
-          resolve(null);
-        }
-      });
-    });
+    console.log('Found session ID in cookies, but using token auth instead');
+    
+    // We're prioritizing token-based auth for stability, so we don't attempt
+    // to retrieve session data from the store. This improves performance
+    // and reduces dependency on the session store.
+    return null;
   } catch (error) {
     console.error('Error in verifySession:', error);
     return null;

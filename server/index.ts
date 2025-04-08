@@ -122,22 +122,33 @@ app.use((req: any, res, next) => {
 
     // Test database connection
     try {
-      const connection = await mysql.createConnection({
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        port: parseInt(process.env.DB_PORT || '3306'),
-        ssl: {
-          rejectUnauthorized: false
-        }
-      });
-
-      console.log('Database connection successful');
-      await connection.end();
+      if (process.env.NODE_ENV === 'development') {
+        // For local development, use PostgreSQL from Replit
+        console.log('Development mode: Using Replit PostgreSQL database');
+        // We'll skip connection test as we'll use the database client from db module
+      } else {
+        // For production, use the external MySQL database
+        const connection = await mysql.createConnection({
+          host: process.env.DB_HOST,
+          user: process.env.DB_USER,
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME,
+          port: parseInt(process.env.DB_PORT || '3306'),
+          ssl: {
+            rejectUnauthorized: false
+          }
+        });
+        
+        console.log('Production database connection successful');
+        await connection.end();
+      }
     } catch (dbError) {
       console.error('Database connection test failed:', dbError);
-      throw dbError;
+      console.log('Continuing in development mode with dummy data');
+      // Don't throw error in development mode so we can continue with dummy data
+      if (process.env.NODE_ENV !== 'development') {
+        throw dbError;
+      }
     }
 
     // Setup authentication
