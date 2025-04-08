@@ -22,18 +22,43 @@
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    .form-section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #f9f9f9;
+      border-radius: 6px;
+      border-left: 4px solid #43EB3E;
+    }
+    .form-section h3 {
+      margin-top: 0;
+      color: #011d3d;
+    }
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 0 -10px;
+    }
+    .form-column {
+      flex: 1;
+      min-width: 250px;
+      padding: 0 10px;
+    }
     label {
       display: block;
       margin-top: 10px;
       font-weight: bold;
     }
-    input, select {
+    input, select, textarea {
       width: 100%;
       padding: 8px;
       margin-top: 5px;
       border: 1px solid #ddd;
       border-radius: 4px;
       box-sizing: border-box;
+    }
+    textarea {
+      min-height: 80px;
+      resize: vertical;
     }
     button {
       background-color: #011d3d;
@@ -47,6 +72,14 @@
     }
     button:hover {
       background-color: #043873;
+    }
+    .accent-btn {
+      background-color: #43EB3E;
+      color: #011d3d;
+    }
+    .accent-btn:hover {
+      background-color: #35cc30;
+      color: #011d3d;
     }
     .result {
       margin-top: 20px;
@@ -63,41 +96,180 @@
       background-color: #f8d7da;
       color: #721c24;
     }
+    .logo {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .logo svg {
+      width: 180px;
+      height: 60px;
+    }
   </style>
 </head>
 <body>
+  <div class="logo">
+    <svg width="180" height="60" viewBox="0 0 300 110" xmlns="http://www.w3.org/2000/svg">
+      <path d="M37.5 55C37.5 46.25 44.5 39.25 53.25 39.25H142.5C151.25 39.25 158.25 46.25 158.25 55C158.25 63.75 151.25 70.75 142.5 70.75H53.25C44.5 70.75 37.5 63.75 37.5 55Z" fill="#43EB3E"/>
+      <path d="M53.25 39.25C44.5 39.25 37.5 46.25 37.5 55C37.5 63.75 44.5 70.75 53.25 70.75C62 70.75 69 63.75 69 55C69 46.25 62 39.25 53.25 39.25Z" fill="#011d3d"/>
+      <path d="M178.5 39.25H187.25V55C187.25 63.75 180.25 70.75 171.5 70.75C162.75 70.75 155.75 63.75 155.75 55V39.25H164.5V55C164.5 58.85 167.65 62 171.5 62C175.35 62 178.5 58.85 178.5 55V39.25Z" fill="#011d3d"/>
+      <path d="M198.75 39.25H207.5L218 60.25H218.5V39.25H227.25V70.75H218.5L208 49.75H207.5V70.75H198.75V39.25Z" fill="#011d3d"/>
+      <path d="M256.5 39.25H265.25V70.75H256.5V57.5H243.25V70.75H234.5V39.25H243.25V49.75H256.5V39.25Z" fill="#011d3d"/>
+    </svg>
+  </div>
+  
   <h1>Test Admin Registration Email</h1>
   <p>Use this form to test the admin registration email with the updated styling and PDF generation.</p>
   
   <form id="testForm">
-    <label for="first_name">First Name</label>
-    <input type="text" id="first_name" name="first_name" value="John" required>
+    <div class="form-section">
+      <h3>Personal Details</h3>
+      <div class="form-row">
+        <div class="form-column">
+          <label for="firstName">First Name</label>
+          <input type="text" id="firstName" name="firstName" value="John" required>
+          
+          <label for="lastName">Last Name</label>
+          <input type="text" id="lastName" name="lastName" value="Doe" required>
+          
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" value="john.doe@example.com" required>
+        </div>
+        <div class="form-column">
+          <label for="mobileNumber">Mobile Number</label>
+          <input type="text" id="mobileNumber" name="mobileNumber" value="+27123456789">
+          
+          <label for="idNumber">ID Number</label>
+          <input type="text" id="idNumber" name="idNumber" value="8205135012087">
+          
+          <label for="dateOfBirth">Date of Birth</label>
+          <input type="date" id="dateOfBirth" name="dateOfBirth" value="1982-05-13">
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-column">
+          <label for="gender">Gender</label>
+          <select id="gender" name="gender">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Non-binary">Non-binary</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+        </div>
+        <div class="form-column">
+          <label for="isSouthAfrican">South African Resident</label>
+          <select id="isSouthAfrican" name="isSouthAfrican">
+            <option value="true" selected>Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+      </div>
+    </div>
     
-    <label for="last_name">Last Name</label>
-    <input type="text" id="last_name" name="last_name" value="Doe" required>
+    <div class="form-section">
+      <h3>Professional Information</h3>
+      <div class="form-row">
+        <div class="form-column">
+          <label for="occupation">Occupation</label>
+          <input type="text" id="occupation" name="occupation" value="Software Developer">
+        </div>
+        <div class="form-column">
+          <label for="industry">Industry</label>
+          <input type="text" id="industry" name="industry" value="Technology">
+        </div>
+      </div>
+    </div>
     
-    <label for="email">Email</label>
-    <input type="email" id="email" name="email" value="john.doe@example.com" required>
+    <div class="form-section">
+      <h3>Address Information</h3>
+      <div class="form-row">
+        <div class="form-column">
+          <label for="address">Address</label>
+          <textarea id="address" name="address">123 Main Street, Suburb</textarea>
+          
+          <label for="city">City</label>
+          <input type="text" id="city" name="city" value="Cape Town">
+        </div>
+        <div class="form-column">
+          <label for="postalCode">Postal Code</label>
+          <input type="text" id="postalCode" name="postalCode" value="8001">
+        </div>
+      </div>
+    </div>
     
-    <label for="phone_number">Phone Number</label>
-    <input type="text" id="phone_number" name="phone_number" value="+27123456789">
+    <div class="form-section">
+      <h3>Banking Details</h3>
+      <div class="form-row">
+        <div class="form-column">
+          <label for="hasCreditCard">Has Credit Card</label>
+          <select id="hasCreditCard" name="hasCreditCard">
+            <option value="true">Yes</option>
+            <option value="false" selected>No</option>
+          </select>
+          
+          <label for="bankName">Bank Name</label>
+          <input type="text" id="bankName" name="bankName" value="Standard Bank">
+          
+          <label for="accountType">Account Type</label>
+          <input type="text" id="accountType" name="accountType" value="Savings">
+        </div>
+        <div class="form-column">
+          <label for="accountNumber">Account Number</label>
+          <input type="text" id="accountNumber" name="accountNumber" value="12345678901">
+          
+          <label for="accountHolderName">Account Holder Name</label>
+          <input type="text" id="accountHolderName" name="accountHolderName" value="John Doe">
+          
+          <label for="branchCode">Branch Code</label>
+          <input type="text" id="branchCode" name="branchCode" value="051001">
+        </div>
+      </div>
+    </div>
     
-    <label for="selectedPackage">Package</label>
-    <select id="selectedPackage" name="selectedPackage">
-      <option value="OPPORTUNITY">OPPORTUNITY</option>
-      <option value="MOMENTUM">MOMENTUM</option>
-      <option value="PROSPER" selected>PROSPER</option>
-      <option value="PRESTIGE">PRESTIGE</option>
-      <option value="PINNACLE">PINNACLE</option>
-    </select>
+    <div class="form-section">
+      <h3>Package Information</h3>
+      <div class="form-row">
+        <div class="form-column">
+          <label for="selectedPackage">Selected Package</label>
+          <select id="selectedPackage" name="selectedPackage">
+            <option value="OPPORTUNITY">OPPORTUNITY</option>
+            <option value="MOMENTUM">MOMENTUM</option>
+            <option value="PROSPER" selected>PROSPER</option>
+            <option value="PRESTIGE">PRESTIGE</option>
+            <option value="PINNACLE">PINNACLE</option>
+          </select>
+        </div>
+        <div class="form-column">
+          <label for="referralCode">Referral Code</label>
+          <input type="text" id="referralCode" name="referralCode" value="REF12345">
+        </div>
+      </div>
+    </div>
     
-    <label for="mandate_accepted">Mandate Accepted</label>
-    <select id="mandate_accepted" name="mandate_accepted">
-      <option value="true" selected>Yes</option>
-      <option value="false">No</option>
-    </select>
+    <div class="form-section">
+      <h3>Legal Information</h3>
+      <div class="form-row">
+        <div class="form-column">
+          <label for="mandate_accepted">Mandate Accepted</label>
+          <select id="mandate_accepted" name="mandate_accepted">
+            <option value="true" selected>Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+      </div>
+    </div>
     
-    <button type="submit">Send Test Email</button>
+    <div class="form-section">
+      <h3>Signature</h3>
+      <p>For testing purposes, a sample signature will be used</p>
+      <input type="hidden" id="signature" name="signature" value="data:image/png;base64,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">
+    </div>
+    
+    <div class="form-row">
+      <div class="form-column">
+        <button type="submit" class="accent-btn">Send Test Email</button>
+      </div>
+    </div>
   </form>
   
   <div id="result" class="result"></div>
