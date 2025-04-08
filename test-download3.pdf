@@ -1,0 +1,1 @@
+{"success":false,"message":"Failed to generate PDF: html-pdf: Unknown Error\nCan't open 'function() { document.documentElement.style.backgroundColor = '#011d3d'; document.body.style.backgroundColor = '#011d3d'; return true; }'\n"}
