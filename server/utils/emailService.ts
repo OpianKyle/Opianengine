@@ -891,7 +891,7 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           margin-top: 30px;
         }
         .signature { 
-          background-color: #f5f5f5; 
+          background-color: #f9f9f9; 
           margin-top: 12px; 
           padding: 15px;
           border-radius: 5px;

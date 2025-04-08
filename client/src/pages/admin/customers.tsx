@@ -725,7 +725,7 @@ export default function AdminCustomers() {
                                 Edit Details
                               </DropdownMenuItem>
                             </DialogTrigger>
-                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
+                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
                               <DialogHeader>
                                 <DialogTitle className="text-[#43EB3E]">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
                               </DialogHeader>
@@ -733,7 +733,7 @@ export default function AdminCustomers() {
                                 <form onSubmit={editDetailsForm.handleSubmit((data) =>
                                   updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
                                 )}>
-                                  <div className="grid grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-4">
+                                  <div className="grid grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-4 [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
                                     <div className="col-span-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
                                     </div>
@@ -1109,7 +1109,7 @@ export default function AdminCustomers() {
                                 Assign Points
                               </DropdownMenuItem>
                             </DialogTrigger>
-                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
+                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
                               <DialogHeader>
                                 <DialogTitle className="text-[#43EB3E]">Assign Points to {customer.firstName}</DialogTitle>
                                 <div className="flex items-center gap-2 mt-2">
