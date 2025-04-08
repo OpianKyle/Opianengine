@@ -65,6 +65,5 @@ async function sendTestEmail(recipient) {
 }
 
 // Run the test with a test recipient
-// Replace this with a real email address to test
-const testRecipient = 'test@example.com'; 
+const testRecipient = 'kylem@opianfsgroup.com'; 
 sendTestEmail(testRecipient);
