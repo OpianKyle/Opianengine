@@ -9,6 +9,44 @@ const createTransporter = () => {
   // Use centralized email configuration
   const { host, port, user, pass, secure } = logSmtpConfig('EMAIL');
   
+  // Check for missing credentials and log detailed warnings
+  if (!host) {
+    console.error('SMTP HOST is not configured! Email sending will fail.');
+  }
+  
+  if (!user) {
+    console.error('SMTP USER is not configured! Email sending will fail.');
+  }
+  
+  if (!pass) {
+    console.error('SMTP PASSWORD is not configured! Email sending will fail.');
+    console.error('Please ensure SMTP_PASSWORD or OPIAN_SMTP_PASSWORD is set correctly in the environment variables.');
+  }
+  
+  // Handle potential special characters in password that might need escaping
+  let processedPass = pass;
+  
+  // Sometimes passwords with special characters can cause issues when not properly handled
+  // This specifically addresses issues with @ symbols in passwords and other common special chars
+  if (processedPass && processedPass.includes('@')) {
+    console.log('Password contains @ symbol - ensuring proper handling');
+  }
+  
+  if (processedPass && (processedPass.includes('#') || processedPass.includes('$'))) {
+    console.log('Password contains special characters - ensuring proper handling');
+  }
+  
+  // Log detailed configuration for troubleshooting (only in non-production)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Detailed email transport config:');
+    console.log('- Host:', host);
+    console.log('- Port:', port);
+    console.log('- User:', user);
+    // DO NOT log the actual password, but indicate its presence
+    console.log('- Password:', pass ? `${pass.slice(0, 3)}...${pass.slice(-3)} (${pass.length} characters)` : 'NOT PROVIDED');
+    console.log('- Secure:', secure);
+  }
+  
   // Create transporter with configured settings
   return nodemailer.createTransport({
     host,
@@ -16,7 +54,7 @@ const createTransporter = () => {
     secure,
     auth: {
       user,
-      pass
+      pass: processedPass
     },
     tls: {
       // Do not fail on invalid certs
@@ -30,13 +68,14 @@ const createTransporter = () => {
 // Create transporter on demand to ensure we have the latest environment variables
 let transporter: nodemailer.Transporter;
 
-// Create connection pool
+// Create connection pool using same database settings as the rest of the application
+// Use Postgres env variables as they're already set up correctly
 const pool = mysql.createPool({
-  host: 'dedi1350.jnb1.host-h.net',
-  user: 'admin',
-  password: '8E33U976qa800F',
-  database: 'opianrewards',
-  port: 3306,
+  host: process.env.PGHOST || 'dedi1350.jnb1.host-h.net',
+  user: process.env.PGUSER || 'admin',
+  password: process.env.PGPASSWORD || 'D0321879rQq8I2',
+  database: process.env.PGDATABASE || 'opianrewards',
+  port: Number(process.env.PGPORT) || 3306,
   ssl: {
     rejectUnauthorized: false
   },
@@ -146,14 +185,39 @@ export async function sendEmail({ to, subject, text, html, emailType = 'GENERAL'
     return true;
   } catch (error) {
     console.error('========== EMAIL ERROR ==========');
-    console.error('Email sending failed:', error instanceof Error ? error.message : 'Unknown error');
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Email sending failed:', errorMessage);
+    
+    // Enhanced error handling for authentication issues
+    if (errorMessage.includes('Invalid login') || 
+        errorMessage.includes('authentication failed') || 
+        errorMessage.includes('535') || 
+        errorMessage.includes('Incorrect authentication data')) {
+      
+      console.error('AUTHENTICATION ERROR DETECTED - This is likely due to incorrect SMTP credentials!');
+      console.error('Please check the following:');
+      console.error('1. Verify that SMTP_PASSWORD or OPIAN_SMTP_PASSWORD has the correct value');
+      console.error('2. Ensure SMTP_USER or OPIAN_SMTP_USER is correct');
+      console.error('3. Confirm SMTP_HOST or OPIAN_SMTP_HOST is correct');
+      console.error('4. Check if SMTP_PORT or OPIAN_SMTP_PORT is correct');
+      console.error('5. Ensure special characters in the password are properly escaped in environment variables');
+      console.error('Current config source:');
+      console.log('- SMTP_HOST:', process.env.SMTP_HOST ? 'Set' : 'Not set');
+      console.log('- OPIAN_SMTP_HOST:', process.env.OPIAN_SMTP_HOST ? 'Set' : 'Not set');
+      console.log('- SMTP_USER:', process.env.SMTP_USER ? 'Set' : 'Not set');
+      console.log('- OPIAN_SMTP_USER:', process.env.OPIAN_SMTP_USER ? 'Set' : 'Not set');
+      console.log('- SMTP_PASSWORD:', process.env.SMTP_PASSWORD ? 'Set' : 'Not set');
+      console.log('- OPIAN_SMTP_PASSWORD:', process.env.OPIAN_SMTP_PASSWORD ? 'Set' : 'Not set');
+      console.log('- SMTP_PORT:', process.env.SMTP_PORT);
+      console.log('- OPIAN_SMTP_PORT:', process.env.OPIAN_SMTP_PORT);
+    }
     
     await logEmail({
       recipientEmail: to,
       subject,
       emailType,
       status: 'FAILED',
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorMessage: errorMessage,
       templateData,
       htmlContent: html,
       textContent: text

@@ -317,6 +317,59 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
   
+  // New test endpoint that won't timeout - for checking email environment variables
+  app.get("/api/email-env-check", async (req: Request, res: Response) => {
+    try {
+      // Check SMTP environment variables
+      const envVars = {
+        smtp_host: process.env.SMTP_HOST ? 'Set' : 'Not set',
+        smtp_user: process.env.SMTP_USER ? 'Set' : 'Not set',
+        smtp_password: process.env.SMTP_PASSWORD ? 'Set' : 'Not set',
+        smtp_port: process.env.SMTP_PORT ? process.env.SMTP_PORT : 'Not set',
+        smtp_secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE : 'Not set',
+        opian_smtp_host: process.env.OPIAN_SMTP_HOST ? 'Set' : 'Not set',
+        opian_smtp_user: process.env.OPIAN_SMTP_USER ? 'Set' : 'Not set',
+        opian_smtp_password: process.env.OPIAN_SMTP_PASSWORD ? 'Set' : 'Not set',
+        opian_smtp_port: process.env.OPIAN_SMTP_PORT ? process.env.OPIAN_SMTP_PORT : 'Not set'
+      };
+      
+      // Get active configuration
+      const config = getSmtpConfig();
+      const activeConfig = {
+        host: config.host,
+        port: config.port,
+        user: config.user,
+        secure: config.secure,
+        password_provided: !!config.pass,
+        password_length: config.pass ? config.pass.length : 0,
+        password_preview: config.pass ? `${config.pass.slice(0, 3)}...${config.pass.slice(-3)}` : null
+      };
+      
+      // Source information
+      const sourceInfo = {
+        host_from: process.env.SMTP_HOST ? 'SMTP_HOST' : (process.env.OPIAN_SMTP_HOST ? 'OPIAN_SMTP_HOST' : 'default'),
+        user_from: process.env.SMTP_USER ? 'SMTP_USER' : (process.env.OPIAN_SMTP_USER ? 'OPIAN_SMTP_USER' : 'default'),
+        pass_from: process.env.SMTP_PASSWORD ? 'SMTP_PASSWORD' : (process.env.OPIAN_SMTP_PASSWORD ? 'OPIAN_SMTP_PASSWORD' : 'default'),
+        port_from: process.env.SMTP_PORT ? 'SMTP_PORT' : (process.env.OPIAN_SMTP_PORT ? 'OPIAN_SMTP_PORT' : 'default')
+      };
+      
+      res.status(200).json({
+        success: true,
+        environment_variables: envVars,
+        active_configuration: activeConfig,
+        config_source: sourceInfo,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in email-env-check endpoint:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+  
   // Send test email with enhanced diagnostics
   app.post("/api/send-test-email", async (req: Request, res: Response) => {
     try {

@@ -4,11 +4,11 @@ import * as schema from "@db/schema";
 
 // Create a connection pool for better performance and connection management
 const poolConnection = mysql.createPool({
-  host: 'dedi1350.jnb1.host-h.net',
-  user: 'admin',
-  password: '8E33U976qa800F',
-  database: 'opianrewards',
-  port: 3306,
+  host: process.env.DB_HOST || 'dedi1350.jnb1.host-h.net',
+  user: process.env.DB_USER || 'admin',
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME || 'opianrewards',
+  port: parseInt(process.env.DB_PORT || '3306', 10),
   ssl: {
     rejectUnauthorized: false
   },

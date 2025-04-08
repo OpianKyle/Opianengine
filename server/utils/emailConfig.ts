@@ -7,11 +7,30 @@
 
 // Get all SMTP settings from environment variables with fallbacks
 export const getSmtpConfig = () => {
-  const host = process.env.SMTP_HOST || 'smtp.opianrewards.com';
-  const port = parseInt(process.env.SMTP_PORT || '465');
-  const user = process.env.SMTP_USER || 'clientservices@opianrewards.com';
-  const pass = process.env.SMTP_PASSWORD;
-  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+  // Check for different environment variations of SMTP settings
+  // This helps in case production uses different environment variable names
+  const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST || 'smtp.opianrewards.com';
+  
+  // Try different port environment variables or default to 465
+  const portStr = process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '465';
+  const port = parseInt(portStr);
+  
+  // Try different user environment variables
+  const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER || 'clientservices@opianrewards.com';
+  
+  // Get password from any available environment variable
+  const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
+  
+  // Secure is true for port 465, otherwise use environment variable setting
+  const secure = process.env.SMTP_SECURE === 'true' || process.env.OPIAN_SMTP_SECURE === 'true' || port === 465;
+  
+  // Log debug information for troubleshooting - avoid printing actual password
+  console.log('Email config source: ', {
+    hostFrom: process.env.SMTP_HOST ? 'SMTP_HOST' : (process.env.OPIAN_SMTP_HOST ? 'OPIAN_SMTP_HOST' : 'default'),
+    portFrom: process.env.SMTP_PORT ? 'SMTP_PORT' : (process.env.OPIAN_SMTP_PORT ? 'OPIAN_SMTP_PORT' : 'default'),
+    userFrom: process.env.SMTP_USER ? 'SMTP_USER' : (process.env.OPIAN_SMTP_USER ? 'OPIAN_SMTP_USER' : 'default'),
+    passFrom: process.env.SMTP_PASSWORD ? 'SMTP_PASSWORD' : (process.env.OPIAN_SMTP_PASSWORD ? 'OPIAN_SMTP_PASSWORD' : 'none'),
+  });
   
   return {
     host,
