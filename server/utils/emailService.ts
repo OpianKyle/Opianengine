@@ -801,167 +801,223 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
               : 'direct URL'))
       : 'no signature');
   
-  // Define a very simplified PDF HTML template
+  // Define the PDF HTML template
   const pdfHtml = `
     <!DOCTYPE html>
     <html>
     <head>
-      <meta charset="UTF-8">
-      <title>OPIAN Rewards Registration</title>
       <style>
-        body {
-          font-family: Arial, sans-serif;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600&display=swap');
+        
+        @page {
+          margin: 20px;
+          size: A4;
           background-color: #011d3d;
-          color: white;
-          padding: 20px;
-          margin: 0;
         }
-        .header {
-          text-align: center;
-          margin-bottom: 20px;
-          background-color: rgba(255,255,255,0.05);
-          padding: 20px;
+        html, body { 
+          font-family: 'Inter', sans-serif;
+          font-weight: 300;
+          color: white; 
+          line-height: 1.4;
+          margin: 0;
+          padding: 0;
+          background-color: #011d3d;
+          font-size: 12px;
+          height: 100%;
+        }
+        .page-break {
+          page-break-before: always;
+          padding-top: 40px; /* Space at the top of second page */
+          margin-top: 40px;
+        }
+        .container { 
+          width: 100%; 
+          max-width: 100%;
+          margin: 0 auto; 
+          padding: 15px;
+          box-sizing: border-box;
+          background-color: #011d3d;
+        }
+        .header { 
+          background-color: rgba(255,255,255,0.05); 
+          color: white; 
+          text-align: center; 
+          padding: 30px 15px; 
+          margin-bottom: 15px;
           border-radius: 5px;
+          border: 1px solid rgba(255,255,255,0.1);
+          page-break-after: avoid;
         }
         .header h1 {
           color: white;
           margin: 0;
-          font-size: 20px;
+          font-size: 24px;
+          font-weight: 600;
+          font-family: 'Inter', sans-serif;
+          letter-spacing: -0.5px;
         }
-        .section {
-          background-color: rgba(255,255,255,0.05);
-          margin: 10px 0;
+        .header p {
+          color: #43EB3E;
+          margin: 8px 0 0 0;
+          font-size: 14px;
+          font-weight: 300;
+        }
+        .section { 
+          background-color: rgba(255,255,255,0.05); 
+          margin: 12px 0; 
           padding: 15px;
           border-radius: 5px;
+          border: 1px solid rgba(255,255,255,0.1);
+          page-break-inside: avoid;
         }
-        .section h2 {
-          color: #43EB3E;
+        .section h2 { 
+          color: #43EB3E; 
+          border-bottom: 1px solid rgba(255,255,255,0.2); 
+          padding-bottom: 8px; 
           margin-top: 0;
+          margin-bottom: 10px;
           font-size: 16px;
-          border-bottom: 1px solid rgba(255,255,255,0.2);
-          padding-bottom: 8px;
+          font-weight: 600;
+          font-family: 'Inter', sans-serif;
         }
-        .section p {
-          margin: 5px 0;
+        .section p { 
+          margin: 6px 0; 
         }
-        .section strong {
+        .section strong { 
+          color: #43EB3E; 
+          font-weight: 600;
+        }
+        .signature { 
+          background-color: rgba(255,255,255,0.05); 
+          margin-top: 12px; 
+          padding: 15px;
+          border-radius: 5px;
+          border: 1px solid rgba(255,255,255,0.1);
+          page-break-inside: avoid;
+        }
+        .signature h2 { 
+          color: #43EB3E; 
+          border-bottom: 1px solid rgba(255,255,255,0.2); 
+          padding-bottom: 8px; 
+          margin-top: 0;
+          margin-bottom: 10px;
+          font-size: 16px;
+          font-weight: 600;
+        }
+        .highlight {
           color: #43EB3E;
+          font-weight: 600;
         }
         .footer {
           text-align: center;
           font-size: 10px;
-          margin-top: 20px;
           color: rgba(255,255,255,0.7);
+          margin-top: 20px;
+          padding-top: 10px;
+          border-top: 1px solid rgba(255,255,255,0.1);
+          page-break-inside: avoid;
         }
+        /* Two column layout for some sections */
         .row {
-          overflow: hidden;
+          display: flex;
+          flex-wrap: wrap;
         }
         .col {
-          float: left;
-          width: 48%;
-        }
-        .signature {
-          background-color: rgba(255,255,255,0.05);
-          margin: 10px 0;
-          padding: 15px;
-          border-radius: 5px;
-        }
-        .signature h2 {
-          color: #43EB3E;
-          margin-top: 0;
-          font-size: 16px;
-          border-bottom: 1px solid rgba(255,255,255,0.2);
-          padding-bottom: 8px;
+          flex: 1;
+          min-width: 45%;
+          padding-right: 10px;
         }
       </style>
     </head>
     <body>
-      <div class="header">
-        <h1>OPIAN REWARDS CUSTOMER REGISTRATION</h1>
-        <p>Registration Date: ${new Date().toLocaleDateString()}</p>
-      </div>
+      <div class="container">
+        <div class="header">
+          <h1>OPIAN REWARDS CUSTOMER REGISTRATION</h1>
+          <p>Registration Date: ${new Date().toLocaleDateString()}</p>
+        </div>
 
-      <div class="section">
-        <h2>Personal Details</h2>
-        <div class="row">
-          <div class="col">
-            <p><strong>First Name:</strong> ${customerData.firstName}</p>
-            <p><strong>Last Name:</strong> ${customerData.lastName}</p>
-            <p><strong>Email:</strong> ${customerData.email}</p>
-            <p><strong>Mobile Number:</strong> ${customerData.mobileNumber}</p>
-          </div>
-          <div class="col">
-            <p><strong>ID Number:</strong> ${customerData.idNumber || 'Not provided'}</p>
-            <p><strong>Date of Birth:</strong> ${customerData.dateOfBirth || 'Not provided'}</p>
-            <p><strong>Gender:</strong> ${customerData.gender || 'Not provided'}</p>
-            <p><strong>South African Resident:</strong> ${customerData.isSouthAfrican ? 'Yes' : 'No'}</p>
+        <div class="section">
+          <h2>Personal Details</h2>
+          <div class="row">
+            <div class="col">
+              <p><strong>First Name:</strong> ${customerData.firstName}</p>
+              <p><strong>Last Name:</strong> ${customerData.lastName}</p>
+              <p><strong>Email:</strong> ${customerData.email}</p>
+              <p><strong>Mobile Number:</strong> ${customerData.mobileNumber}</p>
+            </div>
+            <div class="col">
+              <p><strong>ID Number:</strong> ${customerData.idNumber || 'Not provided'}</p>
+              <p><strong>Date of Birth:</strong> ${customerData.dateOfBirth || 'Not provided'}</p>
+              <p><strong>Gender:</strong> ${customerData.gender || 'Not provided'}</p>
+              <p><strong>South African Resident:</strong> ${customerData.isSouthAfrican ? 'Yes' : 'No'}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="section">
-        <h2>Professional Information</h2>
-        <p><strong>Occupation:</strong> ${customerData.occupation || 'Not provided'}</p>
-        <p><strong>Industry:</strong> ${customerData.industry || 'Not provided'}</p>
-      </div>
-
-      <div class="section">
-        <h2>Address Information</h2>
-        <p><strong>Address:</strong> ${customerData.address || 'Not provided'}</p>
-        <p><strong>City:</strong> ${customerData.city || 'Not provided'}</p>
-        <p><strong>Postal Code:</strong> ${customerData.postalCode || 'Not provided'}</p>
-      </div>
-
-      <div class="section">
-        <h2>Banking Details</h2>
-        <div class="row">
-          <div class="col">
-            <p><strong>Has Credit Card:</strong> ${customerData.hasCreditCard ? 'Yes' : 'No'}</p>
-            <p><strong>Bank Name:</strong> ${customerData.bankName || 'Not provided'}</p>
-            <p><strong>Account Type:</strong> ${customerData.accountType || 'Not provided'}</p>
-          </div>
-          <div class="col">
-            <p><strong>Account Number:</strong> ${customerData.accountNumber || 'Not provided'}</p>
-            <p><strong>Account Holder Name:</strong> ${customerData.accountHolderName || 'Not provided'}</p>
-            <p><strong>Branch Code:</strong> ${customerData.branchCode || 'Not provided'}</p>
-          </div>
+        <div class="section">
+          <h2>Professional Information</h2>
+          <p><strong>Occupation:</strong> ${customerData.occupation || 'Not provided'}</p>
+          <p><strong>Industry:</strong> ${customerData.industry || 'Not provided'}</p>
         </div>
-      </div>
 
-      <div class="section">
-        <h2>Package Information</h2>
-        <p><strong>Selected Package:</strong> ${customerData.selectedPackage}</p>
-        <p><strong>Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
-      </div>
-      
-      <div class="section">
-        <h2>Legal Information</h2>
-        <p><strong>Mandate Accepted:</strong> ${customerData.mandate_accepted ? 'Yes' : 'No'}</p>
-      </div>
+        <div class="section">
+          <h2>Address Information</h2>
+          <p><strong>Address:</strong> ${customerData.address || 'Not provided'}</p>
+          <p><strong>City:</strong> ${customerData.city || 'Not provided'}</p>
+          <p><strong>Postal Code:</strong> ${customerData.postalCode || 'Not provided'}</p>
+        </div>
 
-      ${customerData.signature ? `
-        <div class="signature">
-          <h2>Customer Signature</h2>
-          <div style="background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 5px;">
-            <img src="${customerData.signature.startsWith('data:') 
-              ? customerData.signature 
-              : (customerData.signature.includes('googleusercontent')
-                ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' 
-                : customerData.signature)}" 
-              style="max-width: 240px;"/>
+        <div class="section">
+          <h2>Banking Details</h2>
+          <div class="row">
+            <div class="col">
+              <p><strong>Has Credit Card:</strong> ${customerData.hasCreditCard ? 'Yes' : 'No'}</p>
+              <p><strong>Bank Name:</strong> ${customerData.bankName || 'Not provided'}</p>
+              <p><strong>Account Type:</strong> ${customerData.accountType || 'Not provided'}</p>
+            </div>
+            <div class="col">
+              <p><strong>Account Number:</strong> ${customerData.accountNumber || 'Not provided'}</p>
+              <p><strong>Account Holder Name:</strong> ${customerData.accountHolderName || 'Not provided'}</p>
+              <p><strong>Branch Code:</strong> ${customerData.branchCode || 'Not provided'}</p>
+            </div>
           </div>
         </div>
-      ` : `
-        <div class="signature">
-          <h2>Customer Signature</h2>
-          <p>No signature provided.</p>
+
+        <div class="section">
+          <h2>Package Information</h2>
+          <p><strong>Selected Package:</strong> <span class="highlight">${customerData.selectedPackage}</span></p>
+          <p><strong>Referral Code:</strong> ${customerData.referralCode || 'None'}</p>
         </div>
-      `}
-      
-      <div class="footer">
-        <p>© ${new Date().getFullYear()} Opian Financial Services Group. All rights reserved.</p>
-        <p>Company Registration Number: 2018/584168/07 | FSP No: 50974</p>
-        <p>260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
+        
+        <div class="section">
+          <h2>Legal Information</h2>
+          <p><strong>Mandate Accepted:</strong> ${customerData.mandate_accepted ? 'Yes' : 'No'}</p>
+        </div>
+
+        ${customerData.signature ? `
+          <div class="signature">
+            <h2>Customer Signature</h2>
+            <div style="background-color: rgba(255,255,255,0.1); padding: 15px; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px;">
+              <img src="${customerData.signature.startsWith('data:') 
+                ? customerData.signature 
+                : (customerData.signature.includes('googleusercontent')
+                  ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' 
+                  : customerData.signature)}" 
+                style="max-width: 240px; filter: invert(1); -webkit-filter: invert(1);"/>
+            </div>
+          </div>
+        ` : `
+          <div class="signature">
+            <h2>Customer Signature</h2>
+            <p>No signature provided.</p>
+          </div>
+        `}
+        
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} Opian Financial Services Group. All rights reserved.</p>
+          <p>Company Registration Number: 2018/584168/07 | FSP No: 50974</p>
+          <p>260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
+        </div>
       </div>
     </body>
     </html>
@@ -972,28 +1028,11 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
     const pdfOptions = {
       format: 'A4',
       border: {
-        top: '0',
-        right: '0',
-        bottom: '0',
-        left: '0'
-      },
-      base: `file://${process.cwd()}/`,
-      // Using phantom instead of phantomjs-prebuilt
-      // phantomPath will be determined automatically by html-pdf
-      // Additional phantom options to handle the background
-      phantomArgs: [
-        '--web-security=false', 
-        '--local-to-remote-url-access=true',
-        '--ignore-ssl-errors=true',
-        '--ssl-protocol=any'
-      ],
-      // Set the quality to high for better rendering
-      quality: '100',
-      renderDelay: 2000, // Wait for 2 seconds before rendering to ensure styles are applied
-      zoomFactor: '1', // Set zoom factor to 1 for better rendering
-      // Add custom script to handle background colors
-      // Remove the script since it's causing issues - rely on HTML/CSS only
-      script: ""
+        top: '10mm',
+        right: '10mm',
+        bottom: '10mm',
+        left: '10mm'
+      }
     };
     
     htmlPdf.create(pdfHtml, pdfOptions).toBuffer((err: Error | null, buffer?: Buffer) => {
