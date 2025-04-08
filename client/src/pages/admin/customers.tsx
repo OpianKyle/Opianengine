@@ -734,7 +734,7 @@ export default function AdminCustomers() {
                                   updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
                                 )}>
                                   <div className="grid grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-4">
-                                    <div className="col-span-2">
+                                    <div className="col-span-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
                                     </div>
                                     <FormField
@@ -862,7 +862,7 @@ export default function AdminCustomers() {
                                       )}
                                     />
 
-                                    <div className="col-span-2 mt-4">
+                                    <div className="col-span-4 mt-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Address Information</h3>
                                     </div>
                                     <FormField
@@ -922,7 +922,7 @@ export default function AdminCustomers() {
                                       )}
                                     />
 
-                                    <div className="col-span-2 mt-4">
+                                    <div className="col-span-4 mt-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Employment Information</h3>
                                     </div>
                                     <FormField
@@ -952,7 +952,7 @@ export default function AdminCustomers() {
                                       )}
                                     />
 
-                                    <div className="col-span-2 mt-4">
+                                    <div className="col-span-4 mt-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Banking Information</h3>
                                     </div>
                                     <FormField
