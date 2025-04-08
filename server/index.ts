@@ -43,6 +43,7 @@ import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
 import adminRouter from './routes/admin';
 import migrationRouter from './routes/migration';
+import developmentRouter from './routes/development';
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
@@ -160,6 +161,13 @@ app.use((req: any, res, next) => {
     app.use('/api/agent', agentRouter);
     app.use('/api/admin', adminRouter);
     app.use('/api/migration', migrationRouter);
+    
+    // Register development routes when in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Registering development mode routes for testing');
+      app.use('/api/dev', developmentRouter);
+    }
+    
     registerRoutes(app, sessionMiddleware);
     console.log('Routes registered');
 

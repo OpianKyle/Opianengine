@@ -832,29 +832,39 @@ export async function getUserFromTokenOrSession(req: Request): Promise<any> {
   // First try to get user from authorization header
   const token = extractBearerToken(req);
   if (token) {
-    console.log('Found Authorization header with Bearer token');
-    console.log('Token starts with:', token.substring(0, 10) + '...');
-    const decoded = verifyToken(token);
-    if (decoded) {
-      console.log('Token verified successfully, getting user data for ID:', decoded.id);
+    try {
+      console.log('Found Authorization header with Bearer token');
+      if (token.length < 20) {
+        console.log('Token appears invalid (too short):', token);
+        console.log('Falling back to session authentication');
+        return await verifySession(req);
+      }
       
-      // No mock authentication - always use actual database authentication
+      console.log('Token starts with:', token.substring(0, 10) + '...');
+      const decoded = verifyToken(token);
+      if (!decoded) {
+        console.log('Token verification failed - invalid token format or signature');
+        return await verifySession(req);
+      }
+      
+      console.log('Token verified successfully, getting user data for ID:', decoded.id);
       
       // Production mode - get user data from database
       const connection = await createConnection();
       try {
+        // More comprehensive query to get all user attributes
         const [users] = await connection.execute(
           `SELECT u.*, 
            CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
            CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
            FROM users u
            LEFT JOIN admin_users au ON u.id = au.user_id
-           WHERE u.id = ?`,
+           WHERE u.id = ? AND u.is_enabled = 1`,
           [decoded.id]
         );
 
         if (!Array.isArray(users) || users.length === 0) {
-          console.log('User not found for token user ID:', decoded.id);
+          console.log('User not found or disabled for token user ID:', decoded.id);
           return null;
         }
 
@@ -885,12 +895,15 @@ export async function getUserFromTokenOrSession(req: Request): Promise<any> {
         return transformedUser;
       } catch (error) {
         console.error('Error getting user from token:', error);
-        return null;
+        console.log('Falling back to session authentication after database error');
+        return await verifySession(req);
       } finally {
         await connection.end();
       }
-    } else {
-      console.log('Token verification failed');
+    } catch (error) {
+      console.error('Unexpected error in token authentication:', error);
+      console.log('Falling back to session authentication after error');
+      return await verifySession(req);
     }
   } else {
     console.log('No Authorization header with Bearer token found');
@@ -904,6 +917,7 @@ export async function verifySession(req: Request): Promise<any> {
   try {
     console.log('Verifying session for request:', {
       url: req.url,
+      method: req.method,
       headers: {
         cookie: req.headers.cookie ? 'Present' : 'Not present',
         'sec-websocket-protocol': req.headers['sec-websocket-protocol']
@@ -912,20 +926,31 @@ export async function verifySession(req: Request): Promise<any> {
 
     // If the user is already authenticated in the request, use that
     if (req.user) {
-      console.log('Using existing session user:', req.user);
-      return req.user;
+      console.log('Using existing session user with ID:', req.user.id);
+      // Ensure consistent boolean values for flags
+      return {
+        ...req.user,
+        is_admin: Boolean(req.user.is_admin),
+        is_super_admin: Boolean(req.user.is_super_admin),
+        is_agent: Boolean(req.user.is_agent),
+        is_enabled: Boolean(req.user.is_enabled)
+      };
     }
 
     // If there's no cookie header, we can't retrieve the session
     if (!req.headers.cookie) {
-      console.log('No cookie found in request');
+      console.log('No cookie found in request - authentication failed');
       return null;
     }
     
-    console.log('Session verification relying on token-based auth as primary method.');
+    console.log('Session verification in progress as token-based auth failed or not available');
 
     // Parse the cookies
     const cookies = parseCookie(req.headers.cookie);
+    if (!cookies['connect.sid']) {
+      console.log('Session ID cookie not found in request');
+      return null;
+    }
     const sessionId = cookies['connect.sid'];
 
     if (!sessionId) {
