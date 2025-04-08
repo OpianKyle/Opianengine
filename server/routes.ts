@@ -317,10 +317,10 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       
       // Create a structured customer data object from the request body
       const customerData = {
-        firstName: req.body.first_name,
-        lastName: req.body.last_name,
+        firstName: req.body.firstName || req.body.first_name,
+        lastName: req.body.lastName || req.body.last_name,
         email: req.body.email,
-        mobileNumber: req.body.phone_number,
+        mobileNumber: req.body.mobileNumber || req.body.phone_number,
         selectedPackage: req.body.selectedPackage,
         referralCode: req.body.referralCode,
         signature: req.body.signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',

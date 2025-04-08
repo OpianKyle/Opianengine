@@ -807,12 +807,15 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
     <html>
     <head>
       <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        
         @page {
           margin: 20px;
           size: A4;
         }
         body { 
-          font-family: Arial, sans-serif; 
+          font-family: 'Inter', Arial, sans-serif; 
+          font-weight: 300; /* Light for main body text */
           color: white; 
           line-height: 1.4;
           margin: 0;
@@ -838,19 +841,18 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           page-break-after: avoid;
         }
         .header h1 {
+          font-family: 'Inter', Arial, sans-serif;
+          font-weight: 600; /* Semi-Bold for main title */
           color: white;
           margin: 10px 0;
           font-size: 18px;
         }
         .header p {
+          font-family: 'Inter', Arial, sans-serif;
+          font-weight: 300; /* Light for supportive text */
           color: #43EB3E;
           margin: 8px 0;
           font-size: 14px;
-        }
-        .logo {
-          max-width: 140px;
-          max-height: 50px;
-          margin-bottom: 10px;
         }
         .section { 
           background-color: rgba(255,255,255,0.05); 
@@ -861,6 +863,8 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           page-break-inside: avoid;
         }
         .section h2 { 
+          font-family: 'Inter', Arial, sans-serif;
+          font-weight: 600; /* Semi-Bold for section headings */
           color: #43EB3E; 
           border-bottom: 1px solid rgba(255,255,255,0.2); 
           padding-bottom: 8px; 
@@ -869,9 +873,12 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           font-size: 15px;
         }
         .section p { 
+          font-family: 'Inter', Arial, sans-serif;
+          font-weight: 300; /* Light for paragraph text */
           margin: 6px 0; 
         }
         .section strong { 
+          font-weight: 600; /* Semi-Bold for strong text */
           color: #43EB3E; 
         }
         .signature { 
@@ -883,6 +890,8 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           page-break-inside: avoid;
         }
         .signature h2 { 
+          font-family: 'Inter', Arial, sans-serif;
+          font-weight: 600; /* Semi-Bold for signature heading */
           color: #43EB3E; 
           border-bottom: 1px solid rgba(255,255,255,0.2); 
           padding-bottom: 8px; 
@@ -892,9 +901,11 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
         }
         .highlight {
           color: #43EB3E;
-          font-weight: bold;
+          font-weight: 600; /* Semi-Bold for highlighted text */
         }
         .footer {
+          font-family: 'Inter', Arial, sans-serif;
+          font-weight: 300; /* Light for footer */
           text-align: center;
           font-size: 10px;
           color: rgba(255,255,255,0.7);
@@ -918,13 +929,6 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
     <body>
       <div class="container">
         <div class="header">
-          <svg width="140" height="50" viewBox="0 0 300 110" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 10px;">
-            <path d="M37.5 55C37.5 46.25 44.5 39.25 53.25 39.25H142.5C151.25 39.25 158.25 46.25 158.25 55C158.25 63.75 151.25 70.75 142.5 70.75H53.25C44.5 70.75 37.5 63.75 37.5 55Z" fill="#43EB3E"/>
-            <path d="M53.25 39.25C44.5 39.25 37.5 46.25 37.5 55C37.5 63.75 44.5 70.75 53.25 70.75C62 70.75 69 63.75 69 55C69 46.25 62 39.25 53.25 39.25Z" fill="white"/>
-            <path d="M178.5 39.25H187.25V55C187.25 63.75 180.25 70.75 171.5 70.75C162.75 70.75 155.75 63.75 155.75 55V39.25H164.5V55C164.5 58.85 167.65 62 171.5 62C175.35 62 178.5 58.85 178.5 55V39.25Z" fill="white"/>
-            <path d="M198.75 39.25H207.5L218 60.25H218.5V39.25H227.25V70.75H218.5L208 49.75H207.5V70.75H198.75V39.25Z" fill="white"/>
-            <path d="M256.5 39.25H265.25V70.75H256.5V57.5H243.25V70.75H234.5V39.25H243.25V49.75H256.5V39.25Z" fill="white"/>
-          </svg>
           <h1>OPIAN Rewards - Customer Registration</h1>
           <p>Registration Date: ${new Date().toLocaleDateString()}</p>
         </div>
