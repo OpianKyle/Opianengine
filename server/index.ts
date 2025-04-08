@@ -118,18 +118,9 @@ app.use((req: any, res, next) => {
 
 (async () => {
   try {
-    console.log('Starting server initialization...');
-    
-    // Start the server early to meet the port opening deadline
-    // Use port 5000 for Replit workflow compatibility, regardless of environment variable
-    const SERVER_PORT = 5000;
-    server.listen(Number(SERVER_PORT), '0.0.0.0', () => {
-      console.log(`Server running on port ${SERVER_PORT} at ${new Date().toISOString()}`);
-      console.log(`Server URL: http://0.0.0.0:${SERVER_PORT}`);
-    });
-    
-    // Test database connection (now happening after server starts)
-    console.log('Testing database connection...');
+    console.log('Starting database initialization...');
+
+    // Test database connection
     try {
       const connection = await mysql.createConnection({
         host: process.env.DB_HOST,
@@ -146,8 +137,7 @@ app.use((req: any, res, next) => {
       await connection.end();
     } catch (dbError) {
       console.error('Database connection test failed:', dbError);
-      // Don't throw error - continue initialization
-      console.warn('Continuing startup despite database connection issue');
+      throw dbError;
     }
 
     // Setup authentication
@@ -173,8 +163,13 @@ app.use((req: any, res, next) => {
       console.log('Static serving setup complete');
     }
 
-    // Server is already started above
-    console.log('Server initialization complete');
+    // Start the server
+    const PORT = process.env.PORT || 5000;
+    // Using Number casting to ensure the PORT is a number which fixes TypeScript errors
+    server.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
+      console.log(`Server URL: http://0.0.0.0:${PORT}`);
+    });
   } catch (error: any) {
     console.error('Server startup error:', error);
     console.error('Error details:', {
