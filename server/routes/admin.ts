@@ -2,6 +2,7 @@ import { Router } from 'express';
 import mysql from 'mysql2/promise';
 import { checkAdmin } from '../auth';
 import { logAdminAction } from '../admin-logger';
+import { stringify } from 'csv-stringify/sync';
 
 const router = Router();
 
@@ -342,7 +343,6 @@ router.get('/customers/export', async (req: any, res) => {
     );
 
     // Convert to CSV
-    const { stringify } = require('csv-stringify/sync');
     
     // Transform data for CSV
     const csvData = (customers as any).map((customer: any) => ({
