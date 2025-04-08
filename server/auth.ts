@@ -702,35 +702,13 @@ export async function checkUserAdminStatus(userId: number) {
   }
 }
 
-// JWT token verification helper - standard version using is_admin pattern
+// JWT token verification helper
 export function verifyJwtToken(token: string): { id: number; is_admin: boolean; is_super_admin: boolean } | null {
   try {
-    // Validate input
-    if (!token || typeof token !== 'string' || token.trim() === '') {
-      console.error('Invalid token format');
-      return null;
-    }
-    
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      id: number;
-      isAdmin?: boolean;
-      isSuperAdmin?: boolean;
-      is_admin?: boolean;
-      is_super_admin?: boolean;
-    };
-    
-    // Ensure we have required fields
-    if (!decoded || typeof decoded !== 'object' || !decoded.id) {
-      console.error('Invalid token payload');
-      return null;
-    }
-    
-    // Support both camelCase and snake_case variants for backwards compatibility
-    return {
-      id: decoded.id,
-      is_admin: Boolean(decoded.is_admin || decoded.isAdmin),
-      is_super_admin: Boolean(decoded.is_super_admin || decoded.isSuperAdmin)
+    return jwt.verify(token, process.env.JWT_SECRET!) as { 
+      id: number; 
+      is_admin: boolean; 
+      is_super_admin: boolean 
     };
   } catch (error) {
     console.error('JWT verification failed:', error);
@@ -739,26 +717,17 @@ export function verifyJwtToken(token: string): { id: number; is_admin: boolean; 
 }
 
 export function generateToken(user: Express.User): string {
-  // Support accessing user properties with different naming patterns (is_admin or isAdmin)
-  // since we have mixed cases in the codebase
-  const userId = user.id;
-  const isAdmin = user.is_admin !== undefined ? user.is_admin : user.isAdmin;
-  const isSuperAdmin = user.is_super_admin !== undefined ? user.is_super_admin : user.isSuperAdmin;
-  
   console.log('Generating token for user:', {
-    userId,
-    isAdmin,
-    isSuperAdmin
+    userId: user.id,
+    isAdmin: user.isAdmin,
+    isSuperAdmin: user.isSuperAdmin
   });
 
-  // Provide both snake_case and camelCase to support all our use cases
   const token = jwt.sign(
     {
-      id: userId,
-      isAdmin: isAdmin,
-      isSuperAdmin: isSuperAdmin,
-      is_admin: isAdmin,  
-      is_super_admin: isSuperAdmin
+      id: user.id,
+      isAdmin: user.isAdmin,
+      isSuperAdmin: user.isSuperAdmin
     },
     process.env.JWT_SECRET!,
     { expiresIn: '24h' }
@@ -770,49 +739,34 @@ export function generateToken(user: Express.User): string {
 
 export function verifyToken(token: string): { id: number; isAdmin: boolean; isSuperAdmin: boolean } | null {
   try {
-    // Validate token input
-    if (!token || typeof token !== 'string' || token.trim() === '') {
-      console.error('Invalid token format provided');
-      return null;
-    }
-    
     console.log('Verifying token:', {
       tokenLength: token.length,
       firstChars: token.substring(0, 10) + '...',
     });
 
-    // Verify the token with JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
       id: number;
-      isAdmin: boolean | undefined;
-      isSuperAdmin: boolean | undefined;
-      is_admin?: boolean;
-      is_super_admin?: boolean;
+      isAdmin: boolean;
+      isSuperAdmin: boolean;
       exp?: number;
     };
 
-    // Handle potential field name mismatches between JWT and database
-    const result = {
-      id: decoded.id,
-      isAdmin: Boolean(decoded.isAdmin || decoded.is_admin),
-      isSuperAdmin: Boolean(decoded.isSuperAdmin || decoded.is_super_admin)
-    };
-
     console.log('Token verified successfully:', {
-      userId: result.id,
-      isAdmin: result.isAdmin,
-      isSuperAdmin: result.isSuperAdmin,
+      userId: decoded.id,
+      isAdmin: decoded.isAdmin,
       exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : undefined
     });
 
-    return result;
+    return {
+      id: decoded.id,
+      isAdmin: decoded.isAdmin,
+      isSuperAdmin: decoded.isSuperAdmin
+    };
   } catch (error) {
-    // Enhanced error logging with token details
     console.error('Token verification failed:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       name: error instanceof Error ? error.name : 'Unknown error type',
-      tokenLength: token?.length,
-      tokenStart: token && token.length > 10 ? token.substring(0, 10) + '...' : '(invalid)'
+      tokenLength: token?.length
     });
     return null;
   }
@@ -832,39 +786,29 @@ export async function getUserFromTokenOrSession(req: Request): Promise<any> {
   // First try to get user from authorization header
   const token = extractBearerToken(req);
   if (token) {
-    try {
-      console.log('Found Authorization header with Bearer token');
-      if (token.length < 20) {
-        console.log('Token appears invalid (too short):', token);
-        console.log('Falling back to session authentication');
-        return await verifySession(req);
-      }
-      
-      console.log('Token starts with:', token.substring(0, 10) + '...');
-      const decoded = verifyToken(token);
-      if (!decoded) {
-        console.log('Token verification failed - invalid token format or signature');
-        return await verifySession(req);
-      }
-      
+    console.log('Found Authorization header with Bearer token');
+    console.log('Token starts with:', token.substring(0, 10) + '...');
+    const decoded = verifyToken(token);
+    if (decoded) {
       console.log('Token verified successfully, getting user data for ID:', decoded.id);
+      
+      // No mock authentication - always use actual database authentication
       
       // Production mode - get user data from database
       const connection = await createConnection();
       try {
-        // More comprehensive query to get all user attributes
         const [users] = await connection.execute(
           `SELECT u.*, 
            CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
            CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
            FROM users u
            LEFT JOIN admin_users au ON u.id = au.user_id
-           WHERE u.id = ? AND u.is_enabled = 1`,
+           WHERE u.id = ?`,
           [decoded.id]
         );
 
         if (!Array.isArray(users) || users.length === 0) {
-          console.log('User not found or disabled for token user ID:', decoded.id);
+          console.log('User not found for token user ID:', decoded.id);
           return null;
         }
 
@@ -895,15 +839,12 @@ export async function getUserFromTokenOrSession(req: Request): Promise<any> {
         return transformedUser;
       } catch (error) {
         console.error('Error getting user from token:', error);
-        console.log('Falling back to session authentication after database error');
-        return await verifySession(req);
+        return null;
       } finally {
         await connection.end();
       }
-    } catch (error) {
-      console.error('Unexpected error in token authentication:', error);
-      console.log('Falling back to session authentication after error');
-      return await verifySession(req);
+    } else {
+      console.log('Token verification failed');
     }
   } else {
     console.log('No Authorization header with Bearer token found');
@@ -917,52 +858,38 @@ export async function verifySession(req: Request): Promise<any> {
   try {
     console.log('Verifying session for request:', {
       url: req.url,
-      method: req.method,
       headers: {
         cookie: req.headers.cookie ? 'Present' : 'Not present',
         'sec-websocket-protocol': req.headers['sec-websocket-protocol']
       }
     });
 
-    // If the user is already authenticated in the request, use that
+    // If we already have a user in the request object, return it
     if (req.user) {
-      console.log('Using existing session user with ID:', req.user.id);
-      // Ensure consistent boolean values for flags
-      return {
-        ...req.user,
-        is_admin: Boolean(req.user.is_admin),
-        is_super_admin: Boolean(req.user.is_super_admin),
-        is_agent: Boolean(req.user.is_agent),
-        is_enabled: Boolean(req.user.is_enabled)
-      };
+      console.log('Using existing session user:', req.user);
+      return req.user;
     }
 
-    // If there's no cookie header, we can't retrieve the session
+    // No cookies means no session
     if (!req.headers.cookie) {
-      console.log('No cookie found in request - authentication failed');
+      console.log('No cookie found in request');
       return null;
     }
     
-    console.log('Session verification in progress as token-based auth failed or not available');
-
-    // Parse the cookies
+    // In this version, we'll rely primarily on JWT token authentication
+    // rather than trying to access the session store directly
+    console.log('Session verification relying on token-based auth as primary method.');
+    
+    // Extract session ID from cookies
     const cookies = parseCookie(req.headers.cookie);
-    if (!cookies['connect.sid']) {
-      console.log('Session ID cookie not found in request');
-      return null;
-    }
     const sessionId = cookies['connect.sid'];
-
+    
     if (!sessionId) {
       console.log('No session ID found in cookies');
       return null;
     }
-
-    console.log('Found session ID in cookies, but using token auth instead');
     
-    // We're prioritizing token-based auth for stability, so we don't attempt
-    // to retrieve session data from the store. This improves performance
-    // and reduces dependency on the session store.
+    console.log('Found session ID in cookies, but using token auth instead');
     return null;
   } catch (error) {
     console.error('Error in verifySession:', error);

@@ -47,53 +47,18 @@ export function useUserProfile() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (userData: Partial<User>) => {
-      console.log('Updating user profile, checking environment...');
-      
-      // Check if in development mode with test users
-      if (import.meta.env.DEV && 
-          (sessionStorage.getItem('dev_mode_active') === 'true' || 
-           (user?.email && user.email.includes('@example.com')))) {
-        
-        console.log('Using development profile update', userData);
-        
-        // Set dev mode flag if not already set
-        if (user?.email && user.email.includes('@example.com')) {
-          sessionStorage.setItem('dev_mode_active', 'true');
-        }
-        
-        // In development mode, just return the merged user data
-        return {
-          ...user,
-          ...userData,
-        };
+      const res = await apiRequest(
+        "PUT",
+        "/api/user-profile",
+        userData
+      );
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update profile");
       }
-      
-      // Normal production code
-      console.log('Using production profile update endpoint');
-      
-      try {
-        const res = await apiRequest(
-          "PUT",
-          "/api/user-profile",
-          userData
-        );
-        
-        if (!res.ok) {
-          if (res.status === 401) {
-            console.error('Authentication error updating profile');
-            throw new Error("You are not authenticated. Please login again.");
-          }
-          const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
-          throw new Error(errorData.message || `Failed to update profile: ${res.status}`);
-        }
-        
-        const data = await res.json();
-        console.log('Profile update response:', data);
-        return data;
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        throw error;
-      }
+
+      return await res.json();
     },
     onSuccess: (updatedUser) => {
       // Update the user data in cache
@@ -134,65 +99,14 @@ export function useUserTransactions() {
   const transactionsQuery = useQuery<Transaction[]>({
     queryKey: ["/api/user/transactions"],
     queryFn: async () => {
-      console.log('Fetching transactions data, checking environment...');
-      
-      // Check if in development mode with test users
-      if (import.meta.env.DEV && 
-          (sessionStorage.getItem('dev_mode_active') === 'true' || 
-           (user?.email && user.email.includes('@example.com')))) {
-        
-        console.log('Using development transactions data');
-        
-        // Set dev mode flag if not already set
-        if (user?.email && user.email.includes('@example.com')) {
-          sessionStorage.setItem('dev_mode_active', 'true');
-        }
-        
-        // Return mock data for development
-        return [
-          {
-            id: 1,
-            user_id: user.id,
-            points: 2500,
-            type: 'SIGNUP',
-            description: 'Initial signup bonus',
-            status: 'COMPLETED',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            user_id: user.id,
-            points: 500,
-            type: 'REFERRAL',
-            description: 'Referral bonus',
-            status: 'COMPLETED',
-            created_at: new Date(Date.now() - 86400000).toISOString() // 1 day ago
-          }
-        ];
+      const res = await apiRequest("GET", "/api/user/transactions");
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to fetch transactions");
       }
-      
-      // Normal production code
-      console.log('Using production transactions endpoint');
-      
-      try {
-        const res = await apiRequest("GET", "/api/user/transactions");
-        
-        if (!res.ok) {
-          if (res.status === 401) {
-            console.error('Authentication error fetching transactions');
-            return [];
-          }
-          const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
-          throw new Error(errorData.message || `Failed to fetch transactions: ${res.status}`);
-        }
-        
-        const data = await res.json();
-        console.log('Transactions data retrieved:', data);
-        return data;
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-        throw error;
-      }
+
+      return await res.json();
     },
     enabled: !!user, // Only fetch if user is logged in
   });
@@ -223,63 +137,14 @@ export function useUserReferrals() {
   const referralsQuery = useQuery<Referral[]>({
     queryKey: ["/api/user/referrals"],
     queryFn: async () => {
-      console.log('Fetching referrals data, checking environment...');
-      
-      // Check if in development mode with test users
-      if (import.meta.env.DEV && 
-          (sessionStorage.getItem('dev_mode_active') === 'true' || 
-           (user?.email && user.email.includes('@example.com')))) {
-        
-        console.log('Using development referrals data');
-        
-        // Set dev mode flag if not already set
-        if (user?.email && user.email.includes('@example.com')) {
-          sessionStorage.setItem('dev_mode_active', 'true');
-        }
-        
-        // Return mock data for development
-        return [
-          {
-            id: 1,
-            email: 'referral1@test.com',
-            first_name: 'John',
-            last_name: 'Doe',
-            created_at: new Date().toISOString(),
-            points: 2000
-          },
-          {
-            id: 2,
-            email: 'referral2@test.com',
-            first_name: 'Jane',
-            last_name: 'Smith',
-            created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-            points: 2000
-          }
-        ];
+      const res = await apiRequest("GET", "/api/user/referrals");
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to fetch referrals");
       }
-      
-      // Normal production code
-      console.log('Using production referrals endpoint');
-      
-      try {
-        const res = await apiRequest("GET", "/api/user/referrals");
-        
-        if (!res.ok) {
-          if (res.status === 401) {
-            console.error('Authentication error fetching referrals');
-            return [];
-          }
-          const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
-          throw new Error(errorData.message || `Failed to fetch referrals: ${res.status}`);
-        }
-        
-        const data = await res.json();
-        console.log('Referrals data retrieved:', data);
-        return data;
-      } catch (error) {
-        console.error('Error fetching referrals:', error);
-        throw error;
-      }
+
+      return await res.json();
     },
     enabled: !!user, // Only fetch if user is logged in
   });

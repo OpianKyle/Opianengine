@@ -43,7 +43,6 @@ import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
 import adminRouter from './routes/admin';
 import migrationRouter from './routes/migration';
-import developmentRouter from './routes/development';
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
@@ -119,37 +118,36 @@ app.use((req: any, res, next) => {
 
 (async () => {
   try {
-    console.log('Starting database initialization...');
-
-    // Test database connection
+    console.log('Starting server initialization...');
+    
+    // Start the server early to meet the port opening deadline
+    // Use port 5000 for Replit workflow compatibility, regardless of environment variable
+    const SERVER_PORT = 5000;
+    server.listen(Number(SERVER_PORT), '0.0.0.0', () => {
+      console.log(`Server running on port ${SERVER_PORT} at ${new Date().toISOString()}`);
+      console.log(`Server URL: http://0.0.0.0:${SERVER_PORT}`);
+    });
+    
+    // Test database connection (now happening after server starts)
+    console.log('Testing database connection...');
     try {
-      if (process.env.NODE_ENV === 'development') {
-        // For local development, use PostgreSQL from Replit
-        console.log('Development mode: Using Replit PostgreSQL database');
-        // We'll skip connection test as we'll use the database client from db module
-      } else {
-        // For production, use the external MySQL database
-        const connection = await mysql.createConnection({
-          host: process.env.DB_HOST,
-          user: process.env.DB_USER,
-          password: process.env.DB_PASSWORD,
-          database: process.env.DB_NAME,
-          port: parseInt(process.env.DB_PORT || '3306'),
-          ssl: {
-            rejectUnauthorized: false
-          }
-        });
-        
-        console.log('Production database connection successful');
-        await connection.end();
-      }
+      const connection = await mysql.createConnection({
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        port: parseInt(process.env.DB_PORT || '3306'),
+        ssl: {
+          rejectUnauthorized: false
+        }
+      });
+
+      console.log('Database connection successful');
+      await connection.end();
     } catch (dbError) {
       console.error('Database connection test failed:', dbError);
-      console.log('Continuing in development mode with dummy data');
-      // Don't throw error in development mode so we can continue with dummy data
-      if (process.env.NODE_ENV !== 'development') {
-        throw dbError;
-      }
+      // Don't throw error - continue initialization
+      console.warn('Continuing startup despite database connection issue');
     }
 
     // Setup authentication
@@ -161,13 +159,6 @@ app.use((req: any, res, next) => {
     app.use('/api/agent', agentRouter);
     app.use('/api/admin', adminRouter);
     app.use('/api/migration', migrationRouter);
-    
-    // Register development routes when in development mode
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Registering development mode routes for testing');
-      app.use('/api/dev', developmentRouter);
-    }
-    
     registerRoutes(app, sessionMiddleware);
     console.log('Routes registered');
 
@@ -182,13 +173,8 @@ app.use((req: any, res, next) => {
       console.log('Static serving setup complete');
     }
 
-    // Start the server
-    const PORT = process.env.PORT || 5000;
-    // Using Number casting to ensure the PORT is a number which fixes TypeScript errors
-    server.listen(Number(PORT), '0.0.0.0', () => {
-      console.log(`Server running on port ${PORT} at ${new Date().toISOString()}`);
-      console.log(`Server URL: http://0.0.0.0:${PORT}`);
-    });
+    // Server is already started above
+    console.log('Server initialization complete');
   } catch (error: any) {
     console.error('Server startup error:', error);
     console.error('Error details:', {
