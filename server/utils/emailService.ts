@@ -812,8 +812,9 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
         @page {
           margin: 20px;
           size: A4;
+          background-color: #011d3d;
         }
-        body { 
+        html, body { 
           font-family: 'Inter', sans-serif;
           font-weight: 300;
           color: white; 
@@ -822,6 +823,12 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           padding: 0;
           background-color: #011d3d;
           font-size: 12px;
+          height: 100%;
+        }
+        .page-break {
+          page-break-before: always;
+          padding-top: 40px; /* Space at the top of second page */
+          margin-top: 40px;
         }
         .container { 
           width: 100%; 
@@ -829,6 +836,7 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           margin: 0 auto; 
           padding: 15px;
           box-sizing: border-box;
+          background-color: #011d3d;
         }
         .header { 
           background-color: rgba(255,255,255,0.05); 
