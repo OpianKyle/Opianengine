@@ -1788,10 +1788,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(404).json({ error: "User not found" });
       }
       
+      // Get user package and convert to uppercase for consistent case-insensitive comparison
       const userPackage = packageCheck[0].selected_package;
       const allowedPackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
       
-      if (!allowedPackages.includes(userPackage)) {
+      // Case-insensitive check for package eligibility
+      if (!userPackage || !allowedPackages.includes(userPackage.toUpperCase())) {
         return res.status(403).json({ 
           error: "Package upgrade required", 
           message: "Referral program is only available for PROSPER package or higher",

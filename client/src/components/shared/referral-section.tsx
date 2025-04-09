@@ -75,11 +75,23 @@ export default function ReferralSection() {
         console.error('Package restriction error:', errorData);
         
         if (errorData.details && errorData.details.currentPackage) {
+          // Store user package with original case
           setUserPackage(errorData.details.currentPackage);
         }
         
-        setPackageUpgradeRequired(true);
-        throw new Error("Package upgrade required");
+        // Make sure the package upgrade message only shows for users without the right package
+        // Check this here in case the server sent 403 but package is actually eligible
+        const currentPackage = errorData.details?.currentPackage || "";
+        const allowedPackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
+        
+        if (!currentPackage || !allowedPackages.includes(currentPackage.toUpperCase())) {
+          setPackageUpgradeRequired(true);
+          throw new Error("Package upgrade required");
+        } else {
+          console.log('Package should be eligible but got 403:', currentPackage);
+          // User has the right package but still got 403, try to continue
+          throw new Error("Failed to access referral program despite having eligible package");
+        }
       }
       
       if (!response.ok) {

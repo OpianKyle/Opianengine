@@ -89,7 +89,7 @@ export default function CustomerDashboard() {
   
   // Check if user has access to the referral program
   const hasReferralAccess = user?.selectedPackage && 
-    ['PROSPER', 'PRESTIGE', 'PINNACLE'].includes(user.selectedPackage);
+    ['PROSPER', 'PRESTIGE', 'PINNACLE'].includes(user.selectedPackage?.toUpperCase());
 
   const { data: transactions } = useQuery<Transaction[]>({
     queryKey: ["/api/customer/transactions"],
