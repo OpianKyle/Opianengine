@@ -254,7 +254,7 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
       console.log(`Executing lead insert with query: ${query}`);
       console.log(`Parameters:`, finalParams);
       
-      await connection.execute(query, params);
+      await connection.execute(query, finalParams);
       
       console.log(`New referral lead created for ${firstName} ${lastName} using code ${referralCode}${agentId ? ` - Assigned to agent ID: ${agentId}` : ''}, referred by user ID: ${referrer.id}`);
       
