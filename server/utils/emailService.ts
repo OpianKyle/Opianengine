@@ -288,7 +288,7 @@ export function formatFundCardEmail(
     Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider
     Company Registration Number: 2018/584168/07 FSP No: 50974
     Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape
-    Tel: 0212141142 | Email: info@opianfsgroup.com | Website: www.opianfsgroup.com
+    Tel: 0212141142 | Email: clientservices@opianrewards.com | Website: www.opianrewards.com
   `;
 
   const html = `
@@ -374,8 +374,8 @@ export function formatFundCardEmail(
           <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
           <p style="color: white !important;">
             Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0212141142" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0212141142</a></span> |
-            Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:info@opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">info@opianfsgroup.com</a></span> |
-            Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianfsgroup.com</a></span>
+            Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:clientservices@opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">clientservices@opianrewards.com</a></span> |
+            Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianrewards.com</a></span>
           </p>
         </div>
       </div>
@@ -449,7 +449,7 @@ export function formatRegistrationEmail(
     Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider
     Company Registration Number: 2018/584168/07 FSP No: 50974
     Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape
-    Tel: 0212141142 | Email: info@opianfsgroup.com | Website: www.opianfsgroup.com
+    Tel: 0212141142 | Email: clientservices@opianrewards.com | Website: www.opianrewards.com
   `;
 
   const html = `
@@ -524,8 +524,8 @@ export function formatRegistrationEmail(
           <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
           <p style="color: white !important;">
             Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0212141142" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0212141142</a></span> |
-            Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:info@opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">info@opianfsgroup.com</a></span> |
-            Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianfsgroup.com</a></span>
+            Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:clientservices@opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">clientservices@opianrewards.com</a></span> |
+            Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianrewards.com</a></span>
           </p>
         </div>
       </div>
@@ -780,8 +780,8 @@ export function formatNewCustomerAdminEmail(
           <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
           <p style="color: white !important;">
             Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0212141142" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0212141142</a></span> |
-            Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:info@opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">info@opianfsgroup.com</a></span> |
-            Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianfsgroup.com</a></span>
+            Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:clientservices@opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">clientservices@opianrewards.com</a></span> |
+            Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianrewards.com</a></span>
           </p>
         </div>
       </div>
