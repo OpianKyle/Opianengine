@@ -87,9 +87,14 @@ export default function CustomerDashboard() {
     }
   });
   
-  // Check if user has access to the referral program
+  // Check if user has access to the referral program (case-insensitive)
   const hasReferralAccess = user?.selectedPackage && 
     ['PROSPER', 'PRESTIGE', 'PINNACLE'].includes(user.selectedPackage?.toUpperCase());
+  
+  // Log package access for debugging purposes
+  if (user?.selectedPackage) {
+    console.log(`Package access check: ${user.selectedPackage} (upper: ${user.selectedPackage.toUpperCase()}) - Access: ${hasReferralAccess}`);
+  }
 
   const { data: transactions } = useQuery<Transaction[]>({
     queryKey: ["/api/customer/transactions"],
@@ -231,6 +236,9 @@ export default function CustomerDashboard() {
                 <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
                 <p className="text-sm text-slate-300">
                   Earn points when your referrals join and receive additional bonuses from their referrals.
+                </p>
+                <p className="text-xs text-slate-400">
+                  Note: Access is granted to any PROSPER, PRESTIGE, or PINNACLE package, regardless of capitalization.
                 </p>
               </div>
               <Button 

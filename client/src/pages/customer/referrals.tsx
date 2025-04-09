@@ -114,11 +114,26 @@ export default function ReferralsPage() {
         if (response.status === 403) {
           const errorData = await response.json().catch(() => ({}));
           console.error('Package restriction error:', errorData);
+          
+          // Add package information to the error
+          const userPackage = errorData?.details?.currentPackage || '';
+          const requiredPackages = errorData?.details?.requiredPackages || ['PROSPER', 'PRESTIGE', 'PINNACLE'];
+          
+          console.log(`Package check: User has "${userPackage}" (upper: "${userPackage.toUpperCase()}"), needs one of:`, 
+            requiredPackages.map(p => `"${p}"`).join(', '));
+            
           throw new Error(JSON.stringify({
             status: 403,
             error: "Package upgrade required",
             message: "You need to upgrade to PROSPER package or higher to access the referral program",
-            details: errorData
+            details: {
+              ...errorData,
+              packageInfo: {
+                current: userPackage,
+                currentUpper: userPackage.toUpperCase(),
+                required: requiredPackages
+              }
+            }
           }));
         }
         
@@ -254,6 +269,9 @@ export default function ReferralsPage() {
               <div className="space-y-4">
                 <p className="text-foreground">
                   The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package (case-insensitive). If you believe your package should grant you access, please contact support.
                 </p>
                 <div className="bg-[#43EB3E]/5 p-4 rounded-lg border border-[#43EB3E]/20">
                   <h3 className="font-medium text-[#43EB3E] mb-2">Why upgrade?</h3>

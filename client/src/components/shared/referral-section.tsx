@@ -82,10 +82,20 @@ export default function ReferralSection() {
         // Make sure the package upgrade message only shows for users without the right package
         // Check this here in case the server sent 403 but package is actually eligible
         const currentPackage = errorData.details?.currentPackage || "";
-        const allowedPackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
+        const requiredPackages = errorData.details?.requiredPackages || ['PROSPER', 'PRESTIGE', 'PINNACLE'];
+        const eligibilityCheck = errorData.details?.eligibleCheck;
         
-        if (!currentPackage || !allowedPackages.includes(currentPackage.toUpperCase())) {
+        // Use the server's eligibility check result if available, otherwise check locally
+        const isPackageEligible = eligibilityCheck !== undefined 
+          ? eligibilityCheck 
+          : (currentPackage && requiredPackages.includes(currentPackage.toUpperCase()));
+        
+        console.log(`Package verification: "${currentPackage}" => eligible: ${isPackageEligible}`, errorData.details);
+        
+        if (!isPackageEligible) {
           setPackageUpgradeRequired(true);
+          // Store user package with original case
+          setUserPackage(currentPackage);
           throw new Error("Package upgrade required");
         } else {
           console.log('Package should be eligible but got 403:', currentPackage);
@@ -191,6 +201,9 @@ export default function ReferralSection() {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Your current package: <strong>{userPackage || "OPPORTUNITY"}</strong>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Note: Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package (case-insensitive).
                 </p>
                 <div className="bg-[#43EB3E]/5 p-3 rounded-md border border-[#43EB3E]/20">
                   <h4 className="text-[#43EB3E] text-sm font-medium mb-2">Why upgrade?</h4>

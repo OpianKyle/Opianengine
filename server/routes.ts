@@ -952,7 +952,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           email,
           first_name,
           last_name,
-          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points
+          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
+          selected_package
         FROM users 
         WHERE id = ?`,
         [req.user?.id]
@@ -965,7 +966,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       console.log('Points data retrieved:', {
         userId: userData[0].id,
         rawPoints: userData[0].points,
-        pointsType: typeof userData[0].points
+        pointsType: typeof userData[0].points,
+        package: userData[0].selected_package,
+        packageUpperCase: userData[0].selected_package ? userData[0].selected_package.toUpperCase() : null
       });
 
       // Ensure points is properly converted to a number
@@ -976,7 +979,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         email: userData[0].email,
         firstName: userData[0].first_name,
         lastName: userData[0].last_name,
-        points: points
+        points: points,
+        selectedPackage: userData[0].selected_package || null
       });
 
     } catch (error) {
@@ -1772,12 +1776,15 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
   app.get("/api/customer/referral", async (req, res) => {
     if (!req.user) {
+      console.log("Referral API: Authentication check failed");
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     const connection = await createConnection();
     
     try {
+      console.log("Referral API: Fetching referral data for user:", req.user.id);
+      
       // Check if user has access to the referral program (PROSPER, PRESTIGE, or PINNACLE package)
       const [packageCheck] = await connection.execute(
         `SELECT selected_package FROM users WHERE id = ?`,
@@ -1785,24 +1792,34 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       );
       
       if (!packageCheck || packageCheck.length === 0) {
+        console.log(`Referral API: User ${req.user.id} not found in database`);
         return res.status(404).json({ error: "User not found" });
       }
       
       // Get user package and convert to uppercase for consistent case-insensitive comparison
-      const userPackage = packageCheck[0].selected_package;
+      const userCurrentPackage = packageCheck[0].selected_package;
       const allowedPackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
       
+      // Convert to uppercase for case-insensitive comparison
+      const userPackageUpper = userCurrentPackage ? userCurrentPackage.toUpperCase() : '';
+      
+      console.log(`REFERRAL API: Checking package access for user ${req.user.id}: package="${userCurrentPackage}" (uppercase: "${userPackageUpper}"), eligible=${allowedPackages.includes(userPackageUpper)}`);
+      
       // Case-insensitive check for package eligibility
-      if (!userPackage || !allowedPackages.includes(userPackage.toUpperCase())) {
+      if (!userCurrentPackage || !allowedPackages.includes(userPackageUpper)) {
+        console.log(`REFERRAL API: ⛔ Access denied to referral system for user ${req.user.id} with package "${userCurrentPackage}"`);
         return res.status(403).json({ 
           error: "Package upgrade required", 
           message: "Referral program is only available for PROSPER package or higher",
           details: {
-            currentPackage: userPackage,
-            requiredPackages: allowedPackages
+            currentPackage: userCurrentPackage, // Original case preserved
+            requiredPackages: allowedPackages,
+            eligibleCheck: allowedPackages.includes(userPackageUpper)
           }
         });
       }
+      
+      console.log(`REFERRAL API: ✅ Access granted to referral system for user ${req.user.id} with package "${userCurrentPackage}"`)
     } catch (error) {
       console.error("Error checking user package:", error);
       return res.status(500).json({ 
@@ -3917,12 +3934,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   // Customer referrals endpoint - moved from previous duplicate implementation
   app.get("/api/customer/referrals", async (req, res) => {
     if (!req.isAuthenticated()) {
+      console.log("Referrals API: Authentication check failed");
       return res.status(401).json({ error: "Not authenticated" });
     }
 
     const connection = await createConnection();
     try {
-      console.log("Fetching referral stats for user:", req.user.id);
+      console.log("Referrals API: Fetching referral stats for user:", req.user.id);
       
       // Get user with referral code
       const [userData] = await connection.execute(
@@ -3937,11 +3955,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
       const currentUser = userData[0];
       
-      // Check if user has PROSPER package or higher
+      // Check if user has PROSPER package or higher - case-insensitive
       const eligiblePackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
       const userPackage = currentUser.selected_package ? currentUser.selected_package.toUpperCase() : '';
       
-      console.log(`REFERRAL DEBUG: Checking package access for user ${req.user.id}: package="${userPackage}", eligible=${eligiblePackages.includes(userPackage)}`);
+      console.log(`REFERRAL DEBUG: Checking package access for user ${req.user.id}: package="${currentUser.selected_package}" (uppercase: "${userPackage}"), eligible=${eligiblePackages.includes(userPackage)}`);
       console.log(`REFERRAL DEBUG: User data:`, JSON.stringify(currentUser));
       
       if (!eligiblePackages.includes(userPackage)) {
@@ -3949,7 +3967,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(403).json({ 
           error: "Package upgrade required", 
           message: "You need to upgrade to PROSPER package or higher to access the referral program",
-          currentPackage: userPackage
+          details: {
+            currentPackage: currentUser.selected_package, // Original case preserved
+            requiredPackages: eligiblePackages,
+            eligibleCheck: eligiblePackages.includes(userPackage)
+          }
         });
       } else {
         console.log(`REFERRAL DEBUG: ✅ Access granted to referral system for user ${req.user.id} with package "${userPackage}"`);
