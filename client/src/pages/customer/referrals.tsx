@@ -171,7 +171,7 @@ export default function ReferralsPage() {
   });
 
   const referralLink = referralStats?.referralCode
-    ? `${window.location.origin}/?ref=${referralStats.referralCode}`
+    ? `${window.location.origin}/referral/${referralStats.referralCode}`
     : '';
 
   const shareText = "Join me on OPIAN Rewards and get 2,000 bonus points! Use my referral link:";

@@ -127,7 +127,7 @@ export default function ReferralSection() {
   console.log('Current referral info:', referralInfo);
 
   const referralLink = referralInfo?.referralCode
-    ? `${window.location.origin}/?ref=${referralInfo.referralCode}`
+    ? `${window.location.origin}/referral/${referralInfo.referralCode}`
     : '';
 
   const shareText = "Join me on OPIAN Rewards and get 2,000 bonus points! Use my referral link:";
