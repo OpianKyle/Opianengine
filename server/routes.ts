@@ -3907,15 +3907,18 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       const eligiblePackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
       const userPackage = currentUser.selected_package ? currentUser.selected_package.toUpperCase() : '';
       
-      console.log(`Checking package access for user ${req.user.id}: package=${userPackage}, eligible=${eligiblePackages.includes(userPackage)}`);
+      console.log(`REFERRAL DEBUG: Checking package access for user ${req.user.id}: package="${userPackage}", eligible=${eligiblePackages.includes(userPackage)}`);
+      console.log(`REFERRAL DEBUG: User data:`, JSON.stringify(currentUser));
       
       if (!eligiblePackages.includes(userPackage)) {
-        console.log(`Access denied to referral system for user ${req.user.id} with package ${userPackage}`);
+        console.log(`REFERRAL DEBUG: ⛔ Access denied to referral system for user ${req.user.id} with package "${userPackage}"`);
         return res.status(403).json({ 
           error: "Package upgrade required", 
           message: "You need to upgrade to PROSPER package or higher to access the referral program",
           currentPackage: userPackage
         });
+      } else {
+        console.log(`REFERRAL DEBUG: ✅ Access granted to referral system for user ${req.user.id} with package "${userPackage}"`);
       }
       
       console.log(`Access granted to referral system for user ${req.user.id} with package ${userPackage}`);
