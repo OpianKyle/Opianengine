@@ -104,7 +104,13 @@ export default function ReferralsPage() {
 
         console.log('Referral response status:', response.status);
         
-        // For 403 errors, we need to properly handle the package restriction
+        // For 401/403 errors, handle appropriately
+        if (response.status === 401) {
+          console.error('Authentication error: User not logged in');
+          throw new Error("Please log in to access the referral program");
+        }
+        
+        // For 403 errors, properly handle the package restriction
         if (response.status === 403) {
           const errorData = await response.json().catch(() => ({}));
           console.error('Package restriction error:', errorData);
@@ -137,8 +143,11 @@ export default function ReferralsPage() {
       }
     },
     retry: (failureCount, error) => {
-      // Don't retry on 403 (package restriction) errors
-      if (error.message && error.message.includes('403')) {
+      // Don't retry on authentication or package restriction errors
+      if (error.message && (
+        error.message.includes('403') || 
+        error.message.includes('Please log in')
+      )) {
         return false;
       }
       // Retry other errors up to 3 times
@@ -234,21 +243,21 @@ export default function ReferralsPage() {
     if (packageUpgradeRequired) {
       return (
         <div className="p-8 max-w-4xl mx-auto">
-          <Card className="border-amber-300">
-            <CardHeader className="bg-amber-50 border-b border-amber-100">
-              <CardTitle className="flex items-center gap-2 text-amber-800">
+          <Card className="border-primary/30">
+            <CardHeader className="bg-primary/5 border-b border-primary/20">
+              <CardTitle className="flex items-center gap-2 text-primary">
                 <PackageIcon className="h-6 w-6" />
                 Package Upgrade Required
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
-                <p className="text-gray-700">
+                <p className="text-foreground">
                   The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
                 </p>
-                <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
-                  <h3 className="font-medium text-amber-800 mb-2">Why upgrade?</h3>
-                  <ul className="list-disc pl-5 space-y-1 text-gray-600">
+                <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
+                  <h3 className="font-medium text-primary mb-2">Why upgrade?</h3>
+                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
                     <li>Earn referral fees from your direct referrals</li>
                     <li>Earn additional rewards from your referral network</li>
                     <li>Access exclusive PROSPER-level benefits</li>
@@ -256,7 +265,7 @@ export default function ReferralsPage() {
                   </ul>
                 </div>
                 <div className="flex justify-center mt-6">
-                  <Button className="bg-amber-600 hover:bg-amber-700">
+                  <Button>
                     Upgrade to PROSPER Package
                   </Button>
                 </div>
