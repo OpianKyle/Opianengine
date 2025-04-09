@@ -11,6 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import ReferralSection from "@/components/shared/referral-section";
 import { formatTransactionType } from "@/lib/utils";
+import { Package as PackageIcon } from "lucide-react";
 
 interface User {
   id: number;
@@ -18,6 +19,7 @@ interface User {
   firstName: string;
   lastName: string;
   points: number;
+  selectedPackage?: string;
 }
 
 interface Transaction {
@@ -84,6 +86,10 @@ export default function CustomerDashboard() {
       return data;
     }
   });
+  
+  // Check if user has access to the referral program
+  const hasReferralAccess = user?.selectedPackage && 
+    ['PROSPER', 'PRESTIGE', 'PINNACLE'].includes(user.selectedPackage);
 
   const { data: transactions } = useQuery<Transaction[]>({
     queryKey: ["/api/customer/transactions"],
@@ -209,7 +215,36 @@ export default function CustomerDashboard() {
           </CardContent>
         </Card>
 
-        <ReferralSection />
+        {/* Only show referral section for users with PROSPER package or higher */}
+        {hasReferralAccess && <ReferralSection />}
+        
+        {/* Show upgrade message for users without access */}
+        {!hasReferralAccess && (
+          <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-[#43EB3E] flex items-center gap-2">
+                <PackageIcon className="h-5 w-5" /> Refer & Earn Points
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
+                <p className="text-sm text-slate-300">
+                  Earn points when your referrals join and receive additional bonuses from their referrals.
+                </p>
+              </div>
+              <Button 
+                className="w-full bg-[#43EB3E] text-slate-900 hover:bg-[#3ad036]"
+                onClick={() => toast({
+                  title: "Package Upgrade",
+                  description: "Please contact support to upgrade your package."
+                })}
+              >
+                Upgrade Package
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Card>
