@@ -73,7 +73,7 @@ export default function AgentLeadsPage() {
   });
 
   // Query to fetch the referral leads with optimizations
-  const { data: leads = [], isLoading: isLeadsLoading } = useQuery({
+  const { data: leadsData, isLoading: isLeadsLoading } = useQuery({
     queryKey: ['/api/referral/agent/leads'],
     queryFn: async () => {
       const response = await fetch('/api/referral/agent/leads');
@@ -275,7 +275,7 @@ export default function AgentLeadsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {leads.length === 0 ? (
+          {!leadsData?.leads || leadsData.leads.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-lg text-muted-foreground mb-4">
                 No referral leads yet
@@ -288,7 +288,7 @@ export default function AgentLeadsPage() {
           ) : (
             <ScrollArea className="h-[600px]">
               <div className="space-y-4">
-                {leads.map((lead: Lead) => (
+                {Array.isArray(leadsData?.leads) && leadsData.leads.map((lead: Lead) => (
                   <Card key={lead.id} className="border-l-4 border-l-primary">
                     <CardContent className="p-4">
                       <div className="flex flex-col md:flex-row justify-between gap-4">
