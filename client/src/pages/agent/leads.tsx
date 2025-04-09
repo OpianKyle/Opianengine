@@ -275,7 +275,7 @@ export default function AgentLeadsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!leadsData?.leads || leadsData.leads.length === 0 ? (
+          {!leadsData?.success || !leadsData?.leads || !Array.isArray(leadsData.leads) || leadsData.leads.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-lg text-muted-foreground mb-4">
                 No referral leads yet
@@ -288,7 +288,7 @@ export default function AgentLeadsPage() {
           ) : (
             <ScrollArea className="h-[600px]">
               <div className="space-y-4">
-                {Array.isArray(leadsData?.leads) && leadsData.leads.map((lead: Lead) => (
+                {leadsData.leads.map((lead: Lead) => (
                   <Card key={lead.id} className="border-l-4 border-l-primary">
                     <CardContent className="p-4">
                       <div className="flex flex-col md:flex-row justify-between gap-4">

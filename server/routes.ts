@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import passport from "passport";
 import { setupAuth, checkAgent, checkAdmin, verifyJwtToken, getUserFromTokenOrSession } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
+import { getAgentByReferralCode } from "./utils/referral";
 import { createConnection } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
 import { parse } from 'csv-parse';
@@ -994,6 +995,117 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   // Mount referral routes
   // Mount the referral routes
   app.use('/api/referral', referralRouter);
+  
+  // Direct endpoints for referral routes to avoid 404 issues
+  app.get("/api/referral/validate", async (req, res) => {
+    try {
+      const { code } = req.query;
+      
+      if (!code) {
+        return res.status(400).json({
+          success: false,
+          error: 'Referral code is required'
+        });
+      }
+      
+      // Clean the code (remove any dashes)
+      const cleanCode = (code as string).replace(/-/g, '');
+      console.log(`Validating referral code: ${cleanCode}`);
+      
+      // Use existing utility function to get agent
+      const agent = await getAgentByReferralCode(cleanCode);
+      
+      if (!agent) {
+        console.log(`Invalid referral code: ${cleanCode} (No agent found)`);
+        return res.status(404).json({
+          success: false,
+          error: 'Invalid referral code or the agent is no longer active'
+        });
+      }
+      
+      console.log(`Valid referral code: ${cleanCode} (Agent: ${agent.first_name} ${agent.last_name})`);
+      
+      // Return agent name but not all details
+      return res.status(200).json({
+        success: true,
+        agentName: `${agent.first_name} ${agent.last_name}`
+      });
+    } catch (error) {
+      console.error('Error validating referral code:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to validate referral code'
+      });
+    }
+  });
+  
+  // Direct endpoint for submitting a referral lead
+  app.post("/api/referral/public/submit", async (req, res) => {
+    try {
+      const { firstName, lastName, email, phoneNumber, notes, referralCode } = req.body;
+      
+      // Basic validation
+      if (!firstName || !lastName || !email || !phoneNumber || !referralCode) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields'
+        });
+      }
+      
+      const connection = await createConnection();
+      
+      try {
+        // Find the agent by referral code
+        const agent = await getAgentByReferralCode(referralCode);
+        
+        if (!agent) {
+          return res.status(404).json({
+            success: false,
+            error: 'Invalid referral code'
+          });
+        }
+        
+        // Create a new lead in the database
+        const [result] = await connection.execute(
+          `INSERT INTO referral_leads (
+            agent_id, first_name, last_name, email, phone_number, 
+            notes, status, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, 'NEW', NOW())`,
+          [
+            agent.id,
+            firstName,
+            lastName,
+            email,
+            phoneNumber,
+            notes || null
+          ]
+        );
+        
+        console.log(`New referral lead created: ${firstName} ${lastName} for agent ID ${agent.id}`);
+        
+        res.status(201).json({
+          success: true,
+          message: 'Referral lead submitted successfully',
+          leadId: (result as any).insertId
+        });
+      } catch (error) {
+        console.error('Database error creating referral lead:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to submit referral lead'
+        });
+      } finally {
+        await connection.end();
+      }
+    } catch (error) {
+      console.error('Error submitting referral lead:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process referral lead submission'
+      });
+    }
+  });
+  
   app.use('/api/agent', agentRouter);
   app.use('/api/migration', migrationRouter);
   app.use('/api/manual-migration', manualMigrationRouter);
