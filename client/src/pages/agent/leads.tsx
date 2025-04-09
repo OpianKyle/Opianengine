@@ -37,6 +37,8 @@ interface Lead {
   createdAt: string;
   updatedAt: string;
   referralCode: string;
+  agentId: number | null;
+  referredBy: number | null;
 }
 
 // Status text mapping

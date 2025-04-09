@@ -78,13 +78,25 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
       
       // First, find the user who owns this referral code
       console.log(`Looking for referrer with code: ${formattedReferralCode}`);
+      
+      // Query the database for the referral code
       const [referrerResults] = await connection.execute(
         'SELECT id, email, referred_by FROM users WHERE referral_code = ? AND is_enabled = 1',
         [formattedReferralCode]
       );
       
+      console.log('Referrer results:', referrerResults);
+      
       // @ts-ignore - MySQL2 results structure
       if (!Array.isArray(referrerResults) || referrerResults.length === 0) {
+        console.log('No referrer found for code:', formattedReferralCode);
+        
+        // Let's try to list a few referral codes to debug
+        const [sampleReferralCodes] = await connection.execute(
+          'SELECT id, email, referral_code FROM users WHERE referral_code IS NOT NULL AND referral_code != "" LIMIT 5'
+        );
+        console.log('Sample referral codes in the database:', sampleReferralCodes);
+        
         return res.status(404).json({
           success: false,
           error: 'Invalid referral code'
@@ -95,55 +107,73 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
       const referrer = referrerResults[0];
       console.log(`Found referrer:`, { id: referrer.id, email: referrer.email, referredBy: referrer.referred_by });
       
-      // Now, check if this referrer was referred by an agent (referred_by field)
+      // Trace the referral chain to find the originating agent
       let agentId: number | null = null;
+      let currentUserId = referrer.id;
+      let depth = 0;
+      const MAX_CHAIN_DEPTH = 10; // Prevent infinite loops
       
-      if (referrer.referred_by) {
-        // Check if the person who referred them is an agent
-        const [agentResults] = await connection.execute(
-          'SELECT id, email, is_agent FROM users WHERE id = ? AND is_enabled = 1',
-          [referrer.referred_by]
-        );
+      // First check if the referrer themselves is an agent
+      const [selfCheck] = await connection.execute(
+        'SELECT id, is_agent FROM users WHERE id = ? AND is_agent = 1 AND is_enabled = 1',
+        [referrer.id]
+      );
+      
+      // @ts-ignore - MySQL2 results structure
+      if (Array.isArray(selfCheck) && selfCheck.length > 0) {
+        agentId = referrer.id;
+        console.log(`Referrer is an agent, assigning lead to them:`, { agentId });
+      } else {
+        console.log(`Referrer is not an agent, following referral chain to find agent...`);
         
-        // @ts-ignore - MySQL2 results structure
-        if (Array.isArray(agentResults) && agentResults.length > 0) {
-          // @ts-ignore - MySQL2 results structure
-          const potentialAgent = agentResults[0];
+        // Follow the chain back to find an agent
+        while (!agentId && depth < MAX_CHAIN_DEPTH) {
+          // Get the person who referred the current user
+          const [userInfo] = await connection.execute(
+            'SELECT id, email, referred_by FROM users WHERE id = ? AND is_enabled = 1',
+            [currentUserId]
+          );
           
-          // If the referrer was referred by an agent, assign this lead to that agent
-          if (potentialAgent.is_agent) {
-            agentId = potentialAgent.id;
-            console.log(`Found agent who referred the referrer:`, { 
-              agentId: potentialAgent.id, 
-              agentEmail: potentialAgent.email 
-            });
-          } else {
-            console.log(`User who referred the referrer is not an agent`);
+          // @ts-ignore - MySQL2 results structure
+          if (!Array.isArray(userInfo) || userInfo.length === 0 || !userInfo[0].referred_by) {
+            console.log(`End of referral chain reached at user ID: ${currentUserId}`);
+            break;
           }
+          
+          // @ts-ignore - MySQL2 results structure
+          const referredById = userInfo[0].referred_by;
+          console.log(`User ${currentUserId} was referred by user ${referredById} - checking if they're an agent`);
+          
+          // Check if this person is an agent
+          const [agentCheck] = await connection.execute(
+            'SELECT id, email, is_agent FROM users WHERE id = ? AND is_agent = 1 AND is_enabled = 1',
+            [referredById]
+          );
+          
+          // @ts-ignore - MySQL2 results structure
+          if (Array.isArray(agentCheck) && agentCheck.length > 0) {
+            // @ts-ignore - MySQL2 results structure
+            agentId = agentCheck[0].id;
+            // @ts-ignore - MySQL2 results structure
+            console.log(`Found agent in referral chain:`, { agentId, agentEmail: agentCheck[0].email });
+            break;
+          }
+          
+          // Move up the chain
+          currentUserId = referredById;
+          depth++;
+          console.log(`Moving up chain to user ${currentUserId}, depth: ${depth}`);
         }
-      }
-      
-      // If we didn't find an agent through the referred_by field, check if the referrer themselves is an agent
-      if (!agentId) {
-        const [selfCheck] = await connection.execute(
-          'SELECT id, is_agent FROM users WHERE id = ? AND is_agent = 1 AND is_enabled = 1',
-          [referrer.id]
-        );
         
-        // @ts-ignore - MySQL2 results structure
-        if (Array.isArray(selfCheck) && selfCheck.length > 0) {
-          agentId = referrer.id;
-          console.log(`Referrer is an agent, assigning lead to them:`, { agentId });
-        } else {
-          console.log(`Referrer is not an agent and was not referred by an agent`);
-          // In this case, we'll still create the lead but won't associate it with any agent
+        if (!agentId) {
+          console.log(`No agent found in referral chain after ${depth} levels`);
         }
       }
       
       // Check if this email has already been referred
       const [existingLeads] = await connection.execute(
         'SELECT id FROM referral_leads WHERE email = ? AND referral_code = ?',
-        [email, formattedReferralCode]
+        [email, referralCode.replace(/-/g, '')]
       );
       
       // @ts-ignore - MySQL2 results structure
@@ -158,7 +188,7 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
             status = 'NEW',
             updated_at = NOW()
           WHERE email = ? AND referral_code = ?`,
-          [firstName, lastName, phoneNumber, notes || '', email, formattedReferralCode]
+          [firstName, lastName, phoneNumber, notes || '', email, referralCode.replace(/-/g, '')]
         );
         
         return res.status(200).json({
@@ -168,39 +198,65 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
       }
       
       // Insert a new referral lead
-      const agentIdField = agentId ? 'agent_id,' : '';
-      const agentIdValue = agentId ? '?,' : '';
+      // Note: We're working with the existing table schema that only has these columns:
+      // id, first_name, last_name, email, phone_number, referral_code, notes, status, 
+      // signed_up_user_id, created_at, updated_at
       
+      // Simple, fixed field list based on the existing schema
+      const fields = [
+        'first_name',
+        'last_name',
+        'email',
+        'phone_number',
+        'referral_code',
+        'notes',
+        'status',
+        'created_at',
+        'updated_at'
+      ];
+      
+      // Values for the prepared statement
       const params = [
         firstName,
         lastName,
         email,
         phoneNumber,
-        formattedReferralCode,
-        notes || ''
+        referralCode.replace(/-/g, ''),
+        notes || '',
+        'NEW',
+        'NOW()',
+        'NOW()'
       ];
       
+      // Special handling for signed_up_user_id if we have an agent
       if (agentId) {
-        params.unshift(agentId);
+        // For now, we'll just log that we found an agent
+        // since the schema doesn't explicitly have an agent_id field
+        console.log(`Found agent ID ${agentId} via referral chain for ${firstName} ${lastName}`);
+        
+        // In the future, we might want to add this field via migration
+        // fields.push('signed_up_user_id');
+        // params.push(agentId);
       }
       
-      await connection.execute(
-        `INSERT INTO referral_leads (
-          ${agentIdField}
-          first_name,
-          last_name,
-          email,
-          phone_number,
-          referral_code,
-          notes,
-          status,
-          created_at,
-          updated_at
-        ) VALUES (${agentIdValue} ?, ?, ?, ?, ?, ?, 'NEW', NOW(), NOW())`,
-        params
-      );
+      // Log the referred_by relationship even though we can't store it
+      console.log(`User was referred by user ID: ${referrer.id}`);
       
-      console.log(`New referral lead created for ${firstName} ${lastName} using code ${formattedReferralCode}${agentId ? ` - Assigned to agent ID: ${agentId}` : ''}`);
+      // Build the SQL query
+      const fieldStr = fields.join(', ');
+      const placeholders = params.map(p => p === 'NOW()' ? 'NOW()' : '?').join(', ');
+      
+      // Remove NOW() from the params since they're directly in the SQL
+      const finalParams = params.filter(p => p !== 'NOW()');
+      
+      const query = `INSERT INTO referral_leads (${fieldStr}) VALUES (${placeholders})`;
+      
+      console.log(`Executing lead insert with query: ${query}`);
+      console.log(`Parameters:`, finalParams);
+      
+      await connection.execute(query, params);
+      
+      console.log(`New referral lead created for ${firstName} ${lastName} using code ${referralCode}${agentId ? ` - Assigned to agent ID: ${agentId}` : ''}, referred by user ID: ${referrer.id}`);
       
       return res.status(201).json({
         success: true,
@@ -262,10 +318,8 @@ referralRouter.get('/agent/leads', checkAgent, async (req: Request, res: Respons
             return [];
           }
           
-          // Get leads that:
-          // 1. Are directly assigned to this agent (agent_id) - These come from referral chain lookups
-          // OR
-          // 2. Used this agent's referral code directly (backward compatibility)
+          // Get leads that used this agent's referral code directly
+          // The schema doesn't have agent_id or referred_by columns 
           const [leads] = await connection.execute(
             `SELECT 
               id,
@@ -276,12 +330,16 @@ referralRouter.get('/agent/leads', checkAgent, async (req: Request, res: Respons
               status,
               notes,
               created_at,
-              updated_at
+              updated_at,
+              signed_up_user_id,
+              referral_code
             FROM referral_leads
-            WHERE agent_id = ? OR referral_code = ?
+            WHERE referral_code = ?
             ORDER BY created_at DESC`,
-            [user.id, agentReferralCode]
+            [agentReferralCode]
           );
+          
+          console.log(`Lead query results:`, leads);
           
           console.log(`Found ${Array.isArray(leads) ? leads.length : 0} leads for agent ID ${user.id}`);
           return leads;
@@ -350,12 +408,11 @@ referralRouter.put('/agent/leads/:leadId', checkAgent, async (req: Request, res:
         });
       }
       
-      // Verify the lead belongs to this agent by checking either:
-      // 1. The agent_id equals the current agent's ID
-      // 2. The referral_code equals the agent's code
+      // Verify the lead belongs to this agent by checking:
+      // The referral_code equals the agent's code (since we don't have agent_id column)
       const [leadCheck] = await connection.execute(
-        'SELECT id FROM referral_leads WHERE id = ? AND (agent_id = ? OR referral_code = ?)',
-        [leadId, user.id, agentReferralCode]
+        'SELECT id FROM referral_leads WHERE id = ? AND referral_code = ?',
+        [leadId, agentReferralCode]
       );
       
       // @ts-ignore - MySQL2 results structure
@@ -460,12 +517,11 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           });
         }
         
-        // Verify the lead belongs to this agent by checking either:
-        // 1. The agent_id equals the current agent's ID
-        // 2. The referral_code equals the agent's code
+        // Verify the lead belongs to this agent by checking:
+        // The referral_code equals the agent's code (since we don't have agent_id column)
         const [leadCheck] = await connection.execute(
-          'SELECT id FROM referral_leads WHERE id = ? AND (agent_id = ? OR referral_code = ?)',
-          [leadId, user.id, agentReferralCode]
+          'SELECT id FROM referral_leads WHERE id = ? AND referral_code = ?',
+          [leadId, agentReferralCode]
         );
         
         // @ts-ignore - MySQL2 results structure
