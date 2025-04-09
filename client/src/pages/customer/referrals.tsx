@@ -243,10 +243,10 @@ export default function ReferralsPage() {
     if (packageUpgradeRequired) {
       return (
         <div className="p-8 max-w-4xl mx-auto">
-          <Card className="border-primary/30">
-            <CardHeader className="bg-primary/5 border-b border-primary/20">
-              <CardTitle className="flex items-center gap-2 text-primary">
-                <PackageIcon className="h-6 w-6" />
+          <Card className="border-[#43EB3E]/30">
+            <CardHeader className="bg-[#43EB3E]/5 border-b border-[#43EB3E]/20">
+              <CardTitle className="flex items-center gap-2 text-[#43EB3E]">
+                <PackageIcon className="h-6 w-6 text-[#43EB3E]" />
                 Package Upgrade Required
               </CardTitle>
             </CardHeader>
@@ -255,8 +255,8 @@ export default function ReferralsPage() {
                 <p className="text-foreground">
                   The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
                 </p>
-                <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
-                  <h3 className="font-medium text-primary mb-2">Why upgrade?</h3>
+                <div className="bg-[#43EB3E]/5 p-4 rounded-lg border border-[#43EB3E]/20">
+                  <h3 className="font-medium text-[#43EB3E] mb-2">Why upgrade?</h3>
                   <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
                     <li>Earn referral fees from your direct referrals</li>
                     <li>Earn additional rewards from your referral network</li>
@@ -265,7 +265,7 @@ export default function ReferralsPage() {
                   </ul>
                 </div>
                 <div className="flex justify-center mt-6">
-                  <Button>
+                  <Button className="bg-[#43EB3E] hover:bg-[#43EB3E]/80 text-black">
                     Upgrade to PROSPER Package
                   </Button>
                 </div>

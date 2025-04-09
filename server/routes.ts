@@ -1776,6 +1776,38 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
 
     const connection = await createConnection();
+    
+    try {
+      // Check if user has access to the referral program (PROSPER, PRESTIGE, or PINNACLE package)
+      const [packageCheck] = await connection.execute(
+        `SELECT selected_package FROM users WHERE id = ?`,
+        [req.user.id]
+      );
+      
+      if (!packageCheck || packageCheck.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const userPackage = packageCheck[0].selected_package;
+      const allowedPackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
+      
+      if (!allowedPackages.includes(userPackage)) {
+        return res.status(403).json({ 
+          error: "Package upgrade required", 
+          message: "Referral program is only available for PROSPER package or higher",
+          details: {
+            currentPackage: userPackage,
+            requiredPackages: allowedPackages
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error checking user package:", error);
+      return res.status(500).json({ 
+        error: "Failed to check package eligibility",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
     try {
       console.log('Fetching referral info for user:', req.user.id);
 

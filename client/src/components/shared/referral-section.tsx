@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy } from "lucide-react";
+import { Copy, Package as PackageIcon, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,8 @@ interface ReferralInfo {
 
 export default function ReferralSection() {
   const [copied, setCopied] = useState(false);
+  const [packageUpgradeRequired, setPackageUpgradeRequired] = useState(false);
+  const [userPackage, setUserPackage] = useState<string>("");
   const { toast } = useToast();
 
   const { data: referralInfo, isLoading, error } = useQuery<ReferralInfo>({
@@ -66,15 +68,38 @@ export default function ReferralSection() {
       const response = await fetch("/api/customer/referral", {
         credentials: 'include'
       });
+      
+      // Check for package restrictions (403 error)
+      if (response.status === 403) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Package restriction error:', errorData);
+        
+        if (errorData.details && errorData.details.currentPackage) {
+          setUserPackage(errorData.details.currentPackage);
+        }
+        
+        setPackageUpgradeRequired(true);
+        throw new Error("Package upgrade required");
+      }
+      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Referral fetch error:', { status: response.status, error: errorData });
         throw new Error(errorData.error || "Failed to fetch referral data");
       }
+      
       const data = await response.json();
       console.log('Referral data received:', data);
       return data;
     },
+    retry: (failureCount, error) => {
+      // Don't retry on package restriction errors
+      if (error instanceof Error && error.message === "Package upgrade required") {
+        return false;
+      }
+      // Retry other errors up to 3 times
+      return failureCount < 3;
+    }
   });
 
   console.log('Current referral info:', referralInfo);
@@ -130,6 +155,52 @@ export default function ReferralSection() {
     );
   }
 
+  if (packageUpgradeRequired) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            <span>Refer & Earn Points</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="border border-[#43EB3E]/30 rounded-lg overflow-hidden">
+              <div className="bg-[#43EB3E]/5 p-4 border-b border-[#43EB3E]/20">
+                <h3 className="text-[#43EB3E] font-medium flex items-center gap-2">
+                  <PackageIcon className="h-5 w-5 text-[#43EB3E]" />
+                  Package Upgrade Required
+                </h3>
+              </div>
+              <div className="p-4 space-y-3">
+                <p>
+                  The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Your current package: <strong>{userPackage || "OPPORTUNITY"}</strong>
+                </p>
+                <div className="bg-[#43EB3E]/5 p-3 rounded-md border border-[#43EB3E]/20">
+                  <h4 className="text-[#43EB3E] text-sm font-medium mb-2">Why upgrade?</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
+                    <li>Earn referral fees from your direct referrals</li>
+                    <li>Earn additional rewards from your referral network</li> 
+                    <li>Access exclusive PROSPER-level benefits</li>
+                  </ul>
+                </div>
+                <div className="flex justify-center mt-4">
+                  <Button className="bg-[#43EB3E] hover:bg-[#43EB3E]/80 text-black">
+                    Upgrade to PROSPER Package
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   if (error) {
     return (
       <Card>
@@ -231,16 +302,16 @@ export default function ReferralSection() {
             </div>
           </>
         )}
-        {referralInfo?.referralCount > 0 && (
+        {referralInfo && referralInfo.referralCount > 0 && (
           <div className="text-sm">
-            <span className="font-medium">{referralInfo?.referralCount}</span> successful referrals
+            <span className="font-medium">{referralInfo.referralCount}</span> successful referrals
           </div>
         )}
-        {referralInfo?.referralsByLevel?.[1]?.length > 0 && (
+        {referralInfo && referralInfo.referralsByLevel && referralInfo.referralsByLevel[1] && referralInfo.referralsByLevel[1].length > 0 && (
           <div className="space-y-2">
             <div className="text-sm font-medium">Recent Referrals</div>
             <div className="space-y-2">
-              {referralInfo?.referralsByLevel?.[1]?.map((referral) => (
+              {referralInfo && referralInfo.referralsByLevel && referralInfo.referralsByLevel[1] && referralInfo.referralsByLevel[1].map((referral) => (
                 <div
                   key={referral.id}
                   className="text-sm p-2 bg-muted rounded-lg flex justify-between items-center"
