@@ -89,8 +89,8 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
       
       // Check if this email has already been referred
       const [existingLeads] = await connection.execute(
-        'SELECT id FROM referral_leads WHERE email = ? AND agent_id = ?',
-        [email, agent.id]
+        'SELECT id FROM referral_leads WHERE email = ? AND referral_code = ?',
+        [email, formattedReferralCode]
       );
       
       // @ts-ignore - MySQL2 results structure
@@ -102,10 +102,10 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
             last_name = ?,
             phone_number = ?,
             notes = ?,
-            status = 'PENDING',
+            status = 'NEW',
             updated_at = NOW()
-          WHERE email = ? AND agent_id = ?`,
-          [firstName, lastName, phoneNumber, notes || '', email, agent.id]
+          WHERE email = ? AND referral_code = ?`,
+          [firstName, lastName, phoneNumber, notes || '', email, formattedReferralCode]
         );
         
         return res.status(200).json({
@@ -117,17 +117,17 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
       // Insert a new referral lead
       await connection.execute(
         `INSERT INTO referral_leads (
-          agent_id,
           first_name,
           last_name,
           email,
           phone_number,
+          referral_code,
           notes,
           status,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING', NOW(), NOW())`,
-        [agent.id, firstName, lastName, email, phoneNumber, notes || '']
+        ) VALUES (?, ?, ?, ?, ?, ?, 'NEW', NOW(), NOW())`,
+        [firstName, lastName, email, phoneNumber, formattedReferralCode, notes || '']
       );
       
       return res.status(201).json({
@@ -168,6 +168,27 @@ referralRouter.get('/agent/leads', checkAgent, async (req: Request, res: Respons
       async () => {
         const connection = await createConnection();
         try {
+          // First get the agent's referral code
+          const [agentResult] = await connection.execute(
+            `SELECT referral_code FROM users WHERE id = ?`,
+            [user.id]
+          );
+          
+          // @ts-ignore - MySQL2 results structure
+          if (!Array.isArray(agentResult) || agentResult.length === 0) {
+            console.error('Agent not found or referral code not set');
+            return [];
+          }
+          
+          // @ts-ignore - MySQL2 results structure
+          const agentReferralCode = agentResult[0].referral_code;
+          
+          if (!agentReferralCode) {
+            console.error('Agent does not have a referral code set');
+            return [];
+          }
+          
+          // Get all leads that used this agent's referral code
           const [leads] = await connection.execute(
             `SELECT 
               id,
@@ -180,9 +201,9 @@ referralRouter.get('/agent/leads', checkAgent, async (req: Request, res: Respons
               created_at,
               updated_at
             FROM referral_leads
-            WHERE agent_id = ?
+            WHERE referral_code = ?
             ORDER BY created_at DESC`,
-            [user.id]
+            [agentReferralCode]
           );
           
           return leads;
@@ -217,7 +238,8 @@ referralRouter.put('/agent/leads/:leadId', checkAgent, async (req: Request, res:
     const { leadId } = req.params;
     const { status, notes } = req.body;
     
-    if (!status || !['PENDING', 'CONTACTED', 'CONVERTED', 'LOST'].includes(status)) {
+    // We've updated the valid status values to match the REFERRAL_LEAD_STATUS enum
+    if (!status || !['NEW', 'CONTACTED', 'SIGNED_UP', 'NOT_INTERESTED'].includes(status)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid status'
@@ -226,10 +248,34 @@ referralRouter.put('/agent/leads/:leadId', checkAgent, async (req: Request, res:
     
     const connection = await createConnection();
     try {
-      // Verify the lead belongs to this agent
+      // First get the agent's referral code
+      const [agentResult] = await connection.execute(
+        `SELECT referral_code FROM users WHERE id = ?`,
+        [user.id]
+      );
+      
+      // @ts-ignore - MySQL2 results structure
+      if (!Array.isArray(agentResult) || agentResult.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Agent not found or referral code not set'
+        });
+      }
+      
+      // @ts-ignore - MySQL2 results structure
+      const agentReferralCode = agentResult[0].referral_code;
+      
+      if (!agentReferralCode) {
+        return res.status(400).json({
+          success: false,
+          error: 'Agent does not have a referral code set'
+        });
+      }
+      
+      // Verify the lead belongs to this agent by checking the referral code
       const [leadCheck] = await connection.execute(
-        'SELECT id FROM referral_leads WHERE id = ? AND agent_id = ?',
-        [leadId, user.id]
+        'SELECT id FROM referral_leads WHERE id = ? AND referral_code = ?',
+        [leadId, agentReferralCode]
       );
       
       // @ts-ignore - MySQL2 results structure
@@ -308,10 +354,36 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       
       // Check if we're registering from a lead
       if (leadId) {
-        // Verify the lead belongs to this agent
+        // First get the agent's referral code
+        const [agentResult] = await connection.execute(
+          `SELECT referral_code FROM users WHERE id = ?`,
+          [user.id]
+        );
+        
+        // @ts-ignore - MySQL2 results structure
+        if (!Array.isArray(agentResult) || agentResult.length === 0) {
+          await connection.rollback();
+          return res.status(404).json({
+            success: false,
+            error: 'Agent not found or referral code not set'
+          });
+        }
+        
+        // @ts-ignore - MySQL2 results structure
+        const agentReferralCode = agentResult[0].referral_code;
+        
+        if (!agentReferralCode) {
+          await connection.rollback();
+          return res.status(400).json({
+            success: false,
+            error: 'Agent does not have a referral code set'
+          });
+        }
+        
+        // Verify the lead belongs to this agent by checking the referral code
         const [leadCheck] = await connection.execute(
-          'SELECT id FROM referral_leads WHERE id = ? AND agent_id = ?',
-          [leadId, user.id]
+          'SELECT id FROM referral_leads WHERE id = ? AND referral_code = ?',
+          [leadId, agentReferralCode]
         );
         
         // @ts-ignore - MySQL2 results structure
@@ -323,10 +395,10 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           });
         }
         
-        // Update the lead to CONVERTED
+        // Update the lead to SIGNED_UP
         await connection.execute(
           `UPDATE referral_leads SET 
-            status = 'CONVERTED',
+            status = 'SIGNED_UP',
             updated_at = NOW()
           WHERE id = ?`,
           [leadId]

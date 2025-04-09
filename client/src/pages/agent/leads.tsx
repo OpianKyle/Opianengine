@@ -33,26 +33,26 @@ interface Lead {
   email: string;
   phoneNumber: string;
   notes: string;
-  status: 'NEW' | 'CONTACTED' | 'INTERESTED' | 'NOT_INTERESTED' | 'CONVERTED';
+  status: 'NEW' | 'CONTACTED' | 'SIGNED_UP' | 'NOT_INTERESTED';
   createdAt: string;
   updatedAt: string;
   referralCode: string;
 }
 
-const statusColors = {
-  NEW: 'bg-blue-100 text-blue-800',
-  CONTACTED: 'bg-yellow-100 text-yellow-800',
-  INTERESTED: 'bg-green-100 text-green-800',
-  NOT_INTERESTED: 'bg-red-100 text-red-800',
-  CONVERTED: 'bg-purple-100 text-purple-800'
-};
-
+// Status text mapping
 const statusText = {
   NEW: 'New Lead',
   CONTACTED: 'Contacted',
-  INTERESTED: 'Interested',
-  NOT_INTERESTED: 'Not Interested',
-  CONVERTED: 'Converted to Customer'
+  SIGNED_UP: 'Signed Up',
+  NOT_INTERESTED: 'Not Interested'
+};
+
+// Status color mapping to match the status values
+const statusColors = {
+  NEW: 'bg-blue-100 text-blue-800',
+  CONTACTED: 'bg-amber-100 text-amber-800',
+  SIGNED_UP: 'bg-green-100 text-green-800',
+  NOT_INTERESTED: 'bg-slate-100 text-slate-800'
 };
 
 export default function AgentLeadsPage() {
@@ -350,7 +350,7 @@ export default function AgentLeadsPage() {
                             Update Status
                           </Button>
                           
-                          {lead.status !== 'CONVERTED' && (
+                          {lead.status !== 'SIGNED_UP' && (
                             <Button
                               onClick={() => handleRegisterCustomer(lead)}
                               variant="default"
@@ -362,10 +362,10 @@ export default function AgentLeadsPage() {
                             </Button>
                           )}
                           
-                          {lead.status === 'CONVERTED' && (
+                          {lead.status === 'SIGNED_UP' && (
                             <Badge className="bg-green-100 text-green-800 flex items-center">
                               <CheckCircle className="mr-1 h-3 w-3" />
-                              Converted
+                              Signed Up
                             </Badge>
                           )}
                         </div>
@@ -401,9 +401,8 @@ export default function AgentLeadsPage() {
                 <SelectContent>
                   <SelectItem value="NEW">New Lead</SelectItem>
                   <SelectItem value="CONTACTED">Contacted</SelectItem>
-                  <SelectItem value="INTERESTED">Interested</SelectItem>
+                  <SelectItem value="SIGNED_UP">Signed Up</SelectItem>
                   <SelectItem value="NOT_INTERESTED">Not Interested</SelectItem>
-                  <SelectItem value="CONVERTED">Converted to Customer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
