@@ -265,7 +265,7 @@ export function formatFundCardEmail(
     Your Next Step - Funding your card
     You would have received your Rewards card by now. Now is the time to fund your card!
     Visti any Standard Bank or do an EFT from your current bank account and deposit money into the following account
-    Name: CENTRAL PAY Bank: STANDARD BANK Acc No: 1021 652 7021
+    Name: Opian Rewards Bank: Standard Bank Acc No: 370239296
     Important! Use the 8 Digit Number at the back, Card Number on the front, or Your ID Number as reference
     DO NOT USE YOUR NAME!
     
@@ -274,8 +274,8 @@ export function formatFundCardEmail(
     Please ensure you whitelist the numbers and email addresses where you receive communication from us, so you can always stay in the LOOP! Remember: The Opian Rewards System is designed to empower you financially-whether through savings, earnings, or smart financial choices.
     
     For assistance, contact our support team:
-    📞 Call: 0861 263 346
-    💬 WhatsApp: 063 581 2042
+    📞 Call: 0212141142
+    💬 WhatsApp: 0780473749
     📧 Email: clientservices@opianrewards.com
     
     Your biggest financial journey starts now! Let's make it rewarding!
@@ -288,7 +288,7 @@ export function formatFundCardEmail(
     Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider
     Company Registration Number: 2018/584168/07 FSP No: 50974
     Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape
-    Tel: 0861 263 346 | Email: info@opianfsgroup.com | Website: www.opianfsgroup.com
+    Tel: 0212141142 | Email: info@opianfsgroup.com | Website: www.opianfsgroup.com
   `;
 
   const html = `
@@ -325,9 +325,9 @@ export function formatFundCardEmail(
           <p style="line-height: 1.6;">Visit any Standard Bank or do an EFT from your current bank account and deposit money into the following account:</p>
           
           <div style="background: rgba(255,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 3px;">
-            <p style="margin: 5px 0; color: white;">Name: <strong>CENTRAL PAY</strong></p>
-            <p style="margin: 5px 0; color: white;">Bank: <strong>STANDARD BANK</strong></p>
-            <p style="margin: 5px 0; color: white;">Acc No: <strong>1021 652 7021</strong></p>
+            <p style="margin: 5px 0; color: white;">Name: <strong>Opian Rewards</strong></p>
+            <p style="margin: 5px 0; color: white;">Bank: <strong>Standard Bank</strong></p>
+            <p style="margin: 5px 0; color: white;">Acc No: <strong>370239296</strong></p>
           </div>
           
           <div style="background-color: rgba(67,235,62,0.1); padding: 15px; border-left: 4px solid #43EB3E; margin: 20px 0;">
@@ -349,8 +349,8 @@ export function formatFundCardEmail(
         <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; margin: 20px 0;">
           <h3 style="color: #43EB3E; margin-top: 0;">For assistance, contact our support team:</h3>
           <p style="line-height: 1.8; color: white !important;">
-            📞 Call: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span><br>
-            💬 WhatsApp: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0635812042" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">063 581 2042</a></span><br>
+            📞 Call: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0212141142" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0212141142</a></span><br>
+            💬 WhatsApp: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0780473749" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0780473749</a></span><br>
             📧 Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:clientservices@opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">clientservices@opianrewards.com</a></span>
           </p>
         </div>
@@ -373,7 +373,7 @@ export function formatFundCardEmail(
           <p>Company Registration Number: 2018/584168/07 FSP No: 50974</p>
           <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
           <p style="color: white !important;">
-            Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span> |
+            Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0212141142" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0212141142</a></span> |
             Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:info@opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">info@opianfsgroup.com</a></span> |
             Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianfsgroup.com</a></span>
           </p>
@@ -434,8 +434,8 @@ export function formatRegistrationEmail(
     The Opian Rewards System is designed to empower you financially—whether through savings, earnings, or smart financial choices.
 
     For assistance, contact our support team:
-    📞 Call: 0861 263 346
-    💬 WhatsApp: 0861 263 346
+    📞 Call: 0212141142
+    💬 WhatsApp: 0780473749
     📧 Email: clientservices@opianrewards.com
 
     Your biggest financial journey starts now! Let's make it rewarding!
@@ -449,7 +449,7 @@ export function formatRegistrationEmail(
     Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider
     Company Registration Number: 2018/584168/07 FSP No: 50974
     Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape
-    Tel: 0861 263 346 | Email: info@opianfsgroup.com | Website: www.opianfsgroup.com
+    Tel: 0212141142 | Email: info@opianfsgroup.com | Website: www.opianfsgroup.com
   `;
 
   const html = `
@@ -492,8 +492,8 @@ export function formatRegistrationEmail(
         <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; margin: 20px 0;">
           <h3 style="color: #43EB3E; margin-top: 0;">For assistance, contact our support team:</h3>
           <p style="line-height: 1.8; color: white !important;">
-            📞 Call: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span><br>
-            💬 WhatsApp: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span><br>
+            📞 Call: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0212141142" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0212141142</a></span><br>
+            💬 WhatsApp: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0780473749" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0780473749</a></span><br>
             📧 Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:clientservices@opianrewards.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">clientservices@opianrewards.com</a></span>
           </p>
         </div>
@@ -523,7 +523,7 @@ export function formatRegistrationEmail(
           <p>Company Registration Number: 2018/584168/07 FSP No: 50974</p>
           <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
           <p style="color: white !important;">
-            Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span> |
+            Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0212141142" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0212141142</a></span> |
             Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:info@opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">info@opianfsgroup.com</a></span> |
             Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianfsgroup.com</a></span>
           </p>
@@ -779,7 +779,7 @@ export function formatNewCustomerAdminEmail(
           <p>Company Registration Number: 2018/584168/07 FSP No: 50974</p>
           <p>Company Address: 260 Uys Krige Drive, Loevenstein, Bellville, 7530, Western Cape</p>
           <p style="color: white !important;">
-            Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0861263346" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0861 263 346</a></span> |
+            Tel: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="tel:0212141142" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">0212141142</a></span> |
             Email: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="mailto:info@opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">info@opianfsgroup.com</a></span> |
             Website: <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;"><a href="http://www.opianfsgroup.com" style="color: white !important; text-decoration: none; mso-color-alt: white; -webkit-text-fill-color: white;">www.opianfsgroup.com</a></span>
           </p>
