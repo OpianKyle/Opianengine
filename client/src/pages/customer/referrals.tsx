@@ -102,12 +102,32 @@ export default function ReferralsPage() {
           credentials: 'include'
         });
 
+        console.log('Referral response status:', response.status);
+        
+        // For 403 errors, we need to properly handle the package restriction
+        if (response.status === 403) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Package restriction error:', errorData);
+          throw new Error(JSON.stringify({
+            status: 403,
+            error: "Package upgrade required",
+            message: "You need to upgrade to PROSPER package or higher to access the referral program",
+            details: errorData
+          }));
+        }
+        
+        // For other error responses
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error('Referral fetch error:', { status: response.status, error: errorData });
+          console.error('Referral fetch error:', { 
+            status: response.status, 
+            error: errorData,
+            statusText: response.statusText 
+          });
           throw new Error(errorData.error || "Failed to fetch referral data");
         }
 
+        // Only parse JSON for successful responses
         const data = await response.json();
         console.log('Referral data received:', data);
         return data;
@@ -116,6 +136,14 @@ export default function ReferralsPage() {
         throw error;
       }
     },
+    retry: (failureCount, error) => {
+      // Don't retry on 403 (package restriction) errors
+      if (error.message && error.message.includes('403')) {
+        return false;
+      }
+      // Retry other errors up to 3 times
+      return failureCount < 3;
+    }
   });
 
   const referralLink = referralStats?.referralCode
@@ -170,11 +198,38 @@ export default function ReferralsPage() {
   if (error) {
     // Check if the error is due to package restriction
     const errorObj = error as any;
+    console.log('Detailed error object:', errorObj);
+    
     // Try to extract error details from the exception
-    const errorResponse = errorObj?.cause as { error?: string; message?: string } | undefined;
+    let errorResponse;
+    try {
+      // The error object structure can vary depending on how fetch errors are handled
+      if (errorObj.cause && typeof errorObj.cause === 'object') {
+        errorResponse = errorObj.cause;
+      } else if (errorObj.message && typeof errorObj.message === 'string') {
+        // Try to parse JSON from error message if it contains JSON
+        const jsonMatch = errorObj.message.match(/{.*}/);
+        if (jsonMatch) {
+          try {
+            errorResponse = JSON.parse(jsonMatch[0]);
+          } catch (e) {
+            console.error('Failed to parse JSON from error message:', e);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error while extracting error details:', e);
+    }
+    
+    console.log('Extracted error response:', errorResponse);
+    
     const packageUpgradeRequired = 
       errorObj?.message?.includes('upgrade to PROSPER package') || 
-      (errorResponse && errorResponse.error === 'Package upgrade required');
+      errorObj?.message?.includes('Package upgrade required') ||
+      (errorResponse && (
+        errorResponse.error === 'Package upgrade required' ||
+        errorResponse.message?.includes('upgrade to PROSPER package')
+      ));
       
     if (packageUpgradeRequired) {
       return (
