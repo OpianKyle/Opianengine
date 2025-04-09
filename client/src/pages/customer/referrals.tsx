@@ -36,7 +36,7 @@ interface ReferralStats {
           PRESTIGE: number;
           PINNACLE: number;
         };
-        commission: {
+        referralFee: {
           percentage: number;
           baseAmount: number;
         };
@@ -52,7 +52,7 @@ interface ReferralStats {
       selectedPackage: string;
       createdAt: string;
       directReferralCount: number;
-      commission: {
+      referralFee: {
         percentage: number;
         randValue: string;
         points: number;
@@ -153,11 +153,11 @@ export default function ReferralsPage() {
     }
   };
 
-  // Calculate total commission for each level
+  // Calculate total referral fees for each level
   const calculateLevelCommission = (level: number) => {
     if (!referralStats?.referralsByLevel[level]) return 0;
     return referralStats.referralsByLevel[level].reduce((sum, ref) => {
-      return sum + Number(ref.commission.randValue);
+      return sum + Number(ref.referralFee.randValue);
     }, 0);
   };
 
@@ -168,6 +168,50 @@ export default function ReferralsPage() {
   })) : [];
 
   if (error) {
+    // Check if the error is due to package restriction
+    const errorObj = error as any;
+    // Try to extract error details from the exception
+    const errorResponse = errorObj?.cause as { error?: string; message?: string } | undefined;
+    const packageUpgradeRequired = 
+      errorObj?.message?.includes('upgrade to PROSPER package') || 
+      (errorResponse && errorResponse.error === 'Package upgrade required');
+      
+    if (packageUpgradeRequired) {
+      return (
+        <div className="p-8 max-w-4xl mx-auto">
+          <Card className="border-amber-300">
+            <CardHeader className="bg-amber-50 border-b border-amber-100">
+              <CardTitle className="flex items-center gap-2 text-amber-800">
+                <PackageIcon className="h-6 w-6" />
+                Package Upgrade Required
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <p className="text-gray-700">
+                  The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
+                </p>
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
+                  <h3 className="font-medium text-amber-800 mb-2">Why upgrade?</h3>
+                  <ul className="list-disc pl-5 space-y-1 text-gray-600">
+                    <li>Earn referral fees from your direct referrals</li>
+                    <li>Earn additional rewards from your referral network</li>
+                    <li>Access exclusive PROSPER-level benefits</li>
+                    <li>Increase your monthly reward potential</li>
+                  </ul>
+                </div>
+                <div className="flex justify-center mt-6">
+                  <Button className="bg-amber-600 hover:bg-amber-700">
+                    Upgrade to PROSPER Package
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    
     return (
       <div className="p-4">
         <p className="text-red-500">Error loading referral data. Please try again later.</p>
@@ -189,12 +233,12 @@ export default function ReferralsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Commission Summary</CardTitle>
+          <CardTitle>Monthly Referral Fees Summary</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Your commission earnings based on your referral network's packages.
+              Your referral fee earnings based on your referral network's packages.
             </p>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
@@ -241,7 +285,7 @@ export default function ReferralsPage() {
 
               <Card className="bg-primary/5">
                 <CardHeader className="py-3">
-                  <CardTitle className="text-sm font-medium">Total Commission</CardTitle>
+                  <CardTitle className="text-sm font-medium">Total Referral Fees</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-white">
@@ -292,7 +336,7 @@ export default function ReferralsPage() {
                       Package: {referral.selectedPackage || 'None'}
                     </Badge>
                     <Badge className="bg-primary text-white">
-                      Commission: R{referral.commission.randValue}
+                      Referral Fee: R{referral.referralFee.randValue}
                     </Badge>
                   </div>
                 </div>

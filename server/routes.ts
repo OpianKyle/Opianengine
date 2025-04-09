@@ -3902,6 +3902,19 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }
 
       const currentUser = userData[0];
+      
+      // Check if user has PROSPER package or higher
+      const eligiblePackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
+      const userPackage = currentUser.selected_package ? currentUser.selected_package.toUpperCase() : '';
+      
+      if (!eligiblePackages.includes(userPackage)) {
+        return res.status(403).json({ 
+          error: "Package upgrade required", 
+          message: "You need to upgrade to PROSPER package or higher to access the referral program",
+          currentPackage: userPackage
+        });
+      }
+      
       let referralCode = currentUser.referral_code;
       
       // Generate referral code if user doesn't have one

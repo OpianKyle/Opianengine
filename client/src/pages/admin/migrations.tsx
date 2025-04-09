@@ -126,7 +126,7 @@ export default function Migrations() {
             <p className="mb-4">
               This migration will identify all users who were signed up by an agent (have agent_id)
               but are not yet in the agent_commissions table, and add them with the appropriate
-              commission data.
+              referral fee data.
             </p>
             
             <div className="flex items-center space-x-2 mb-6">
@@ -210,10 +210,10 @@ export default function Migrations() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Wrench className="h-5 w-5 mr-2" />
-              Manual Agent Commissions Migration
+              Manual Agent Referral Fees Migration
             </CardTitle>
             <CardDescription>
-              Direct SQL migration for agent customer commissions
+              Direct SQL migration for agent customer referral fees
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -365,7 +365,7 @@ export default function Migrations() {
             <li>Make sure to back up your database before running any migration</li>
             <li>Migrations are designed to be idempotent (safe to run multiple times)</li>
             <li>Users that already exist in the agent_commissions table will be skipped</li>
-            <li>This migration will calculate commission points based on customer selected package</li>
+            <li>This migration will calculate referral fee points based on customer selected package</li>
             <li>If the standard migration times out, try the manual migration option which uses a different approach</li>
           </ul>
         </div>

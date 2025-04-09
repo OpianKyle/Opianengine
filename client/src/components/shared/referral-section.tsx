@@ -31,7 +31,7 @@ interface ReferralInfo {
         PROFESSIONAL: number;
         EXPERT: number;
       };
-      commission: {
+      referralFee: {
         percentage: number;
         baseAmount: number;
       };
@@ -46,7 +46,7 @@ interface ReferralInfo {
       selectedPackage: string;
       createdAt: string;
       directReferralCount: number;
-      commission: {
+      referralFee: {
         percentage: number;
         randValue: string;
         points: number;
@@ -157,9 +157,9 @@ export default function ReferralSection() {
         <div className="bg-[rgba(255,255,255,0.05)] p-5 rounded-lg my-5">
           <h3 className="text-[#43EB3E] mt-0">Your Referral Rewards</h3>
           <ul className="list-none pl-0 my-2.5">
-            <li className="my-1.5">• Level 1: 7.5% commission + 2000 points per direct referral</li>
-            <li className="my-1.5">• Level 2: 5% commission from your referrals' referrals</li>
-            <li className="my-1.5">• Level 3: 2.5% commission from level 3 referrals</li>
+            <li className="my-1.5">• Level 1: 7.5% referral fee + 2000 points per direct referral</li>
+            <li className="my-1.5">• Level 2: 5% referral fee from your referrals' referrals</li>
+            <li className="my-1.5">• Level 3: 2.5% referral fee from level 3 referrals</li>
           </ul>
         </div>
         {referralLink && (
@@ -233,14 +233,14 @@ export default function ReferralSection() {
         )}
         {referralInfo?.referralCount > 0 && (
           <div className="text-sm">
-            <span className="font-medium">{referralInfo.referralCount}</span> successful referrals
+            <span className="font-medium">{referralInfo?.referralCount}</span> successful referrals
           </div>
         )}
-        {referralInfo?.referralsByLevel[1]?.length > 0 && (
+        {referralInfo?.referralsByLevel?.[1]?.length > 0 && (
           <div className="space-y-2">
             <div className="text-sm font-medium">Recent Referrals</div>
             <div className="space-y-2">
-              {referralInfo.referralsByLevel[1].map((referral) => (
+              {referralInfo?.referralsByLevel?.[1]?.map((referral) => (
                 <div
                   key={referral.id}
                   className="text-sm p-2 bg-muted rounded-lg flex justify-between items-center"
@@ -250,7 +250,7 @@ export default function ReferralSection() {
                     <span className="text-muted-foreground"> joined on </span>
                     <span>{new Date(referral.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <Badge variant="outline">+{referral.commission.points} points</Badge>
+                  <Badge variant="outline">+{referral.referralFee.points} points</Badge>
                 </div>
               ))}
             </div>
