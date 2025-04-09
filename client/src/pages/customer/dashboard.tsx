@@ -238,7 +238,7 @@ export default function CustomerDashboard() {
                   Earn points when your referrals join and receive additional bonuses from their referrals.
                 </p>
                 <p className="text-xs text-slate-400">
-                  Note: Access is granted to any PROSPER, PRESTIGE, or PINNACLE package, regardless of capitalization.
+                  Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
                 </p>
               </div>
               <Button 

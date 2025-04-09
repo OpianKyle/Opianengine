@@ -271,7 +271,7 @@ export default function ReferralsPage() {
                   The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package (case-insensitive). If you believe your package should grant you access, please contact support.
+                  Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package. If you believe your package should grant you access, please contact support.
                 </p>
                 <div className="bg-[#43EB3E]/5 p-4 rounded-lg border border-[#43EB3E]/20">
                   <h3 className="font-medium text-[#43EB3E] mb-2">Why upgrade?</h3>

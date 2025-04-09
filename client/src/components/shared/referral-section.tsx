@@ -203,7 +203,7 @@ export default function ReferralSection() {
                   Your current package: <strong>{userPackage || "OPPORTUNITY"}</strong>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Note: Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package (case-insensitive).
+                  Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
                 </p>
                 <div className="bg-[#43EB3E]/5 p-3 rounded-md border border-[#43EB3E]/20">
                   <h4 className="text-[#43EB3E] text-sm font-medium mb-2">Why upgrade?</h4>
