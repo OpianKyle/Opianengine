@@ -128,42 +128,86 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
         console.log(`Referrer is not an agent, following referral chain to find agent...`);
         
         // Follow the chain back to find an agent
-        while (!agentId && depth < MAX_CHAIN_DEPTH) {
-          // Get the person who referred the current user
-          const [userInfo] = await connection.execute(
-            'SELECT id, email, referred_by FROM users WHERE id = ? AND is_enabled = 1',
-            [currentUserId]
-          );
+        console.log(`DETAILED DEBUG - Starting referral chain lookup from user ${currentUserId} (${referrer.email})`);
+        console.log(`DETAILED DEBUG - This user was registered by agent ID ${referrer.referred_by}`);
+        
+        // First, check directly if the user's referred_by field points to an agent
+        // This is the most direct way to identify the original agent who signed them up
+        if (referrer && referrer.referred_by) {
+          const referredById = referrer.referred_by;
+          console.log(`DETAILED DEBUG - User ${currentUserId} has referrer ID ${referredById} - checking if they're an agent`);
           
-          // @ts-ignore - MySQL2 results structure
-          if (!Array.isArray(userInfo) || userInfo.length === 0 || !userInfo[0].referred_by) {
-            console.log(`End of referral chain reached at user ID: ${currentUserId}`);
-            break;
-          }
-          
-          // @ts-ignore - MySQL2 results structure
-          const referredById = userInfo[0].referred_by;
-          console.log(`User ${currentUserId} was referred by user ${referredById} - checking if they're an agent`);
-          
-          // Check if this person is an agent
-          const [agentCheck] = await connection.execute(
-            'SELECT id, email, is_agent FROM users WHERE id = ? AND is_agent = 1 AND is_enabled = 1',
-            [referredById]
-          );
-          
-          // @ts-ignore - MySQL2 results structure
-          if (Array.isArray(agentCheck) && agentCheck.length > 0) {
+          try {
+            const [directAgentCheck] = await connection.execute(
+              'SELECT id, email, is_agent, is_admin FROM users WHERE id = ? AND is_agent = 1 AND is_enabled = 1',
+              [referredById]
+            );
+            
             // @ts-ignore - MySQL2 results structure
-            agentId = agentCheck[0].id;
-            // @ts-ignore - MySQL2 results structure
-            console.log(`Found agent in referral chain:`, { agentId, agentEmail: agentCheck[0].email });
-            break;
+            if (Array.isArray(directAgentCheck) && directAgentCheck.length > 0) {
+              // @ts-ignore - MySQL2 results structure
+              agentId = directAgentCheck[0].id;
+              // @ts-ignore - MySQL2 results structure
+              const agentEmail = directAgentCheck[0].email;
+              // @ts-ignore - MySQL2 results structure
+              const isAdmin = directAgentCheck[0].is_admin === 1;
+              
+              console.log(`DETAILED DEBUG - Found direct agent who registered this user:`, { 
+                agentId, 
+                agentEmail,
+                isAdmin
+              });
+              
+              console.log(`CORRECTED ASSIGNMENT - Directly assigning lead to agent ${agentId} who registered user ${currentUserId}`);
+            } else {
+              console.log(`DETAILED DEBUG - User ${currentUserId} was registered by ${referredById}, but they are not an agent`);
+            }
+          } catch (error) {
+            console.error(`Error checking if user's referred_by is an agent:`, error);
           }
+        }
+        
+        // Only proceed with chain search if we didn't find a direct agent
+        if (!agentId) {
+          console.log(`DETAILED DEBUG - No direct agent found, searching through referral chain...`);
           
-          // Move up the chain
-          currentUserId = referredById;
-          depth++;
-          console.log(`Moving up chain to user ${currentUserId}, depth: ${depth}`);
+          while (!agentId && depth < MAX_CHAIN_DEPTH) {
+            // Get the person who referred the current user
+            const [userInfo] = await connection.execute(
+              'SELECT id, email, referred_by FROM users WHERE id = ? AND is_enabled = 1',
+              [currentUserId]
+            );
+            
+            // @ts-ignore - MySQL2 results structure
+            if (!Array.isArray(userInfo) || userInfo.length === 0 || !userInfo[0].referred_by) {
+              console.log(`DETAILED DEBUG - End of referral chain reached at user ID: ${currentUserId}`);
+              break;
+            }
+            
+            // @ts-ignore - MySQL2 results structure
+            const referredById = userInfo[0].referred_by;
+            console.log(`DETAILED DEBUG - User ${currentUserId} was referred by user ${referredById} - checking if they're an agent`);
+            
+            // Check if this person is an agent
+            const [agentCheck] = await connection.execute(
+              'SELECT id, email, is_agent FROM users WHERE id = ? AND is_agent = 1 AND is_enabled = 1',
+              [referredById]
+            );
+            
+            // @ts-ignore - MySQL2 results structure
+            if (Array.isArray(agentCheck) && agentCheck.length > 0) {
+              // @ts-ignore - MySQL2 results structure
+              agentId = agentCheck[0].id;
+              // @ts-ignore - MySQL2 results structure
+              console.log(`DETAILED DEBUG - Found agent in referral chain:`, { agentId, agentEmail: agentCheck[0].email });
+              break;
+            }
+            
+            // Move up the chain
+            currentUserId = referredById;
+            depth++;
+            console.log(`DETAILED DEBUG - Moving up chain to user ${currentUserId}, depth: ${depth}`);
+          }
         }
         
         if (!agentId) {
