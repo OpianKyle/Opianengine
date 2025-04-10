@@ -987,8 +987,12 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
         });
       }
       
-      // Create password (can be changed later)
+      // Create a random temporary password (can be changed later)
       const tempPassword = Math.random().toString(36).slice(2, 10);
+      
+      // Hash the password before storing it
+      const bcrypt = require('bcrypt');
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
       
       // Insert the new user
       // CRITICAL FIX: When an agent registers a customer, set the agent_id field
@@ -1007,13 +1011,12 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           is_super_admin,
           is_enabled,
           mandate_accepted,
-          created_by,
           agent_id,
           referred_by,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, '', 0, 0, 0, 1, ?, ?, ?, ?, NOW(), NOW())`,
-        [email, tempPassword, firstName, lastName, phoneNumber, idNumber || '', mandateAccepted ? 1 : 0, user.id, user.id, user.id]
+        ) VALUES (?, ?, ?, ?, ?, ?, '', 0, 0, 0, 1, ?, ?, ?, NOW(), NOW())`,
+        [email, hashedPassword, firstName, lastName, phoneNumber, idNumber || '', mandateAccepted ? 1 : 0, user.id, user.id]
       );
       
       // @ts-ignore - MySQL2 results structure
@@ -1123,6 +1126,20 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           ) VALUES (?, ?, 'ASSIGNED', ?, NOW())`,
           [newUserId, productId, user.id]
         );
+      }
+      
+      // Update the lead status to SIGNED_UP if this registration came from a lead
+      if (leadId) {
+        try {
+          await connection.execute(
+            `UPDATE referral_leads SET status = 'SIGNED_UP', updated_at = NOW() WHERE id = ?`,
+            [leadId]
+          );
+          console.log(`Updated lead ${leadId} status to SIGNED_UP after customer registration`);
+        } catch (updateError) {
+          console.error(`Error updating lead status:`, updateError);
+          // Don't fail the whole transaction if this update fails
+        }
       }
       
       // Commit the transaction
