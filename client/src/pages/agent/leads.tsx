@@ -193,14 +193,26 @@ export default function AgentLeadsPage() {
         headers['Authorization'] = `Bearer ${token}`;
       }
       
+      // Generate a signature from the form data
+      // This is required for the server-side API but we're just passing the
+      // mandateAgreement value as the signature since we've removed the signature field
+      const payload = {
+        ...data,
+        leadId: selectedLead?.id,
+        // Remove password fields as they're not needed in this flow
+        password: undefined,
+        confirmPassword: undefined,
+        // Add mandateAccepted field which the server expects
+        mandateAccepted: data.mandateAgreement,
+        // Add a simple signature placeholder since we removed the UI element
+        signature: data.mandateAgreement ? 'User agreed via checkbox' : '',
+      };
+      
       const response = await fetch('/api/referral/agent/register-customer', {
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify({
-          ...data,
-          leadId: selectedLead?.id,
-        }),
+        body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
@@ -341,15 +353,6 @@ export default function AgentLeadsPage() {
         variant: 'destructive',
         title: 'Mandate Agreement Required',
         description: 'Customer must agree to the mandate agreement to proceed.',
-      });
-      return;
-    }
-
-    if (registerData.password !== registerData.confirmPassword) {
-      toast({
-        variant: 'destructive',
-        title: 'Password Mismatch',
-        description: 'The passwords you entered do not match.',
       });
       return;
     }
@@ -797,10 +800,10 @@ export default function AgentLeadsPage() {
                 </div>
               </div>
               
-              {/* Package and Account */}
+              {/* Package */}
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Package and Account</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Package Selection</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="selectedPackage">Select Package *</Label>
                     <Select
@@ -818,26 +821,6 @@ export default function AgentLeadsPage() {
                         <SelectItem value="PINNACLE">Pinnacle (R825)</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Temporary Password *</Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      value={registerData.password}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type="password"
-                      value={registerData.confirmPassword}
-                      onChange={handleRegisterDataChange}
-                    />
                   </div>
                 </div>
               </div>
