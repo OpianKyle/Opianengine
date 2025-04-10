@@ -228,15 +228,13 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
         'NOW()'
       ];
       
-      // Special handling for signed_up_user_id if we have an agent
+      // Use signed_up_user_id to store the agent ID when we have one
       if (agentId) {
-        // For now, we'll just log that we found an agent
-        // since the schema doesn't explicitly have an agent_id field
         console.log(`Found agent ID ${agentId} via referral chain for ${firstName} ${lastName}`);
         
-        // In the future, we might want to add this field via migration
-        // fields.push('signed_up_user_id');
-        // params.push(agentId);
+        // Add the agent ID to the signed_up_user_id field
+        fields.push('signed_up_user_id');
+        params.push(agentId);
       }
       
       // Log the referred_by relationship even though we can't store it
@@ -340,7 +338,9 @@ referralRouter.get('/agent/leads', checkAgent, async (req: Request, res: Respons
           
           console.log(`Searching for leads with these referral codes:`, referralCodes);
           
-          // Get leads that used this agent's referral code or any of their referred users' codes
+          // Get leads that either:
+          // 1. Used this agent's referral code or any of their referred users' codes
+          // 2. Have their signed_up_user_id set to this agent (tracked via the referral chain)
           const [leads] = await connection.execute(
             `SELECT 
               id,
@@ -356,8 +356,9 @@ referralRouter.get('/agent/leads', checkAgent, async (req: Request, res: Respons
               referral_code
             FROM referral_leads
             WHERE referral_code IN (${referralCodes.map(() => '?').join(',')})
+               OR signed_up_user_id = ?
             ORDER BY created_at DESC`,
-            referralCodes
+            [...referralCodes, user.id]
           );
           
           console.log(`Lead query results:`, leads);
@@ -448,11 +449,12 @@ referralRouter.put('/agent/leads/:leadId', checkAgent, async (req: Request, res:
       console.log(`Checking lead ${leadId} against these referral codes:`, referralCodes);
       
       // Verify the lead belongs to this agent by checking:
-      // If the referral_code matches the agent's code or any of their referred users' codes
+      // 1. If the referral_code matches the agent's code or any of their referred users' codes
+      // 2. If this agent is directly set as responsible for the lead via signed_up_user_id
       const placeholders = referralCodes.map(() => '?').join(',');
       const [leadCheck] = await connection.execute(
-        `SELECT id FROM referral_leads WHERE id = ? AND referral_code IN (${placeholders})`,
-        [leadId, ...referralCodes]
+        `SELECT id FROM referral_leads WHERE id = ? AND (referral_code IN (${placeholders}) OR signed_up_user_id = ?)`,
+        [leadId, ...referralCodes, user.id]
       );
       
       // @ts-ignore - MySQL2 results structure
@@ -576,11 +578,12 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
         console.log(`Checking lead ${leadId} against these referral codes:`, referralCodes);
         
         // Verify the lead belongs to this agent by checking:
-        // If the referral_code matches the agent's code or any of their referred users' codes
+        // 1. If the referral_code matches the agent's code or any of their referred users' codes
+        // 2. If this agent is directly set as responsible for the lead via signed_up_user_id
         const placeholders = referralCodes.map(() => '?').join(',');
         const [leadCheck] = await connection.execute(
-          `SELECT id FROM referral_leads WHERE id = ? AND referral_code IN (${placeholders})`,
-          [leadId, ...referralCodes]
+          `SELECT id FROM referral_leads WHERE id = ? AND (referral_code IN (${placeholders}) OR signed_up_user_id = ?)`,
+          [leadId, ...referralCodes, user.id]
         );
         
         // @ts-ignore - MySQL2 results structure
