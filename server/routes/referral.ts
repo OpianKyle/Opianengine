@@ -113,34 +113,22 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
       let depth = 0;
       const MAX_CHAIN_DEPTH = 10; // Prevent infinite loops
       
-      // Simple approach: Just use the agent with ID 160 for now
-      // We know this agent works based on testing
-      const DIRECT_AGENT_ID = 160; // Known working agent ID
-      
-      // Log information for diagnostics
-      console.log(`INFO: Using agent ID ${DIRECT_AGENT_ID} for simplicity`);
-      agentId = DIRECT_AGENT_ID;
-      
-      // Let's also check the original chain for debugging purposes
+      // First, check if the referrer is directly an agent
       const [selfCheck] = await connection.execute(
         'SELECT id, is_agent FROM users WHERE id = ? AND is_agent = 1 AND is_enabled = 1',
         [referrer.id]
       );
       
-      // Log the check result but don't use it for agent assignment
       // @ts-ignore - MySQL2 results structure
       if (Array.isArray(selfCheck) && selfCheck.length > 0) {
-        const originalAgentId = referrer.id;
-        console.log(`DEBUG ONLY - Referrer is an agent, would have assigned lead to them:`, { originalAgentId });
-        console.log(`But using override agent ID instead: ${DIRECT_AGENT_ID}`);
+        // If the referrer is an agent, assign the lead directly to them
+        agentId = referrer.id;
+        console.log(`Referrer is an agent, assigned lead directly to them: Agent ID ${agentId}`);
       } else {
-        console.log(`DEBUG ONLY - Referrer is not an agent, would follow referral chain...`);
-        console.log(`But using override agent ID instead: ${DIRECT_AGENT_ID}`);
+        console.log(`Referrer is not an agent, following referral chain to find agent...`);
         
-        // For diagnostic purposes, follow the chain back to find an agent
-        // But we won't actually use this agentId - keeping only for debugging
-        let diagnosticAgentId = null;
-        while (!diagnosticAgentId && depth < MAX_CHAIN_DEPTH) {
+        // Follow the chain back to find an agent
+        while (!agentId && depth < MAX_CHAIN_DEPTH) {
           // Get the person who referred the current user
           const [userInfo] = await connection.execute(
             'SELECT id, email, referred_by FROM users WHERE id = ? AND is_enabled = 1',
@@ -166,10 +154,9 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
           // @ts-ignore - MySQL2 results structure
           if (Array.isArray(agentCheck) && agentCheck.length > 0) {
             // @ts-ignore - MySQL2 results structure
-            diagnosticAgentId = agentCheck[0].id;
+            agentId = agentCheck[0].id;
             // @ts-ignore - MySQL2 results structure
-            console.log(`DEBUG ONLY - Found agent in referral chain:`, { diagnosticAgentId, agentEmail: agentCheck[0].email });
-            console.log(`But using override agent ID instead: ${DIRECT_AGENT_ID}`);
+            console.log(`Found agent in referral chain:`, { agentId, agentEmail: agentCheck[0].email });
             break;
           }
           
@@ -179,9 +166,9 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
           console.log(`Moving up chain to user ${currentUserId}, depth: ${depth}`);
         }
         
-        if (!diagnosticAgentId) {
-          console.log(`DEBUG ONLY - No agent found in referral chain after ${depth} levels`);
-          console.log(`Using override agent ID instead: ${DIRECT_AGENT_ID}`);
+        if (!agentId) {
+          console.log(`No agent found in referral chain after ${depth} levels`);
+          console.log(`Lead will be created without an agent assignment`);
         }
       }
       
