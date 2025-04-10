@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +61,7 @@ const statusColors = {
 export default function AgentLeadsPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { token } = useAuth();
   const queryClient = useQueryClient();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
@@ -75,28 +77,64 @@ export default function AgentLeadsPage() {
   });
 
   // Query to fetch the referral leads with optimizations
-  const { data: leadsData, isLoading: isLeadsLoading } = useQuery({
-    queryKey: ['/api/referral/agent/leads'],
+  const { data: leadsData, isLoading: isLeadsLoading, error: leadsError } = useQuery({
+    queryKey: ['/api/referral/agent/leads', token],
     queryFn: async () => {
-      const response = await fetch('/api/referral/agent/leads');
+      // Create headers with authorization token
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      // Add token to headers if available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch('/api/referral/agent/leads', {
+        headers,
+        credentials: 'include'
+      });
+      
       if (!response.ok) {
+        // Handle potential auth errors specifically
+        if (response.status === 401) {
+          throw new Error('Authentication required - please log in again');
+        }
+        
+        if (response.status === 403) {
+          throw new Error('You do not have permission to access these leads');
+        }
+        
         throw new Error('Failed to fetch leads');
       }
+      
       return response.json();
     },
     staleTime: 2 * 60 * 1000, // 2 minutes before refetching (server cache is 2 minutes)
     gcTime: 5 * 60 * 1000, // 5 minutes before removing from cache (cacheTime is renamed to gcTime in React Query v5)
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    enabled: !!token, // Only run the query if token exists
   });
 
   // Mutation to update lead status
   const updateLeadMutation = useMutation({
     mutationFn: async ({ leadId, status }: { leadId: number; status: string }) => {
+      // Create headers with authorization token
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      // Add token to headers if available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`/api/referral/agent/leads/${leadId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({ status }),
       });
       
@@ -126,11 +164,21 @@ export default function AgentLeadsPage() {
   // Mutation to register a new customer from a lead
   const registerCustomerMutation = useMutation({
     mutationFn: async (data: typeof registerData) => {
+      // Create headers with authorization token
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      // Add token to headers if available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch('/api/referral/agent/register-customer', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           ...data,
           leadId: selectedLead?.id,
