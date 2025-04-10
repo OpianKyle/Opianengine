@@ -168,7 +168,36 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
         
         if (!agentId) {
           console.log(`No agent found in referral chain after ${depth} levels`);
-          console.log(`Lead will be created without an agent assignment`);
+          console.log(`Attempting to find a default agent for assignment...`);
+          
+          // Find any available agent to assign this lead to
+          // First try to get an admin agent (they should handle leads without proper chain)
+          const [adminAgents] = await connection.execute(
+            'SELECT id, email FROM users WHERE is_agent = 1 AND is_admin = 1 AND is_enabled = 1 LIMIT 1'
+          );
+          
+          // @ts-ignore - MySQL2 results structure
+          if (Array.isArray(adminAgents) && adminAgents.length > 0) {
+            // @ts-ignore - MySQL2 results structure
+            agentId = adminAgents[0].id;
+            // @ts-ignore - MySQL2 results structure
+            console.log(`Assigned lead to admin agent:`, { agentId, agentEmail: adminAgents[0].email });
+          } else {
+            // If no admin agents, try to get any agent
+            const [anyAgent] = await connection.execute(
+              'SELECT id, email FROM users WHERE is_agent = 1 AND is_enabled = 1 LIMIT 1'
+            );
+            
+            // @ts-ignore - MySQL2 results structure
+            if (Array.isArray(anyAgent) && anyAgent.length > 0) {
+              // @ts-ignore - MySQL2 results structure
+              agentId = anyAgent[0].id;
+              // @ts-ignore - MySQL2 results structure
+              console.log(`Assigned lead to available agent:`, { agentId, agentEmail: anyAgent[0].email });
+            } else {
+              console.log(`No agents found in the system. Lead will be created without an agent assignment`);
+            }
+          }
         }
       }
       
