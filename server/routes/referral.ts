@@ -19,6 +19,52 @@ interface User {
 }
 
 /**
+ * TEMPORARY DEBUG ENDPOINT - REMOVE AFTER FIXING
+ * This endpoint helps us understand the referred_by relationship between users
+ */
+referralRouter.get('/debug/user-chain', async (req: Request, res: Response) => {
+  try {
+    const connection = await createConnection();
+    try {
+      // Get specific users from IDs we're troubleshooting
+      const [user187] = await connection.execute(
+        'SELECT id, email, first_name, last_name, referred_by, is_agent FROM users WHERE id = 187'
+      );
+      
+      const [user186] = await connection.execute(
+        'SELECT id, email, first_name, last_name, referred_by, is_agent FROM users WHERE id = 186'
+      );
+      
+      const [user76] = await connection.execute(
+        'SELECT id, email, first_name, last_name, referred_by, is_agent FROM users WHERE id = 76'
+      );
+      
+      // Also look up all agents to check if agent 186 needs to be activated/configured
+      const [agents] = await connection.execute(
+        'SELECT id, email, first_name, last_name, referral_code, is_enabled FROM users WHERE is_agent = 1 LIMIT 10'
+      );
+      
+      return res.status(200).json({
+        success: true,
+        user187,
+        user186, 
+        user76,
+        agents,
+        notes: 'This is a debug endpoint to understand the referral chain'
+      });
+    } finally {
+      await connection.end();
+    }
+  } catch (error) {
+    console.error('Error in debug endpoint:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Debug endpoint error'
+    });
+  }
+});
+
+/**
  * API endpoint to validate a referral code
  * This will return information about the agent if the code is valid
  */
