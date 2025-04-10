@@ -67,13 +67,31 @@ export default function AgentLeadsPage() {
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [registerData, setRegisterData] = useState({
+    email: '',
     firstName: '',
     lastName: '',
-    email: '',
-    phoneNumber: '',
+    isSouthAfrican: false,
+    idNumber: '',
+    dateOfBirth: '',
+    gender: 'male',
+    mobileNumber: '',
+    occupation: '',
+    industry: '',
+    addressLine1: '',
+    suburb: '',
+    postalCode: '',
+    hasCreditCard: false,
+    selectedPackage: 'OPPORTUNITY',
+    accountHolderName: '',
+    bankName: '',
+    branchCode: '',
+    accountNumber: '',
+    accountType: 'SAVINGS',
+    mandateAgreement: false,
+    // We'll still need these for customer registration via the API
     password: '',
     confirmPassword: '',
-    selectedPackage: '',
+    phoneNumber: '',
   });
 
   // Query to fetch the referral leads with optimizations
@@ -196,15 +214,35 @@ export default function AgentLeadsPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/referral/agent/leads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/referral/agent/commissions'] });
       setIsRegisterDialogOpen(false);
+      
+      // Reset to default values that match all the fields in the form
       setRegisterData({
+        email: '',
         firstName: '',
         lastName: '',
-        email: '',
-        phoneNumber: '',
+        isSouthAfrican: false,
+        idNumber: '',
+        dateOfBirth: '',
+        gender: 'male',
+        mobileNumber: '',
+        occupation: '',
+        industry: '',
+        addressLine1: '',
+        suburb: '',
+        postalCode: '',
+        hasCreditCard: false,
+        selectedPackage: 'OPPORTUNITY',
+        accountHolderName: '',
+        bankName: '',
+        branchCode: '',
+        accountNumber: '',
+        accountType: 'SAVINGS',
+        mandateAgreement: false,
         password: '',
         confirmPassword: '',
-        selectedPackage: '',
+        phoneNumber: '',
       });
+      
       toast({
         title: 'Customer Registered',
         description: 'The new customer has been successfully registered.',
@@ -227,13 +265,15 @@ export default function AgentLeadsPage() {
   const handleRegisterCustomer = (lead: Lead) => {
     setSelectedLead(lead);
     setRegisterData({
+      ...registerData, // Keep default values for other fields
       firstName: lead.firstName,
       lastName: lead.lastName,
       email: lead.email,
       phoneNumber: lead.phoneNumber,
+      mobileNumber: lead.phoneNumber, // Copy to mobileNumber too as some forms use that
       password: '',
       confirmPassword: '',
-      selectedPackage: '',
+      selectedPackage: 'OPPORTUNITY', // Set default package
     });
     setIsRegisterDialogOpen(true);
   };
@@ -255,12 +295,34 @@ export default function AgentLeadsPage() {
   const handleSubmitRegistration = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
-    if (!registerData.firstName || !registerData.lastName || !registerData.email || !registerData.phoneNumber) {
+    // Required fields validation
+    const requiredFields = [
+      { name: 'firstName', label: 'First Name' },
+      { name: 'lastName', label: 'Last Name' },
+      { name: 'email', label: 'Email' },
+      { name: 'phoneNumber', label: 'Phone Number' },
+      { name: 'idNumber', label: 'ID Number' },
+      { name: 'dateOfBirth', label: 'Date of Birth' },
+      { name: 'occupation', label: 'Occupation' },
+      { name: 'industry', label: 'Industry' },
+      { name: 'addressLine1', label: 'Address' },
+      { name: 'suburb', label: 'Suburb' },
+      { name: 'postalCode', label: 'Postal Code' },
+      { name: 'accountHolderName', label: 'Account Holder Name' },
+      { name: 'bankName', label: 'Bank Name' },
+      { name: 'branchCode', label: 'Branch Code' },
+      { name: 'accountNumber', label: 'Account Number' },
+    ];
+    
+    const missingFields = requiredFields.filter(field => 
+      !registerData[field.name as keyof typeof registerData]
+    );
+    
+    if (missingFields.length > 0) {
       toast({
         variant: 'destructive',
         title: 'Missing Information',
-        description: 'Please fill in all required fields.',
+        description: `Please fill in the following required fields: ${missingFields.map(f => f.label).join(', ')}`,
       });
       return;
     }
@@ -270,6 +332,15 @@ export default function AgentLeadsPage() {
         variant: 'destructive',
         title: 'Select a Package',
         description: 'Please select a package for the customer.',
+      });
+      return;
+    }
+    
+    if (!registerData.mandateAgreement) {
+      toast({
+        variant: 'destructive',
+        title: 'Mandate Agreement Required',
+        description: 'Customer must agree to the mandate agreement to proceed.',
       });
       return;
     }
@@ -474,94 +545,324 @@ export default function AgentLeadsPage() {
 
       {/* Register Customer Dialog */}
       <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Register as Customer</DialogTitle>
-            <DialogDescription>
-              Complete the registration process for {selectedLead?.firstName} {selectedLead?.lastName}.
+        <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto bg-background border-border [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-[#43EB3E]">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="text-foreground">Register as Customer</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Complete the registration process for {selectedLead?.firstName} {selectedLead?.lastName}. All fields with * are required.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmitRegistration}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    value={registerData.firstName}
-                    onChange={handleRegisterDataChange}
-                  />
+            <div className="space-y-6 py-4">
+              {/* Personal Information */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Personal Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name *</Label>
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      value={registerData.firstName}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      value={registerData.lastName}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={registerData.email}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber">Phone Number *</Label>
+                    <Input
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      value={registerData.phoneNumber}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    value={registerData.lastName}
-                    onChange={handleRegisterDataChange}
-                  />
+                
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="isSouthAfrican">Citizenship</Label>
+                    <div className="flex items-center space-x-2 pt-2">
+                      <input
+                        type="checkbox"
+                        id="isSouthAfrican"
+                        name="isSouthAfrican"
+                        checked={registerData.isSouthAfrican}
+                        onChange={(e) => setRegisterData({...registerData, isSouthAfrican: e.target.checked})}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="isSouthAfrican" className="font-normal">South African Citizen</Label>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="idNumber">ID Number *</Label>
+                    <Input
+                      id="idNumber"
+                      name="idNumber"
+                      value={registerData.idNumber}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                    <Input
+                      id="dateOfBirth"
+                      name="dateOfBirth"
+                      type="date"
+                      value={registerData.dateOfBirth}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gender">Gender *</Label>
+                    <Select
+                      value={registerData.gender}
+                      onValueChange={(value) => handleSelectChange('gender', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="occupation">Occupation *</Label>
+                    <Input
+                      id="occupation"
+                      name="occupation"
+                      value={registerData.occupation}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="industry">Industry *</Label>
+                    <Select
+                      value={registerData.industry}
+                      onValueChange={(value) => handleSelectChange('industry', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select industry" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Agriculture">Agriculture</SelectItem>
+                        <SelectItem value="Construction">Construction</SelectItem>
+                        <SelectItem value="Education">Education</SelectItem>
+                        <SelectItem value="Finance">Finance</SelectItem>
+                        <SelectItem value="Healthcare">Healthcare</SelectItem>
+                        <SelectItem value="Information Technology">Information Technology</SelectItem>
+                        <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                        <SelectItem value="Mining">Mining</SelectItem>
+                        <SelectItem value="Retail">Retail</SelectItem>
+                        <SelectItem value="Services">Services</SelectItem>
+                        <SelectItem value="Transport">Transport</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hasCreditCard">Credit Card</Label>
+                    <div className="flex items-center space-x-2 pt-2">
+                      <input
+                        type="checkbox"
+                        id="hasCreditCard"
+                        name="hasCreditCard"
+                        checked={registerData.hasCreditCard}
+                        onChange={(e) => setRegisterData({...registerData, hasCreditCard: e.target.checked})}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="hasCreditCard" className="font-normal">Has Credit Card</Label>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={registerData.email}
-                  onChange={handleRegisterDataChange}
-                />
+              
+              {/* Address */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Address Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="addressLine1">Address *</Label>
+                    <Input
+                      id="addressLine1"
+                      name="addressLine1"
+                      value={registerData.addressLine1}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="suburb">Suburb *</Label>
+                    <Input
+                      id="suburb"
+                      name="suburb"
+                      value={registerData.suburb}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="postalCode">Postal Code *</Label>
+                    <Input
+                      id="postalCode"
+                      name="postalCode"
+                      value={registerData.postalCode}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phoneNumber">Phone Number</Label>
-                <Input
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  value={registerData.phoneNumber}
-                  onChange={handleRegisterDataChange}
-                />
+              
+              {/* Banking */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Banking Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="accountHolderName">Account Holder Name *</Label>
+                    <Input
+                      id="accountHolderName"
+                      name="accountHolderName"
+                      value={registerData.accountHolderName}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bankName">Bank Name *</Label>
+                    <Input
+                      id="bankName"
+                      name="bankName"
+                      value={registerData.bankName}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="branchCode">Branch Code *</Label>
+                    <Input
+                      id="branchCode"
+                      name="branchCode"
+                      value={registerData.branchCode}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="accountNumber">Account Number *</Label>
+                    <Input
+                      id="accountNumber"
+                      name="accountNumber"
+                      value={registerData.accountNumber}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="accountType">Account Type *</Label>
+                    <Select
+                      value={registerData.accountType}
+                      onValueChange={(value) => handleSelectChange('accountType', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="SAVINGS">Savings</SelectItem>
+                        <SelectItem value="CURRENT">Current</SelectItem>
+                        <SelectItem value="CHEQUE">Cheque</SelectItem>
+                        <SelectItem value="CREDIT">Credit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="selectedPackage">Select Package</Label>
-                <Select
-                  value={registerData.selectedPackage}
-                  onValueChange={(value) => handleSelectChange('selectedPackage', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a package" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OPPORTUNITY">Opportunity (R350)</SelectItem>
-                    <SelectItem value="MOMENTUM">Momentum (R450)</SelectItem>
-                    <SelectItem value="PROSPER">Prosper (R550)</SelectItem>
-                    <SelectItem value="PRESTIGE">Prestige (R695)</SelectItem>
-                    <SelectItem value="PINNACLE">Pinnacle (R825)</SelectItem>
-                  </SelectContent>
-                </Select>
+              
+              {/* Package and Account */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Package and Account</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="selectedPackage">Select Package *</Label>
+                    <Select
+                      value={registerData.selectedPackage}
+                      onValueChange={(value) => handleSelectChange('selectedPackage', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a package" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OPPORTUNITY">Opportunity (R350)</SelectItem>
+                        <SelectItem value="MOMENTUM">Momentum (R450)</SelectItem>
+                        <SelectItem value="PROSPER">Prosper (R550)</SelectItem>
+                        <SelectItem value="PRESTIGE">Prestige (R695)</SelectItem>
+                        <SelectItem value="PINNACLE">Pinnacle (R825)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Temporary Password *</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      value={registerData.password}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      value={registerData.confirmPassword}
+                      onChange={handleRegisterDataChange}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Temporary Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={registerData.password}
-                  onChange={handleRegisterDataChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={registerData.confirmPassword}
-                  onChange={handleRegisterDataChange}
-                />
+              
+              {/* Mandate Agreement */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Mandate Agreement</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="mandateAgreement"
+                      name="mandateAgreement"
+                      checked={registerData.mandateAgreement}
+                      onChange={(e) => setRegisterData({...registerData, mandateAgreement: e.target.checked})}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="mandateAgreement" className="font-normal">
+                      * I hereby authorize OPIAN Group to process the monthly package payment via debit order from my account.
+                    </Label>
+                  </div>
+                </div>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="border-t pt-4">
               <Button variant="outline" onClick={() => setIsRegisterDialogOpen(false)}>
                 Cancel
               </Button>

@@ -673,9 +673,25 @@ referralRouter.get('/agent/leads', checkAgent, async (req: Request, res: Respons
       120000
     );
     
+    // Format the leads to use camelCase fields that the frontend expects
+    const formattedLeads = Array.isArray(leads) ? leads.map(lead => ({
+      id: lead.id,
+      firstName: lead.first_name,
+      lastName: lead.last_name,
+      email: lead.email,
+      phoneNumber: lead.phone_number,
+      notes: lead.notes || '',
+      status: lead.status,
+      createdAt: lead.created_at,
+      updatedAt: lead.updated_at,
+      referralCode: lead.referral_code,
+      signedUpUserId: lead.signed_up_user_id,
+      agentId: lead.agent_id
+    })) : [];
+    
     return res.status(200).json({
       success: true,
-      leads
+      leads: formattedLeads
     });
   } catch (error) {
     console.error('Error processing referral leads request:', error);
