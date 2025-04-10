@@ -232,39 +232,62 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
         notes || ''
       ];
       
-      // DIRECT FIX: Let's use a completely different approach with a simpler, direct query
-      let sql;
-      let sqlParams;
+      // DIRECT FIX: Let's use a simpler approach, just a direct SQL statement for clarity
+      // 1. Log very clearly what we're doing
+      console.log(`REFERRAL DEBUG - Setting up to create lead for ${firstName} ${lastName}`);
+      console.log(`REFERRAL DEBUG - Agent ID available: ${agentId ? 'YES: ' + agentId : 'NO'}`);
       
       if (agentId) {
-        // If we have an agent ID, use a query that explicitly includes signed_up_user_id
-        sql = `
-          INSERT INTO referral_leads (
-            first_name, last_name, email, phone_number, 
-            referral_code, notes, status, signed_up_user_id, 
-            created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, 'NEW', ?, NOW(), NOW())
+        // Explicitly use the agent_id and signed_up_user_id field for maximum compatibility
+        // This is the most direct approach possible - raw SQL statement
+        
+        // First try with the exact field name that works when manually inserted
+        const directSql = `
+          INSERT INTO referral_leads 
+            (first_name, last_name, email, phone_number, referral_code, notes, status, signed_up_user_id, created_at, updated_at) 
+          VALUES 
+            ('${firstName}', '${lastName}', '${email}', '${phoneNumber}', 
+             '${referralCode.replace(/-/g, '')}', '${notes || ''}', 'NEW', ${agentId}, NOW(), NOW())
         `;
         
-        sqlParams = [
-          firstName, lastName, email, phoneNumber,
-          referralCode.replace(/-/g, ''), notes || '', agentId
-        ];
+        console.log(`REFERRAL DEBUG - Executing direct SQL insert with signed_up_user_id = ${agentId}`);
+        console.log(`REFERRAL DEBUG - SQL: ${directSql}`);
         
-        console.log(`Executing DIRECT lead insert with agent ID ${agentId}`);
-      } else {
-        // Without agent ID, use a simpler query without signed_up_user_id
-        sql = `
-          INSERT INTO referral_leads (
-            first_name, last_name, email, phone_number, 
-            referral_code, notes, status, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, 'NEW', NOW(), NOW())
-        `;
-        
-        sqlParams = [
-          firstName, lastName, email, phoneNumber,
-          referralCode.replace(/-/g, ''), notes || ''
-        ];
+        try {
+          // Use direct SQL execution
+          await connection.query(directSql);
+          console.log(`REFERRAL DEBUG - Direct insert succeeded with agent ID ${agentId}`);
+          
+          console.log(`New referral lead created for ${firstName} ${lastName} using code ${referralCode} - Assigned to agent ID: ${agentId}, referred by user ID: ${referrer.id}`);
+          
+          return res.status(201).json({
+            success: true,
+            message: 'Referral lead submitted successfully'
+          });
+        } catch (sqlError) {
+          console.error(`REFERRAL DEBUG - Direct insert failed:`, sqlError);
+          // Fall back to the standard approach if direct SQL fails
+        }
+      }
+      
+      // Fall back to standard parameterized query if direct insert failed or no agent ID
+      let sql = `
+        INSERT INTO referral_leads (
+          first_name, last_name, email, phone_number, 
+          referral_code, notes, status, 
+          ${agentId ? 'signed_up_user_id,' : ''} 
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'NEW', ${agentId ? '?,' : ''} NOW(), NOW())
+      `;
+      
+      let sqlParams = [
+        firstName, lastName, email, phoneNumber,
+        referralCode.replace(/-/g, ''), notes || ''
+      ];
+      
+      if (agentId) {
+        sqlParams.push(agentId);
+        console.log(`REFERRAL DEBUG - Added agent ID to parameters: ${agentId}`);
       }
       
       // Log the referred_by relationship
