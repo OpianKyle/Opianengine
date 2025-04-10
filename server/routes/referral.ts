@@ -202,57 +202,79 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
       // id, first_name, last_name, email, phone_number, referral_code, notes, status, 
       // signed_up_user_id, created_at, updated_at
       
-      // Simple, fixed field list based on the existing schema
-      const fields = [
-        'first_name',
-        'last_name',
-        'email',
-        'phone_number',
-        'referral_code',
-        'notes',
-        'status',
-        'created_at',
-        'updated_at'
-      ];
+      // Let's completely rewrite this insert to avoid parameter issues
+      // Build the SQL query directly with the agent ID if available
+      let query = `
+        INSERT INTO referral_leads (
+          first_name, 
+          last_name, 
+          email, 
+          phone_number, 
+          referral_code, 
+          notes, 
+          status, 
+          created_at, 
+          updated_at
+          ${agentId ? ', signed_up_user_id' : ''}
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, 'NEW', NOW(), NOW()
+          ${agentId ? ', ?' : ''}
+        )
+      `;
       
-      // Values for the prepared statement
+      // Create params array with correct order, and no NOW() values
       const params = [
         firstName,
         lastName,
         email,
         phoneNumber,
         referralCode.replace(/-/g, ''),
-        notes || '',
-        'NEW',
-        'NOW()',
-        'NOW()'
+        notes || ''
       ];
       
-      // Use signed_up_user_id to store the agent ID when we have one
+      // DIRECT FIX: Let's use a completely different approach with a simpler, direct query
+      let sql;
+      let sqlParams;
+      
       if (agentId) {
-        console.log(`Found agent ID ${agentId} via referral chain for ${firstName} ${lastName}`);
+        // If we have an agent ID, use a query that explicitly includes signed_up_user_id
+        sql = `
+          INSERT INTO referral_leads (
+            first_name, last_name, email, phone_number, 
+            referral_code, notes, status, signed_up_user_id, 
+            created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, 'NEW', ?, NOW(), NOW())
+        `;
         
-        // Add the agent ID to the signed_up_user_id field
-        fields.push('signed_up_user_id');
-        params.push(agentId);
+        sqlParams = [
+          firstName, lastName, email, phoneNumber,
+          referralCode.replace(/-/g, ''), notes || '', agentId
+        ];
+        
+        console.log(`Executing DIRECT lead insert with agent ID ${agentId}`);
+      } else {
+        // Without agent ID, use a simpler query without signed_up_user_id
+        sql = `
+          INSERT INTO referral_leads (
+            first_name, last_name, email, phone_number, 
+            referral_code, notes, status, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, 'NEW', NOW(), NOW())
+        `;
+        
+        sqlParams = [
+          firstName, lastName, email, phoneNumber,
+          referralCode.replace(/-/g, ''), notes || ''
+        ];
       }
       
-      // Log the referred_by relationship even though we can't store it
+      // Log the referred_by relationship
       console.log(`User was referred by user ID: ${referrer.id}`);
       
-      // Build the SQL query
-      const fieldStr = fields.join(', ');
-      const placeholders = params.map(p => p === 'NOW()' ? 'NOW()' : '?').join(', ');
+      console.log(`Executing lead insert with SQL: ${sql}`);
+      console.log(`Parameters:`, sqlParams);
       
-      // Remove NOW() from the params since they're directly in the SQL
-      const finalParams = params.filter(p => p !== 'NOW()');
-      
-      const query = `INSERT INTO referral_leads (${fieldStr}) VALUES (${placeholders})`;
-      
-      console.log(`Executing lead insert with query: ${query}`);
-      console.log(`Parameters:`, finalParams);
-      
-      await connection.execute(query, finalParams);
+      // Execute the query with agent ID as signed_up_user_id
+      await connection.execute(sql, sqlParams);
       
       console.log(`New referral lead created for ${firstName} ${lastName} using code ${referralCode}${agentId ? ` - Assigned to agent ID: ${agentId}` : ''}, referred by user ID: ${referrer.id}`);
       
