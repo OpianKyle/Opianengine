@@ -1010,6 +1010,7 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       // Insert the new user
       // CRITICAL FIX: When an agent registers a customer, set the agent_id field
       // so this customer will always be visible to this agent in lookup queries
+      // FIXED: Removed 'updated_at' column which doesn't exist in the users table
       const [userInsert] = await connection.execute(
         `INSERT INTO users (
           email,
@@ -1026,10 +1027,9 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           mandate_accepted,
           agent_id,
           referred_by,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, '', 0, 0, 0, 1, ?, ?, ?, NOW(), NOW())`,
-        [email, hashedPassword, firstName, lastName, phoneNumber, idNumber || '', mandateAccepted ? 1 : 0, user.id, user.id]
+          created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 1, ?, ?, ?, NOW())`,
+        [email, hashedPassword, firstName, lastName, phoneNumber, idNumber || '', referralCode || '', mandateAccepted ? 1 : 0, user.id, referralCode || '']
       );
       
       // @ts-ignore - MySQL2 results structure
