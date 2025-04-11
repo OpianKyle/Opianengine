@@ -1078,10 +1078,10 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
         // Assign different initial points based on package tier
         switch(packageType) {
           case 'OPPORTUNITY': return 2500;
-          case 'MOMENTUM': return 3500;
-          case 'PROSPER': return 5000;
-          case 'PRESTIGE': return 7500;
-          case 'PINNACLE': return 10000;
+          case 'MOMENTUM': return 5000;
+          case 'PROSPER': return 7500;
+          case 'PRESTIGE': return 10000;
+          case 'PINNACLE': return 12500;
           default: return 2500; // Default fallback
         }
       })();
