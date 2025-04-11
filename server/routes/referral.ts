@@ -910,33 +910,43 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       // Start a transaction
       await connection.beginTransaction();
       
-      // Check if we're registering from a lead
-      if (leadId) {
-        // First get the agent's referral code
-        const [agentResult] = await connection.execute(
-          `SELECT referral_code FROM users WHERE id = ?`,
-          [user.id]
+      // First make sure the agent has a referral code (when creating new customers directly)
+      const [agentResult] = await connection.execute(
+        `SELECT referral_code FROM users WHERE id = ?`,
+        [user.id]
+      );
+      
+      // @ts-ignore - MySQL2 results structure
+      if (!Array.isArray(agentResult) || agentResult.length === 0) {
+        await connection.rollback();
+        return res.status(404).json({
+          success: false,
+          error: 'Agent account not found'
+        });
+      }
+      
+      // @ts-ignore - MySQL2 results structure
+      let agentReferralCode = agentResult[0].referral_code;
+      
+      // If the agent doesn't have a referral code, generate one and update their record
+      if (!agentReferralCode) {
+        console.log(`Agent ${user.id} does not have a referral code. Generating one...`);
+        
+        // Generate a unique referral code for the agent
+        const generatedCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        
+        // Update the agent's record with this new code
+        await connection.execute(
+          `UPDATE users SET referral_code = ? WHERE id = ?`,
+          [generatedCode, user.id]
         );
         
-        // @ts-ignore - MySQL2 results structure
-        if (!Array.isArray(agentResult) || agentResult.length === 0) {
-          await connection.rollback();
-          return res.status(404).json({
-            success: false,
-            error: 'Agent not found or referral code not set'
-          });
-        }
-        
-        // @ts-ignore - MySQL2 results structure
-        const agentReferralCode = agentResult[0].referral_code;
-        
-        if (!agentReferralCode) {
-          await connection.rollback();
-          return res.status(400).json({
-            success: false,
-            error: 'Agent does not have a referral code set'
-          });
-        }
+        console.log(`Updated agent ${user.id} with new referral code: ${generatedCode}`);
+        agentReferralCode = generatedCode;
+      }
+      
+      // Check if we're registering from a lead
+      if (leadId) {
         
         // First, get all the referral codes from users who were referred by this agent
         const [referredUsers] = await connection.execute(
