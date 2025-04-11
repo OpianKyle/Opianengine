@@ -886,12 +886,24 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       signature
     } = req.body;
     
-    if (!email || !firstName || !lastName || !phoneNumber || !selectedPackage || !mandateAccepted || !signature) {
+    // Make signature optional to support the streamlined process
+    if (!email || !firstName || !lastName || !phoneNumber || !selectedPackage || !mandateAccepted) {
+      console.log('Missing required fields for customer registration:', {
+        email: !!email,
+        firstName: !!firstName,
+        lastName: !!lastName,
+        phoneNumber: !!phoneNumber,
+        selectedPackage: !!selectedPackage,
+        mandateAccepted: !!mandateAccepted
+      });
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
       });
     }
+    
+    // Allow a placeholder signature if none was provided
+    const customerSignature = signature || "Mandate accepted via checkbox";
     
     const connection = await createConnection();
     try {
@@ -1022,16 +1034,33 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       // @ts-ignore - MySQL2 results structure
       const newUserId = userInsert.insertId;
       
-      // Save signature if provided
-      if (signature) {
-        await connection.execute(
-          `INSERT INTO signatures (
-            user_id,
-            signature_data,
-            created_at
-          ) VALUES (?, ?, NOW())`,
-          [newUserId, signature]
+      // Check if signatures table exists before trying to insert
+      try {
+        const [tableCheck] = await connection.execute(
+          `SELECT COUNT(*) as table_exists 
+           FROM information_schema.tables 
+           WHERE table_schema = DATABASE() 
+           AND table_name = 'signatures'`
         );
+        
+        // @ts-ignore - MySQL2 results structure
+        if (tableCheck && Array.isArray(tableCheck) && tableCheck[0].table_exists > 0) {
+          // Always save a signature - either the provided one or the placeholder text
+          await connection.execute(
+            `INSERT INTO signatures (
+              user_id,
+              signature_data,
+              created_at
+            ) VALUES (?, ?, NOW())`,
+            [newUserId, customerSignature]
+          );
+          console.log(`Signature saved for user ${newUserId}`);
+        } else {
+          console.log(`Signatures table does not exist, skipping signature creation`);
+        }
+      } catch (sigError) {
+        console.error(`Error handling signature:`, sigError);
+        // Don't fail the whole transaction if signature insertion fails
       }
       
       // Record a commission for the agent
@@ -1157,9 +1186,22 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
     } catch (error) {
       await connection.rollback();
       console.error('Error registering customer:', error);
+      // Add detailed logging to help diagnose the issue
+      console.error('Registration payload:', {
+        leadId,
+        email,
+        firstName,
+        lastName,
+        phoneNumber,
+        selectedPackage,
+        mandateAccepted,
+        hasSignature: !!signature,
+        agentId: user.id
+      });
       return res.status(500).json({
         success: false,
-        error: 'Failed to register customer'
+        error: 'Failed to register customer',
+        details: error.message || 'Unknown error'
       });
     } finally {
       await connection.end();
