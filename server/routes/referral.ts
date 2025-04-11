@@ -3,6 +3,7 @@ import { createConnection } from '../db';
 import { verifyReferralCode, formatReferralCode, getAgentByReferralCode } from '../utils/referral';
 import { checkAgent } from '../auth';
 import { queryCache } from '../utils/query-cache';
+import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from '../utils/emailService';
 
 // Create express router
 const referralRouter = Router();
@@ -1070,6 +1071,23 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       // CRITICAL FIX: When an agent registers a customer, set the agent_id field
       // so this customer will always be visible to this agent in lookup queries
       // FIXED: Using all fields from the form to ensure complete customer information
+      // Determine initial points based on package type
+      const initialPoints = (() => {
+        const packageType = selectedPackage.toUpperCase();
+        
+        // Assign different initial points based on package tier
+        switch(packageType) {
+          case 'OPPORTUNITY': return 2500;
+          case 'MOMENTUM': return 3500;
+          case 'PROSPER': return 5000;
+          case 'PRESTIGE': return 7500;
+          case 'PINNACLE': return 10000;
+          default: return 2500; // Default fallback
+        }
+      })();
+      
+      console.log(`Setting initial points for ${selectedPackage} package: ${initialPoints}`);
+          
       const [userInsert] = await connection.execute(
         `INSERT INTO users (
           email,
@@ -1101,8 +1119,9 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           account_holder_name,
           branch_code,
           selected_package,
+          points,
           created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           email, 
           hashedPassword, 
@@ -1128,7 +1147,8 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           accountNumber || '',
           accountHolderName || '',
           branchCode || '',
-          selectedPackage.toUpperCase()
+          selectedPackage.toUpperCase(),
+          initialPoints
         ]
       );
       
@@ -1289,6 +1309,49 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           console.error(`Error updating lead status:`, updateError);
           // Don't fail the whole transaction if this update fails
         }
+      }
+      
+      // Send welcome email to the customer
+      try {
+        const customerData = {
+          id: newUserId,
+          firstName,
+          lastName,
+          email,
+          phoneNumber: effectivePhoneNumber,
+          selectedPackage: selectedPackage.toUpperCase(),
+          points: initialPoints,
+          signedUpBy: `${user.first_name} ${user.last_name}`,
+          referralCode: generatedReferralCode,
+          agentId: user.id,
+          mandateAccepted: mandateAccepted ? true : false,
+          // Add banking data
+          bankName: bankName || '',
+          accountType: accountType || '',
+          accountNumber: accountNumber || '',
+          accountHolderName: accountHolderName || '',
+          branchCode: branchCode || '',
+          // Other required fields
+          createdAt: new Date().toISOString()
+        };
+
+        // Send welcome email to customer
+        console.log(`Sending welcome email to new customer: ${email}`);
+        const welcomeEmailHtml = formatRegistrationEmail(customerData);
+        await sendEmail({
+          to: email,
+          subject: 'Welcome to OPIAN Rewards!',
+          html: welcomeEmailHtml,
+        });
+        
+        // Send notification to admin
+        console.log('Sending admin notification about new customer registration');
+        await sendAdminRegistrationNotification(customerData);
+        
+        console.log('Successfully sent welcome and admin notification emails');
+      } catch (emailError) {
+        console.error('Error sending registration emails:', emailError);
+        // Don't fail the transaction if emails fail
       }
       
       // Commit the transaction
