@@ -1003,8 +1003,9 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       const tempPassword = Math.random().toString(36).slice(2, 10);
       
       // Hash the password before storing it
-      const bcrypt = require('bcrypt');
-      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+      // Use Bcrypt directly with ES import
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.default.hash(tempPassword, 10);
       
       // Insert the new user
       // CRITICAL FIX: When an agent registers a customer, set the agent_id field
