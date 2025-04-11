@@ -36,7 +36,7 @@ interface ReferralStats {
           PRESTIGE: number;
           PINNACLE: number;
         };
-        referralFee: {
+        commission: {
           percentage: number;
           baseAmount: number;
         };
@@ -51,8 +51,10 @@ interface ReferralStats {
       email: string;
       selectedPackage: string;
       createdAt: string;
+      level: number;
       directReferralCount: number;
-      referralFee: {
+      referralPackageStats: any[];
+      commission: {
         percentage: number;
         randValue: string;
         points: number;
@@ -209,7 +211,7 @@ export default function ReferralsPage() {
   const calculateLevelCommission = (level: number) => {
     if (!referralStats?.referralsByLevel[level]) return 0;
     return referralStats.referralsByLevel[level].reduce((sum, ref) => {
-      return sum + Number(ref.referralFee.randValue);
+      return sum + Number(ref.commission.randValue);
     }, 0);
   };
 
@@ -418,7 +420,7 @@ export default function ReferralsPage() {
                       Package: {referral.selectedPackage || 'None'}
                     </Badge>
                     <Badge className="bg-primary text-white">
-                      Referral Fee: R{referral.referralFee.randValue}
+                      Referral Fee: R{referral.commission.randValue}
                     </Badge>
                   </div>
                 </div>

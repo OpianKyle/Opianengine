@@ -1,0 +1,35 @@
+referrals.tsx:212 Uncaught TypeError: Cannot read properties of undefined (reading 'randValue')
+    at referrals.tsx:212:43
+    at Array.reduce (<anonymous>)
+    at calculateLevelCommission (referrals.tsx:211:50)
+    at ReferralsPage (referrals.tsx:332:23)
+referrals.tsx:212 Uncaught TypeError: Cannot read properties of undefined (reading 'randValue')
+    at referrals.tsx:212:43
+    at Array.reduce (<anonymous>)
+    at calculateLevelCommission (referrals.tsx:211:50)
+    at ReferralsPage (referrals.tsx:332:23)
+chunk-276SZO74.js?v=02818e28:14032 The above error occurred in the <ReferralsPage> component:
+
+    at ReferralsPage (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/customer/referrals.tsx:90:31)
+    at ProtectedRoute (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/App.tsx?v=ASQppctQe5_9f--ySO7vI:53:38)
+    at div
+    at div
+    at main
+    at div
+    at CustomerLayout (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/layout/customer-layout.tsx:26:42)
+    at Route (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.repli…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=02818e28:323:16)
+    at Switch (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.repli…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=02818e28:379:17)
+    at Router
+    at div
+    at ResponsiveProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/hooks/use-mobile.tsx:28:38)
+    at AuthProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/hooks/use-auth.tsx:48:32)
+    at QueryClientProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.repli…rkspace/node_modules/.vite/deps/@tanstack_react-query.js?v=02818e28:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+chunk-276SZO74.js?v=02818e28:9129 Uncaught TypeError: Cannot read properties of undefined (reading 'randValue')
+    at referrals.tsx:212:43
+    at Array.reduce (<anonymous>)
+    at calculateLevelCommission (referrals.tsx:211:50)
+    at ReferralsPage (referrals.tsx:332:23)
