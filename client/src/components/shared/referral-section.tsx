@@ -25,13 +25,13 @@ interface ReferralInfo {
       count: number;
       totalReferrals: number;
       referralsByPackage: {
-        BEGINNER: number;
-        NOVICE: number;
-        ACTIVE: number;
-        PROFESSIONAL: number;
-        EXPERT: number;
+        OPPORTUNITY: number;
+        MOMENTUM: number;
+        PROSPER: number;
+        PRESTIGE: number;
+        PINNACLE: number;
       };
-      referralFee: {
+      commission: {
         percentage: number;
         baseAmount: number;
       };
@@ -45,8 +45,10 @@ interface ReferralInfo {
       email: string;
       selectedPackage: string;
       createdAt: string;
+      level: number;
       directReferralCount: number;
-      referralFee: {
+      referralPackageStats: any[];
+      commission: {
         percentage: number;
         randValue: string;
         points: number;
@@ -346,7 +348,7 @@ export default function ReferralSection() {
                     <span className="text-muted-foreground"> joined on </span>
                     <span>{new Date(referral.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <Badge variant="outline">+{referral.referralFee.points} points</Badge>
+                  <Badge variant="outline">+{referral.commission.points} points</Badge>
                 </div>
               ))}
             </div>

@@ -1,0 +1,256 @@
+Uncaught TypeError: Cannot read properties of undefined (reading 'points')
+    at referral-section.tsx:349:67
+    at Array.map (<anonymous>)
+    at ReferralSection (referral-section.tsx:339:134)
+    at renderWithHooks (chunk-276SZO74.js?v=02818e28:11548:26)
+    at updateFunctionComponent (chunk-276SZO74.js?v=02818e28:14582:28)
+    at beginWork (chunk-276SZO74.js?v=02818e28:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-276SZO74.js?v=02818e28:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-276SZO74.js?v=02818e28:3699:24)
+    at invokeGuardedCallback (chunk-276SZO74.js?v=02818e28:3733:39)
+    at beginWork$1 (chunk-276SZO74.js?v=02818e28:19765:15)
+(anonymous) @ referral-section.tsx:349
+ReferralSection @ referral-section.tsx:339
+renderWithHooks @ chunk-276SZO74.js?v=02818e28:11548
+updateFunctionComponent @ chunk-276SZO74.js?v=02818e28:14582
+beginWork @ chunk-276SZO74.js?v=02818e28:15924
+callCallback2 @ chunk-276SZO74.js?v=02818e28:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=02818e28:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=02818e28:3733
+beginWork$1 @ chunk-276SZO74.js?v=02818e28:19765
+performUnitOfWork @ chunk-276SZO74.js?v=02818e28:19198
+workLoopSync @ chunk-276SZO74.js?v=02818e28:19137
+renderRootSync @ chunk-276SZO74.js?v=02818e28:19116
+recoverFromConcurrentError @ chunk-276SZO74.js?v=02818e28:18736
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=02818e28:18879
+flushSyncCallbacks @ chunk-276SZO74.js?v=02818e28:9119
+(anonymous) @ chunk-276SZO74.js?v=02818e28:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=02818e28:555
+flush @ @tanstack_react-query.js?v=02818e28:569
+batch @ @tanstack_react-query.js?v=02818e28:587
+dispatch_fn @ @tanstack_react-query.js?v=02818e28:996
+setData @ @tanstack_react-query.js?v=02818e28:696
+onSuccess @ @tanstack_react-query.js?v=02818e28:897
+resolve @ @tanstack_react-query.js?v=02818e28:456
+Promise.then
+run @ @tanstack_react-query.js?v=02818e28:498
+start @ @tanstack_react-query.js?v=02818e28:536
+fetch @ @tanstack_react-query.js?v=02818e28:926
+executeFetch_fn @ @tanstack_react-query.js?v=02818e28:2211
+onSubscribe @ @tanstack_react-query.js?v=02818e28:1898
+subscribe @ @tanstack_react-query.js?v=02818e28:24
+(anonymous) @ @tanstack_react-query.js?v=02818e28:3022
+subscribeToStore @ chunk-276SZO74.js?v=02818e28:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=02818e28:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=02818e28:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=02818e28:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=02818e28:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=02818e28:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=02818e28:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=02818e28:19447
+commitRootImpl @ chunk-276SZO74.js?v=02818e28:19416
+commitRoot @ chunk-276SZO74.js?v=02818e28:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=02818e28:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=02818e28:9119
+(anonymous) @ chunk-276SZO74.js?v=02818e28:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=02818e28:555
+flush @ @tanstack_react-query.js?v=02818e28:569
+batch @ @tanstack_react-query.js?v=02818e28:587
+dispatch_fn @ @tanstack_react-query.js?v=02818e28:996
+setData @ @tanstack_react-query.js?v=02818e28:696
+onSuccess @ @tanstack_react-query.js?v=02818e28:897
+resolve @ @tanstack_react-query.js?v=02818e28:456
+Promise.then
+run @ @tanstack_react-query.js?v=02818e28:498
+start @ @tanstack_react-query.js?v=02818e28:536
+fetch @ @tanstack_react-query.js?v=02818e28:926
+executeFetch_fn @ @tanstack_react-query.js?v=02818e28:2211
+onSubscribe @ @tanstack_react-query.js?v=02818e28:1898
+subscribe @ @tanstack_react-query.js?v=02818e28:24
+(anonymous) @ @tanstack_react-query.js?v=02818e28:3022
+subscribeToStore @ chunk-276SZO74.js?v=02818e28:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=02818e28:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=02818e28:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=02818e28:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=02818e28:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=02818e28:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=02818e28:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=02818e28:19447
+commitRootImpl @ chunk-276SZO74.js?v=02818e28:19416
+commitRoot @ chunk-276SZO74.js?v=02818e28:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=02818e28:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=02818e28:9119
+(anonymous) @ chunk-276SZO74.js?v=02818e28:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=02818e28:555
+flush @ @tanstack_react-query.js?v=02818e28:569
+batch @ @tanstack_react-query.js?v=02818e28:587
+dispatch_fn @ @tanstack_react-query.js?v=02818e28:996
+setData @ @tanstack_react-query.js?v=02818e28:696
+onSuccess @ @tanstack_react-query.js?v=02818e28:897
+resolve @ @tanstack_react-query.js?v=02818e28:456
+Promise.then
+run @ @tanstack_react-query.js?v=02818e28:498
+start @ @tanstack_react-query.js?v=02818e28:536
+fetch @ @tanstack_react-query.js?v=02818e28:926
+executeFetch_fn @ @tanstack_react-query.js?v=02818e28:2211
+onSubscribe @ @tanstack_react-query.js?v=02818e28:1898
+subscribe @ @tanstack_react-query.js?v=02818e28:24
+(anonymous) @ @tanstack_react-query.js?v=02818e28:3022
+subscribeToStore @ chunk-276SZO74.js?v=02818e28:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=02818e28:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=02818e28:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=02818e28:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=02818e28:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=02818e28:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=02818e28:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=02818e28:19447
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=02818e28:18868
+flushSyncCallbacks @ chunk-276SZO74.js?v=02818e28:9119
+commitRootImpl @ chunk-276SZO74.js?v=02818e28:19432
+commitRoot @ chunk-276SZO74.js?v=02818e28:19277
+finishConcurrentRender @ chunk-276SZO74.js?v=02818e28:18805
+performConcurrentWorkOnRoot @ chunk-276SZO74.js?v=02818e28:18718
+workLoop @ chunk-276SZO74.js?v=02818e28:197
+flushWork @ chunk-276SZO74.js?v=02818e28:176
+performWorkUntilDeadline @ chunk-276SZO74.js?v=02818e28:384Understand this error
+chunk-276SZO74.js?v=02818e28:14032 The above error occurred in the <ReferralSection> component:
+
+    at ReferralSection (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/shared/referral-section.tsx:37:31)
+    at div
+    at div
+    at CustomerDashboard (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/pages/customer/dashboard.tsx:69:26)
+    at ProtectedRoute (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/App.tsx?v=FJXaM1FYy7Iv4Expwu9NM:53:38)
+    at div
+    at div
+    at main
+    at div
+    at CustomerLayout (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/components/layout/customer-layout.tsx:26:42)
+    at Route (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=02818e28:323:16)
+    at Switch (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=02818e28:379:17)
+    at Router
+    at div
+    at ResponsiveProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/hooks/use-mobile.tsx:28:38)
+    at AuthProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/src/hooks/use-auth.tsx:48:32)
+    at QueryClientProvider (https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=02818e28:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-276SZO74.js?v=02818e28:14032
+update.callback @ chunk-276SZO74.js?v=02818e28:14052
+callCallback @ chunk-276SZO74.js?v=02818e28:11248
+commitUpdateQueue @ chunk-276SZO74.js?v=02818e28:11265
+commitLayoutEffectOnFiber @ chunk-276SZO74.js?v=02818e28:17093
+commitLayoutMountEffects_complete @ chunk-276SZO74.js?v=02818e28:17980
+commitLayoutEffects_begin @ chunk-276SZO74.js?v=02818e28:17969
+commitLayoutEffects @ chunk-276SZO74.js?v=02818e28:17920
+commitRootImpl @ chunk-276SZO74.js?v=02818e28:19353
+commitRoot @ chunk-276SZO74.js?v=02818e28:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=02818e28:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=02818e28:9119
+(anonymous) @ chunk-276SZO74.js?v=02818e28:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=02818e28:555
+flush @ @tanstack_react-query.js?v=02818e28:569
+batch @ @tanstack_react-query.js?v=02818e28:587
+dispatch_fn @ @tanstack_react-query.js?v=02818e28:996
+setData @ @tanstack_react-query.js?v=02818e28:696
+onSuccess @ @tanstack_react-query.js?v=02818e28:897
+resolve @ @tanstack_react-query.js?v=02818e28:456
+Promise.then
+run @ @tanstack_react-query.js?v=02818e28:498
+start @ @tanstack_react-query.js?v=02818e28:536
+fetch @ @tanstack_react-query.js?v=02818e28:926
+executeFetch_fn @ @tanstack_react-query.js?v=02818e28:2211
+onSubscribe @ @tanstack_react-query.js?v=02818e28:1898
+subscribe @ @tanstack_react-query.js?v=02818e28:24
+(anonymous) @ @tanstack_react-query.js?v=02818e28:3022
+subscribeToStore @ chunk-276SZO74.js?v=02818e28:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=02818e28:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=02818e28:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=02818e28:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=02818e28:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=02818e28:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=02818e28:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=02818e28:19447
+commitRootImpl @ chunk-276SZO74.js?v=02818e28:19416
+commitRoot @ chunk-276SZO74.js?v=02818e28:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=02818e28:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=02818e28:9119
+(anonymous) @ chunk-276SZO74.js?v=02818e28:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=02818e28:555
+flush @ @tanstack_react-query.js?v=02818e28:569
+batch @ @tanstack_react-query.js?v=02818e28:587
+dispatch_fn @ @tanstack_react-query.js?v=02818e28:996
+setData @ @tanstack_react-query.js?v=02818e28:696
+onSuccess @ @tanstack_react-query.js?v=02818e28:897
+resolve @ @tanstack_react-query.js?v=02818e28:456
+Promise.then
+run @ @tanstack_react-query.js?v=02818e28:498
+start @ @tanstack_react-query.js?v=02818e28:536
+fetch @ @tanstack_react-query.js?v=02818e28:926
+executeFetch_fn @ @tanstack_react-query.js?v=02818e28:2211
+onSubscribe @ @tanstack_react-query.js?v=02818e28:1898
+subscribe @ @tanstack_react-query.js?v=02818e28:24
+(anonymous) @ @tanstack_react-query.js?v=02818e28:3022
+subscribeToStore @ chunk-276SZO74.js?v=02818e28:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=02818e28:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=02818e28:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=02818e28:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=02818e28:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=02818e28:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=02818e28:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=02818e28:19447
+commitRootImpl @ chunk-276SZO74.js?v=02818e28:19416
+commitRoot @ chunk-276SZO74.js?v=02818e28:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=02818e28:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=02818e28:9119
+(anonymous) @ chunk-276SZO74.js?v=02818e28:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=02818e28:555
+flush @ @tanstack_react-query.js?v=02818e28:569
+batch @ @tanstack_react-query.js?v=02818e28:587
+dispatch_fn @ @tanstack_react-query.js?v=02818e28:996
+setData @ @tanstack_react-query.js?v=02818e28:696
+onSuccess @ @tanstack_react-query.js?v=02818e28:897
+resolve @ @tanstack_react-query.js?v=02818e28:456
+Promise.then
+run @ @tanstack_react-query.js?v=02818e28:498
+start @ @tanstack_react-query.js?v=02818e28:536
+fetch @ @tanstack_react-query.js?v=02818e28:926
+executeFetch_fn @ @tanstack_react-query.js?v=02818e28:2211
+onSubscribe @ @tanstack_react-query.js?v=02818e28:1898
+subscribe @ @tanstack_react-query.js?v=02818e28:24
+(anonymous) @ @tanstack_react-query.js?v=02818e28:3022
+subscribeToStore @ chunk-276SZO74.js?v=02818e28:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=02818e28:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=02818e28:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=02818e28:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=02818e28:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=02818e28:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=02818e28:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=02818e28:19447
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=02818e28:18868
+flushSyncCallbacks @ chunk-276SZO74.js?v=02818e28:9119
+commitRootImpl @ chunk-276SZO74.js?v=02818e28:19432
+commitRoot @ chunk-276SZO74.js?v=02818e28:19277
+finishConcurrentRender @ chunk-276SZO74.js?v=02818e28:18805
+performConcurrentWorkOnRoot @ chunk-276SZO74.js?v=02818e28:18718
+workLoop @ chunk-276SZO74.js?v=02818e28:197
+flushWork @ chunk-276SZO74.js?v=02818e28:176
+performWorkUntilDeadline @ chunk-276SZO74.js?v=02818e28:384Understand this error
+chunk-276SZO74.js?v=02818e28:9129 Uncaught TypeError: Cannot read properties of undefined (reading 'points')
+    at referral-section.tsx:349:67
+    at Array.map (<anonymous>)
+    at ReferralSection (referral-section.tsx:339:134)
+    at renderWithHooks (chunk-276SZO74.js?v=02818e28:11548:26)
+    at updateFunctionComponent (chunk-276SZO74.js?v=02818e28:14582:28)
+    at beginWork (chunk-276SZO74.js?v=02818e28:15924:22)
+    at beginWork$1 (chunk-276SZO74.js?v=02818e28:19753:22)
+    at performUnitOfWork (chunk-276SZO74.js?v=02818e28:19198:20)
+    at workLoopSync (chunk-276SZO74.js?v=02818e28:19137:13)
+    at renderRootSync (chunk-276SZO74.js?v=02818e28:19116:15)
