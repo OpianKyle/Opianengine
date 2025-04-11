@@ -1153,6 +1153,14 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
         [selectedPackage]
       );
       
+      // Make sure the selected_package field is updated in the users table
+      await connection.execute(
+        'UPDATE users SET selected_package = ? WHERE id = ?',
+        [packageType, newUserId]
+      );
+      
+      console.log(`Updated user ${newUserId} with package ${packageType}`);
+      
       // @ts-ignore - MySQL2 results structure
       if (Array.isArray(productResult) && productResult.length > 0) {
         // @ts-ignore - MySQL2 results structure
@@ -1169,17 +1177,19 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           [newUserId, productId, user.id]
         );
         
-        // Add product activity log
+        // Add product activity log - using schema defined columns
         await connection.execute(
           `INSERT INTO product_activities (
-            user_id,
             product_id,
-            activity_type,
-            activity_by,
-            activity_at
-          ) VALUES (?, ?, 'ASSIGNED', ?, NOW())`,
-          [newUserId, productId, user.id]
+            type,
+            points_value
+          ) VALUES (?, 'PRODUCT_ACTIVATION', 0)`,
+          [productId]
         );
+        
+        console.log(`Assigned product ${productId} (${selectedPackage}) to user ${newUserId}`);
+      } else {
+        console.log(`Warning: No product found with name ${selectedPackage}`);
       }
       
       // Update the lead status to SIGNED_UP if this registration came from a lead
