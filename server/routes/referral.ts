@@ -1010,6 +1010,13 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       // Generate a random referral code for the new customer
       const generatedReferralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
       
+      // Default values for bank details and other fields
+      const defaultBankName = '';
+      const defaultAccountType = null;
+      const defaultAccountNumber = '';
+      const defaultAccountHolderName = '';
+      const defaultBranchCode = '';
+      
       // If this registration came from a lead, we need to get the lead's referral code for the referred_by field
       let leadReferralCode = '';
       if (leadId) {
@@ -1035,6 +1042,7 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       // CRITICAL FIX: When an agent registers a customer, set the agent_id field
       // so this customer will always be visible to this agent in lookup queries
       // FIXED: Removed 'updated_at' column which doesn't exist in the users table
+      // FIXED: Added all required fields for the customer to ensure they appear in the dashboard
       const [userInsert] = await connection.execute(
         `INSERT INTO users (
           email,
@@ -1051,9 +1059,32 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           mandate_accepted,
           agent_id,
           referred_by,
+          bank_name,
+          account_type,
+          account_number,
+          account_holder_name,
+          branch_code,
+          selected_package,
           created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 1, ?, ?, ?, NOW())`,
-        [email, hashedPassword, firstName, lastName, phoneNumber, idNumber || '', generatedReferralCode, mandateAccepted ? 1 : 0, user.id, leadReferralCode]
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          email, 
+          hashedPassword, 
+          firstName, 
+          lastName, 
+          phoneNumber, 
+          idNumber || '', 
+          generatedReferralCode, 
+          mandateAccepted ? 1 : 0, 
+          user.id, 
+          leadReferralCode,
+          defaultBankName,
+          defaultAccountType,
+          defaultAccountNumber,
+          defaultAccountHolderName,
+          defaultBranchCode,
+          selectedPackage.toUpperCase()
+        ]
       );
       
       // @ts-ignore - MySQL2 results structure
@@ -1177,15 +1208,24 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           [newUserId, productId, user.id]
         );
         
-        // Add product activity log - using schema defined columns
-        await connection.execute(
-          `INSERT INTO product_activities (
-            product_id,
-            type,
-            points_value
-          ) VALUES (?, 'PRODUCT_ACTIVATION', 0)`,
-          [productId]
-        );
+        try {
+          // Add product activity log based on the schema in db/schema.ts
+          // The table should have: id, product_id, type, points_value, created_at, updated_at
+          await connection.execute(
+            `INSERT INTO product_activities (
+              product_id,
+              type,
+              points_value,
+              created_at,
+              updated_at
+            ) VALUES (?, 'PRODUCT_ACTIVATION', 0, NOW(), NOW())`,
+            [productId]
+          );
+          console.log(`Added product activity for product ${productId}`);
+        } catch (activityError) {
+          console.error(`Error adding product activity:`, activityError);
+          // Don't fail the whole transaction if activity creation fails
+        }
         
         console.log(`Assigned product ${productId} (${selectedPackage}) to user ${newUserId}`);
       } else {
