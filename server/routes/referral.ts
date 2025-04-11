@@ -880,19 +880,37 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       firstName, 
       lastName, 
       phoneNumber, 
+      mobileNumber,
       idNumber, 
+      dateOfBirth,
+      gender,
+      occupation,
+      industry,
+      addressLine1,
+      suburb,
+      postalCode,
+      bankName,
+      accountType,
+      accountNumber,
+      accountHolderName,
+      branchCode,
+      isSouthAfrican,
+      hasCreditCard,
       selectedPackage,
       mandateAccepted,
       signature
     } = req.body;
     
+    // Use mobileNumber for phoneNumber if phoneNumber not provided
+    const effectivePhoneNumber = phoneNumber || mobileNumber;
+    
     // Make signature optional to support the streamlined process
-    if (!email || !firstName || !lastName || !phoneNumber || !selectedPackage || !mandateAccepted) {
+    if (!email || !firstName || !lastName || !effectivePhoneNumber || !selectedPackage || !mandateAccepted) {
       console.log('Missing required fields for customer registration:', {
         email: !!email,
         firstName: !!firstName,
         lastName: !!lastName,
-        phoneNumber: !!phoneNumber,
+        phoneNumber: !!effectivePhoneNumber,
         selectedPackage: !!selectedPackage,
         mandateAccepted: !!mandateAccepted
       });
@@ -1048,11 +1066,10 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
         }
       }
       
-      // Insert the new user
+      // Insert the new user with all provided fields
       // CRITICAL FIX: When an agent registers a customer, set the agent_id field
       // so this customer will always be visible to this agent in lookup queries
-      // FIXED: Removed 'updated_at' column which doesn't exist in the users table
-      // FIXED: Added all required fields for the customer to ensure they appear in the dashboard
+      // FIXED: Using all fields from the form to ensure complete customer information
       const [userInsert] = await connection.execute(
         `INSERT INTO users (
           email,
@@ -1061,6 +1078,15 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           last_name,
           phone_number,
           id_number,
+          date_of_birth,
+          gender,
+          occupation,
+          industry,
+          address,
+          suburb,
+          postal_code,
+          is_south_african,
+          has_credit_card,
           referral_code,
           is_agent,
           is_admin,
@@ -1076,23 +1102,32 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           branch_code,
           selected_package,
           created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           email, 
           hashedPassword, 
           firstName, 
           lastName, 
-          phoneNumber, 
+          effectivePhoneNumber, 
           idNumber || '', 
+          dateOfBirth || null,
+          gender || null,
+          occupation || null,
+          industry || null,
+          addressLine1 || null,
+          suburb || null,
+          postalCode || null,
+          isSouthAfrican ? 1 : 0,
+          hasCreditCard ? 1 : 0,
           generatedReferralCode, 
           mandateAccepted ? 1 : 0, 
           user.id, 
           leadReferralCode,
-          defaultBankName,
-          defaultAccountType,
-          defaultAccountNumber,
-          defaultAccountHolderName,
-          defaultBranchCode,
+          bankName || '',
+          accountType || null,
+          accountNumber || '',
+          accountHolderName || '',
+          branchCode || '',
           selectedPackage.toUpperCase()
         ]
       );
