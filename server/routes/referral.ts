@@ -1007,6 +1007,30 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       const bcrypt = await import('bcrypt');
       const hashedPassword = await bcrypt.default.hash(tempPassword, 10);
       
+      // Generate a random referral code for the new customer
+      const generatedReferralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      
+      // If this registration came from a lead, we need to get the lead's referral code for the referred_by field
+      let leadReferralCode = '';
+      if (leadId) {
+        try {
+          const [leadResult] = await connection.execute(
+            `SELECT referral_code FROM referral_leads WHERE id = ?`,
+            [leadId]
+          );
+          
+          // @ts-ignore - MySQL2 results structure
+          if (Array.isArray(leadResult) && leadResult.length > 0 && leadResult[0].referral_code) {
+            // @ts-ignore - MySQL2 results structure
+            leadReferralCode = leadResult[0].referral_code;
+            console.log(`Using lead's referral code: ${leadReferralCode}`);
+          }
+        } catch (refError) {
+          console.error(`Error fetching lead referral code:`, refError);
+          // Continue even if we can't get the lead's referral code
+        }
+      }
+      
       // Insert the new user
       // CRITICAL FIX: When an agent registers a customer, set the agent_id field
       // so this customer will always be visible to this agent in lookup queries
@@ -1029,7 +1053,7 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
           referred_by,
           created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 1, ?, ?, ?, NOW())`,
-        [email, hashedPassword, firstName, lastName, phoneNumber, idNumber || '', referralCode || '', mandateAccepted ? 1 : 0, user.id, referralCode || '']
+        [email, hashedPassword, firstName, lastName, phoneNumber, idNumber || '', generatedReferralCode, mandateAccepted ? 1 : 0, user.id, leadReferralCode]
       );
       
       // @ts-ignore - MySQL2 results structure
