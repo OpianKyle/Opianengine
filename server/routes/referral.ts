@@ -1028,13 +1028,16 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
         });
       }
       
-      // Create a random temporary password (can be changed later)
-      const tempPassword = Math.random().toString(36).slice(2, 10);
+      // Use a fixed password for new customers registered by agents
+      // This is intentional to make it easier for customers to login the first time
+      const tempPassword = '12345678';
       
       // Hash the password before storing it
       // Use Bcrypt directly with ES import
       const bcrypt = await import('bcrypt');
       const hashedPassword = await bcrypt.default.hash(tempPassword, 10);
+      
+      console.log('Generated temporary password for new customer:', tempPassword);
       
       // Generate a random referral code for the new customer
       const generatedReferralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -1313,35 +1316,57 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       
       // Send welcome email to the customer
       try {
+        // Create the customer data object with a structure that matches what the email formatter expects
         const customerData = {
           id: newUserId,
           firstName,
           lastName,
           email,
-          phoneNumber: effectivePhoneNumber,
+          mobileNumber: effectivePhoneNumber, // Renamed to match email formatter interface
           selectedPackage: selectedPackage.toUpperCase(),
           points: initialPoints,
           signedUpBy: `${user.first_name} ${user.last_name}`,
           referralCode: generatedReferralCode,
           agentId: user.id,
-          mandateAccepted: mandateAccepted ? true : false,
-          // Add banking data
+          mandate_accepted: mandateAccepted ? true : false, // Note the underscore in parameter name
+          // Personal details fields
+          idNumber: idNumber || '',
+          dateOfBirth: dateOfBirth || '',
+          gender: gender || '',
+          isSouthAfrican: isSouthAfrican ? true : false,
+          // Professional details
+          occupation: occupation || '',
+          industry: industry || '',
+          // Address information
+          address: addressLine1 || '',
+          city: suburb || '',
+          postalCode: postalCode || '',
+          // Banking data
+          hasCreditCard: hasCreditCard ? true : false,
           bankName: bankName || '',
           accountType: accountType || '',
           accountNumber: accountNumber || '',
           accountHolderName: accountHolderName || '',
           branchCode: branchCode || '',
           // Other required fields
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          signature: customerSignature || ''
         };
 
         // Send welcome email to customer
         console.log(`Sending welcome email to new customer: ${email}`);
-        const welcomeEmailHtml = formatRegistrationEmail(customerData);
+        
+        // Use the same temporary password we set when creating the user account
+        
+        // Format the email with the appropriate customer details
+        const { text, html } = formatRegistrationEmail(firstName, email);
+        
         await sendEmail({
           to: email,
           subject: 'Welcome to OPIAN Rewards!',
-          html: welcomeEmailHtml,
+          text: text,
+          html: html,
+          emailType: 'CUSTOMER_WELCOME'
         });
         
         // Send notification to admin

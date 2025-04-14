@@ -414,6 +414,10 @@ export function formatRegistrationEmail(
   // Use Replit domain for images (they actually work)
   const signatureImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png";
   const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
+  
+  // Default temporary password
+  const tempPassword = "12345678";
+  
   const text = `
     Dear ${firstName},
 
@@ -424,7 +428,7 @@ export function formatRegistrationEmail(
     Your Next Steps:
     1. Sign in: Visit our platform at www.opian.co.za and log in using your credentials:
        Username: ${email}
-       Password: 12345678
+       Password: ${tempPassword}
     2. Secure your account: Change your password to something strong and unique.
     3. Activate your rewards: Start engaging on the Opian journey with referral, financial product engagement and merchant rewards and unlock great benefits!
     4. Earn as you go: Every interaction brings you closer to bigger rewards and exclusive perks. We will guide you on your journey all the way, so expect regular communication from us.
@@ -472,7 +476,7 @@ export function formatRegistrationEmail(
             <li><strong>Sign in:</strong> Visit our platform at <a href="https://www.opian.co.za" style="color: #43EB3E; text-decoration: underline; font-weight: bold;">www.opian.co.za</a> and log in using your credentials:
               <div style="background: rgba(255,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 3px;">
                 <span style="color: #43EB3E;">Username:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">${email}</span><br>
-                <span style="color: #43EB3E;">Password:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">12345678</span>
+                <span style="color: #43EB3E;">Password:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">${tempPassword}</span>
               </div>
             </li>
             <li><strong>Secure your account:</strong> Change your password to something strong and unique.</li>
