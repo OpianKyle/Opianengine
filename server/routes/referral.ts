@@ -1379,6 +1379,32 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
         // Don't fail the transaction if emails fail
       }
       
+      // Create a transaction record for the welcome bonus points
+      try {
+        console.log(`Creating welcome bonus transaction record for user ${newUserId} with ${initialPoints} points`);
+        await connection.execute(
+          `INSERT INTO transactions (
+            user_id,
+            points,
+            type,
+            description,
+            status,
+            created_at
+          ) VALUES (?, ?, ?, ?, ?, NOW())`,
+          [
+            newUserId,
+            initialPoints,
+            'WELCOME_BONUS',
+            `Welcome bonus for ${selectedPackage.toUpperCase()} package`,
+            'PROCESSED'
+          ]
+        );
+        console.log('Successfully created welcome bonus transaction record');
+      } catch (transactionError) {
+        console.error('Error creating welcome bonus transaction record:', transactionError);
+        // Don't fail the entire registration if this fails
+      }
+
       // Commit the transaction
       await connection.commit();
       
