@@ -4214,9 +4214,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       
       // Calculate commission percentages by level
       const commissionPercentages = {
-        1: 0.075, // 7.5%
-        2: 0.05,  // 5%
-        3: 0.025  // 2.5%
+        1: 0.30, // 30%
+        2: 0.05, // 5%
+        3: 0.025 // 2.5%
       };
       
       // Process all referrals
@@ -4238,7 +4238,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           commission: {
             percentage: percentage * 100,
             randValue: (baseAmount * percentage).toFixed(2),
-            points: Math.floor(baseAmount * percentage * 10) // Example conversion
+            points: level === 1 ? 2000 : Math.floor(baseAmount * percentage * 10) // Fixed 2000 points for level 1
           }
         });
         
