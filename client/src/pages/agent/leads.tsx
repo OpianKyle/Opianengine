@@ -833,13 +833,13 @@ export default function AgentLeadsPage() {
                     <div className="whitespace-pre-wrap text-foreground text-base leading-relaxed">
                       {`This signed Authority and Mandate refers to our contract dated ${new Date().toISOString().split('T')[0]} ("the Agreement").
 
-I / We hereby authorise you to issue and deliver payment instructions of ${registerData.selectedPackage === 'OPPORTUNITY' ? '350' 
+I / We hereby authorise you to issue and deliver payment instructions of R${registerData.selectedPackage === 'OPPORTUNITY' ? '350' 
                           : registerData.selectedPackage === 'MOMENTUM' ? '450'
                           : registerData.selectedPackage === 'PROSPER' ? '550'
                           : registerData.selectedPackage === 'PRESTIGE' ? '695'
                           : registerData.selectedPackage === 'PINNACLE' ? '825' : '0'} per month for the subscription fee to your Banker for collection against my / our abovementioned account at my / our above-mentioned Bank (or any other bank or branch to which I / we may transfer my / our account) on condition that the sum of such payment instructions will never exceed my / our obligations as as agreed to in the Agreement and commencing on 1st of each month and continuing until this Authority and Mandate is terminated by me / us by giving you notice in writing of not less than 60 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
 
-The individual payment instructions so authorised to be issued must be issued and delivered as follows: ${registerData.selectedPackage === 'OPPORTUNITY' ? '350' 
+The individual payment instructions so authorised to be issued must be issued and delivered as follows: R${registerData.selectedPackage === 'OPPORTUNITY' ? '350' 
                           : registerData.selectedPackage === 'MOMENTUM' ? '450'
                           : registerData.selectedPackage === 'PROSPER' ? '550'
                           : registerData.selectedPackage === 'PRESTIGE' ? '695'
