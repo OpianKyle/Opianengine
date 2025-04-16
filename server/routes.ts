@@ -2049,14 +2049,15 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       const transformedReferrals = referrals.map((referral: any) => {
         // Calculate commission based on level
         const commissionPercentage = 
-          referral.level === 1 ? 0.075 : // 15% for level 1
-          referral.level === 2 ? 0.05 : // 10% for level 2
-          referral.level === 3 ? 0.025 : // 5% for level 3
+          referral.level === 1 ? 0.30 : // 30% for level 1 (previously 0.075)
+          referral.level === 2 ? 0.05 : // 5% for level 2
+          referral.level === 3 ? 0.025 : // 2.5% for level 3
           0;
         
         const packageAmount = referral.package_amount || 0;
         const randValue = packageAmount * commissionPercentage;
-        const points = Math.floor(randValue * 100);
+        // Use a fixed 2000 points value for all referrals as required
+        const points = referral.level === 1 ? 2000 : Math.floor(randValue * 100);
 
         // Parse referral package stats
         const packageStats = referral.referral_package_stats 
@@ -2098,7 +2099,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
                 PINNACLE: 0
               },
               commission: {
-                percentage: 7.5,
+                percentage: 30.0,
                 baseAmount: packagePriceMap[packageType] || 0
               }
             };
