@@ -25,11 +25,57 @@ export const AGENT_API_ENDPOINTS = [
   '/api/agent/statistics'
 ];
 
+export const CUSTOMER_API_ENDPOINTS = [
+  '/api/profile',
+  '/api/rewards',
+  '/api/products',
+  '/api/transactions',
+  '/api/statistics',
+  '/api/referral'
+];
+
+export const ADMIN_API_ENDPOINTS = [
+  '/api/admin/users',
+  '/api/admin/statistics',
+  '/api/admin/agents',
+  '/api/admin/rewards',
+  '/api/admin/products',
+  '/api/admin/logs',
+  '/api/admin/quote-requests',
+  '/api/admin/redemptions'
+];
+
 /**
  * Prefetches key API data for the agent dashboard
  * @param token JWT token for authenticated requests
  */
 export const prefetchAgentData = async (token?: string) => {
+  await prefetchData(AGENT_API_ENDPOINTS, token, 'agent');
+};
+
+/**
+ * Prefetches key API data for the customer dashboard
+ * @param token JWT token for authenticated requests
+ */
+export const prefetchCustomerData = async (token?: string) => {
+  await prefetchData(CUSTOMER_API_ENDPOINTS, token, 'customer');
+};
+
+/**
+ * Prefetches key API data for the admin dashboard
+ * @param token JWT token for authenticated requests
+ */
+export const prefetchAdminData = async (token?: string) => {
+  await prefetchData(ADMIN_API_ENDPOINTS, token, 'admin');
+};
+
+/**
+ * Generic data prefetching function for any role
+ * @param endpoints Array of API endpoints to prefetch
+ * @param token JWT token for authenticated requests
+ * @param role Role name for logging purposes
+ */
+const prefetchData = async (endpoints: string[], token?: string, role: string = 'user') => {
   // Create headers with authorization token if available
   const headers: Record<string, string> = {
     'Accept': 'application/json',
@@ -46,18 +92,23 @@ export const prefetchAgentData = async (token?: string) => {
     credentials: 'include' as RequestCredentials,
   };
 
-  // Prefetch all key agent data endpoints
-  const prefetchPromises = AGENT_API_ENDPOINTS.map(endpoint => {
+  // Prefetch all key data endpoints
+  const prefetchPromises = endpoints.map(endpoint => {
     return queryClient.prefetchQuery({
       queryKey: [endpoint, token],
       queryFn: async () => {
-        const response = await fetch(endpoint, options);
-        if (!response.ok) {
-          // Silently fail for prefetches - we don't want to show error toasts for background fetches
-          console.warn(`Failed to prefetch ${endpoint}: ${response.status}`);
+        try {
+          const response = await fetch(endpoint, options);
+          if (!response.ok) {
+            // Silently fail for prefetches - we don't want to show error toasts for background fetches
+            console.warn(`Failed to prefetch ${endpoint}: ${response.status}`);
+            return null;
+          }
+          return response.json();
+        } catch (error) {
+          console.warn(`Error prefetching ${endpoint}:`, error);
           return null;
         }
-        return response.json();
       },
       staleTime: 2 * 60 * 1000, // 2 minutes
     });
@@ -65,7 +116,7 @@ export const prefetchAgentData = async (token?: string) => {
 
   // Wait for all prefetches to complete
   await Promise.all(prefetchPromises);
-  console.log('✅ Prefetched agent data for instant access');
+  console.log(`✅ Prefetched ${role} data for instant access`);
 };
 
 export function getQueryFn({ on401 = 'throw', headers = {}, method = 'GET' }: FetchOptions = {}) {

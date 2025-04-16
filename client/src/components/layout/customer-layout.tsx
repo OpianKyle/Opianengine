@@ -1,16 +1,27 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Home, Gift, Users, User, Menu, X, ShoppingBag } from "lucide-react";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/NotificationBell";
+import { prefetchCustomerData } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const { logoutMutation } = useUser();
+  const { token } = useAuth();
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasPrefetched, setHasPrefetched] = useState(false);
+
+  // Prefetch all customer data when the layout is first loaded
+  useEffect(() => {
+    if (!hasPrefetched && token) {
+      prefetchCustomerData(token);
+      setHasPrefetched(true);
+    }
+  }, [token, hasPrefetched]);
 
   const handleLogout = async () => {
     try {
@@ -28,6 +39,21 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     { label: "Referrals", href: "/referrals", icon: <Users className="h-4 w-4 mr-2" /> },
     { label: "Profile", href: "/profile", icon: <User className="h-4 w-4 mr-2" /> },
   ];
+
+  // Handle navigation and prefetch data for the next section
+  const handleNavigation = (href: string) => {
+    // Only navigate if not already on the page
+    if (href !== location) {
+      // Immediately prefetch data before navigation to ensure fast loading
+      if (token) {
+        prefetchCustomerData(token);
+      }
+      
+      // Then navigate
+      navigate(href);
+      setSidebarOpen(false);
+    }
+  };
 
   return (
     <div className="flex h-screen w-full">
@@ -82,9 +108,13 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                   key={item.href}
                   variant={location === item.href ? "secondary" : "ghost"}
                   className="w-full justify-start text-sm md:text-base capitalize"
-                  onClick={() => {
-                    navigate(item.href);
-                    setSidebarOpen(false);
+                  onClick={() => handleNavigation(item.href)}
+                  onMouseEnter={() => {
+                    // Start prefetching data when hovering over navigation items
+                    if (token && item.href !== location) {
+                      console.log(`👆 Hover prefetching for ${item.href}`);
+                      prefetchCustomerData(token);
+                    }
                   }}
                 >
                   {item.icon}
@@ -98,9 +128,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               variant="outline" 
               className="w-full text-sm md:text-base" 
               onClick={handleLogout}
-              disabled={logoutMutation.isLoading}
+              disabled={logoutMutation.isPending}
             >
-              {logoutMutation.isLoading ? 'Logging out...' : 'Logout'}
+              {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
             </Button>
           </div>
         </div>
@@ -127,7 +157,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                 "flex flex-col items-center justify-center h-full w-full space-y-1 rounded-none",
                 location === item.href && "bg-secondary"
               )}
-              onClick={() => navigate(item.href)}
+              onClick={() => handleNavigation(item.href)}
             >
               {React.cloneElement(item.icon, { className: "h-5 w-5" })}
               <span className="text-xs">{item.label}</span>

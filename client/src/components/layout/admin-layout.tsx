@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -9,7 +9,6 @@ import {
   Package,
   Gift,
   DollarSign,
-  UserCog,
   ScrollText,
   FileText,
   LogOut,
@@ -17,14 +16,26 @@ import {
   X,
   UserPlus,
   UserCheck,
-  Mail, // Added import for Mail icon
-  RefreshCw, // Added import for RefreshCw icon for migrations
+  Mail,
+  RefreshCw,
 } from "lucide-react";
+import { prefetchAdminData } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { logoutMutation } = useUser();
+  const { token } = useAuth();
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasPrefetched, setHasPrefetched] = useState(false);
+
+  // Prefetch all admin data when the layout is first loaded
+  useEffect(() => {
+    if (!hasPrefetched && token) {
+      prefetchAdminData(token);
+      setHasPrefetched(true);
+    }
+  }, [token, hasPrefetched]);
 
   const handleLogout = async () => {
     try {
@@ -49,6 +60,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "Action Logs", href: "/admin/logs", icon: <ScrollText className="h-4 w-4 mr-2" /> },
     { label: "Email Logs", href: "/admin/email-logs", icon: <Mail className="h-4 w-4 mr-2" /> },
   ];
+
+  // Handle navigation and prefetch data for the next section
+  const handleNavigation = (href: string) => {
+    // Only navigate if not already on the page
+    if (href !== location) {
+      // Immediately prefetch data before navigation to ensure fast loading
+      if (token) {
+        prefetchAdminData(token);
+      }
+      
+      // Then navigate
+      navigate(href);
+      setSidebarOpen(false);
+    }
+  };
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
@@ -97,9 +123,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   key={item.href}
                   variant={location === item.href ? "secondary" : "ghost"}
                   className="w-full justify-start text-sm md:text-base capitalize"
-                  onClick={() => {
-                    navigate(item.href);
-                    setSidebarOpen(false);
+                  onClick={() => handleNavigation(item.href)}
+                  onMouseEnter={() => {
+                    // Start prefetching data when hovering over navigation items
+                    if (token && item.href !== location) {
+                      console.log(`👆 Hover prefetching for ${item.href}`);
+                      prefetchAdminData(token);
+                    }
                   }}
                 >
                   {item.icon}
@@ -113,9 +143,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               variant="outline"
               className="w-full text-sm md:text-base"
               onClick={handleLogout}
-              disabled={logoutMutation.isLoading}
+              disabled={logoutMutation.isPending}
             >
-              {logoutMutation.isLoading ? (
+              {logoutMutation.isPending ? (
                 <>Loading...</>
               ) : (
                 <>
