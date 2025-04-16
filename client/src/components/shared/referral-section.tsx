@@ -348,7 +348,7 @@ export default function ReferralSection() {
                     <span className="text-muted-foreground"> joined on </span>
                     <span>{new Date(referral.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <Badge variant="outline">+{referral.commission.points} points</Badge>
+                  <Badge variant="outline">+{referral.commission?.points || 0} points</Badge>
                 </div>
               ))}
             </div>
