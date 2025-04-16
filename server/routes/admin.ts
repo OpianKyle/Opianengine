@@ -269,14 +269,20 @@ router.get('/agents/:id/customers', async (req: any, res) => {
             )
           ),
           '[]'
-        ) as products
+        ) as products,
+        (
+          SELECT 
+            COALESCE(SUM(ac.commission_amount), 0) 
+          FROM agent_commissions ac 
+          WHERE ac.customer_id = u.id AND ac.agent_id = ?
+        ) as commissionAmount
        FROM users u
        LEFT JOIN product_assignments pa ON u.id = pa.user_id
        LEFT JOIN products p ON pa.product_id = p.id
        WHERE u.agent_id = ?
        GROUP BY u.id
        ORDER BY u.created_at DESC`,
-      [req.params.id]
+      [req.params.id, req.params.id]
     );
 
     const transformedCustomers = (customers as any).map((customer: any) => ({
@@ -289,7 +295,8 @@ router.get('/agents/:id/customers', async (req: any, res) => {
       points: customer.points,
       createdAt: customer.created_at,
       isEnabled: Boolean(customer.is_enabled),
-      products: JSON.parse(customer.products)
+      products: JSON.parse(customer.products),
+      commissionAmount: parseFloat(customer.commissionAmount || 0)
     }));
 
     console.log('Found customers for agent:', {

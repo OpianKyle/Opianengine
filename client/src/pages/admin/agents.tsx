@@ -42,7 +42,9 @@ const calculateCommission = (packageName: string | null): number => {
   
   // Calculate 30% of package price as the commission
   const packagePrice = getPackagePrice(packageName);
-  return packagePrice * 0.3;
+  const commission = packagePrice * 0.3;
+  // Return with 2 decimal places
+  return Math.round(commission * 100) / 100;
 };
 
 export default function AdminAgents() {
@@ -303,7 +305,9 @@ export default function AdminAgents() {
                         R{getPackagePrice(customer.selectedPackage)?.toFixed(2) || "0.00"}
                       </TableCell>
                       <TableCell className="text-white">
-                        R{calculateCommission(customer.selectedPackage)?.toFixed(2) || "0.00"}
+                        {customer.commissionAmount 
+                          ? `R${customer.commissionAmount.toFixed(2)}` 
+                          : `R${calculateCommission(customer.selectedPackage)?.toFixed(2) || "0.00"}`}
                       </TableCell>
                       <TableCell>
                         <Badge
