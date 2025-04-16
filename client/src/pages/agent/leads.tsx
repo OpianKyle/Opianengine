@@ -505,42 +505,47 @@ export default function AgentLeadsPage() {
 
       {/* Update Status Dialog */}
       <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Lead Status</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-md bg-background border-border [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-[#43EB3E]">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="text-foreground font-semibold text-xl">Update Lead Status</DialogTitle>
+            <DialogDescription className="text-muted-foreground mt-1">
               Update the status of {selectedLead?.firstName} {selectedLead?.lastName}'s lead.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="py-6 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="status">Current Status</Label>
+              <Label htmlFor="status" className="text-foreground font-medium">Current Status</Label>
               <Select
                 defaultValue={selectedLead?.status}
                 onValueChange={(value) => handleSubmitStatus(value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full border-input bg-background">
                   <SelectValue placeholder="Select a status" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="NEW">New Lead</SelectItem>
-                  <SelectItem value="CONTACTED">Contacted</SelectItem>
-                  <SelectItem value="SIGNED_UP">Signed Up</SelectItem>
-                  <SelectItem value="NOT_INTERESTED">Not Interested</SelectItem>
+                <SelectContent className="bg-background border-border">
+                  <SelectItem className="hover:bg-muted" value="NEW">New Lead</SelectItem>
+                  <SelectItem className="hover:bg-muted" value="CONTACTED">Contacted</SelectItem>
+                  <SelectItem className="hover:bg-muted" value="SIGNED_UP">Signed Up</SelectItem>
+                  <SelectItem className="hover:bg-muted" value="NOT_INTERESTED">Not Interested</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
+          <DialogFooter className="border-t pt-4 gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsUpdateDialogOpen(false)}
+              className="border-border text-foreground hover:bg-muted"
+            >
               Cancel
             </Button>
             <Button
               type="submit"
+              className="bg-[#43EB3E] text-background hover:bg-[#38c634]"
               disabled={updateLeadMutation.isPending}
               onClick={() => setIsUpdateDialogOpen(false)}
             >
-              {updateLeadMutation.isPending ? 'Updating...' : 'Close'}
+              {updateLeadMutation.isPending ? 'Updating...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
