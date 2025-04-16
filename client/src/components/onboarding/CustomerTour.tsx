@@ -73,8 +73,11 @@ const tourSteps: Step[] = [
     target: '.referral-section',
     content: 'Share your unique referral code with friends and family. You\'ll earn 2000 points for each successful referral!',
     disableBeacon: true,
-    placement: 'top',
-    spotlightPadding: 15,
+    placement: 'bottom',
+    spotlightPadding: 20,
+    disableOverlay: false,
+    disableScrolling: false,
+    offset: 20,
   },
   {
     target: '.recent-transactions',
@@ -137,18 +140,44 @@ const CustomerTour: React.FC = () => {
         try {
           const targetElement = document.querySelector(step.target);
           if (targetElement) {
-            // Check if element is in viewport
-            const rect = targetElement.getBoundingClientRect();
-            const isInViewport = (
-              rect.top >= 0 &&
-              rect.left >= 0 &&
-              rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-              rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-            );
-            
-            if (!isInViewport) {
-              console.log(`Element ${step.target} not in viewport, scrolling to it`);
-              targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Special handling for step 3 (referral section)
+            if (index === 3) {
+              console.log(`Enhanced scrolling for referral section (step ${index})`);
+              // Force scroll to element with additional offset
+              window.scrollTo({
+                top: targetElement.getBoundingClientRect().top + window.pageYOffset - 120,
+                behavior: 'smooth'
+              });
+              
+              // Add a slight delay to ensure scrolling completes
+              setTimeout(() => {
+                console.log('Highlighting referral section after scroll');
+                // If needed, we could add additional handling here
+              }, 300);
+            } else {
+              // Check if element is in viewport
+              const rect = targetElement.getBoundingClientRect();
+              const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+              const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+              
+              // More forgiving viewport check (element is at least partially visible)
+              const isPartiallyInViewport = !(
+                rect.bottom < 0 || 
+                rect.top > viewportHeight ||
+                rect.right < 0 || 
+                rect.left > viewportWidth
+              );
+              
+              // Element is not even partially in viewport
+              if (!isPartiallyInViewport) {
+                console.log(`Element ${step.target} not in viewport, scrolling to it`);
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+              // Element is partially visible but not fully
+              else if (rect.top < 0 || rect.bottom > viewportHeight) {
+                console.log(`Element ${step.target} partially in viewport, adjusting scroll`);
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
             }
           }
         } catch (err) {
