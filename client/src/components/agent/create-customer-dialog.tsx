@@ -56,9 +56,10 @@ const customerSchema = z.object({
   branchCode: z.string().min(1, "Branch code is required"),
   accountNumber: z.string().min(1, "Account number is required"),
   accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"], { required_error: "Please select an account type" }),
-  mandateAgreement: z.literal(true, {
-    errorMap: () => ({ message: "You must agree to the mandate terms" }),
-  }),
+  mandateAgreement: z.boolean()
+    .refine(val => val === true, {
+      message: "You must agree to the mandate terms"
+    }),
 });
 
 type CustomerFormData = z.infer<typeof customerSchema>;
@@ -111,7 +112,7 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
       branchCode: "",
       accountNumber: "",
       accountType: "SAVINGS",
-      mandateAgreement: false,
+      mandateAgreement: false, // User must check this box before submitting
     }
   });
 
@@ -543,7 +544,16 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel className="text-foreground">
-                          I confirm that the customer has agreed to the above mandate
+                          <div className="space-y-2">
+                            <p>I confirm that the customer has agreed to the above mandate</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap border p-3 bg-muted/50 rounded-md max-h-40 overflow-y-auto">
+                              This signed Authority and Mandate refers to our contract dated {today} ("the Agreement").{'\n\n'}
+                              I / We hereby authorise you to issue and deliver payment instructions of {packages.find(pkg => pkg.id === form.getValues().selectedPackage)?.price || 0} per month for the subscription fee to my bank account.{'\n\n'}
+                              Mandate: I /We acknowledge that all payment instructions issued by you shall be treated by my / our above-mentioned Bank as if the instructions have been issued by me/us personally.{'\n\n'}
+                              Cancellation: I /We agree that although this Authority and Mandate may be cancelled by me/us, such cancellation will not cancel the Agreement.{'\n\n'}
+                              Assignment: I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty) Ltd as per your agreement with Netcash (Pty) Ltd.
+                            </p>
+                          </div>
                         </FormLabel>
                         <FormMessage />
                       </div>
