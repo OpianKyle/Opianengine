@@ -59,7 +59,7 @@ const tourSteps: Step[] = [
     target: '.points-card',
     content: 'Here you can see your current points balance. You earn points through referrals, purchases, and special promotions.',
     disableBeacon: true,
-    placement: 'bottom',
+    placement: 'right',
     spotlightPadding: 15,
   },
   {
@@ -73,7 +73,7 @@ const tourSteps: Step[] = [
     target: '.referral-section',
     content: 'Share your unique referral code with friends and family. You\'ll earn 2000 points for each successful referral!',
     disableBeacon: true,
-    placement: 'bottom',
+    placement: 'left',
     spotlightPadding: 20,
     disableOverlay: false,
     disableScrolling: false,
