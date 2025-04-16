@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/NotificationBell";
 import { prefetchCustomerData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
 
 // Helper function for section determination
 const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' | 'referral' | 'all' => {
@@ -51,7 +52,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     { label: "Products", href: "/products", icon: <ShoppingBag className="h-4 w-4 mr-2" /> },
     { label: "Rewards", href: "/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Referrals", href: "/referrals", icon: <Users className="h-4 w-4 mr-2" /> },
-    { label: "Profile", href: "/profile", icon: <User className="h-4 w-4 mr-2" /> },
+    { label: "Profile", href: "/profile", icon: <User className="h-4 w-4 mr-2" />, className: "profile-link" },
   ];
 
   // Handle navigation and prefetch data for the next section
@@ -120,12 +121,12 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
             <h2 className="mb-2 px-3 md:px-4 text-base md:text-lg font-semibold text-[#1b75bc]">
               Rewards Portal
             </h2>
-            <div className="space-y-1">
+            <div className="space-y-1 sidebar-navigation">
               {menuItems.map((item) => (
                 <Button
                   key={item.href}
                   variant={location === item.href ? "secondary" : "ghost"}
-                  className="w-full justify-start text-sm md:text-base capitalize"
+                  className={`w-full justify-start text-sm md:text-base capitalize ${item.className || ''}`}
                   onClick={() => handleNavigation(item.href)}
                   onMouseEnter={() => {
                     // Start prefetching data when hovering over navigation items
@@ -159,7 +160,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       <main className="flex-1 w-0 lg:w-auto lg:pl-72">
         <div className="min-h-screen pt-16 pb-20">
           <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: "100rem" }}>
-            {children}
+            <OnboardingProvider section="customer">
+              {children}
+            </OnboardingProvider>
           </div>
         </div>
       </main>
@@ -174,7 +177,8 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               size="sm"
               className={cn(
                 "flex flex-col items-center justify-center h-full w-full space-y-1 rounded-none",
-                location === item.href && "bg-secondary"
+                location === item.href && "bg-secondary",
+                item.className || ''
               )}
               onClick={() => handleNavigation(item.href)}
               onMouseEnter={() => {

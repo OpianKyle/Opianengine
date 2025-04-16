@@ -12,6 +12,8 @@ import { useState } from "react";
 import ReferralSection from "@/components/shared/referral-section";
 import { formatTransactionType } from "@/lib/utils";
 import { Package as PackageIcon } from "lucide-react";
+import CustomerTour from "@/components/onboarding/CustomerTour";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 
 interface User {
   id: number;
@@ -69,6 +71,9 @@ const getTierInfo = (points: number): { name: string; color: string; nextTier?: 
 };
 
 export default function CustomerDashboard() {
+  // Use the onboarding context
+  const { isFirstVisit } = useOnboarding();
+  
   const { data: user, isLoading: isUserLoading } = useQuery<User>({
     queryKey: ["/api/customer/points"],
     queryFn: async () => {
@@ -152,7 +157,10 @@ export default function CustomerDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
+      {/* Tour Component */}
+      <CustomerTour />
+      
+      <div className="space-y-2 welcome-dashboard">
         <h2 className="text-2xl font-semibold text-muted-foreground">
           Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome to OPIAN Rewards'}
         </h2>
@@ -160,7 +168,7 @@ export default function CustomerDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="points-card">
           <CardHeader>
             <CardTitle>Current Points & Tier</CardTitle>
           </CardHeader>
@@ -201,7 +209,7 @@ export default function CustomerDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rewards-section">
           <CardHeader>
             <CardTitle>Cash Redemption</CardTitle>
           </CardHeader>
@@ -249,11 +257,11 @@ export default function CustomerDashboard() {
         </Card>
 
         {/* Only show referral section for users with PROSPER package or higher */}
-        {hasReferralAccess && <ReferralSection />}
+        {hasReferralAccess && <div className="referral-section"><ReferralSection /></div>}
         
         {/* Show upgrade message for users without access */}
         {!hasReferralAccess && (
-          <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border border-slate-700">
+          <Card className="referral-section bg-gradient-to-br from-slate-900 to-slate-800 text-white border border-slate-700">
             <CardHeader>
               <CardTitle className="text-[#43EB3E] flex items-center gap-2">
                 <PackageIcon className="h-5 w-5" /> Refer & Earn Points
@@ -283,7 +291,7 @@ export default function CustomerDashboard() {
         )}
       </div>
 
-      <Card>
+      <Card className="recent-transactions">
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
