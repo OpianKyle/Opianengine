@@ -94,13 +94,13 @@ async function calculateCommissionPoints(connection: any, packageName: string, l
   let commissionPercentage = 0;
   switch (level) {
     case 1: // Direct referral
-      commissionPercentage = 0.15; // 15%
+      commissionPercentage = 0.075; // 7.5%
       break;
     case 2:
-      commissionPercentage = 0.10; // 10%
+      commissionPercentage = 0.05; // 5%
       break;
     case 3:
-      commissionPercentage = 0.05; // 5%
+      commissionPercentage = 0.025; // 2.5%
       break;
     default:
       commissionPercentage = 0;
@@ -2049,7 +2049,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       const transformedReferrals = referrals.map((referral: any) => {
         // Calculate commission based on level
         const commissionPercentage = 
-          referral.level === 1 ? 0.30 : // 30% for level 1 (previously 0.075)
+          referral.level === 1 ? 0.075 : // 7.5% for level 1
           referral.level === 2 ? 0.05 : // 5% for level 2
           referral.level === 3 ? 0.025 : // 2.5% for level 3
           0;
@@ -2099,7 +2099,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
                 PINNACLE: 0
               },
               commission: {
-                percentage: 30.0,
+                percentage: 7.5,
                 baseAmount: packagePriceMap[packageType] || 0
               }
             };
