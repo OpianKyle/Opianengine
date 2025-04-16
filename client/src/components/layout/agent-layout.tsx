@@ -14,6 +14,14 @@ import {
 import { prefetchAgentData, AGENT_API_ENDPOINTS } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 
+// Helper function for section determination
+const getSectionFromHref = (href: string): 'dashboard' | 'customers' | 'leads' | 'all' => {
+  if (href === '/agent') return 'dashboard';
+  if (href === '/agent/customers') return 'customers';
+  if (href === '/agent/leads') return 'leads';
+  return 'all';
+};
+
 export default function AgentLayout({ children }: { children: React.ReactNode }) {
   const { logoutMutation } = useUser();
   const { token } = useAuth();
@@ -21,13 +29,18 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasPrefetched, setHasPrefetched] = useState(false);
 
-  // Prefetch all agent data when the layout is first loaded
+  // Prefetch section-specific data when the layout is first loaded
   useEffect(() => {
     if (!hasPrefetched && token) {
-      prefetchAgentData(token);
+      // Get the current section based on the URL
+      const currentSection = getSectionFromHref(location);
+      console.log(`🚀 Initial prefetching for section: ${currentSection}`);
+      
+      // Prefetch data for the current section
+      prefetchAgentData(token, currentSection);
       setHasPrefetched(true);
     }
-  }, [token, hasPrefetched]);
+  }, [token, hasPrefetched, location]);
 
   const handleLogout = async () => {
     try {
@@ -46,19 +59,15 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
 
   // Handle navigation and prefetch data for the next section
   const handleNavigation = (href: string) => {
-    // Early prefetch data on menu hover
-    const prefetchDataOnHover = () => {
-      if (token) {
-        console.log(`🔄 Prefetching data for ${href}`);
-        prefetchAgentData(token);
-      }
-    };
+    // Section we're navigating to
+    const section = getSectionFromHref(href);
 
     // Only navigate if not already on the page
     if (href !== location) {
       // Immediately prefetch data before navigation
       if (token) {
-        prefetchAgentData(token);
+        console.log(`🚀 Navigation prefetching for ${href} (${section})`);
+        prefetchAgentData(token, section);
       }
       
       // Then navigate
@@ -126,8 +135,9 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
                   onMouseEnter={() => {
                     // Start prefetching data when hovering over navigation items
                     if (token && item.href !== location) {
-                      console.log(`👆 Hover prefetching for ${item.href}`);
-                      prefetchAgentData(token);
+                      const section = getSectionFromHref(item.href);
+                      console.log(`👆 Hover prefetching for ${item.href} (${section})`);
+                      prefetchAgentData(token, section);
                     }
                   }}
                 >
