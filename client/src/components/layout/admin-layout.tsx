@@ -22,6 +22,20 @@ import {
 import { prefetchAdminData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 
+// Helper function for section determination
+const getSectionFromHref = (href: string): 'dashboard' | 'users' | 'agents' | 'products' | 'rewards' | 'quotes' | 'redemptions' | 'logs' | 'all' => {
+  if (href === '/admin') return 'dashboard';
+  if (href === '/admin/manage-users') return 'users';
+  if (href === '/admin/agents') return 'agents';
+  if (href === '/admin/customers') return 'users';
+  if (href === '/admin/products') return 'products';
+  if (href === '/admin/quote-requests') return 'quotes';
+  if (href === '/admin/rewards') return 'rewards';
+  if (href === '/admin/cash-redemptions') return 'redemptions';
+  if (href === '/admin/logs' || href === '/admin/email-logs') return 'logs';
+  return 'all';
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { logoutMutation } = useUser();
   const { token } = useAuth();
@@ -29,13 +43,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasPrefetched, setHasPrefetched] = useState(false);
 
-  // Prefetch all admin data when the layout is first loaded
+  // Prefetch section-specific data when the layout is first loaded
   useEffect(() => {
     if (!hasPrefetched && token) {
-      prefetchAdminData(token);
+      // Get the current section based on the URL
+      const currentSection = getSectionFromHref(location);
+      console.log(`🚀 Initial prefetching for admin section: ${currentSection}`);
+      
+      // Prefetch data for the current section
+      prefetchAdminData(token, currentSection);
       setHasPrefetched(true);
     }
-  }, [token, hasPrefetched]);
+  }, [token, hasPrefetched, location]);
 
   const handleLogout = async () => {
     try {
@@ -63,11 +82,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Handle navigation and prefetch data for the next section
   const handleNavigation = (href: string) => {
+    // Determine which section we're navigating to
+    const section = getSectionFromHref(href);
+    
     // Only navigate if not already on the page
     if (href !== location) {
       // Immediately prefetch data before navigation to ensure fast loading
       if (token) {
-        prefetchAdminData(token);
+        console.log(`🚀 Navigation prefetching for ${href} (${section})`);
+        prefetchAdminData(token, section);
       }
       
       // Then navigate
@@ -127,8 +150,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   onMouseEnter={() => {
                     // Start prefetching data when hovering over navigation items
                     if (token && item.href !== location) {
-                      console.log(`👆 Hover prefetching for ${item.href}`);
-                      prefetchAdminData(token);
+                      const section = getSectionFromHref(item.href);
+                      console.log(`👆 Hover prefetching for ${item.href} (${section})`);
+                      prefetchAdminData(token, section);
                     }
                   }}
                 >

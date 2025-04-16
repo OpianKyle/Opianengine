@@ -8,6 +8,15 @@ import NotificationBell from "@/components/NotificationBell";
 import { prefetchCustomerData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 
+// Helper function for section determination
+const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' | 'referral' | 'all' => {
+  if (href === '/dashboard') return 'dashboard';
+  if (href === '/products') return 'products';
+  if (href === '/rewards') return 'rewards';
+  if (href === '/referrals') return 'referral';
+  return 'all';
+};
+
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const { logoutMutation } = useUser();
   const { token } = useAuth();
@@ -15,13 +24,18 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasPrefetched, setHasPrefetched] = useState(false);
 
-  // Prefetch all customer data when the layout is first loaded
+  // Prefetch section-specific data when the layout is first loaded
   useEffect(() => {
     if (!hasPrefetched && token) {
-      prefetchCustomerData(token);
+      // Get the current section based on the URL
+      const currentSection = getSectionFromHref(location);
+      console.log(`🚀 Initial prefetching for section: ${currentSection}`);
+      
+      // Prefetch data for the current section
+      prefetchCustomerData(token, currentSection);
       setHasPrefetched(true);
     }
-  }, [token, hasPrefetched]);
+  }, [token, hasPrefetched, location]);
 
   const handleLogout = async () => {
     try {
@@ -42,11 +56,15 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   // Handle navigation and prefetch data for the next section
   const handleNavigation = (href: string) => {
+    // Determine which section we're navigating to
+    const section = getSectionFromHref(href);
+    
     // Only navigate if not already on the page
     if (href !== location) {
       // Immediately prefetch data before navigation to ensure fast loading
       if (token) {
-        prefetchCustomerData(token);
+        console.log(`🚀 Navigation prefetching for ${href} (${section})`);
+        prefetchCustomerData(token, section);
       }
       
       // Then navigate
@@ -112,8 +130,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                   onMouseEnter={() => {
                     // Start prefetching data when hovering over navigation items
                     if (token && item.href !== location) {
-                      console.log(`👆 Hover prefetching for ${item.href}`);
-                      prefetchCustomerData(token);
+                      const section = getSectionFromHref(item.href);
+                      console.log(`👆 Hover prefetching for ${item.href} (${section})`);
+                      prefetchCustomerData(token, section);
                     }
                   }}
                 >
@@ -158,6 +177,14 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                 location === item.href && "bg-secondary"
               )}
               onClick={() => handleNavigation(item.href)}
+              onMouseEnter={() => {
+                // Start prefetching data when hovering over mobile nav items
+                if (token && item.href !== location) {
+                  const section = getSectionFromHref(item.href);
+                  console.log(`👆 Mobile hover prefetching for ${item.href} (${section})`);
+                  prefetchCustomerData(token, section);
+                }
+              }}
             >
               {React.cloneElement(item.icon, { className: "h-5 w-5" })}
               <span className="text-xs">{item.label}</span>
