@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 // Commission record type
 interface Commission {
@@ -25,6 +26,9 @@ interface AgentStatistics {
 }
 
 export default function AgentDashboard() {
+  // State for filtering commissions by type
+  const [filterType, setFilterType] = useState<'all' | 'upfront' | 'renewal'>('all');
+  
   // Query to fetch the agent's commissions with optimizations
   const { data: commissionData, isLoading: isCommissionsLoading } = useQuery({
     queryKey: ['/api/referral/agent/commissions'],
@@ -42,8 +46,13 @@ export default function AgentDashboard() {
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
   
-  // Extract commissions from response
-  const commissions = commissionData?.commissions || [];
+  // Extract and filter commissions based on the selected type
+  const allCommissions = commissionData?.commissions || [];
+  const commissions = filterType === 'all' 
+    ? allCommissions 
+    : allCommissions.filter(c => 
+        filterType === 'upfront' ? !c.isRenewal : c.isRenewal
+      );
 
   // Query to fetch the agent statistics
   const { data: statistics, isLoading: isStatsLoading } = useQuery<AgentStatistics>({
@@ -118,21 +127,27 @@ export default function AgentDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            <Card>
+            <Card 
+              className={`cursor-pointer hover:shadow-md transition-shadow ${filterType === 'upfront' ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setFilterType(filterType === 'upfront' ? 'all' : 'upfront')}
+            >
               <CardHeader className="py-3">
-                <CardTitle className="text-sm font-medium">First-time Signups (30%)</CardTitle>
+                <CardTitle className="text-sm font-medium">Upfront Sign Ups (30%)</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   R{calculateTotalCommission(false).toFixed(2)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  From {commissions.filter(c => !c.isRenewal).length} customer registrations
+                  From {allCommissions.filter(c => !c.isRenewal).length} customer registrations
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card 
+              className={`cursor-pointer hover:shadow-md transition-shadow ${filterType === 'renewal' ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setFilterType(filterType === 'renewal' ? 'all' : 'renewal')}
+            >
               <CardHeader className="py-3">
                 <CardTitle className="text-sm font-medium">Renewals (10%)</CardTitle>
               </CardHeader>
@@ -141,21 +156,21 @@ export default function AgentDashboard() {
                   R{calculateTotalCommission(true).toFixed(2)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  From {commissions.filter(c => c.isRenewal).length} customer renewals
+                  From {allCommissions.filter(c => c.isRenewal).length} customer renewals
                 </p>
               </CardContent>
             </Card>
 
             <Card className="bg-primary/5">
               <CardHeader className="py-3">
-                <CardTitle className="text-sm font-medium">Total Commission</CardTitle>
+                <CardTitle className="text-sm font-medium">Potential Commissions</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   R{(calculateTotalCommission(false) + calculateTotalCommission(true)).toFixed(2)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  From {commissions.length} transactions
+                  From {allCommissions.length} transactions
                 </p>
               </CardContent>
             </Card>
@@ -166,9 +181,9 @@ export default function AgentDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {commissions.length > 0 ? 
-                    `${((commissions.filter(c => !c.isRenewal).length / 
-                    Math.max(commissions.length, 1)) * 100).toFixed(1)}%` : 
+                  {allCommissions.length > 0 ? 
+                    `${((allCommissions.filter(c => !c.isRenewal).length / 
+                    Math.max(allCommissions.length, 1)) * 100).toFixed(1)}%` : 
                     '0%'}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -177,6 +192,22 @@ export default function AgentDashboard() {
               </CardContent>
             </Card>
           </div>
+          
+          {/* Filter status indicator */}
+          {filterType !== 'all' && (
+            <div className="mb-4 p-2 bg-muted/30 rounded-md text-sm flex items-center justify-between">
+              <span>
+                Showing {filterType === 'upfront' ? 'Upfront Sign Ups' : 'Renewals'} only 
+                ({commissions.length} of {allCommissions.length})
+              </span>
+              <button 
+                className="text-primary hover:underline"
+                onClick={() => setFilterType('all')}
+              >
+                Clear filter
+              </button>
+            </div>
+          )}
 
           {commissions.length > 0 ? (
             <div className="overflow-x-auto">
@@ -200,7 +231,7 @@ export default function AgentDashboard() {
                         {commission.isRenewal ? (
                           <span className="text-amber-500">Renewal (10%)</span>
                         ) : (
-                          <span className="text-green-500">New (30%)</span>
+                          <span className="text-green-500">Upfront (30%)</span>
                         )}
                       </td>
                       <td className="p-2 text-right">R{commission.commissionAmount.toFixed(2)}</td>
