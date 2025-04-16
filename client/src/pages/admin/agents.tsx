@@ -27,11 +27,11 @@ const getPackagePrice = (packageName: string | null): number => {
   if (!packageName) return 0;
   
   const packagePrices: Record<string, number> = {
-    'OPPORTUNITY': 349,
+    'OPPORTUNITY': 350,
     'MOMENTUM': 450,
     'PROSPER': 550,
     'PRESTIGE': 695,
-    'PINNACLE': 995
+    'PINNACLE': 825
   };
   
   return packagePrices[packageName.toUpperCase()] || 0;

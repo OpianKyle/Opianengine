@@ -250,8 +250,8 @@ router.post('/customers/create', async (req: any, res) => {
         if (tableCheck[0].count > 0) {
           console.log('Adding customer to agent_commissions table');
           
-          // Calculate commission (7.5% for sign-up)
-          const commissionPercentage = 7.5; // 7.5%
+          // Calculate commission (30% for sign-up)
+          const commissionPercentage = 30; // 30%
           const commissionAmount = packagePrice * commissionPercentage / 100;
           
           // Insert into agent_commissions
