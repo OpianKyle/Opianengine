@@ -10,23 +10,41 @@ import { Request, Response, NextFunction } from 'express';
 
 // Export the processReferralPoints function for use in other modules
 export async function processReferralPoints(connection: any, userId: number, referralCode: string, selectedPackage: string) {
-  if (!referralCode) return;
+  console.log(`Processing referral points for: userId=${userId}, referralCode=${referralCode}, package=${selectedPackage}`);
+  
+  if (!referralCode) {
+    console.log('No referral code provided, skipping referral points processing');
+    return;
+  }
+
+  // Clean up referral code by removing any dashes or spaces
+  const cleanReferralCode = referralCode.replace(/[-\s]/g, '');
+  console.log(`Using cleaned referral code: ${cleanReferralCode}`);
 
   const [referrer] = await connection.execute(
-    'SELECT id FROM users WHERE referral_code = ?',
-    [referralCode]
+    'SELECT id, email, points FROM users WHERE referral_code = ?',
+    [cleanReferralCode]
   );
 
-  if (!Array.isArray(referrer) || referrer.length === 0) return;
+  if (!Array.isArray(referrer) || referrer.length === 0) {
+    console.log(`No referrer found with code: ${cleanReferralCode}`);
+    return;
+  }
 
   const referrerId = referrer[0].id;
+  const referrerEmail = referrer[0].email;
+  const currentPoints = referrer[0].points || 0;
   const referralBonus = 2000; // Fixed referral bonus points - 2000 points per referral
+  
+  console.log(`Found referrer: id=${referrerId}, email=${referrerEmail}, currentPoints=${currentPoints}`);
 
   // Add points to referrer
   await connection.execute(
     'UPDATE users SET points = points + ? WHERE id = ?',
     [referralBonus, referrerId]
   );
+  
+  console.log(`Updated referrer ${referrerId} points from ${currentPoints} to ${currentPoints + referralBonus}`);
 
   // Record referral transaction
   await connection.execute(
@@ -41,6 +59,8 @@ export async function processReferralPoints(connection: any, userId: number, ref
       'PROCESSED'
     ]
   );
+  
+  console.log(`Created referral transaction record for referrer ${referrerId} with ${referralBonus} points`);
 }
 
 const scryptAsync = promisify(scrypt);
