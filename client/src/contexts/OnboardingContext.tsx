@@ -36,9 +36,24 @@ export const OnboardingProvider = ({ children, section = 'customer' }: { childre
     const sectionKey = `${ONBOARDING_SECTION_KEY}${section}`;
     const hasCompletedOnboarding = localStorage.getItem(sectionKey) === 'true';
     
+    console.log('OnboardingContext: Checking first visit status', { 
+      section, 
+      sectionKey,
+      hasCompletedOnboarding,
+      storedValue: localStorage.getItem(sectionKey)
+    });
+    
     if (!hasCompletedOnboarding) {
+      console.log('OnboardingContext: First visit detected, setting isFirstVisit to true');
       setIsFirstVisit(true);
       // We don't automatically start the tour here, giving the app time to load
+      
+      // Force localStorage to be reset if there's any issue
+      try {
+        localStorage.removeItem(sectionKey);
+      } catch (error) {
+        console.error('Error accessing localStorage:', error);
+      }
     }
   }, [section]);
 
