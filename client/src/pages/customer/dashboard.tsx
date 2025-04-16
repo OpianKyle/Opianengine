@@ -69,7 +69,7 @@ const getTierInfo = (points: number): { name: string; color: string; nextTier?: 
 };
 
 export default function CustomerDashboard() {
-  const { data: user } = useQuery<User>({
+  const { data: user, isLoading: isUserLoading } = useQuery<User>({
     queryKey: ["/api/customer/points"],
     queryFn: async () => {
       const response = await fetch("/api/customer/points", {
@@ -96,7 +96,7 @@ export default function CustomerDashboard() {
     console.log(`Package access check: ${user.selectedPackage} (upper: ${user.selectedPackage.toUpperCase()}) - Access: ${hasReferralAccess}`);
   }
 
-  const { data: transactions } = useQuery<Transaction[]>({
+  const { data: transactions, isLoading: isTransactionsLoading } = useQuery<Transaction[]>({
     queryKey: ["/api/customer/transactions"],
     queryFn: async () => {
       const response = await fetch("/api/customer/transactions", {
@@ -165,24 +165,39 @@ export default function CustomerDashboard() {
             <CardTitle>Current Points & Tier</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <PointsDisplay points={points} size="large" />
-            <div className="space-y-4">
-              <Badge className={`${tierInfo.color} text-lg px-4 py-2`}>
-                {tierInfo.name} Tier
-              </Badge>
-              {tierInfo.nextTier && (
-                <div className="space-y-2">
-                  <Progress
-                    value={(points / tierInfo.nextTier.pointsNeeded) * 100}
-                    className="h-2"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    {tierInfo.nextTier.pointsNeeded.toLocaleString()} points needed to reach{" "}
-                    {tierInfo.nextTier.name}
-                  </p>
+            {isUserLoading ? (
+              <>
+                <div className="h-10 w-36 bg-muted rounded animate-pulse mb-4"></div>
+                <div className="space-y-4">
+                  <div className="h-8 w-24 bg-muted rounded animate-pulse"></div>
+                  <div className="space-y-2">
+                    <div className="h-2 w-full bg-muted rounded animate-pulse"></div>
+                    <div className="h-5 w-48 bg-muted rounded animate-pulse"></div>
+                  </div>
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <>
+                <PointsDisplay points={points} size="large" />
+                <div className="space-y-4">
+                  <Badge className={`${tierInfo.color} text-lg px-4 py-2`}>
+                    {tierInfo.name} Tier
+                  </Badge>
+                  {tierInfo.nextTier && (
+                    <div className="space-y-2">
+                      <Progress
+                        value={(points / tierInfo.nextTier.pointsNeeded) * 100}
+                        className="h-2"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        {tierInfo.nextTier.pointsNeeded.toLocaleString()} points needed to reach{" "}
+                        {tierInfo.nextTier.name}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -191,32 +206,45 @@ export default function CustomerDashboard() {
             <CardTitle>Cash Redemption</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Points to Redeem</label>
-              <Input
-                type="number"
-                min="0"
-                max={points}
-                value={pointsToRedeem}
-                onChange={(e) => setPointsToRedeem(Number(e.target.value))}
-                placeholder="Enter points amount"
-              />
-              <p className="text-sm text-muted-foreground">
-                Conversion rate: 1 point = R0.015
-              </p>
-              {pointsToRedeem > 0 && (
-                <p className="text-sm font-medium">
-                  You will receive: R{randValue}
-                </p>
-              )}
-            </div>
-            <Button
-              className="w-full"
-              onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
-              disabled={!canRedeem}
-            >
-              {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
-            </Button>
+            {isUserLoading ? (
+              <>
+                <div className="space-y-2">
+                  <div className="h-5 w-32 bg-muted rounded animate-pulse"></div>
+                  <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
+                  <div className="h-4 w-48 bg-muted rounded animate-pulse"></div>
+                </div>
+                <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Points to Redeem</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max={points}
+                    value={pointsToRedeem}
+                    onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                    placeholder="Enter points amount"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Conversion rate: 1 point = R0.015
+                  </p>
+                  {pointsToRedeem > 0 && (
+                    <p className="text-sm font-medium">
+                      You will receive: R{randValue}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
+                  disabled={!canRedeem}
+                >
+                  {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -262,7 +290,18 @@ export default function CustomerDashboard() {
         <CardContent>
           <ScrollArea className="h-[300px]">
             <div className="space-y-4">
-              {transactions?.map((transaction) => (
+              {isTransactionsLoading ? (
+                // Skeleton loading state
+                Array(5).fill(0).map((_, index) => (
+                  <div key={`skeleton-${index}`} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-1">
+                      <div className="h-5 w-64 bg-muted rounded animate-pulse"></div>
+                      <div className="h-4 w-32 bg-muted rounded animate-pulse"></div>
+                    </div>
+                    <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
+                  </div>
+                ))
+              ) : transactions?.map((transaction) => (
                 <div
                   key={transaction.id}
                   className="flex items-center justify-between p-4 border rounded-lg"
@@ -282,7 +321,7 @@ export default function CustomerDashboard() {
                   />
                 </div>
               ))}
-              {(!transactions || transactions.length === 0) && (
+              {(!isTransactionsLoading && (!transactions || transactions.length === 0)) && (
                 <p className="text-center text-muted-foreground py-4">
                   No recent activity
                 </p>

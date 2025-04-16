@@ -31,8 +31,55 @@ export default function AdminDashboard() {
     queryFn: getQueryFn({ on401: "throw" }),
   });
 
+  // Skeleton UI rendering
   if (isLoading) {
-    return <div>Loading dashboard...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="h-6 w-48 bg-muted rounded animate-pulse"></div>
+          <div className="h-9 w-64 bg-muted rounded animate-pulse"></div>
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={`stat-skeleton-${i}`}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 w-24 bg-muted rounded animate-pulse"></div>
+                <div className="h-4 w-4 bg-muted rounded-full animate-pulse"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-7 w-16 bg-muted rounded animate-pulse mb-2"></div>
+                <div className="h-3 w-32 bg-muted rounded animate-pulse"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <div className="h-5 w-48 bg-muted rounded animate-pulse"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] bg-muted/30 rounded flex items-center justify-center">
+                <div className="h-40 w-40 rounded-full bg-muted animate-pulse"></div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <div className="h-5 w-48 bg-muted rounded animate-pulse"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] bg-muted/30 rounded flex items-center justify-center">
+                <div className="h-40 w-40 rounded-full bg-muted animate-pulse"></div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   if (error) {

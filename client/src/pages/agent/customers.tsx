@@ -156,7 +156,34 @@ export default function AgentCustomers() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-4">Loading customers...</div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Package</TableHead>
+                  <TableHead>Points</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array(5).fill(0).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    <TableCell><div className="h-5 w-32 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell><div className="h-5 w-40 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell><div className="h-5 w-24 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell><div className="h-5 w-20 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell><div className="h-5 w-12 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell><div className="h-5 w-16 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell className="text-right">
+                      <div className="h-5 w-8 bg-muted rounded animate-pulse ml-auto"></div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
             <Table>
               <TableHeader>

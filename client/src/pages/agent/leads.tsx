@@ -376,14 +376,39 @@ export default function AgentLeadsPage() {
     }
   };
 
-  if (isLeadsLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading leads...</span>
-      </div>
-    );
-  }
+  const renderSkeletonLeads = () => {
+    return Array(3).fill(0).map((_, index) => (
+      <Card key={`skeleton-${index}`} className="border-l-4 border-l-primary">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row justify-between gap-4">
+            <div className="space-y-2 w-full">
+              <div className="flex items-center">
+                <div className="h-6 w-40 bg-muted rounded animate-pulse"></div>
+                <div className="ml-2 h-5 w-24 bg-blue-100 rounded animate-pulse"></div>
+              </div>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <div className="flex items-center">
+                  <Mail className="h-4 w-4 mr-2 text-muted" />
+                  <div className="h-4 w-48 bg-muted rounded animate-pulse"></div>
+                </div>
+                <div className="flex items-center">
+                  <Phone className="h-4 w-4 mr-2 text-muted" />
+                  <div className="h-4 w-32 bg-muted rounded animate-pulse"></div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  <div className="h-3 w-36 bg-muted rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col md:flex-row gap-2 mt-2 md:mt-0 justify-end md:items-end">
+              <div className="h-9 w-24 bg-muted rounded animate-pulse"></div>
+              <div className="h-9 w-24 bg-muted rounded animate-pulse"></div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    ));
+  };
 
   return (
     <div>
@@ -399,7 +424,13 @@ export default function AgentLeadsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!leadsData?.success || !leadsData?.leads || !Array.isArray(leadsData.leads) || leadsData.leads.length === 0 ? (
+          {isLeadsLoading ? (
+            <ScrollArea className="h-[600px]">
+              <div className="space-y-4">
+                {renderSkeletonLeads()}
+              </div>
+            </ScrollArea>
+          ) : !leadsData?.success || !leadsData?.leads || !Array.isArray(leadsData.leads) || leadsData.leads.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-lg text-muted-foreground mb-4">
                 No referral leads yet
