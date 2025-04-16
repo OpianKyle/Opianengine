@@ -14,6 +14,8 @@ interface Commission {
   commissionAmount: number;
   commissionDate: string;
   paidOut: boolean;
+  packagePrice: number;
+  email: string;
 }
 
 // Agent statistics type
@@ -218,7 +220,8 @@ export default function AgentDashboard() {
                     <th className="text-left p-2">Package</th>
                     <th className="text-left p-2">Date</th>
                     <th className="text-left p-2">Type</th>
-                    <th className="text-right p-2">Amount</th>
+                    <th className="text-right p-2">Package Price</th>
+                    <th className="text-right p-2">Commission</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -234,6 +237,7 @@ export default function AgentDashboard() {
                           <span className="text-green-500">Upfront (30%)</span>
                         )}
                       </td>
+                      <td className="p-2 text-right">R{commission.packagePrice?.toFixed(2) || "0.00"}</td>
                       <td className="p-2 text-right">R{commission.commissionAmount.toFixed(2)}</td>
                     </tr>
                   ))}
