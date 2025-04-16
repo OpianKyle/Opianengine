@@ -8,6 +8,41 @@ import { createConnection } from './db';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 
+// Export the processReferralPoints function for use in other modules
+export async function processReferralPoints(connection: any, userId: number, referralCode: string, selectedPackage: string) {
+  if (!referralCode) return;
+
+  const [referrer] = await connection.execute(
+    'SELECT id FROM users WHERE referral_code = ?',
+    [referralCode]
+  );
+
+  if (!Array.isArray(referrer) || referrer.length === 0) return;
+
+  const referrerId = referrer[0].id;
+  const referralBonus = 2000; // Fixed referral bonus points - 2000 points per referral
+
+  // Add points to referrer
+  await connection.execute(
+    'UPDATE users SET points = points + ? WHERE id = ?',
+    [referralBonus, referrerId]
+  );
+
+  // Record referral transaction
+  await connection.execute(
+    `INSERT INTO transactions (
+      user_id, points, type, description, status, created_at
+    ) VALUES (?, ?, ?, ?, ?, NOW())`,
+    [
+      referrerId,
+      referralBonus,
+      'REFERRAL_BONUS',
+      `Referral bonus for new ${selectedPackage} package signup - 2000 points`,
+      'PROCESSED'
+    ]
+  );
+}
+
 const scryptAsync = promisify(scrypt);
 
 const crypto = {
@@ -322,7 +357,7 @@ export function setupAuth(app: Express) {
 
   // Keep existing imports and configurations...
 
-  // Add helper function for validating referral code
+  // Helper function for validating referral code within setupAuth scope
   async function validateReferralCode(connection: any, referralCode: string): Promise<boolean> {
     if (!referralCode) return true;
     const [referrer] = await connection.execute(
@@ -332,42 +367,7 @@ export function setupAuth(app: Express) {
     return Array.isArray(referrer) && referrer.length > 0;
   }
 
-  // Add helper function for processing referral points
-  async function processReferralPoints(connection: any, userId: number, referralCode: string, selectedPackage: string) {
-    if (!referralCode) return;
-
-    const [referrer] = await connection.execute(
-      'SELECT id FROM users WHERE referral_code = ?',
-      [referralCode]
-    );
-
-    if (!Array.isArray(referrer) || referrer.length === 0) return;
-
-    const referrerId = referrer[0].id;
-    const referralBonus = 2000; // Fixed referral bonus points
-
-    // Add points to referrer
-    await connection.execute(
-      'UPDATE users SET points = points + ? WHERE id = ?',
-      [referralBonus, referrerId]
-    );
-
-    // Record referral transaction
-    await connection.execute(
-      `INSERT INTO transactions (
-        user_id, points, type, description, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, NOW())`,
-      [
-        referrerId,
-        referralBonus,
-        'REFERRAL_BONUS',
-        `Referral bonus for new ${selectedPackage} package signup - 2000 points`,
-        'PROCESSED'
-      ]
-    );
-  }
-
-
+  // Setup registration endpoint
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {

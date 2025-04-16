@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { createConnection } from '../db';
 import { verifyReferralCode, formatReferralCode, getAgentByReferralCode } from '../utils/referral';
-import { checkAgent } from '../auth';
+import { checkAgent, processReferralPoints } from '../auth';
 import { queryCache } from '../utils/query-cache';
 import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from '../utils/emailService';
 
@@ -1403,6 +1403,19 @@ referralRouter.post('/agent/register-customer', checkAgent, async (req: Request,
       } catch (transactionError) {
         console.error('Error creating welcome bonus transaction record:', transactionError);
         // Don't fail the entire registration if this fails
+      }
+
+      // Process referral points if a referral code was used
+      // This function adds 2000 points to the referrer and creates a transaction record
+      if (leadReferralCode) {
+        try {
+          console.log(`Processing referral points for referrer with code ${leadReferralCode}`);
+          await processReferralPoints(connection, newUserId, leadReferralCode, selectedPackage.toUpperCase());
+          console.log(`Successfully added referral points for code ${leadReferralCode}`);
+        } catch (referralPointsError) {
+          console.error('Error processing referral points:', referralPointsError);
+          // Don't fail the entire registration if this fails
+        }
       }
 
       // Commit the transaction
