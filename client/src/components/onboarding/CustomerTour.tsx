@@ -10,17 +10,21 @@ const joyrideStyles = {
     textColor: '#011d3d',
     backgroundColor: '#ffffff',
     arrowColor: '#ffffff',
-    overlayColor: 'rgba(0, 0, 0, 0.5)',
+    overlayColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 1000,
   },
   tooltipContainer: {
     textAlign: 'left' as const,
-    padding: '15px',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
   },
   buttonNext: {
     backgroundColor: '#1b75bc',
     color: '#ffffff',
     borderRadius: '4px',
     padding: '8px 16px',
+    fontWeight: 'bold',
   },
   buttonBack: {
     marginRight: '8px',
@@ -28,6 +32,16 @@ const joyrideStyles = {
   },
   buttonSkip: {
     color: '#757575',
+  },
+  buttonClose: {
+    color: '#757575',
+  },
+  spotlight: {
+    backgroundColor: 'transparent',
+    borderRadius: '4px',
+  },
+  overlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
 };
 
@@ -100,17 +114,31 @@ const CustomerTour: React.FC = () => {
     console.log('CustomerTour state:', { showTour, stepIndex, isFirstVisit });
   }, [showTour, stepIndex, isFirstVisit]);
   
-  // Handle tour events with improved debugging
+  // Handle tour events with improved debugging and smoother transitions
   const handleJoyrideCallback = (data: any) => {
-    const { action, index, status, type } = data;
+    const { action, index, status, type, lifecycle } = data;
     
-    console.log('Tour callback:', { action, index, status, type });
+    console.log('Tour callback:', { action, index, status, type, lifecycle });
+    
+    // Handle different tour events
+    if (type === 'step:before') {
+      // Preparing to show a step
+      console.log('Preparing step:', index);
+    }
     
     // Update step index for navigation
     if (type === 'step:after' && action === 'next') {
+      console.log('Moving to next step:', index + 1);
       setStepIndex(index + 1);
     } else if (type === 'step:after' && action === 'back') {
+      console.log('Moving to previous step:', index - 1);
       setStepIndex(index - 1);
+    }
+    
+    // Handle step entry and exit
+    if (lifecycle === 'complete' && action !== 'close') {
+      // Step was completed (user clicked "Next" or "Back")
+      console.log('Step completed:', index);
     }
     
     // End tour when finished or skipped
@@ -143,13 +171,13 @@ const CustomerTour: React.FC = () => {
         run={showTour}
         continuous={true}
         scrollToFirstStep={true}
+        scrollOffset={100}
         showProgress={true}
         showSkipButton={true}
         spotlightClicks={true}
         disableOverlayClose={true}
         disableCloseOnEsc={true}
         hideCloseButton={false}
-        scrollOffset={120}
         callback={handleJoyrideCallback}
         stepIndex={stepIndex}
         styles={joyrideStyles}
