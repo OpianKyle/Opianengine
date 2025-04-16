@@ -38,10 +38,11 @@ const joyrideStyles = {
   },
   spotlight: {
     backgroundColor: 'transparent',
-    borderRadius: '4px',
+    borderRadius: '8px',
+    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.85), 0 0 15px rgba(0, 0, 0, 0.5)',
   },
   overlay: {
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'transparent',
   },
 };
 
@@ -52,36 +53,42 @@ const tourSteps: Step[] = [
     content: 'Welcome to your OPIAN Rewards dashboard! This tour will help you learn how to navigate the platform and make the most of your rewards.',
     disableBeacon: true,
     placement: 'auto',
+    isFixed: true, // Keep the tooltip in a fixed position
   },
   {
     target: '.points-card',
     content: 'Here you can see your current points balance. You earn points through referrals, purchases, and special promotions.',
     disableBeacon: true,
     placement: 'bottom',
+    spotlightPadding: 15,
   },
   {
     target: '.sidebar-navigation',
     content: 'Use the navigation menu to access different sections of your dashboard, including Products, Rewards, and Referrals.',
     disableBeacon: true,
     placement: 'right',
+    spotlightPadding: 10,
   },
   {
     target: '.referral-section',
     content: 'Share your unique referral code with friends and family. You\'ll earn 2000 points for each successful referral!',
     disableBeacon: true,
     placement: 'top',
+    spotlightPadding: 15,
   },
   {
     target: '.recent-transactions',
     content: 'Track your recent point transactions, including earnings and redemptions.',
     disableBeacon: true,
     placement: 'top',
+    spotlightPadding: 15,
   },
   {
     target: '.profile-link',
     content: 'Update your profile information and manage your account settings here.',
     disableBeacon: true,
     placement: 'left',
+    spotlightPadding: 10,
   },
 ];
 
@@ -116,7 +123,7 @@ const CustomerTour: React.FC = () => {
   
   // Handle tour events with improved debugging and smoother transitions
   const handleJoyrideCallback = (data: any) => {
-    const { action, index, status, type, lifecycle } = data;
+    const { action, index, status, type, lifecycle, step } = data;
     
     console.log('Tour callback:', { action, index, status, type, lifecycle });
     
@@ -124,6 +131,30 @@ const CustomerTour: React.FC = () => {
     if (type === 'step:before') {
       // Preparing to show a step
       console.log('Preparing step:', index);
+      
+      // Make sure target is visible by scrolling to it if needed
+      if (step && step.target) {
+        try {
+          const targetElement = document.querySelector(step.target);
+          if (targetElement) {
+            // Check if element is in viewport
+            const rect = targetElement.getBoundingClientRect();
+            const isInViewport = (
+              rect.top >= 0 &&
+              rect.left >= 0 &&
+              rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+              rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+            );
+            
+            if (!isInViewport) {
+              console.log(`Element ${step.target} not in viewport, scrolling to it`);
+              targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        } catch (err) {
+          console.error('Error scrolling to target:', err);
+        }
+      }
     }
     
     // Update step index for navigation
@@ -171,7 +202,10 @@ const CustomerTour: React.FC = () => {
         run={showTour}
         continuous={true}
         scrollToFirstStep={true}
-        scrollOffset={100}
+        // @ts-ignore - scrollToSteps exists in react-joyride but isn't in the types
+        scrollToSteps={true}
+        scrollOffset={80}
+        scrollDuration={300}
         showProgress={true}
         showSkipButton={true}
         spotlightClicks={true}
