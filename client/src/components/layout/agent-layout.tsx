@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -11,11 +11,23 @@ import {
   X,
   ClipboardList,
 } from "lucide-react";
+import { prefetchAgentData, AGENT_API_ENDPOINTS } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function AgentLayout({ children }: { children: React.ReactNode }) {
   const { logoutMutation } = useUser();
+  const { token } = useAuth();
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasPrefetched, setHasPrefetched] = useState(false);
+
+  // Prefetch all agent data when the layout is first loaded
+  useEffect(() => {
+    if (!hasPrefetched && token) {
+      prefetchAgentData(token);
+      setHasPrefetched(true);
+    }
+  }, [token, hasPrefetched]);
 
   const handleLogout = async () => {
     try {
@@ -31,6 +43,29 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
     { label: "My Customers", href: "/agent/customers", icon: <Users className="h-4 w-4 mr-2" /> },
     { label: "Referral Leads", href: "/agent/leads", icon: <ClipboardList className="h-4 w-4 mr-2" /> },
   ];
+
+  // Handle navigation and prefetch data for the next section
+  const handleNavigation = (href: string) => {
+    // Early prefetch data on menu hover
+    const prefetchDataOnHover = () => {
+      if (token) {
+        console.log(`🔄 Prefetching data for ${href}`);
+        prefetchAgentData(token);
+      }
+    };
+
+    // Only navigate if not already on the page
+    if (href !== location) {
+      // Immediately prefetch data before navigation
+      if (token) {
+        prefetchAgentData(token);
+      }
+      
+      // Then navigate
+      navigate(href);
+      setSidebarOpen(false);
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -87,9 +122,13 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
                   key={item.href}
                   variant={location === item.href ? "secondary" : "ghost"}
                   className="w-full justify-start"
-                  onClick={() => {
-                    navigate(item.href);
-                    setSidebarOpen(false);
+                  onClick={() => handleNavigation(item.href)}
+                  onMouseEnter={() => {
+                    // Start prefetching data when hovering over navigation items
+                    if (token && item.href !== location) {
+                      console.log(`👆 Hover prefetching for ${item.href}`);
+                      prefetchAgentData(token);
+                    }
                   }}
                 >
                   {item.icon}

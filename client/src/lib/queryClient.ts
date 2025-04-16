@@ -17,6 +17,57 @@ export const queryClient = new QueryClient({
   },
 });
 
+// Constants for API endpoints we want to prefetch
+export const AGENT_API_ENDPOINTS = [
+  '/api/referral/agent/leads',
+  '/api/agent/customers', 
+  '/api/referral/agent/commissions',
+  '/api/agent/statistics'
+];
+
+/**
+ * Prefetches key API data for the agent dashboard
+ * @param token JWT token for authenticated requests
+ */
+export const prefetchAgentData = async (token?: string) => {
+  // Create headers with authorization token if available
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Set up fetch options
+  const options = {
+    headers,
+    credentials: 'include' as RequestCredentials,
+  };
+
+  // Prefetch all key agent data endpoints
+  const prefetchPromises = AGENT_API_ENDPOINTS.map(endpoint => {
+    return queryClient.prefetchQuery({
+      queryKey: [endpoint, token],
+      queryFn: async () => {
+        const response = await fetch(endpoint, options);
+        if (!response.ok) {
+          // Silently fail for prefetches - we don't want to show error toasts for background fetches
+          console.warn(`Failed to prefetch ${endpoint}: ${response.status}`);
+          return null;
+        }
+        return response.json();
+      },
+      staleTime: 2 * 60 * 1000, // 2 minutes
+    });
+  });
+
+  // Wait for all prefetches to complete
+  await Promise.all(prefetchPromises);
+  console.log('✅ Prefetched agent data for instant access');
+};
+
 export function getQueryFn({ on401 = 'throw', headers = {}, method = 'GET' }: FetchOptions = {}) {
   return async ({ queryKey }: { queryKey: (string | object)[] }) => {
     const endpoint = typeof queryKey[0] === 'string' ? queryKey[0] : '';
