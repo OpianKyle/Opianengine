@@ -828,8 +828,40 @@ export default function AgentLeadsPage() {
               {/* Mandate Agreement */}
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Mandate Agreement</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
+                <div className="border rounded-lg p-4 bg-muted space-y-3">
+                  <ScrollArea className="h-[200px] w-full rounded-md border p-6 bg-background [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-[#43EB3E]">
+                    <div className="whitespace-pre-wrap text-foreground text-base leading-relaxed">
+                      {`This signed Authority and Mandate refers to our contract dated ${new Date().toISOString().split('T')[0]} ("the Agreement").
+
+I / We hereby authorise you to issue and deliver payment instructions of ${registerData.selectedPackage === 'OPPORTUNITY' ? '350' 
+                          : registerData.selectedPackage === 'MOMENTUM' ? '450'
+                          : registerData.selectedPackage === 'PROSPER' ? '550'
+                          : registerData.selectedPackage === 'PRESTIGE' ? '695'
+                          : registerData.selectedPackage === 'PINNACLE' ? '825' : '0'} per month for the subscription fee to your Banker for collection against my / our abovementioned account at my / our above-mentioned Bank (or any other bank or branch to which I / we may transfer my / our account) on condition that the sum of such payment instructions will never exceed my / our obligations as as agreed to in the Agreement and commencing on 1st of each month and continuing until this Authority and Mandate is terminated by me / us by giving you notice in writing of not less than 60 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
+
+The individual payment instructions so authorised to be issued must be issued and delivered as follows: ${registerData.selectedPackage === 'OPPORTUNITY' ? '350' 
+                          : registerData.selectedPackage === 'MOMENTUM' ? '450'
+                          : registerData.selectedPackage === 'PROSPER' ? '550'
+                          : registerData.selectedPackage === 'PRESTIGE' ? '695'
+                          : registerData.selectedPackage === 'PINNACLE' ? '825' : '0'} monthly for 12 months. This is an annual agreement which is automatically renewable unless canceled in writing.
+
+In the event that the payment day falls on a Sunday, or recognised South African public holiday, the payment day will automatically be the preceding ordinary business day.
+
+Payment Instructions due in December may be debited against my account on a earlier date.
+
+I / We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement. A payment reference is added to this form before the issuing of any payment instruction.
+
+Mandate
+I /We acknowledge that all payment instructions issued by you shall be treated by my / our above-mentioned Bank as if the instructions have been issued by me/us personally.
+
+Cancellation
+I /We agree that although this Authority and Mandate may be cancelled by me/us, such cancellation will not cancel the Agreement. I/We shall not be entitled to any refund of amounts which you have withdrawn while this authority was in force, if such amounts were legally owing to you.
+
+Assignment
+I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty) Ltd as per your agreement with Netcash (Pty) Ltd, but in the absence of such assignment of the Agreement, this Authority and Mandate will be null and void.`}
+                    </div>
+                  </ScrollArea>
+                  <div className="flex items-center space-x-2 pt-2">
                     <input
                       type="checkbox"
                       id="mandateAgreement"
@@ -839,7 +871,7 @@ export default function AgentLeadsPage() {
                       className="h-4 w-4"
                     />
                     <Label htmlFor="mandateAgreement" className="font-normal">
-                      * I hereby authorize OPIAN Group to process the monthly package payment via debit order from my account.
+                      * I confirm that the customer has agreed to the above mandate
                     </Label>
                   </div>
                 </div>
