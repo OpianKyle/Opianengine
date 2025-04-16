@@ -176,7 +176,13 @@ router.get('/agents/stats', async (req: any, res) => {
         a.email, a.is_enabled as isEnabled, a.created_at as joinDate,
         COUNT(c.id) as totalCustomers,
         SUM(CASE WHEN DATE(c.created_at) = ? THEN 1 ELSE 0 END) as todaySignups,
-        SUM(c.points) as totalCustomerPoints
+        SUM(c.points) as totalCustomerPoints,
+        (
+          SELECT 
+            COALESCE(SUM(ac.commission_amount), 0) 
+          FROM agent_commissions ac 
+          WHERE ac.agent_id = a.id
+        ) as potentialCommissions
        FROM users a
        LEFT JOIN users c ON c.agent_id = a.id
        WHERE a.is_agent = 1

@@ -22,6 +22,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// Helper functions for package pricing and commission calculations
+const getPackagePrice = (packageName: string | null): number => {
+  if (!packageName) return 0;
+  
+  const packagePrices: Record<string, number> = {
+    'OPPORTUNITY': 349,
+    'MOMENTUM': 450,
+    'PROSPER': 550,
+    'PRESTIGE': 695,
+    'PINNACLE': 995
+  };
+  
+  return packagePrices[packageName.toUpperCase()] || 0;
+};
+
+const calculateCommission = (packageName: string | null): number => {
+  if (!packageName) return 0;
+  
+  // Calculate 30% of package price as the commission
+  const packagePrice = getPackagePrice(packageName);
+  return packagePrice * 0.3;
+};
+
 export default function AdminAgents() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
@@ -174,6 +197,7 @@ export default function AdminAgents() {
                   <TableHead>Total Customers</TableHead>
                   <TableHead>Today's Sign-ups</TableHead>
                   <TableHead>Points Managed</TableHead>
+                  <TableHead>Potential Commissions</TableHead>
                   <TableHead>Join Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Performance</TableHead>
@@ -188,6 +212,7 @@ export default function AdminAgents() {
                     <TableCell>{agent.totalCustomers}</TableCell>
                     <TableCell>{agent.todaySignups}</TableCell>
                     <TableCell>{(agent.totalCustomerPoints || 0).toLocaleString()}</TableCell>
+                    <TableCell>R{(agent.potentialCommissions || 0).toFixed(2)}</TableCell>
                     <TableCell>{new Date(agent.joinDate).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Badge
@@ -238,9 +263,10 @@ export default function AdminAgents() {
             <DialogTitle className="text-xl font-semibold text-white">
               {selectedAgent?.firstName} {selectedAgent?.lastName}'s Customers
             </DialogTitle>
-            <p className="text-sm text-gray-300">
-              Total Customers: {agentCustomers?.length || 0}
-            </p>
+            <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-300">
+              <p>Total Customers: {agentCustomers?.length || 0}</p>
+              <p>Potential Commissions: R{(selectedAgent?.potentialCommissions || 0).toFixed(2)}</p>
+            </div>
           </DialogHeader>
 
           {isLoadingCustomers ? (
@@ -256,6 +282,8 @@ export default function AdminAgents() {
                     <TableHead className="text-gray-300">Email</TableHead>
                     <TableHead className="text-gray-300">Package</TableHead>
                     <TableHead className="text-gray-300">Points</TableHead>
+                    <TableHead className="text-gray-300">Package Price</TableHead>
+                    <TableHead className="text-gray-300">Potential Commission</TableHead>
                     <TableHead className="text-gray-300">Status</TableHead>
                     <TableHead className="text-gray-300">Created At</TableHead>
                   </TableRow>
@@ -271,6 +299,12 @@ export default function AdminAgents() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-white">{customer.points?.toLocaleString() || 0}</TableCell>
+                      <TableCell className="text-white">
+                        R{getPackagePrice(customer.selectedPackage)?.toFixed(2) || "0.00"}
+                      </TableCell>
+                      <TableCell className="text-white">
+                        R{calculateCommission(customer.selectedPackage)?.toFixed(2) || "0.00"}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant={customer.isEnabled ? "default" : "destructive"}
