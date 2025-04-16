@@ -30,7 +30,7 @@ async function updateReferralPoints() {
 
     // Step 1: Get all referral transactions
     const [referralTransactions] = await connection.execute(
-      `SELECT id, user_id, amount, description 
+      `SELECT id, user_id, points, description 
        FROM transactions 
        WHERE type = 'REFERRAL_BONUS'`
     );
@@ -43,7 +43,7 @@ async function updateReferralPoints() {
 
     // Step 2: Update each transaction to have 2000 points
     for (const transaction of referralTransactions) {
-      const oldAmount = parseFloat(transaction.amount);
+      const oldAmount = parseFloat(transaction.points);
       const difference = 2000 - oldAmount;
       
       // Only update if the points are different from 2000
@@ -59,7 +59,7 @@ async function updateReferralPoints() {
 
         // Update the transaction to have 2000 points
         await connection.execute(
-          'UPDATE transactions SET amount = ? WHERE id = ?',
+          'UPDATE transactions SET points = ? WHERE id = ?',
           [2000, transaction.id]
         );
 
@@ -71,7 +71,7 @@ async function updateReferralPoints() {
     for (const userId of usersToUpdate) {
       // Get total points from transactions for this user
       const [pointsResult] = await connection.execute(
-        'SELECT SUM(amount) as total FROM transactions WHERE user_id = ?',
+        'SELECT SUM(points) as total FROM transactions WHERE user_id = ?',
         [userId]
       );
       
