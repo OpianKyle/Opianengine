@@ -250,12 +250,12 @@ export default function ReferralSection() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground">
-          Share your referral link with friends. When they register, you'll earn 2,500 points!
+          Share your referral link with friends. When they register, you'll earn 2,000 points!
         </div>
         <div className="bg-[rgba(255,255,255,0.05)] p-5 rounded-lg my-5">
           <h3 className="text-[#43EB3E] mt-0">Your Referral Rewards</h3>
           <ul className="list-none pl-0 my-2.5">
-            <li className="my-1.5">• Level 1: 7.5% referral fee + 2000 points per direct referral</li>
+            <li className="my-1.5">• Level 1: 30% referral fee + 2000 points per direct referral</li>
             <li className="my-1.5">• Level 2: 5% referral fee from your referrals' referrals</li>
             <li className="my-1.5">• Level 3: 2.5% referral fee from level 3 referrals</li>
           </ul>
