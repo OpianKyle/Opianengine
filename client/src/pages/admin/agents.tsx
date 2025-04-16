@@ -212,7 +212,7 @@ export default function AdminAgents() {
                     <TableCell>{agent.totalCustomers}</TableCell>
                     <TableCell>{agent.todaySignups}</TableCell>
                     <TableCell>{(agent.totalCustomerPoints || 0).toLocaleString()}</TableCell>
-                    <TableCell>R{(agent.potentialCommissions || 0).toFixed(2)}</TableCell>
+                    <TableCell>R{parseFloat(agent.potentialCommissions || 0).toFixed(2)}</TableCell>
                     <TableCell>{new Date(agent.joinDate).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Badge
@@ -265,7 +265,7 @@ export default function AdminAgents() {
             </DialogTitle>
             <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-300">
               <p>Total Customers: {agentCustomers?.length || 0}</p>
-              <p>Potential Commissions: R{(selectedAgent?.potentialCommissions || 0).toFixed(2)}</p>
+              <p>Potential Commissions: R{parseFloat(selectedAgent?.potentialCommissions || 0).toFixed(2)}</p>
             </div>
           </DialogHeader>
 
