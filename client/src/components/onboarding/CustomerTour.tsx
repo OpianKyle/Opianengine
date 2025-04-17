@@ -39,7 +39,17 @@ const joyrideStyles = {
     color: '#43EB3E', // Green for better visibility on dark background
   },
   buttonClose: {
-    color: '#43EB3E', // Green for better visibility on dark background
+    color: '#ffffff', // White for better visibility against dark background
+    fontSize: '24px', // Make it larger
+    fontWeight: 'bold', // Make it bolder
+    backgroundColor: 'rgba(67, 235, 62, 0.3)', // Semi-transparent green background
+    borderRadius: '50%', // Circular background
+    width: '30px',
+    height: '30px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '2px solid #ffffff', // White border for contrast
   },
   spotlight: {
     backgroundColor: 'transparent',
