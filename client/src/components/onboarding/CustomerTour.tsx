@@ -67,10 +67,20 @@ const tourSteps: Step[] = [
   },
   {
     target: '.sidebar-navigation',
-    content: 'Use the navigation menu to access different sections of your dashboard, including Products, Rewards, and Referrals.',
+    content: 'Use the navigation menu to access different sections of your dashboard. Let\'s explore them!',
     disableBeacon: true,
     placement: 'right',
     spotlightPadding: 10,
+  },
+  {
+    target: 'a[href="/customer/referrals"]',
+    content: 'Click here to access your referrals page where you can view detailed stats and manage your referral activities.',
+    disableBeacon: true,
+    placement: 'right',
+    spotlightPadding: 5,
+    spotlightClicks: true,
+    disableOverlayClose: true,
+    showSkipButton: true,
   },
   {
     target: '.referral-section',
@@ -91,10 +101,20 @@ const tourSteps: Step[] = [
   },
   {
     target: '.profile-link',
-    content: 'Update your profile information and manage your account settings here.',
+    content: 'Update your profile information and manage your account settings here. Let\'s check it out!',
     disableBeacon: true,
     placement: 'left',
     spotlightPadding: 10,
+    spotlightClicks: true,
+    disableOverlayClose: true,
+    showSkipButton: true,
+  },
+  {
+    target: 'a[href="/customer/profile"]',
+    content: 'This is your profile page where you can update your personal information and account settings.',
+    disableBeacon: true,
+    placement: 'bottom',
+    spotlightPadding: 5,
   },
 ];
 
@@ -138,8 +158,17 @@ const CustomerTour: React.FC = () => {
       // Preparing to show a step
       console.log('Preparing step:', index);
       
-      // Make sure target is visible by scrolling to it if needed
+      // For steps that navigate to new pages
       if (step && step.target) {
+        // Handle navigation steps
+        if (step.target === 'a[href="/customer/referrals"]') {
+          console.log('Preparing to navigate to referrals page');
+          // The spotlightClicks: true will handle the actual navigation
+        } else if (step.target === 'a[href="/customer/profile"]') {
+          console.log('Preparing to navigate to profile page');
+          // The spotlightClicks: true will handle the actual navigation
+        }
+      
         try {
           const targetElement = document.querySelector(step.target);
           if (targetElement) {
@@ -151,7 +180,7 @@ const CustomerTour: React.FC = () => {
                 top: Math.max(0, targetElement.getBoundingClientRect().top + window.scrollY - 300),
                 behavior: 'smooth'
               });
-            } else if (index === 3) {
+            } else if (index === 4) {
               console.log(`Enhanced scrolling for referral section (step ${index})`);
               // Force scroll to element with additional offset
               window.scrollTo({
@@ -193,6 +222,22 @@ const CustomerTour: React.FC = () => {
         } catch (err) {
           console.error('Error scrolling to target:', err);
         }
+      }
+    }
+    
+    // Handle clicks on navigational elements
+    if (type === 'tooltip:after' && action === 'click' && step) {
+      if (step.target === 'a[href="/customer/referrals"]') {
+        console.log('User clicked on referrals link, waiting for navigation...');
+        // We need to pause the tour briefly to allow the page to load
+        setTimeout(() => {
+          setStepIndex(index + 1);
+        }, 500);
+      } else if (step.target === '.profile-link') {
+        console.log('User clicked on profile link, waiting for navigation...');
+        setTimeout(() => {
+          setStepIndex(index + 1);
+        }, 500);
       }
     }
     
