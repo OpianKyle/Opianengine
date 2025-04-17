@@ -160,7 +160,7 @@ export default function CustomerDashboard() {
       {/* Tour Component */}
       <CustomerTour />
       
-      <div className="space-y-2 welcome-dashboard">
+      <div className="space-y-2 welcome-dashboard dashboard-header">
         <h2 className="text-2xl font-semibold text-muted-foreground">
           Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome to OPIAN Rewards'}
         </h2>

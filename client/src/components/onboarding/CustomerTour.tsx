@@ -50,10 +50,10 @@ const joyrideStyles = {
 // Tour steps for the customer dashboard
 const tourSteps: Step[] = [
   {
-    target: '.welcome-dashboard', 
+    target: '.dashboard-header', // Changed from welcome-dashboard to a more generic selector
     content: 'Welcome to your OPIAN Rewards dashboard! This tour will help you learn how to navigate the platform and make the most of your rewards.',
     disableBeacon: true,
-    placement: 'auto',
+    placement: 'bottom',
     isFixed: true, // Keep the tooltip in a fixed position
   },
   {
@@ -371,12 +371,10 @@ const CustomerTour: React.FC = () => {
 
   return (
     <>
-      {/* Only show tour button when tour is not running */}
-      {!showTour && (
-        <div className="flex justify-end mb-4">
-          <TourButton />
-        </div>
-      )}
+      {/* Always show tour button at the top right for testing */}
+      <div className="flex justify-end mb-4">
+        <TourButton />
+      </div>
       {/* Add additional debugging display to help troubleshoot */}
       <div className="hidden">
         Current step: {stepIndex} | Location: {location}
