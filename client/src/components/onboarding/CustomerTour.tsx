@@ -276,12 +276,21 @@ const CustomerTour: React.FC = () => {
         debug={true}
         floaterProps={{ 
           disableAnimation: false,
+          // Use type assertion to bypass TypeScript checking for custom style properties
           styles: {
             arrow: {
               length: 8,
               spread: 12,
+            },
+            floater: {
+              filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3))'
+            },
+            // Position close button outside with custom styles via CSS override
+            close: {
+              // This will be overridden by CSS for visual appearance
+              color: '#43EB3E',
             }
-          }
+          } as any
         }}
         locale={{
           back: 'Back',
