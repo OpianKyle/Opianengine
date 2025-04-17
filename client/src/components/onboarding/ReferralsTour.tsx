@@ -113,8 +113,19 @@ interface ReferralsTourProps {
 }
 
 const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
-  const [showTour, setShowTour] = useState(false);
+  // Start tour automatically for first-time users
+  const [showTour, setShowTour] = useState(true);
   const [stepIndex, setStepIndex] = useState(0);
+  const [hasSeenTour, setHasSeenTour] = useState(false);
+
+  // Check if user has seen the tour before
+  useEffect(() => {
+    const hasViewedReferralsTour = localStorage.getItem('hasViewedReferralsTour');
+    if (hasViewedReferralsTour === 'true') {
+      setShowTour(false);
+      setHasSeenTour(true);
+    }
+  }, []);
 
   const startTour = () => {
     setShowTour(true);
@@ -122,7 +133,10 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
   };
 
   const endTour = () => {
+    // Mark tour as seen in localStorage
+    localStorage.setItem('hasViewedReferralsTour', 'true');
     setShowTour(false);
+    setHasSeenTour(true);
     if (onComplete) {
       onComplete();
     }
@@ -188,8 +202,8 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
 
   return (
     <>
-      {/* Only show tour button when tour is not running */}
-      {!showTour && (
+      {/* Only show tour button when the user has seen the tour before and it's not currently running */}
+      {!showTour && hasSeenTour && (
         <div className="flex justify-end mb-4">
           <TourButton />
         </div>
