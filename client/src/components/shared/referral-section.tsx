@@ -334,26 +334,6 @@ export default function ReferralSection() {
             <span className="font-medium">{referralInfo.referralCount}</span> successful referrals
           </div>
         )}
-        {referralInfo && referralInfo.referralsByLevel && referralInfo.referralsByLevel[1] && referralInfo.referralsByLevel[1].length > 0 && (
-          <div className="space-y-2">
-            <div className="text-sm font-medium">Recent Referrals</div>
-            <div className="space-y-2">
-              {referralInfo && referralInfo.referralsByLevel && referralInfo.referralsByLevel[1] && referralInfo.referralsByLevel[1].map((referral) => (
-                <div
-                  key={referral.id}
-                  className="text-sm p-2 bg-muted rounded-lg flex justify-between items-center"
-                >
-                  <div>
-                    <span className="font-medium">{referral.firstName} {referral.lastName}</span>
-                    <span className="text-muted-foreground"> joined on </span>
-                    <span>{new Date(referral.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <Badge variant="outline">+{referral.commission?.points || 0} points</Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
