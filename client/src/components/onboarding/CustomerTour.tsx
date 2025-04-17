@@ -61,6 +61,9 @@ const tourSteps: Step[] = [
     disableBeacon: true,
     placement: 'right',
     spotlightPadding: 15,
+    offset: 100,
+    disableScrolling: false,
+    disableOverlayClose: false,
   },
   {
     target: '.sidebar-navigation',
@@ -140,8 +143,15 @@ const CustomerTour: React.FC = () => {
         try {
           const targetElement = document.querySelector(step.target);
           if (targetElement) {
-            // Special handling for step 3 (referral section)
-            if (index === 3) {
+            // Special handling for specific steps that need custom scroll positioning
+            if (index === 1) {
+              console.log(`Enhanced scrolling for points card (step ${index})`);
+              // For points card, scroll to show the full card
+              window.scrollTo({
+                top: targetElement.getBoundingClientRect().top + window.scrollY - 200,
+                behavior: 'smooth'
+              });
+            } else if (index === 3) {
               console.log(`Enhanced scrolling for referral section (step ${index})`);
               // Force scroll to element with additional offset
               window.scrollTo({
