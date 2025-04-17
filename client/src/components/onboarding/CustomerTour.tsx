@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import Joyride, { STATUS, Step } from 'react-joyride';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Button } from '@/components/ui/button';
-import { useLocation } from 'wouter';
 
 // Style customization for the tour
 const joyrideStyles = {
@@ -50,10 +49,10 @@ const joyrideStyles = {
 // Tour steps for the customer dashboard
 const tourSteps: Step[] = [
   {
-    target: '.dashboard-header', // Changed from welcome-dashboard to a more generic selector
+    target: '.welcome-dashboard', 
     content: 'Welcome to your OPIAN Rewards dashboard! This tour will help you learn how to navigate the platform and make the most of your rewards.',
     disableBeacon: true,
-    placement: 'bottom',
+    placement: 'auto',
     isFixed: true, // Keep the tooltip in a fixed position
   },
   {
@@ -68,20 +67,10 @@ const tourSteps: Step[] = [
   },
   {
     target: '.sidebar-navigation',
-    content: 'Use the navigation menu to access different sections of your dashboard. Let\'s explore them!',
+    content: 'Use the navigation menu to access different sections of your dashboard, including Products, Rewards, and Referrals.',
     disableBeacon: true,
     placement: 'right',
     spotlightPadding: 10,
-  },
-  {
-    target: 'a[href="/customer/referrals"]',
-    content: 'Click here to access your referrals page where you can view detailed stats and manage your referral activities.',
-    disableBeacon: true,
-    placement: 'right',
-    spotlightPadding: 5,
-    spotlightClicks: true,
-    disableOverlayClose: true,
-    showSkipButton: true,
   },
   {
     target: '.referral-section',
@@ -102,25 +91,14 @@ const tourSteps: Step[] = [
   },
   {
     target: '.profile-link',
-    content: 'Update your profile information and manage your account settings here. Let\'s check it out!',
+    content: 'Update your profile information and manage your account settings here.',
     disableBeacon: true,
     placement: 'left',
     spotlightPadding: 10,
-    spotlightClicks: true,
-    disableOverlayClose: true,
-    showSkipButton: true,
-  },
-  {
-    target: 'a[href="/customer/profile"]',
-    content: 'This is your profile page where you can update your personal information and account settings.',
-    disableBeacon: true,
-    placement: 'bottom',
-    spotlightPadding: 5,
   },
 ];
 
 const CustomerTour: React.FC = () => {
-  const [location] = useLocation();
   const { 
     showTour, 
     stepIndex, 
@@ -146,38 +124,8 @@ const CustomerTour: React.FC = () => {
   
   // Debug the current tour state for troubleshooting
   useEffect(() => {
-    console.log('CustomerTour state:', { showTour, stepIndex, isFirstVisit, location });
-  }, [showTour, stepIndex, isFirstVisit, location]);
-  
-  // Filter and adjust steps based on the current page
-  const getPageSpecificSteps = () => {
-    console.log('CustomerTour: Getting steps for location:', location);
-    
-    // Get steps appropriate for the current page
-    if (location.includes('/referrals')) {
-      // On the referrals page, only show referral-specific steps
-      console.log('CustomerTour: Showing referral page steps');
-      return tourSteps.filter(step => {
-        const target = typeof step.target === 'string' ? step.target : '';
-        return target.includes('referral') || 
-               target === '.profile-link' || 
-               target === 'a[href="/customer/profile"]';
-      });
-    } else if (location.includes('/profile')) {
-      // On the profile page, only show profile-specific steps
-      console.log('CustomerTour: Showing profile page steps');
-      return tourSteps.filter(step => {
-        const target = typeof step.target === 'string' ? step.target : '';
-        const content = typeof step.content === 'string' ? step.content : '';
-        
-        return target === 'a[href="/customer/profile"]' ||
-               content.includes('profile');
-      });
-    }
-    
-    // Default to showing all steps
-    return tourSteps;
-  };
+    console.log('CustomerTour state:', { showTour, stepIndex, isFirstVisit });
+  }, [showTour, stepIndex, isFirstVisit]);
   
   // Handle tour events with improved debugging and smoother transitions
   const handleJoyrideCallback = (data: any) => {
@@ -190,75 +138,8 @@ const CustomerTour: React.FC = () => {
       // Preparing to show a step
       console.log('Preparing step:', index);
       
-      // For steps that navigate to new pages
+      // Make sure target is visible by scrolling to it if needed
       if (step && step.target) {
-        // Handle navigation steps
-        if (step.target === 'a[href="/customer/referrals"]') {
-          console.log('Preparing to navigate to referrals page');
-          
-          // Store the current tour state in sessionStorage to persist across page navigation
-          sessionStorage.setItem('opian_tour_active', 'true');
-          sessionStorage.setItem('opian_tour_step', String(index + 1)); // Pre-increment to next step
-          
-          // Find and click the element to trigger navigation
-          const referralLink = document.querySelector(step.target) as HTMLElement;
-          if (referralLink) {
-            console.log('Found referrals link, clicking it programmatically');
-            
-            // Use a small delay before clicking to ensure all state is saved
-            setTimeout(() => {
-              try {
-                console.log('Executing delayed click on referrals link');
-                // Force setting the sessionStorage again right before navigation
-                sessionStorage.setItem('opian_tour_active', 'true');
-                sessionStorage.setItem('opian_tour_step', String(index + 1));
-                
-                // Perform the click
-                referralLink.click();
-              } catch (err) {
-                console.error('Error clicking referrals link:', err);
-              }
-            }, 100);
-            
-            // Prevent further execution since we're navigating
-            return;
-          }
-        } else if (step.target === 'a[href="/customer/profile"]' || step.target === '.profile-link') {
-          console.log('Preparing to navigate to profile page');
-          
-          // Store the current tour state in sessionStorage to persist across page navigation
-          sessionStorage.setItem('opian_tour_active', 'true');
-          sessionStorage.setItem('opian_tour_step', String(index + 1)); // Pre-increment to next step
-          
-          // Find and click the profile link to trigger navigation
-          const profileButton = document.querySelector('.profile-link') as HTMLElement;
-          const profileLink = document.querySelector('a[href="/customer/profile"]') as HTMLElement;
-          
-          const linkToClick = profileButton || profileLink;
-          
-          if (linkToClick) {
-            console.log('Found profile link, clicking it programmatically');
-            
-            // Use a small delay before clicking to ensure all state is saved
-            setTimeout(() => {
-              try {
-                console.log('Executing delayed click on profile link');
-                // Force setting the sessionStorage again right before navigation
-                sessionStorage.setItem('opian_tour_active', 'true');
-                sessionStorage.setItem('opian_tour_step', String(index + 1));
-                
-                // Perform the click
-                linkToClick.click();
-              } catch (err) {
-                console.error('Error clicking profile link:', err);
-              }
-            }, 100);
-            
-            // Prevent further execution since we're navigating
-            return;
-          }
-        }
-      
         try {
           const targetElement = document.querySelector(step.target);
           if (targetElement) {
@@ -270,7 +151,7 @@ const CustomerTour: React.FC = () => {
                 top: Math.max(0, targetElement.getBoundingClientRect().top + window.scrollY - 300),
                 behavior: 'smooth'
               });
-            } else if (index === 4) {
+            } else if (index === 3) {
               console.log(`Enhanced scrolling for referral section (step ${index})`);
               // Force scroll to element with additional offset
               window.scrollTo({
@@ -315,32 +196,13 @@ const CustomerTour: React.FC = () => {
       }
     }
     
-    // Handle clicks on navigational elements
-    if (type === 'tooltip:after' && action === 'click' && step) {
-      if (step.target === 'a[href="/customer/referrals"]') {
-        console.log('User clicked on referrals link, waiting for navigation...');
-        // Store the current tour state in sessionStorage to persist across page navigation
-        sessionStorage.setItem('opian_tour_active', 'true');
-        sessionStorage.setItem('opian_tour_step', String(index + 1)); // Next step after navigation
-      } else if (step.target === '.profile-link' || step.target === 'a[href="/customer/profile"]') {
-        console.log('User clicked on profile link, waiting for navigation...');
-        // Store the current tour state in sessionStorage to persist across page navigation
-        sessionStorage.setItem('opian_tour_active', 'true');
-        sessionStorage.setItem('opian_tour_step', String(index + 1)); // Next step after navigation
-      }
-    }
-    
     // Update step index for navigation
     if (type === 'step:after' && action === 'next') {
       console.log('Moving to next step:', index + 1);
       setStepIndex(index + 1);
-      // Save current step to session storage to persist across page refreshes or navigations
-      sessionStorage.setItem('opian_tour_step', String(index + 1));
     } else if (type === 'step:after' && action === 'back') {
       console.log('Moving to previous step:', index - 1);
       setStepIndex(index - 1);
-      // Save current step to session storage
-      sessionStorage.setItem('opian_tour_step', String(index - 1));
     }
     
     // Handle step entry and exit
@@ -352,9 +214,6 @@ const CustomerTour: React.FC = () => {
     // End tour when finished or skipped
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
       console.log('Tour ended with status:', status);
-      // Clear session storage
-      sessionStorage.removeItem('opian_tour_active');
-      sessionStorage.removeItem('opian_tour_step');
       endTour();
     }
   };
@@ -371,17 +230,14 @@ const CustomerTour: React.FC = () => {
 
   return (
     <>
-      {/* Always show tour button at the top right for testing */}
-      <div className="flex justify-end mb-4">
-        <TourButton />
-      </div>
-      {/* Add additional debugging display to help troubleshoot */}
-      <div className="hidden">
-        Current step: {stepIndex} | Location: {location}
-      </div>
-      
+      {/* Only show tour button when tour is not running */}
+      {!showTour && (
+        <div className="flex justify-end mb-4">
+          <TourButton />
+        </div>
+      )}
       <Joyride
-        steps={getPageSpecificSteps()}
+        steps={tourSteps}
         run={showTour}
         continuous={true}
         scrollToFirstStep={true}
@@ -415,8 +271,6 @@ const CustomerTour: React.FC = () => {
           next: 'Next',
           skip: 'Skip Tour',
         }}
-        // Set a lower disableOverlay threshold to prevent the tour from disappearing too early
-        disableOverlay={false}
       />
     </>
   );

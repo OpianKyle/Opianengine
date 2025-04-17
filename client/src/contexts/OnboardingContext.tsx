@@ -25,18 +25,10 @@ const OnboardingContext = createContext<OnboardingContextProps>({
 // Local storage key for tracking whether the user has seen the tour
 const ONBOARDING_COMPLETED_KEY = 'opian_onboarding_completed';
 const ONBOARDING_SECTION_KEY = 'opian_onboarding_section_';
-const TOUR_ACTIVE_KEY = 'opian_tour_active';
-const TOUR_STEP_KEY = 'opian_tour_step';
 
 export const OnboardingProvider = ({ children, section = 'customer' }: { children: ReactNode, section?: string }) => {
-  // Check if there's an active tour in sessionStorage when component mounts
-  const shouldRestoreTour = typeof window !== 'undefined' && sessionStorage.getItem(TOUR_ACTIVE_KEY) === 'true';
-  const savedStepIndex = typeof window !== 'undefined' && sessionStorage.getItem(TOUR_STEP_KEY) 
-    ? parseInt(sessionStorage.getItem(TOUR_STEP_KEY) as string, 10) 
-    : 0;
-  
-  const [showTour, setShowTour] = useState(shouldRestoreTour);
-  const [stepIndex, setStepIndex] = useState(savedStepIndex);
+  const [showTour, setShowTour] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
   
   // Check if this is the user's first visit to this section
@@ -48,30 +40,10 @@ export const OnboardingProvider = ({ children, section = 'customer' }: { childre
       section, 
       sectionKey,
       hasCompletedOnboarding,
-      storedValue: localStorage.getItem(sectionKey),
-      shouldRestoreTour,
-      savedStepIndex
+      storedValue: localStorage.getItem(sectionKey)
     });
     
-    // Check if we have an active tour in session storage (from page navigation)
-    if (shouldRestoreTour) {
-      console.log('OnboardingContext: Restoring tour from session storage', {
-        step: savedStepIndex
-      });
-      
-      // Mark as active in session storage
-      sessionStorage.setItem(TOUR_ACTIVE_KEY, 'true');
-      
-      // Ensure tour is showing
-      setShowTour(true);
-      
-      // Set step index from session storage
-      if (savedStepIndex !== null && !isNaN(savedStepIndex)) {
-        setStepIndex(savedStepIndex);
-      }
-    }
-    // Otherwise check if this is the user's first visit
-    else if (!hasCompletedOnboarding) {
+    if (!hasCompletedOnboarding) {
       console.log('OnboardingContext: First visit detected, setting isFirstVisit to true');
       setIsFirstVisit(true);
       // We don't automatically start the tour here, giving the app time to load
@@ -83,91 +55,24 @@ export const OnboardingProvider = ({ children, section = 'customer' }: { childre
         console.error('Error accessing localStorage:', error);
       }
     }
-  }, [section, shouldRestoreTour, savedStepIndex]);
-  
-  // Add a dedicated listener to window storage events to handle cross-page communications
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.storageArea === sessionStorage) {
-        // Only handle our specific keys
-        if (e.key === TOUR_ACTIVE_KEY) {
-          console.log('OnboardingContext: Detected tour active state change in sessionStorage', {
-            newValue: e.newValue
-          });
-          
-          if (e.newValue === 'true') {
-            setShowTour(true);
-          } else if (e.newValue === null) {
-            setShowTour(false);
-          }
-        } else if (e.key === TOUR_STEP_KEY) {
-          console.log('OnboardingContext: Detected tour step change in sessionStorage', {
-            newValue: e.newValue
-          });
-          
-          if (e.newValue !== null) {
-            const newStep = parseInt(e.newValue, 10);
-            if (!isNaN(newStep)) {
-              setStepIndex(newStep);
-            }
-          }
-        }
-      }
-    };
-    
-    // This function ensures that the tour state is saved before the page unloads
-    const handleBeforeUnload = () => {
-      if (showTour) {
-        console.log('OnboardingContext: Page is about to unload, ensuring tour state is saved');
-        // Make sure the current tour state is saved in session storage
-        sessionStorage.setItem(TOUR_ACTIVE_KEY, 'true');
-        sessionStorage.setItem(TOUR_STEP_KEY, stepIndex.toString());
-      }
-    };
-    
-    // Add the event listeners
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    // Clean up
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [showTour, stepIndex]);
+  }, [section]);
 
   const startTour = () => {
-    console.log('OnboardingContext: Starting tour');
     setShowTour(true);
     setStepIndex(0);
-    
-    // Set session storage to mark tour as active
-    sessionStorage.setItem(TOUR_ACTIVE_KEY, 'true');
-    sessionStorage.setItem(TOUR_STEP_KEY, '0');
   };
 
   const endTour = () => {
-    console.log('OnboardingContext: Ending tour');
     setShowTour(false);
-    
-    // Mark this section's tour as completed in localStorage (permanent)
+    // Mark this section's tour as completed
     const sectionKey = `${ONBOARDING_SECTION_KEY}${section}`;
     localStorage.setItem(sectionKey, 'true');
     setIsFirstVisit(false);
-    
-    // Clear session storage
-    sessionStorage.removeItem(TOUR_ACTIVE_KEY);
-    sessionStorage.removeItem(TOUR_STEP_KEY);
   };
 
   const resetTour = () => {
-    console.log('OnboardingContext: Resetting tour');
     setStepIndex(0);
     setShowTour(true);
-    
-    // Update session storage
-    sessionStorage.setItem(TOUR_ACTIVE_KEY, 'true');
-    sessionStorage.setItem(TOUR_STEP_KEY, '0');
   };
 
   return (
