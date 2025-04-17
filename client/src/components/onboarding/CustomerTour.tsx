@@ -204,7 +204,21 @@ const CustomerTour: React.FC = () => {
           const referralLink = document.querySelector(step.target) as HTMLElement;
           if (referralLink) {
             console.log('Found referrals link, clicking it programmatically');
-            referralLink.click();
+            
+            // Use a small delay before clicking to ensure all state is saved
+            setTimeout(() => {
+              try {
+                console.log('Executing delayed click on referrals link');
+                // Force setting the sessionStorage again right before navigation
+                sessionStorage.setItem('opian_tour_active', 'true');
+                sessionStorage.setItem('opian_tour_step', String(index + 1));
+                
+                // Perform the click
+                referralLink.click();
+              } catch (err) {
+                console.error('Error clicking referrals link:', err);
+              }
+            }, 100);
             
             // Prevent further execution since we're navigating
             return;
@@ -224,7 +238,21 @@ const CustomerTour: React.FC = () => {
           
           if (linkToClick) {
             console.log('Found profile link, clicking it programmatically');
-            linkToClick.click();
+            
+            // Use a small delay before clicking to ensure all state is saved
+            setTimeout(() => {
+              try {
+                console.log('Executing delayed click on profile link');
+                // Force setting the sessionStorage again right before navigation
+                sessionStorage.setItem('opian_tour_active', 'true');
+                sessionStorage.setItem('opian_tour_step', String(index + 1));
+                
+                // Perform the click
+                linkToClick.click();
+              } catch (err) {
+                console.error('Error clicking profile link:', err);
+              }
+            }, 100);
             
             // Prevent further execution since we're navigating
             return;
@@ -349,6 +377,11 @@ const CustomerTour: React.FC = () => {
           <TourButton />
         </div>
       )}
+      {/* Add additional debugging display to help troubleshoot */}
+      <div className="hidden">
+        Current step: {stepIndex} | Location: {location}
+      </div>
+      
       <Joyride
         steps={getPageSpecificSteps()}
         run={showTour}
@@ -384,6 +417,8 @@ const CustomerTour: React.FC = () => {
           next: 'Next',
           skip: 'Skip Tour',
         }}
+        // Set a lower disableOverlay threshold to prevent the tour from disappearing too early
+        disableOverlay={false}
       />
     </>
   );

@@ -84,6 +84,57 @@ export const OnboardingProvider = ({ children, section = 'customer' }: { childre
       }
     }
   }, [section, shouldRestoreTour, savedStepIndex]);
+  
+  // Add a dedicated listener to window storage events to handle cross-page communications
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.storageArea === sessionStorage) {
+        // Only handle our specific keys
+        if (e.key === TOUR_ACTIVE_KEY) {
+          console.log('OnboardingContext: Detected tour active state change in sessionStorage', {
+            newValue: e.newValue
+          });
+          
+          if (e.newValue === 'true') {
+            setShowTour(true);
+          } else if (e.newValue === null) {
+            setShowTour(false);
+          }
+        } else if (e.key === TOUR_STEP_KEY) {
+          console.log('OnboardingContext: Detected tour step change in sessionStorage', {
+            newValue: e.newValue
+          });
+          
+          if (e.newValue !== null) {
+            const newStep = parseInt(e.newValue, 10);
+            if (!isNaN(newStep)) {
+              setStepIndex(newStep);
+            }
+          }
+        }
+      }
+    };
+    
+    // This function ensures that the tour state is saved before the page unloads
+    const handleBeforeUnload = () => {
+      if (showTour) {
+        console.log('OnboardingContext: Page is about to unload, ensuring tour state is saved');
+        // Make sure the current tour state is saved in session storage
+        sessionStorage.setItem(TOUR_ACTIVE_KEY, 'true');
+        sessionStorage.setItem(TOUR_STEP_KEY, stepIndex.toString());
+      }
+    };
+    
+    // Add the event listeners
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [showTour, stepIndex]);
 
   const startTour = () => {
     console.log('OnboardingContext: Starting tour');
