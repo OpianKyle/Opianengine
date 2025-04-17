@@ -3,17 +3,18 @@ import Joyride, { STATUS, Step, CallBackProps, Placement } from "react-joyride";
 import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 
-// Define styles explicitly with proper TypeScript typings to match the site's blue and green theme
+// Define styles explicitly with proper TypeScript typings to match the site's blue and green theme on dark background
 const joyrideStyles = {
   options: {
-    backgroundColor: "#fff",
+    backgroundColor: "#011d3d", // Dark blue background
     borderRadius: "8px",
     overlayColor: "rgba(0, 0, 0, 0.7)",
     primaryColor: "#43EB3E", // OPIAN green for primary actions
     spotlightShadow: "0 0 15px rgba(67, 235, 62, 0.5), 0 0 8px rgba(27, 117, 188, 0.5)",
-    textColor: "#011d3d",
+    textColor: "#ffffff", // White text for dark background
     width: 400,
     zIndex: 10000,
+    arrowColor: "#011d3d", // Match the tooltip background
   },
   overlay: {
     backgroundColor: "rgba(0, 0, 0, 0.7)",
@@ -25,9 +26,9 @@ const joyrideStyles = {
     boxShadow: '0 0 0 999vw rgba(0, 0, 0, 0.85), 0 0 15px rgba(67, 235, 62, 0.5), 0 0 8px rgba(27, 117, 188, 0.5)',
   },
   tooltip: {
-    backgroundColor: "#fff",
+    backgroundColor: "#011d3d", // Dark blue background matching site theme
     borderRadius: "8px",
-    color: "#011d3d",
+    color: "#ffffff", // White text for contrast
     fontSize: "15px",
     padding: "20px",
     border: "2px solid #1b75bc",
@@ -38,6 +39,7 @@ const joyrideStyles = {
     padding: "5px 0",
     fontSize: "15px",
     lineHeight: "1.5",
+    color: "#ffffff", // Ensure content text is white for readability
   },
   tooltipFooter: {
     alignItems: "center",
@@ -46,10 +48,10 @@ const joyrideStyles = {
     marginTop: "15px",
   },
   tooltipTitle: {
-    color: "#1b75bc", // Blue for headings
+    color: "#43EB3E", // Green for headings stands out on dark background
     fontSize: "18px",
     fontWeight: "bold",
-    borderBottom: "1px solid #e0e0e0",
+    borderBottom: "1px solid #1b75bc", // Blue border
     paddingBottom: "8px",
     marginBottom: "12px",
   },
@@ -63,13 +65,13 @@ const joyrideStyles = {
   },
   buttonBack: {
     marginRight: "10px",
-    color: "#1b75bc", // Blue for secondary actions
+    color: "#43EB3E", // Green for better visibility on dark background
   },
   buttonSkip: {
-    color: "#1b75bc", // Blue for secondary actions
+    color: "#43EB3E", // Green for better visibility on dark background
   },
   buttonClose: {
-    color: "#1b75bc", // Blue for secondary actions
+    color: "#43EB3E", // Green for better visibility on dark background
   },
 };
 

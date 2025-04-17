@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 const joyrideStyles = {
   options: {
     primaryColor: '#43EB3E', // OPIAN green for primary actions
-    textColor: '#011d3d',
-    backgroundColor: '#ffffff',
-    arrowColor: '#ffffff',
+    textColor: '#ffffff', // White text for dark background
+    backgroundColor: '#011d3d', // Dark blue background
+    arrowColor: '#011d3d', // Match the tooltip background
     overlayColor: 'rgba(0, 0, 0, 0.7)',
     zIndex: 1000,
   },
@@ -20,6 +20,8 @@ const joyrideStyles = {
     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
     border: '2px solid #1b75bc',
     borderTop: '4px solid #43EB3E', // Green top border for emphasis
+    backgroundColor: '#011d3d', // Dark blue background matching site theme
+    color: '#ffffff', // White text for contrast
   },
   buttonNext: {
     backgroundColor: '#43EB3E', // Green for the primary action button
@@ -31,13 +33,13 @@ const joyrideStyles = {
   },
   buttonBack: {
     marginRight: '8px',
-    color: '#1b75bc', // Blue for secondary actions
+    color: '#43EB3E', // Green for better visibility on dark background
   },
   buttonSkip: {
-    color: '#1b75bc', // Blue for secondary actions
+    color: '#43EB3E', // Green for better visibility on dark background
   },
   buttonClose: {
-    color: '#1b75bc', // Blue for secondary actions
+    color: '#43EB3E', // Green for better visibility on dark background
   },
   spotlight: {
     backgroundColor: 'transparent',
@@ -47,18 +49,19 @@ const joyrideStyles = {
   overlay: {
     backgroundColor: 'transparent',
   },
-  // Add title styling with blue color
+  // Add title styling with enhanced colors for dark background
   tooltipTitle: {
-    color: '#1b75bc', // Blue for headings
+    color: '#43EB3E', // Green for headings stands out on dark background
     fontSize: '18px',
     fontWeight: 'bold',
-    borderBottom: '1px solid #e0e0e0',
+    borderBottom: '1px solid #1b75bc', // Blue border
     paddingBottom: '8px',
     marginBottom: '12px',
   },
   tooltipContent: {
     fontSize: '15px',
     lineHeight: '1.5',
+    color: '#ffffff', // Ensure content text is white for readability
   },
 };
 
