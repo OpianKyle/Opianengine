@@ -145,7 +145,7 @@ const CustomerTour: React.FC = () => {
               console.log(`Enhanced scrolling for referral section (step ${index})`);
               // Force scroll to element with additional offset
               window.scrollTo({
-                top: targetElement.getBoundingClientRect().top + window.pageYOffset - 120,
+                top: targetElement.getBoundingClientRect().top + window.scrollY - 120,
                 behavior: 'smooth'
               });
               
