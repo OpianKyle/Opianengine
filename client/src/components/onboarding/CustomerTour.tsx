@@ -59,9 +59,9 @@ const tourSteps: Step[] = [
     target: '.points-card',
     content: 'Here you can see your current points balance. You earn points through referrals, purchases, and special promotions.',
     disableBeacon: true,
-    placement: 'right',
+    placement: 'bottom',
     spotlightPadding: 15,
-    offset: 100,
+    offset: 20,
     disableScrolling: false,
     disableOverlayClose: false,
   },
@@ -148,7 +148,7 @@ const CustomerTour: React.FC = () => {
               console.log(`Enhanced scrolling for points card (step ${index})`);
               // For points card, scroll to show the full card
               window.scrollTo({
-                top: targetElement.getBoundingClientRect().top + window.scrollY - 200,
+                top: Math.max(0, targetElement.getBoundingClientRect().top + window.scrollY - 300),
                 behavior: 'smooth'
               });
             } else if (index === 3) {
