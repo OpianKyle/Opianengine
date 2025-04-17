@@ -3,33 +3,34 @@ import Joyride, { STATUS, Step, CallBackProps, Placement } from "react-joyride";
 import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 
-// Define styles explicitly with proper TypeScript typings
+// Define styles explicitly with proper TypeScript typings to match the site theme
 const joyrideStyles = {
   options: {
     backgroundColor: "#fff",
-    borderRadius: "4px",
-    overlayColor: "rgba(0, 0, 0, 0.5)",
-    primaryColor: "#1b75bc",
-    spotlightShadow: "0 0 15px rgba(0, 0, 0, 0.5)",
-    textColor: "#333",
+    borderRadius: "8px",
+    overlayColor: "rgba(0, 0, 0, 0.7)",
+    primaryColor: "#1b75bc", // OPIAN blue from theme.json
+    spotlightShadow: "0 0 15px rgba(27, 117, 188, 0.5)",
+    textColor: "#011d3d",
     width: 400,
     zIndex: 10000,
   },
   overlay: {
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     mixBlendMode: "normal" as const, // Use const assertion for string literals
   },
   spotlight: {
     backgroundColor: "transparent",
-    borderRadius: 4,
-    boxShadow: '0 0 0 999vw rgba(0, 0, 0, 0.5)',
+    borderRadius: 8,
+    boxShadow: '0 0 0 999vw rgba(0, 0, 0, 0.85), 0 0 15px rgba(27, 117, 188, 0.5)',
   },
   tooltip: {
     backgroundColor: "#fff",
-    borderRadius: "4px",
-    color: "#333",
+    borderRadius: "8px",
+    color: "#011d3d",
     fontSize: "15px",
-    padding: "15px",
+    padding: "20px",
+    border: "1px solid #1b75bc",
   },
   tooltipContent: {
     padding: "5px 0",
@@ -50,9 +51,18 @@ const joyrideStyles = {
     backgroundColor: "#1b75bc",
     borderRadius: "4px",
     color: "#fff",
+    fontWeight: "bold",
+    padding: "8px 16px",
   },
   buttonBack: {
     marginRight: "10px",
+    color: "#1b75bc",
+  },
+  buttonSkip: {
+    color: "#1b75bc",
+  },
+  buttonClose: {
+    color: "#1b75bc",
   },
 };
 
@@ -198,7 +208,7 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
   const TourButton = () => (
     <Button
       onClick={startTour}
-      className="tour-guide-button bg-[#1b75bc] hover:bg-[#145d99] text-white"
+      className="tour-guide-button bg-primary hover:bg-primary/80 text-white font-medium"
     >
       Start Referrals Tour
     </Button>

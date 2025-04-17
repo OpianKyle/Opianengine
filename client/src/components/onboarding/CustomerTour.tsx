@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 // Style customization for the tour
 const joyrideStyles = {
   options: {
-    primaryColor: '#1b75bc', // OPIAN blue
+    primaryColor: '#1b75bc', // OPIAN blue from theme.json
     textColor: '#011d3d',
     backgroundColor: '#ffffff',
     arrowColor: '#ffffff',
@@ -18,6 +18,7 @@ const joyrideStyles = {
     padding: '20px',
     borderRadius: '8px',
     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    border: '1px solid #1b75bc',
   },
   buttonNext: {
     backgroundColor: '#1b75bc',
@@ -28,18 +29,18 @@ const joyrideStyles = {
   },
   buttonBack: {
     marginRight: '8px',
-    color: '#757575',
+    color: '#1b75bc',
   },
   buttonSkip: {
-    color: '#757575',
+    color: '#1b75bc',
   },
   buttonClose: {
-    color: '#757575',
+    color: '#1b75bc',
   },
   spotlight: {
     backgroundColor: 'transparent',
     borderRadius: '8px',
-    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.85), 0 0 15px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.85), 0 0 15px rgba(27, 117, 188, 0.5)',
   },
   overlay: {
     backgroundColor: 'transparent',
@@ -222,7 +223,7 @@ const CustomerTour: React.FC = () => {
   const TourButton = () => (
     <Button
       onClick={startTour}
-      className="tour-guide-button bg-[#1b75bc] hover:bg-[#145d99] text-white"
+      className="tour-guide-button bg-primary hover:bg-primary/80 text-white font-medium"
     >
       Start Tour Guide
     </Button>
