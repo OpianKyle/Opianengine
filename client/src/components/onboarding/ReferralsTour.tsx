@@ -71,18 +71,19 @@ const joyrideStyles = {
     color: "#43EB3E", // Green for better visibility on dark background
   },
   buttonClose: {
-    color: "#ffffff", // White for better visibility against dark background
-    fontSize: "20px", // Slightly smaller
+    color: "#43EB3E", // Green cross
+    fontSize: "16px", // Smaller cross to fit in circle
     fontWeight: "bold", // Make it bolder
-    background: "linear-gradient(135deg, #1b75bc 0%, #43EB3E 100%)", // Blue to green gradient
+    backgroundColor: "#1b75bc", // Solid blue background
     borderRadius: "50%", // Circular background
-    width: "24px",
-    height: "24px",
+    width: "22px",
+    height: "22px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    border: "1px solid #ffffff", // Thinner white border for contrast
+    border: "1px solid #43EB3E", // Green border
     padding: 0, // Remove padding
+    boxShadow: "0 0 4px rgba(67, 235, 62, 0.5)", // Subtle green glow
   },
 };
 
