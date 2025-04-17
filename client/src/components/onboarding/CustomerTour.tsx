@@ -76,7 +76,7 @@ const tourSteps: Step[] = [
     target: '.referral-section',
     content: 'Share your unique referral code with friends and family. You\'ll earn 2000 points for each successful referral!',
     disableBeacon: true,
-    placement: 'left',
+    placement: 'bottom',
     spotlightPadding: 20,
     disableOverlay: false,
     disableScrolling: false,
@@ -155,7 +155,7 @@ const CustomerTour: React.FC = () => {
               console.log(`Enhanced scrolling for referral section (step ${index})`);
               // Force scroll to element with additional offset
               window.scrollTo({
-                top: targetElement.getBoundingClientRect().top + window.scrollY - 120,
+                top: Math.max(0, targetElement.getBoundingClientRect().top + window.scrollY - 300),
                 behavior: 'smooth'
               });
               
