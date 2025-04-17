@@ -8,6 +8,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { AchievementBadges, referralBadges } from "@/components/ui/badges";
+import CustomerTour from "@/components/onboarding/CustomerTour";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 import {
   FaXTwitter as TwitterIcon,
   FaFacebook as FacebookIcon,
@@ -122,7 +124,7 @@ export default function ReferralsPage() {
           const requiredPackages = errorData?.details?.requiredPackages || ['PROSPER', 'PRESTIGE', 'PINNACLE'];
           
           console.log(`Package check: User has "${userPackage}" (upper: "${userPackage.toUpperCase()}"), needs one of:`, 
-            requiredPackages.map(p => `"${p}"`).join(', '));
+            requiredPackages.map((p: string) => `"${p}"`).join(', '));
             
           throw new Error(JSON.stringify({
             status: 403,
@@ -313,6 +315,9 @@ export default function ReferralsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Include CustomerTour component to enable guided tour on this page */}
+      <CustomerTour />
+      
       <h1 className="text-3xl font-bold">My Referrals</h1>
 
       <Card>

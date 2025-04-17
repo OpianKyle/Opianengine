@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import CustomerTour from "@/components/onboarding/CustomerTour";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 
 // Match the account types with the database schema
 const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"] as const;
@@ -347,6 +349,9 @@ export default function ProfilePage() {
 
   return (
     <div className="w-full min-h-full">
+      {/* Include CustomerTour component to enable guided tour on this page */}
+      <CustomerTour />
+      
       <div className="space-y-0.5 px-4 sm:px-6 mb-4">
         <h2 className="text-2xl font-bold tracking-tight">Profile Settings</h2>
         <p className="text-muted-foreground">
