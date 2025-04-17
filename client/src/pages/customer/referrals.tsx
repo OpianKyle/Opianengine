@@ -19,6 +19,7 @@ import {
 } from "react-icons/fa6";
 import { PackageIcon as LucidePackageIcon } from "lucide-react";
 import ReferralsTour from "@/components/onboarding/ReferralsTour";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
 
 
 interface ReferralStats {
@@ -92,7 +93,7 @@ const PackageEmblem = ({ type, count, totalReferrals, level }: {
   </div>
 );
 
-export default function ReferralsPage() {
+function ReferralsPageContent() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
@@ -556,5 +557,14 @@ export default function ReferralsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Export the wrapped component with OnboardingProvider
+export default function ReferralsPage() {
+  return (
+    <OnboardingProvider section="referrals">
+      <ReferralsPageContent />
+    </OnboardingProvider>
   );
 }

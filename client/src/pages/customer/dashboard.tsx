@@ -70,7 +70,7 @@ const getTierInfo = (points: number): { name: string; color: string; nextTier?: 
   };
 };
 
-export default function CustomerDashboard() {
+function CustomerDashboardContent() {
   // Use the onboarding context
   const { isFirstVisit } = useOnboarding();
   
@@ -339,5 +339,14 @@ export default function CustomerDashboard() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Export the wrapped component with OnboardingProvider
+export default function CustomerDashboard() {
+  return (
+    <OnboardingProvider section="dashboard">
+      <CustomerDashboardContent />
+    </OnboardingProvider>
   );
 }

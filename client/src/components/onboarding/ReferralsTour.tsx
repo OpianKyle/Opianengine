@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import Joyride, { STATUS, Step, CallBackProps, Placement } from "react-joyride";
 import { Button } from "@/components/ui/button";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 
 // Define styles explicitly with proper TypeScript typings
 const joyrideStyles = {
@@ -113,30 +114,33 @@ interface ReferralsTourProps {
 }
 
 const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
-  // Start tour automatically for first-time users
-  const [showTour, setShowTour] = useState(true);
-  const [stepIndex, setStepIndex] = useState(0);
-  const [hasSeenTour, setHasSeenTour] = useState(false);
+  // Use the centralized OnboardingContext for managing tour state
+  const { 
+    showTour, 
+    stepIndex, 
+    setStepIndex, 
+    startTour, 
+    endTour, 
+    isFirstVisit 
+  } = useOnboarding();
 
-  // Check if user has seen the tour before
+  // Start the tour automatically on the first visit after a small delay
+  // to ensure all components are loaded
   useEffect(() => {
-    const hasViewedReferralsTour = localStorage.getItem('hasViewedReferralsTour');
-    if (hasViewedReferralsTour === 'true') {
-      setShowTour(false);
-      setHasSeenTour(true);
+    if (isFirstVisit) {
+      console.log('ReferralsTour: First visit detected, preparing to start tour...');
+      const timer = setTimeout(() => {
+        console.log('ReferralsTour: Starting tour now');
+        startTour();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
     }
-  }, []);
+  }, [isFirstVisit, startTour]);
 
-  const startTour = () => {
-    setShowTour(true);
-    setStepIndex(0);
-  };
-
-  const endTour = () => {
-    // Mark tour as seen in localStorage
-    localStorage.setItem('hasViewedReferralsTour', 'true');
-    setShowTour(false);
-    setHasSeenTour(true);
+  // Custom endTour handler to call the onComplete callback if provided
+  const handleEndTour = () => {
+    endTour();
     if (onComplete) {
       onComplete();
     }
@@ -186,7 +190,7 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
     // Do a string comparison instead of using the STATUS enum to avoid TypeScript errors
     if (status === 'finished' || status === 'skipped') {
       console.log('Referrals tour ended with status:', status);
-      endTour();
+      handleEndTour();
     }
   };
   
@@ -202,8 +206,8 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
 
   return (
     <>
-      {/* Only show tour button when the user has seen the tour before and it's not currently running */}
-      {!showTour && hasSeenTour && (
+      {/* Only show tour button when tour is not running */}
+      {!showTour && !isFirstVisit && (
         <div className="flex justify-end mb-4">
           <TourButton />
         </div>
