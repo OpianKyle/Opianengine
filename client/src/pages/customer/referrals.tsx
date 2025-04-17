@@ -18,6 +18,7 @@ import {
   FaGem as PackageIcon
 } from "react-icons/fa6";
 import { PackageIcon as LucidePackageIcon } from "lucide-react";
+import ReferralsTour from "@/components/onboarding/ReferralsTour";
 
 
 interface ReferralStats {
@@ -122,7 +123,7 @@ export default function ReferralsPage() {
           const requiredPackages = errorData?.details?.requiredPackages || ['PROSPER', 'PRESTIGE', 'PINNACLE'];
           
           console.log(`Package check: User has "${userPackage}" (upper: "${userPackage.toUpperCase()}"), needs one of:`, 
-            requiredPackages.map(p => `"${p}"`).join(', '));
+            requiredPackages.map((p: string) => `"${p}"`).join(', '));
             
           throw new Error(JSON.stringify({
             status: 403,
@@ -313,14 +314,19 @@ export default function ReferralsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">My Referrals</h1>
+      {/* Add ReferralsTour component */}
+      <ReferralsTour />
+      
+      <div className="referral-header">
+        <h1 className="text-3xl font-bold">My Referrals</h1>
+      </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Monthly Referral Fees Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-4 referral-rewards-info">
             <p className="text-sm text-muted-foreground">
               Your referral fee earnings based on your referral network's packages.
             </p>
@@ -389,7 +395,84 @@ export default function ReferralsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      {/* Add a card for sharing referral link - this was missing in the original */}
+      <Card className="referral-link-section">
+        <CardHeader>
+          <CardTitle>Your Referral Link</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Share this unique link with friends and family. When they sign up, you'll earn 2,000 points and ongoing referral fees!
+            </p>
+            <div className="flex items-center gap-3">
+              <Input
+                value={referralLink}
+                readOnly
+                className="font-mono text-sm"
+              />
+              <Button size="sm" onClick={copyToClipboard} disabled={!referralLink}>
+                {copied ? "Copied!" : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+            <div className="social-share-buttons mt-4">
+              <p className="text-sm font-medium mb-2">Share via:</p>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={socialShareUrls.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#1DA1F2] text-white hover:bg-opacity-80"
+                >
+                  <TwitterIcon size={18} />
+                </a>
+                <a
+                  href={socialShareUrls.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#4267B2] text-white hover:bg-opacity-80"
+                >
+                  <FacebookIcon size={18} />
+                </a>
+                <a
+                  href={socialShareUrls.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#0077B5] text-white hover:bg-opacity-80"
+                >
+                  <LinkedInIcon size={18} />
+                </a>
+                <a
+                  href={socialShareUrls.whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#25D366] text-white hover:bg-opacity-80"
+                >
+                  <WhatsAppIcon size={18} />
+                </a>
+                <a
+                  href={socialShareUrls.telegram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#0088CC] text-white hover:bg-opacity-80"
+                >
+                  <TelegramIcon size={18} />
+                </a>
+                <a
+                  href={socialShareUrls.email}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-gray-600 text-white hover:bg-opacity-80"
+                >
+                  <EmailIcon size={18} />
+                </a>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="referral-stats">
         <CardHeader>
           <CardTitle>Your Direct Referrals</CardTitle>
         </CardHeader>
@@ -461,7 +544,7 @@ export default function ReferralsPage() {
         </Card>
       ))}
 
-      <Card>
+      <Card className="referral-badges">
         <CardHeader>
           <CardTitle>Achievement Badges</CardTitle>
         </CardHeader>
