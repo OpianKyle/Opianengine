@@ -3,10 +3,10 @@ import Joyride, { STATUS, Step } from 'react-joyride';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Button } from '@/components/ui/button';
 
-// Style customization for the tour
+// Style customization for the tour with blue and green theme
 const joyrideStyles = {
   options: {
-    primaryColor: '#1b75bc', // OPIAN blue from theme.json
+    primaryColor: '#43EB3E', // OPIAN green for primary actions
     textColor: '#011d3d',
     backgroundColor: '#ffffff',
     arrowColor: '#ffffff',
@@ -18,32 +18,47 @@ const joyrideStyles = {
     padding: '20px',
     borderRadius: '8px',
     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-    border: '1px solid #1b75bc',
+    border: '2px solid #1b75bc',
+    borderTop: '4px solid #43EB3E', // Green top border for emphasis
   },
   buttonNext: {
-    backgroundColor: '#1b75bc',
-    color: '#ffffff',
+    backgroundColor: '#43EB3E', // Green for the primary action button
+    color: '#011d3d', // Dark text for contrast on green
     borderRadius: '4px',
     padding: '8px 16px',
     fontWeight: 'bold',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
   },
   buttonBack: {
     marginRight: '8px',
-    color: '#1b75bc',
+    color: '#1b75bc', // Blue for secondary actions
   },
   buttonSkip: {
-    color: '#1b75bc',
+    color: '#1b75bc', // Blue for secondary actions
   },
   buttonClose: {
-    color: '#1b75bc',
+    color: '#1b75bc', // Blue for secondary actions
   },
   spotlight: {
     backgroundColor: 'transparent',
     borderRadius: '8px',
-    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.85), 0 0 15px rgba(27, 117, 188, 0.5)',
+    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.85), 0 0 15px rgba(67, 235, 62, 0.5), 0 0 8px rgba(27, 117, 188, 0.5)', // Combined green and blue glow
   },
   overlay: {
     backgroundColor: 'transparent',
+  },
+  // Add title styling with blue color
+  tooltipTitle: {
+    color: '#1b75bc', // Blue for headings
+    fontSize: '18px',
+    fontWeight: 'bold',
+    borderBottom: '1px solid #e0e0e0',
+    paddingBottom: '8px',
+    marginBottom: '12px',
+  },
+  tooltipContent: {
+    fontSize: '15px',
+    lineHeight: '1.5',
   },
 };
 
@@ -219,11 +234,11 @@ const CustomerTour: React.FC = () => {
     }
   };
   
-  // Tour restart button to show in the dashboard
+  // Tour restart button to show in the dashboard with green styling
   const TourButton = () => (
     <Button
       onClick={startTour}
-      className="tour-guide-button bg-primary hover:bg-primary/80 text-white font-medium"
+      className="tour-guide-button bg-[#43EB3E] hover:bg-[#43EB3E]/80 text-[#011d3d] font-medium border border-[#1b75bc] shadow-sm"
     >
       Start Tour Guide
     </Button>

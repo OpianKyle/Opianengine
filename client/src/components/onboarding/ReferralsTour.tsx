@@ -3,14 +3,14 @@ import Joyride, { STATUS, Step, CallBackProps, Placement } from "react-joyride";
 import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 
-// Define styles explicitly with proper TypeScript typings to match the site theme
+// Define styles explicitly with proper TypeScript typings to match the site's blue and green theme
 const joyrideStyles = {
   options: {
     backgroundColor: "#fff",
     borderRadius: "8px",
     overlayColor: "rgba(0, 0, 0, 0.7)",
-    primaryColor: "#1b75bc", // OPIAN blue from theme.json
-    spotlightShadow: "0 0 15px rgba(27, 117, 188, 0.5)",
+    primaryColor: "#43EB3E", // OPIAN green for primary actions
+    spotlightShadow: "0 0 15px rgba(67, 235, 62, 0.5), 0 0 8px rgba(27, 117, 188, 0.5)",
     textColor: "#011d3d",
     width: 400,
     zIndex: 10000,
@@ -22,7 +22,7 @@ const joyrideStyles = {
   spotlight: {
     backgroundColor: "transparent",
     borderRadius: 8,
-    boxShadow: '0 0 0 999vw rgba(0, 0, 0, 0.85), 0 0 15px rgba(27, 117, 188, 0.5)',
+    boxShadow: '0 0 0 999vw rgba(0, 0, 0, 0.85), 0 0 15px rgba(67, 235, 62, 0.5), 0 0 8px rgba(27, 117, 188, 0.5)',
   },
   tooltip: {
     backgroundColor: "#fff",
@@ -30,10 +30,14 @@ const joyrideStyles = {
     color: "#011d3d",
     fontSize: "15px",
     padding: "20px",
-    border: "1px solid #1b75bc",
+    border: "2px solid #1b75bc",
+    borderTop: "4px solid #43EB3E", // Green top border for emphasis
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
   },
   tooltipContent: {
     padding: "5px 0",
+    fontSize: "15px",
+    lineHeight: "1.5",
   },
   tooltipFooter: {
     alignItems: "center",
@@ -42,27 +46,30 @@ const joyrideStyles = {
     marginTop: "15px",
   },
   tooltipTitle: {
-    color: "#1b75bc",
-    fontSize: "16px",
+    color: "#1b75bc", // Blue for headings
+    fontSize: "18px",
     fontWeight: "bold",
-    marginBottom: "10px",
+    borderBottom: "1px solid #e0e0e0",
+    paddingBottom: "8px",
+    marginBottom: "12px",
   },
   buttonNext: {
-    backgroundColor: "#1b75bc",
+    backgroundColor: "#43EB3E", // Green for the primary action button
     borderRadius: "4px",
-    color: "#fff",
+    color: "#011d3d", // Dark text for contrast on green
     fontWeight: "bold",
     padding: "8px 16px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
   },
   buttonBack: {
     marginRight: "10px",
-    color: "#1b75bc",
+    color: "#1b75bc", // Blue for secondary actions
   },
   buttonSkip: {
-    color: "#1b75bc",
+    color: "#1b75bc", // Blue for secondary actions
   },
   buttonClose: {
-    color: "#1b75bc",
+    color: "#1b75bc", // Blue for secondary actions
   },
 };
 
@@ -204,11 +211,11 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
     }
   };
   
-  // Tour restart button to show in the dashboard
+  // Tour restart button to show in the dashboard with green styling
   const TourButton = () => (
     <Button
       onClick={startTour}
-      className="tour-guide-button bg-primary hover:bg-primary/80 text-white font-medium"
+      className="tour-guide-button bg-[#43EB3E] hover:bg-[#43EB3E]/80 text-[#011d3d] font-medium border border-[#1b75bc] shadow-sm"
     >
       Start Referrals Tour
     </Button>
