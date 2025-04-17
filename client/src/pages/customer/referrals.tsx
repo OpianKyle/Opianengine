@@ -19,7 +19,7 @@ import {
 } from "react-icons/fa6";
 import { PackageIcon as LucidePackageIcon } from "lucide-react";
 import ReferralsTour from "@/components/onboarding/ReferralsTour";
-import { OnboardingProvider } from "@/contexts/OnboardingContext";
+import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext";
 
 
 interface ReferralStats {
@@ -94,6 +94,8 @@ const PackageEmblem = ({ type, count, totalReferrals, level }: {
 );
 
 function ReferralsPageContent() {
+  // Use the onboarding context but only access properties after confirming user is logged in
+  const onboarding = useOnboarding();
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 

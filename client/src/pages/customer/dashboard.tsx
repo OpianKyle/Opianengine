@@ -13,7 +13,7 @@ import ReferralSection from "@/components/shared/referral-section";
 import { formatTransactionType } from "@/lib/utils";
 import { Package as PackageIcon } from "lucide-react";
 import CustomerTour from "@/components/onboarding/CustomerTour";
-import { useOnboarding } from "@/contexts/OnboardingContext";
+import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext";
 
 interface User {
   id: number;
@@ -71,8 +71,8 @@ const getTierInfo = (points: number): { name: string; color: string; nextTier?: 
 };
 
 function CustomerDashboardContent() {
-  // Use the onboarding context
-  const { isFirstVisit } = useOnboarding();
+  // Use the onboarding context but don't access until we know the user is logged in
+  const onboarding = useOnboarding();
   
   const { data: user, isLoading: isUserLoading } = useQuery<User>({
     queryKey: ["/api/customer/points"],
