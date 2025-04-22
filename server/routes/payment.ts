@@ -524,4 +524,100 @@ router.get('/verify/:reference', async (req, res) => {
   }
 });
 
+// Special route to manually fix any pending subscriptions
+router.post('/fix-pending', async (req, res) => {
+  try {
+    // Both admins and super admins can use this route
+    const user = req.user as User | undefined;
+    if (!user || !(user.is_admin || user.is_super_admin)) {
+      return res.status(403).json({ success: false, message: 'Unauthorized - Admin permissions required' });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+      // Find all PENDING subscriptions
+      const [pendingSubscriptions] = await connection.query(
+        `SELECT * FROM subscriptions WHERE status = 'PENDING' ORDER BY created_at DESC`
+      );
+      
+      if (!Array.isArray(pendingSubscriptions) || pendingSubscriptions.length === 0) {
+        return res.json({ success: true, message: 'No pending subscriptions found' });
+      }
+      
+      console.log(`Found ${pendingSubscriptions.length} pending subscriptions to fix`);
+      
+      // Process each pending subscription
+      const results = [];
+      for (const subscription of pendingSubscriptions) {
+        // Get reference
+        const reference = subscription.payment_reference;
+        if (!reference) {
+          results.push({
+            id: subscription.id,
+            status: 'SKIPPED',
+            reason: 'No payment reference'
+          });
+          continue;
+        }
+        
+        try {
+          // Try to verify the payment
+          const transaction = await verifyTransaction(reference);
+          
+          if (transaction.status === 'success') {
+            // Update the subscription to ACTIVE
+            await connection.query(
+              `UPDATE subscriptions SET 
+               status = 'ACTIVE', 
+               last_payment_date = ?,
+               next_payment_date = ?,
+               updated_at = ?
+               WHERE id = ?`,
+              [
+                new Date(),
+                new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
+                new Date(),
+                subscription.id
+              ]
+            );
+            
+            results.push({
+              id: subscription.id,
+              status: 'FIXED',
+              message: 'Payment verified and subscription activated'
+            });
+          } else {
+            results.push({
+              id: subscription.id,
+              status: 'SKIPPED',
+              reason: `Payment not successful: ${transaction.status}`
+            });
+          }
+        } catch (verifyError) {
+          results.push({
+            id: subscription.id,
+            status: 'ERROR',
+            error: verifyError.message
+          });
+        }
+      }
+      
+      return res.json({
+        success: true,
+        message: `Processed ${pendingSubscriptions.length} pending subscriptions`,
+        results
+      });
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Error fixing pending subscriptions:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fix pending subscriptions',
+      error: error.message 
+    });
+  }
+});
+
 export default router;
