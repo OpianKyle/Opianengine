@@ -10,6 +10,7 @@ import { users, transactions } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import type { User } from '../../db/schema';
 import { paystackConfig } from '../config/paystack';
+import mysql from 'mysql2/promise';
 import { 
   createOrGetCustomer, 
   initializeTransaction, 
@@ -95,9 +96,13 @@ router.get('/verify/:reference', async (req, res) => {
       // Convert amount from kobo/cents to rand
       const amountInRand = verificationData.amount / 100;
       
+      // Check if this is a subscription payment
+      const isSubscription = verificationData.metadata?.type === 'SUBSCRIPTION';
+      const subscriptionId = verificationData.metadata?.subscription_id;
+      
       // Record the transaction
       const transactionRecord = await db.insert(transactions).values({
-        type: 'FUNDING',
+        type: isSubscription ? 'SUBSCRIPTION' : 'FUNDING',
         points: 0,
         description: verificationData.metadata?.purpose || 'Account funding',
         userId: user.id,
@@ -105,33 +110,77 @@ router.get('/verify/:reference', async (req, res) => {
         paymentReference: reference,
         metadata: JSON.stringify({
           paystack_reference: reference,
-          amount: amountInRand
+          amount: amountInRand,
+          subscription_id: subscriptionId || null
         })
       }).execute();
       
-      // Update user balance
-      await db.update(users)
-        .set({ 
-          wallet_balance: (user.wallet_balance || 0) + amountInRand,
-          last_funding_date: new Date()
-        })
-        .where(eq(users.id, user.id))
-        .execute();
-      
-      return res.json({
-        success: true,
-        message: 'Payment verified successfully',
-        data: {
-          amount: amountInRand,
-          reference,
-          status: 'COMPLETED'
+      if (isSubscription && subscriptionId) {
+        // Get a database connection
+        const conn = await mysql.createConnection({
+          host: process.env.DB_HOST,
+          user: process.env.DB_USER,
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME,
+          port: parseInt(process.env.DB_PORT || '3306'),
+          ssl: { rejectUnauthorized: false }
+        });
+        
+        try {
+          // Update subscription status to ACTIVE
+          await conn.query(
+            `UPDATE subscriptions SET status = 'ACTIVE', updated_at = ? WHERE id = ? AND user_id = ?`,
+            [new Date(), subscriptionId, user.id]
+          );
+          
+          // Also update the payment_reference for verification
+          await conn.query(
+            `UPDATE subscriptions SET payment_reference = ? WHERE id = ?`,
+            [reference, subscriptionId]
+          );
+        } finally {
+          await conn.end();
         }
-      });
-      
+        
+        return res.json({
+          success: true,
+          message: 'Subscription payment verified successfully',
+          data: {
+            amount: amountInRand,
+            reference,
+            status: 'COMPLETED',
+            subscriptionId,
+            type: 'SUBSCRIPTION'
+          }
+        });
+      } else {
+        // Normal funding transaction
+        await db.update(users)
+          .set({ 
+            wallet_balance: (user.wallet_balance || 0) + amountInRand,
+            last_funding_date: new Date()
+          })
+          .where(eq(users.id, user.id))
+          .execute();
+        
+        return res.json({
+          success: true,
+          message: 'Payment verified successfully',
+          data: {
+            amount: amountInRand,
+            reference,
+            status: 'COMPLETED'
+          }
+        });
+      }
     } else {
+      // Check if this was a subscription payment
+      const isSubscription = verificationData.metadata?.type === 'SUBSCRIPTION';
+      const subscriptionId = verificationData.metadata?.subscription_id;
+      
       // Record failed transaction
       await db.insert(transactions).values({
-        type: 'FUNDING_FAILED',
+        type: isSubscription ? 'SUBSCRIPTION_FAILED' : 'FUNDING_FAILED',
         points: 0,
         description: 'Failed payment',
         userId: user.id,
@@ -140,16 +189,41 @@ router.get('/verify/:reference', async (req, res) => {
         metadata: JSON.stringify({
           paystack_reference: reference,
           amount: verificationData.amount / 100,
-          error: 'Payment verification failed'
+          error: 'Payment verification failed',
+          subscription_id: subscriptionId || null
         })
       }).execute();
+      
+      if (isSubscription && subscriptionId) {
+        // Get a database connection
+        const conn = await mysql.createConnection({
+          host: process.env.DB_HOST,
+          user: process.env.DB_USER,
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME,
+          port: parseInt(process.env.DB_PORT || '3306'),
+          ssl: { rejectUnauthorized: false }
+        });
+        
+        try {
+          // Update subscription status to UNPAID
+          await conn.query(
+            `UPDATE subscriptions SET status = 'UNPAID', updated_at = ? WHERE id = ? AND user_id = ?`,
+            [new Date(), subscriptionId, user.id]
+          );
+        } finally {
+          await conn.end();
+        }
+      }
       
       return res.json({
         success: false,
         message: 'Payment verification failed',
         data: {
           reference,
-          status: 'FAILED'
+          status: 'FAILED',
+          subscriptionId: subscriptionId || null,
+          type: isSubscription ? 'SUBSCRIPTION' : 'FUNDING'
         }
       });
     }

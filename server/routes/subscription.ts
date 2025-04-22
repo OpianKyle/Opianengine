@@ -141,11 +141,11 @@ router.post("/api/subscription", async (req, res) => {
 
     const connection = await pool.getConnection();
     try {
-      // Create new subscription
+      // Create new subscription with PENDING status
       const subscriptionData = {
         user_id: user.id,
         package_type: packageType,
-        status: 'ACTIVE',
+        status: 'PENDING', // Start with PENDING status until payment is confirmed
         amount: PACKAGE_PRICES[packageType],
         start_date: new Date(),
         end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
@@ -154,7 +154,7 @@ router.post("/api/subscription", async (req, res) => {
         updated_at: new Date()
       };
 
-      await connection.query(
+      const [result] = await connection.query(
         `INSERT INTO subscriptions 
         (user_id, package_type, status, amount, start_date, end_date, payment_method, created_at, updated_at) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -171,13 +171,55 @@ router.post("/api/subscription", async (req, res) => {
         ]
       );
 
-      // No need to update user's package type as the field doesn't exist
-      // We'll use the subscription record to determine the user's package
+      // Get the inserted subscription ID
+      const subscriptionId = result.insertId;
+
+      // Initialize Paystack payment
+      const paymentData = {
+        amount: subscriptionData.amount,
+        purpose: `${packageType} Package Subscription`,
+        metadata: {
+          subscription_id: subscriptionId,
+          package_type: packageType,
+          type: 'SUBSCRIPTION'
+        }
+      };
+
+      // Get base URL for the current server
+      const protocol = req.protocol;
+      const host = req.get('host') || 'localhost:5000';
+      const baseUrl = `${protocol}://${host}`;
+      
+      // Make request to payment initialization endpoint
+      const response = await fetch(`${baseUrl}/api/payment/initialize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': req.headers.cookie || ''
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      const paymentResponse = await response.json();
+
+      if (!paymentResponse.success) {
+        throw new Error('Payment initialization failed');
+      }
+
+      // Store payment reference
+      await connection.query(
+        `UPDATE subscriptions SET payment_reference = ? WHERE id = ?`,
+        [paymentResponse.data.reference, subscriptionId]
+      );
 
       return res.json({
         success: true,
-        message: "Subscription created successfully",
-        subscription: subscriptionData
+        message: "Subscription initialized, redirecting to payment",
+        subscription: {
+          ...subscriptionData,
+          id: subscriptionId
+        },
+        redirectUrl: paymentResponse.data.authorization_url
       });
     } finally {
       connection.release();

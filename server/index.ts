@@ -162,7 +162,7 @@ app.use((req: any, res, next) => {
     app.use('/api/admin', adminRouter);
     app.use('/api/migration', migrationRouter);
     app.use(subscriptionRouter);
-    app.use(paymentRouter);
+    app.use('/api/payment', paymentRouter);
     registerRoutes(app, sessionMiddleware);
     console.log('Routes registered');
 
