@@ -201,28 +201,33 @@ router.post("/api/subscription", async (req, res) => {
       const host = req.get('host') || 'localhost:5000';
       const baseUrl = `${protocol}://${host}`;
       
-      // Make request to payment initialization endpoint
-      const response = await fetch(`${baseUrl}/api/payment/initialize`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': req.headers.cookie || ''
-        },
-        body: JSON.stringify(paymentData)
-      });
-
-      const paymentResponse = await response.json();
-
-      if (!paymentResponse.success) {
-        throw new Error('Payment initialization failed');
-      }
-
+      // Import payment initialization function directly
+      const { initializeTransaction } = await import('../utils/paystack');
+      
+      // Generate a unique reference for this transaction
+      const { generateReference } = await import('../utils/paystack');
+      const reference = generateReference();
+      
+      // Initialize transaction directly with Paystack
+      const transaction = await initializeTransaction(
+        Math.floor(subscriptionData.amount * 100), // Convert to cents/kobo
+        user.email,
+        reference,
+        {
+          subscription_id: subscriptionId,
+          package_type: packageType,
+          type: 'SUBSCRIPTION',
+          plan_code: PAYSTACK_PLAN_CODES[packageType]
+        }
+      );
+      
       // Store payment reference
       await connection.query(
         `UPDATE subscriptions SET payment_reference = ? WHERE id = ?`,
-        [paymentResponse.data.reference, subscriptionId]
+        [reference, subscriptionId]
       );
-
+      
+      // Success! Use transaction data for response
       return res.json({
         success: true,
         message: "Subscription initialized, redirecting to payment",
@@ -230,7 +235,7 @@ router.post("/api/subscription", async (req, res) => {
           ...subscriptionData,
           id: subscriptionId
         },
-        redirectUrl: paymentResponse.data.authorization_url
+        redirectUrl: transaction.authorization_url
       });
     } finally {
       connection.release();
