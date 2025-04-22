@@ -47,20 +47,27 @@ const SubscriptionPage = () => {
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'cancel' | 'reactivate' | null>(null);
 
-  // Fetch subscriptions
-  const { data: subscriptions, isLoading, error } = useQuery({
+  // Fetch subscription data
+  const { data: subscriptionData, isLoading, error } = useQuery({
     queryKey: ['/api/subscription'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/subscription');
-      const data = await response.json();
-      return data.subscriptions as Subscription[];
+      return response.json();
     },
   });
+  
+  // Extract subscription, packages and current package from response
+  const subscription = subscriptionData?.subscription || null;
+  const packages = subscriptionData?.packages || {};
+  const currentPackage = subscriptionData?.currentPackage || null;
+  
+  // Convert to array for compatibility with existing code
+  const subscriptions = subscription ? [subscription] : [];
 
   // Cancel subscription mutation
   const cancelMutation = useMutation({
     mutationFn: async (subscriptionId: number) => {
-      const response = await apiRequest('POST', `/api/subscription/${subscriptionId}/cancel`);
+      const response = await apiRequest('DELETE', `/api/subscription/${subscriptionId}`);
       return response.json();
     },
     onSuccess: () => {
@@ -84,7 +91,7 @@ const SubscriptionPage = () => {
   // Reactivate subscription mutation
   const reactivateMutation = useMutation({
     mutationFn: async (subscriptionId: number) => {
-      const response = await apiRequest('POST', `/api/subscription/${subscriptionId}/reactivate`);
+      const response = await apiRequest('PUT', `/api/subscription/${subscriptionId}`);
       return response.json();
     },
     onSuccess: () => {
@@ -108,7 +115,7 @@ const SubscriptionPage = () => {
   // New subscription mutation
   const newSubscriptionMutation = useMutation({
     mutationFn: async (packageType: string) => {
-      const response = await apiRequest('POST', '/api/subscription/create', { packageType });
+      const response = await apiRequest('POST', '/api/subscription', { packageType });
       return response.json();
     },
     onSuccess: (data) => {
@@ -312,12 +319,12 @@ const SubscriptionPage = () => {
 
       <h2 className="text-xl font-semibold mb-4">Available Packages</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {['OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'].map(packageType => (
+        {Object.keys(packages).map(packageType => (
           <Card key={packageType} className="overflow-hidden">
             <CardHeader className={packageColors[packageType] || 'bg-gray-100'}>
               <CardTitle>{packageType} Package</CardTitle>
               <CardDescription className="text-foreground/70">
-                Monthly subscription
+                {formatAmount(packages[packageType]?.price || 0)} per month
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
