@@ -253,11 +253,20 @@ const CustomerTour: React.FC = () => {
     
     // Update step index for navigation
     if (type === 'step:after' && action === 'next') {
-      console.log('Moving to next step:', index + 1);
-      setStepIndex(index + 1);
-    } else if (type === 'step:after' && action === 'back') {
-      console.log('Moving to previous step:', index - 1);
-      setStepIndex(index - 1);
+      const nextIndex = index + 1;
+      console.log('Moving to next step:', nextIndex);
+      setStepIndex(nextIndex);
+    } else if (type === 'step:after' && action === 'prev' || type === 'step:after' && action === 'back') {
+      // Only go back if we're not already at the first step
+      if (index > 0) {
+        const prevIndex = index - 1;
+        console.log('Moving to previous step:', prevIndex);
+        setStepIndex(prevIndex);
+      } else {
+        // If we're at the first step, just maintain the current step
+        console.log('Already at first step, maintaining current position');
+        setStepIndex(0);
+      }
     }
     
     // Handle tour end

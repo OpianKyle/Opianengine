@@ -183,6 +183,11 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
       return () => clearTimeout(timer);
     }
   }, [isFirstVisit, startTour]);
+  
+  // Debug the current tour state for troubleshooting
+  useEffect(() => {
+    console.log('ReferralsTour state:', { showTour, stepIndex, isFirstVisit });
+  }, [showTour, stepIndex, isFirstVisit]);
 
   // Custom endTour handler to call the onComplete callback if provided
   const handleEndTour = () => {
@@ -230,12 +235,20 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
     // Update step index for navigation
     if (type === 'step:after') {
       if (action === 'next') {
-        console.log('Moving to next step:', index + 1);
-        setStepIndex(index + 1);
-      } else if (action === 'prev') {
-        // 'prev' is the correct action type in Joyride, not 'back'
-        console.log('Moving to previous step:', index - 1);
-        setStepIndex(index - 1);
+        const nextIndex = index + 1;
+        console.log('Moving to next step:', nextIndex);
+        setStepIndex(nextIndex);
+      } else if (action === 'prev' || action === 'back') {
+        // Only go back if we're not already at the first step
+        if (index > 0) {
+          const prevIndex = index - 1;
+          console.log('Moving to previous step:', prevIndex);
+          setStepIndex(prevIndex);
+        } else {
+          // If we're at the first step, just maintain the current step
+          console.log('Already at first step, maintaining current position');
+          setStepIndex(0);
+        }
       }
     }
     
