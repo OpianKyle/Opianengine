@@ -170,23 +170,29 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
     isFirstVisit 
   } = useOnboarding();
 
+  // We need to use a ref to track if we've already started the tour
+  // to prevent multiple starts from the auto-start feature
+  const hasAutoStarted = React.useRef(false);
+  
   // Start the tour automatically on the first visit after a small delay
   // to ensure all components are loaded
   useEffect(() => {
-    if (isFirstVisit) {
+    if (isFirstVisit && !hasAutoStarted.current && !showTour) {
       console.log('ReferralsTour: First visit detected, preparing to start tour...');
+      hasAutoStarted.current = true;
+      
       const timer = setTimeout(() => {
-        console.log('ReferralsTour: Starting tour now');
+        console.log('ReferralsTour: Starting tour now (auto)');
         startTour();
-      }, 2000);
+      }, 1500);
       
       return () => clearTimeout(timer);
     }
-  }, [isFirstVisit, startTour]);
+  }, [isFirstVisit, startTour, showTour]);
   
   // Debug the current tour state for troubleshooting
   useEffect(() => {
-    console.log('ReferralsTour state:', { showTour, stepIndex, isFirstVisit });
+    console.log('ReferralsTour state:', { showTour, stepIndex, isFirstVisit, hasAutoStarted: hasAutoStarted.current });
   }, [showTour, stepIndex, isFirstVisit]);
 
   // Custom endTour handler to call the onComplete callback if provided
