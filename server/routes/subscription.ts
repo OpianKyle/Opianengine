@@ -106,10 +106,16 @@ router.get("/api/subscription", async (req, res) => {
         }
       };
 
+      // Determine current package from active subscription
+      let currentPackage = null;
+      if (userSubscription && userSubscription.status === 'ACTIVE') {
+        currentPackage = userSubscription.package_type;
+      }
+
       return res.json({
         subscription: userSubscription || null,
         packages: packageInfo,
-        currentPackage: user.package_type
+        currentPackage: currentPackage
       });
     } finally {
       connection.release();
@@ -165,11 +171,8 @@ router.post("/api/subscription", async (req, res) => {
         ]
       );
 
-      // Update user's package type
-      await connection.query(
-        `UPDATE users SET package_type = ? WHERE id = ?`,
-        [packageType, user.id]
-      );
+      // No need to update user's package type as the field doesn't exist
+      // We'll use the subscription record to determine the user's package
 
       return res.json({
         success: true,
