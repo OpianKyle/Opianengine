@@ -226,7 +226,7 @@ function Router() {
           <ProtectedRoute component={CustomerProducts} />
         </CustomerLayout>
       </Route>
-      <Route path="/payments">
+      <Route path="/profile/payments">
         <CustomerLayout>
           <ProtectedRoute component={PaymentPage} />
         </CustomerLayout>

@@ -112,7 +112,7 @@ router.get('/verify/:reference', async (req, res) => {
       // Update user balance
       await db.update(users)
         .set({ 
-          walletBalance: (user.walletBalance || 0) + amountInRand,
+          walletBalance: (user.wallet_balance || 0) + amountInRand,
           lastFundingDate: new Date()
         })
         .where(eq(users.id, user.id))
