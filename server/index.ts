@@ -43,6 +43,8 @@ import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
 import adminRouter from './routes/admin';
 import migrationRouter from './routes/migration';
+import subscriptionRouter from './routes/subscription';
+import paymentRouter from './routes/payment';
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
@@ -159,6 +161,8 @@ app.use((req: any, res, next) => {
     app.use('/api/agent', agentRouter);
     app.use('/api/admin', adminRouter);
     app.use('/api/migration', migrationRouter);
+    app.use(subscriptionRouter);
+    app.use(paymentRouter);
     registerRoutes(app, sessionMiddleware);
     console.log('Routes registered');
 
