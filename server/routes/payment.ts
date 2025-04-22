@@ -129,8 +129,8 @@ router.post('/callback', async (req, res) => {
   const reference = req.body.reference || req.query.reference || req.body.trxref || req.query.trxref;
   console.log('Payment callback received (POST):', { reference, body: req.body, query: req.query });
   
-  // Simply pass along the reference - the frontend will verify it
-  return res.redirect(`/profile/subscription?reference=${reference}`);
+  // Redirect to the subscription page with reference
+  return res.redirect(`/subscription?reference=${reference}`);
 });
 
 // GET version for the callback URL (Paystack might redirect with GET)
@@ -139,8 +139,8 @@ router.get('/callback', async (req, res) => {
   const reference = req.query.reference || req.query.trxref;
   console.log('Payment callback received (GET):', { reference, query: req.query });
   
-  // Simply pass along the reference - the frontend will verify it
-  return res.redirect(`/profile/subscription?reference=${reference}`);
+  // Redirect to the subscription page with reference
+  return res.redirect(`/subscription?reference=${reference}`);
 });
 
 // Verify a payment transaction

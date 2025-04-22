@@ -172,11 +172,19 @@ export const initializeTransaction = async (
   metadata: any = {}
 ): Promise<PaystackTransactionResponse['data']> => {
   try {
+    console.log('Setting up Paystack callback URL...');
+    
+    // Use the most reliable URL format to ensure callback works
+    const baseUrl = process.env.APP_URL || 'https://opian.replit.app';
+    const callbackUrl = `${baseUrl}/api/payment/callback`;
+    
+    console.log('Using callback URL:', callbackUrl);
+    
     const response = await createPaystackRequest('transaction/initialize', 'POST', {
       amount,
       email,
       reference,
-      callback_url: `${process.env.APP_URL || 'https://opian.replit.app'}/api/payment/callback`,
+      callback_url: callbackUrl,
       metadata
     });
     
