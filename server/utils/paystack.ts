@@ -57,7 +57,7 @@ interface PaystackVerificationResponse {
 /**
  * Create a Paystack API request with proper headers
  */
-const createPaystackRequest = (path: string, method: string = 'GET', body: any = null) => {
+export const createPaystackRequest = (path: string, method: string = 'GET', body: any = null) => {
   const url = `https://api.paystack.co/${path}`;
   
   const headers = {
@@ -100,6 +100,51 @@ export const createOrGetCustomer = async (user: Customer): Promise<PaystackCreat
       metadata: {
         user_id: user.id
       }
+    });
+    
+    const createCustomerData = await createCustomerResponse.json() as PaystackCreateCustomerResponse;
+    
+    if (!createCustomerResponse.ok || !createCustomerData.status) {
+      throw new Error(`Failed to create customer: ${createCustomerData.message}`);
+    }
+    
+    console.log('New Paystack customer created:', createCustomerData.data.customer_code);
+    return createCustomerData.data;
+    
+  } catch (error) {
+    console.error('Error creating/getting Paystack customer:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create a new customer in Paystack or get existing customer by email
+ * Simplified version that accepts email and name fields directly
+ */
+export const getOrCreateCustomer = async (
+  email: string, 
+  customerData?: { 
+    first_name?: string; 
+    last_name?: string; 
+    phone?: string;
+  }
+): Promise<PaystackCreateCustomerResponse['data']> => {
+  try {
+    // First check if customer exists
+    const checkCustomerResponse = await createPaystackRequest(`customer/${email}`);
+    const checkCustomerData = await checkCustomerResponse.json();
+    
+    if (checkCustomerResponse.ok && checkCustomerData.status) {
+      console.log('Existing Paystack customer found:', checkCustomerData.data.customer_code);
+      return checkCustomerData.data;
+    }
+    
+    // Create new customer if doesn't exist
+    const createCustomerResponse = await createPaystackRequest('customer', 'POST', {
+      email,
+      first_name: customerData?.first_name || '',
+      last_name: customerData?.last_name || '',
+      phone: customerData?.phone || ''
     });
     
     const createCustomerData = await createCustomerResponse.json() as PaystackCreateCustomerResponse;
