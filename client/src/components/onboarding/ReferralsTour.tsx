@@ -198,6 +198,13 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
     
     console.log('Referrals tour callback:', { action, index, status, type, lifecycle });
     
+    // Immediately handle close action regardless of context
+    if (action === 'close') {
+      console.log('Close button clicked, ending tour immediately');
+      handleEndTour();
+      return;
+    }
+    
     // Handle different tour events
     if (type === 'step:before') {
       // Preparing to show a step
@@ -230,6 +237,12 @@ const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
         console.log('Moving to previous step:', index - 1);
         setStepIndex(index - 1);
       }
+    }
+    
+    // Handle tour end
+    if (type === 'tour:end') {
+      console.log('Tour ended by tour:end event');
+      handleEndTour();
     }
     
     // End tour when finished or skipped
