@@ -176,7 +176,7 @@ export const initializeTransaction = async (
       amount,
       email,
       reference,
-      callback_url: `${process.env.APP_URL || 'https://opian.replit.app'}/api/payment/callback`,
+      callback_url: `${process.env.APP_URL || 'https://opian.replit.app'}/profile/subscription`,
       metadata
     });
     

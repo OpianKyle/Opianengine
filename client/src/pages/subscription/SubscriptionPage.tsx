@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useLocation } from 'wouter';
 
 // Types for subscriptions
 interface Subscription {
@@ -46,6 +47,53 @@ const SubscriptionPage = () => {
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'cancel' | 'reactivate' | null>(null);
+  const [, params] = useLocation();
+  
+  // Check for payment reference from Paystack redirect
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const reference = urlParams.get('reference');
+    const status = urlParams.get('status');
+    
+    if (reference && status === 'success') {
+      // Verify the payment
+      const verifyPayment = async () => {
+        try {
+          const response = await apiRequest('GET', `/api/payment/verify/${reference}`);
+          const data = await response.json();
+          
+          if (data.success) {
+            toast({
+              title: "Payment Successful",
+              description: "Your subscription payment has been processed successfully.",
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Payment Verification Failed",
+              description: "There was an issue verifying your payment. Please contact support.",
+              variant: "destructive",
+            });
+          }
+          
+          // Refresh subscription data
+          queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
+          
+          // Clean up URL params
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (error) {
+          console.error('Error verifying payment:', error);
+          toast({
+            title: "Verification Error",
+            description: "Failed to verify payment. Please check your account status.",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      verifyPayment();
+    }
+  }, [toast, queryClient]);
 
   // Fetch subscription data
   const { data: subscriptionData, isLoading, error } = useQuery({

@@ -5,7 +5,7 @@
  */
 
 import express from 'express';
-import { db } from '../../db';
+import { db, pool } from '../../db';
 import { users, transactions } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import type { User } from '../../db/schema';
@@ -79,163 +79,7 @@ router.post('/initialize', async (req, res) => {
   }
 });
 
-// Verify a transaction
-router.get('/verify/:reference', async (req, res) => {
-  try {
-    const { reference } = req.params;
-    const user = req.user as User | undefined;
-    
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'User not authenticated' });
-    }
-    
-    // Verify the transaction with Paystack
-    const verificationData = await verifyTransaction(reference);
-    
-    if (verificationData.status === 'success') {
-      // Convert amount from kobo/cents to rand
-      const amountInRand = verificationData.amount / 100;
-      
-      // Check if this is a subscription payment
-      const isSubscription = verificationData.metadata?.type === 'SUBSCRIPTION';
-      const subscriptionId = verificationData.metadata?.subscription_id;
-      
-      // Record the transaction
-      const transactionRecord = await db.insert(transactions).values({
-        type: isSubscription ? 'SUBSCRIPTION' : 'FUNDING',
-        points: 0,
-        description: verificationData.metadata?.purpose || 'Account funding',
-        userId: user.id,
-        paymentMethod: 'PAYSTACK',
-        paymentReference: reference,
-        metadata: JSON.stringify({
-          paystack_reference: reference,
-          amount: amountInRand,
-          subscription_id: subscriptionId || null
-        })
-      }).execute();
-      
-      if (isSubscription && subscriptionId) {
-        // Get a database connection
-        const conn = await mysql.createConnection({
-          host: process.env.DB_HOST,
-          user: process.env.DB_USER,
-          password: process.env.DB_PASSWORD,
-          database: process.env.DB_NAME,
-          port: parseInt(process.env.DB_PORT || '3306'),
-          ssl: { rejectUnauthorized: false }
-        });
-        
-        try {
-          // Update subscription status to ACTIVE
-          await conn.query(
-            `UPDATE subscriptions SET status = 'ACTIVE', updated_at = ? WHERE id = ? AND user_id = ?`,
-            [new Date(), subscriptionId, user.id]
-          );
-          
-          // Also update the payment_reference for verification
-          await conn.query(
-            `UPDATE subscriptions SET payment_reference = ? WHERE id = ?`,
-            [reference, subscriptionId]
-          );
-        } finally {
-          await conn.end();
-        }
-        
-        return res.json({
-          success: true,
-          message: 'Subscription payment verified successfully',
-          data: {
-            amount: amountInRand,
-            reference,
-            status: 'COMPLETED',
-            subscriptionId,
-            type: 'SUBSCRIPTION'
-          }
-        });
-      } else {
-        // Normal funding transaction
-        await db.update(users)
-          .set({ 
-            wallet_balance: (user.wallet_balance || 0) + amountInRand,
-            last_funding_date: new Date()
-          })
-          .where(eq(users.id, user.id))
-          .execute();
-        
-        return res.json({
-          success: true,
-          message: 'Payment verified successfully',
-          data: {
-            amount: amountInRand,
-            reference,
-            status: 'COMPLETED'
-          }
-        });
-      }
-    } else {
-      // Check if this was a subscription payment
-      const isSubscription = verificationData.metadata?.type === 'SUBSCRIPTION';
-      const subscriptionId = verificationData.metadata?.subscription_id;
-      
-      // Record failed transaction
-      await db.insert(transactions).values({
-        type: isSubscription ? 'SUBSCRIPTION_FAILED' : 'FUNDING_FAILED',
-        points: 0,
-        description: 'Failed payment',
-        userId: user.id,
-        paymentMethod: 'PAYSTACK',
-        paymentReference: reference,
-        metadata: JSON.stringify({
-          paystack_reference: reference,
-          amount: verificationData.amount / 100,
-          error: 'Payment verification failed',
-          subscription_id: subscriptionId || null
-        })
-      }).execute();
-      
-      if (isSubscription && subscriptionId) {
-        // Get a database connection
-        const conn = await mysql.createConnection({
-          host: process.env.DB_HOST,
-          user: process.env.DB_USER,
-          password: process.env.DB_PASSWORD,
-          database: process.env.DB_NAME,
-          port: parseInt(process.env.DB_PORT || '3306'),
-          ssl: { rejectUnauthorized: false }
-        });
-        
-        try {
-          // Update subscription status to UNPAID
-          await conn.query(
-            `UPDATE subscriptions SET status = 'UNPAID', updated_at = ? WHERE id = ? AND user_id = ?`,
-            [new Date(), subscriptionId, user.id]
-          );
-        } finally {
-          await conn.end();
-        }
-      }
-      
-      return res.json({
-        success: false,
-        message: 'Payment verification failed',
-        data: {
-          reference,
-          status: 'FAILED',
-          subscriptionId: subscriptionId || null,
-          type: isSubscription ? 'SUBSCRIPTION' : 'FUNDING'
-        }
-      });
-    }
-    
-  } catch (error) {
-    console.error('Payment verification error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to verify payment'
-    });
-  }
-});
+// Simplified transaction verification logic is now in the new /verify/:reference endpoint below
 
 // Get user's transaction history
 router.get('/transactions', async (req, res) => {
@@ -267,11 +111,139 @@ router.get('/transactions', async (req, res) => {
   }
 });
 
-// Callback URL for Paystack (webhook)
+// Callback URL for Paystack - handle both POST and GET requests
 router.post('/callback', async (req, res) => {
-  // This is a redirect URL after payment, not a webhook
-  // In a real-world scenario, we'd verify the payment using the reference
-  return res.redirect('/profile/payments?status=success');
+  // This is a redirect URL after payment
+  const reference = req.body.reference || req.query.reference;
+  return res.redirect(`/profile/subscription?reference=${reference}&status=success`);
+});
+
+// GET version for the callback URL (Paystack might redirect with GET)
+router.get('/callback', async (req, res) => {
+  // Extract reference from query params
+  const reference = req.query.reference || req.query.trxref;
+  return res.redirect(`/profile/subscription?reference=${reference}&status=success`);
+});
+
+// Verify a payment transaction
+router.get('/verify/:reference', async (req, res) => {
+  try {
+    const { reference } = req.params;
+    const user = req.user as User | undefined;
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    if (!reference) {
+      return res.status(400).json({ success: false, message: 'Payment reference is required' });
+    }
+
+    // Verify the transaction with Paystack
+    const transaction = await verifyTransaction(reference);
+    
+    if (transaction.status !== 'success') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Payment verification failed',
+        status: transaction.status
+      });
+    }
+    
+    // Check for existing transaction record using raw SQL for consistency
+    const connection = await pool.getConnection();
+    let transactionRecord = null;
+    
+    try {
+      // Check for existing transaction
+      const [existingTransactions] = await connection.query(
+        `SELECT * FROM transactions WHERE payment_reference = ? LIMIT 1`,
+        [reference]
+      );
+      
+      if (Array.isArray(existingTransactions) && existingTransactions.length > 0) {
+        transactionRecord = existingTransactions[0];
+        return res.json({ 
+          success: true, 
+          message: 'Payment already verified', 
+          transaction: transactionRecord 
+        });
+      }
+      
+      // Insert transaction record
+      const [insertResult] = await connection.query(
+        `INSERT INTO transactions 
+         (user_id, amount, type, description, status, payment_reference, metadata, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          user.id,
+          transaction.amount / 100, // Convert from kobo to naira
+          'SUBSCRIPTION_PAYMENT',
+          `Subscription payment for ${transaction.metadata?.packageType || 'unknown package'}`,
+          'COMPLETED',
+          reference,
+          JSON.stringify(transaction),
+          new Date(),
+          new Date()
+        ]
+      );
+      
+      const transactionId = insertResult.insertId;
+      
+      // Update subscription status if this was a subscription payment
+      if (transaction.metadata && transaction.metadata.type === 'SUBSCRIPTION' && transaction.metadata.subscription_id) {
+        const subscriptionId = transaction.metadata.subscription_id;
+        
+        // Update the subscription to ACTIVE status
+        await connection.query(
+          `UPDATE subscriptions SET 
+           status = 'ACTIVE', 
+           last_payment_date = ?,
+           next_payment_date = ?,
+           updated_at = ?
+           WHERE id = ?`,
+          [
+            new Date(),
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
+            new Date(),
+            subscriptionId
+          ]
+        );
+        
+        console.log(`Subscription ${subscriptionId} activated after payment verification`);
+      }
+      
+      // Get the newly created transaction
+      const [newTransactions] = await connection.query(
+        `SELECT * FROM transactions WHERE id = ? LIMIT 1`,
+        [transactionId]
+      );
+      
+      if (Array.isArray(newTransactions) && newTransactions.length > 0) {
+        transactionRecord = newTransactions[0];
+      }
+      
+    } catch (error) {
+      console.error('Error processing payment verification:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+    
+    return res.json({
+      success: true,
+      message: 'Payment verified successfully',
+      transaction: transactionRecord
+    });
+    
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to verify payment',
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
 });
 
 export default router;
