@@ -18,11 +18,11 @@ const PACKAGE_PRICES = {
 
 // Paystack plan codes for each package type
 const PAYSTACK_PLAN_CODES = {
-  OPPORTUNITY: 'PLN_opportunity',
-  MOMENTUM: 'PLN_momentum',
-  PROSPER: 'PLN_prosper',
-  PRESTIGE: 'PLN_prestige',
-  PINNACLE: 'PLN_pinnacle'
+  OPPORTUNITY: 'PLN_ksp8kcv39wx6gsq',
+  MOMENTUM: 'PLN_ronq4bf0oiodxuq',
+  PROSPER: 'PLN_o7wt6oekkdhx6nz',
+  PRESTIGE: 'PLN_1nt0ne30xcgw4h6',
+  PINNACLE: 'PLN_46rhhthybf7wlzv'
 };
 
 // Get subscription information for the current user
