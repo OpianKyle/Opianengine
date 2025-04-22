@@ -27,10 +27,15 @@ router.get("/api/subscription", async (req, res) => {
     const connection = await pool.getConnection();
     try {
       // Get user's subscription
-      const [userSubscription] = await connection.query(
+      const [userSubscriptionResult] = await connection.query(
         `SELECT * FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
         [user.id]
       );
+      
+      // Convert to array and get first item if it exists
+      const userSubscription = Array.isArray(userSubscriptionResult) && userSubscriptionResult.length > 0 
+        ? userSubscriptionResult[0] 
+        : null;
 
       // Get package information
       const packageInfo = {
@@ -193,12 +198,14 @@ router.delete("/api/subscription/:id", async (req, res) => {
     
     try {
       // Check if subscription exists and belongs to the user
-      const [subscription] = await connection.query(
+      const [subscriptionResult] = await connection.query(
         `SELECT * FROM subscriptions WHERE id = ? AND user_id = ?`,
         [subscriptionId, user.id]
       );
+      
+      const subscriptionArray = Array.isArray(subscriptionResult) ? subscriptionResult : [];
 
-      if (!subscription || subscription.length === 0) {
+      if (subscriptionArray.length === 0) {
         return res.status(404).json({ error: "Subscription not found" });
       }
 
