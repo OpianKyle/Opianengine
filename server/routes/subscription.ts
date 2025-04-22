@@ -16,6 +16,15 @@ const PACKAGE_PRICES = {
   PINNACLE: 825
 };
 
+// Paystack plan codes for each package type
+const PAYSTACK_PLAN_CODES = {
+  OPPORTUNITY: 'PLN_opportunity',
+  MOMENTUM: 'PLN_momentum',
+  PROSPER: 'PLN_prosper',
+  PRESTIGE: 'PLN_prestige',
+  PINNACLE: 'PLN_pinnacle'
+};
+
 // Get subscription information for the current user
 router.get("/api/subscription", async (req, res) => {
   try {
@@ -178,10 +187,12 @@ router.post("/api/subscription", async (req, res) => {
       const paymentData = {
         amount: subscriptionData.amount,
         purpose: `${packageType} Package Subscription`,
+        plan_code: PAYSTACK_PLAN_CODES[packageType],
         metadata: {
           subscription_id: subscriptionId,
           package_type: packageType,
-          type: 'SUBSCRIPTION'
+          type: 'SUBSCRIPTION',
+          plan_code: PAYSTACK_PLAN_CODES[packageType]
         }
       };
 
