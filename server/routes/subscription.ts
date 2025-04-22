@@ -206,7 +206,11 @@ router.post("/api/subscription", async (req, res) => {
           package_type: packageType,
           type: 'SUBSCRIPTION',
           user_id: user.id,
-          plan_code: PAYSTACK_PLAN_CODES[packageType]
+          plan_code: PAYSTACK_PLAN_CODES[packageType],
+          // Add customer details for Paystack
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          phone: user.phone_number || ''
         }
       );
       

@@ -125,22 +125,66 @@ router.get('/transactions', async (req, res) => {
 
 // Callback URL for Paystack - handle both POST and GET requests
 router.post('/callback', async (req, res) => {
-  // This is a redirect URL after payment
-  const reference = req.body.reference || req.query.reference || req.body.trxref || req.query.trxref;
-  console.log('Payment callback received (POST):', { reference, body: req.body, query: req.query });
-  
-  // Redirect to the subscription page with reference
-  return res.redirect(`/subscription?reference=${reference}`);
+  try {
+    // This is a redirect URL after payment
+    const reference = req.body.reference || req.query.reference || req.body.trxref || req.query.trxref;
+    console.log('Payment callback received (POST):', { reference, body: req.body, query: req.query });
+    
+    if (reference) {
+      // Auto-verify the transaction server-side
+      try {
+        const transaction = await verifyTransaction(reference.toString());
+        console.log('Auto-verification in callback successful:', {
+          status: transaction.status,
+          reference: transaction.reference,
+          amount: transaction.amount,
+          metadata: transaction.metadata
+        });
+      } catch (error) {
+        console.error('Auto-verification failed but continuing with redirect:', error);
+      }
+    }
+    
+    // Always redirect to subscription page with reference (client will verify again)
+    const redirectUrl = `/subscription?reference=${reference}`;
+    console.log('Redirecting to:', redirectUrl);
+    return res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('Error in payment callback (POST):', error);
+    return res.redirect('/subscription?error=callback_failed');
+  }
 });
 
 // GET version for the callback URL (Paystack might redirect with GET)
 router.get('/callback', async (req, res) => {
-  // Extract reference from query params
-  const reference = req.query.reference || req.query.trxref;
-  console.log('Payment callback received (GET):', { reference, query: req.query });
-  
-  // Redirect to the subscription page with reference
-  return res.redirect(`/subscription?reference=${reference}`);
+  try {
+    // Extract reference from query params
+    const reference = req.query.reference || req.query.trxref;
+    console.log('Payment callback received (GET):', { reference, query: req.query });
+    
+    if (reference) {
+      // Auto-verify the transaction server-side
+      try {
+        const transaction = await verifyTransaction(reference.toString());
+        console.log('Auto-verification in callback successful:', {
+          status: transaction.status,
+          reference: transaction.reference,
+          amount: transaction.amount,
+          metadata: transaction.metadata
+        });
+      } catch (error) {
+        console.error('Auto-verification failed but continuing with redirect:', error);
+      }
+    }
+    
+    // Always redirect to subscription page with reference (client will verify again)
+    const redirectUrl = `/subscription?reference=${reference}`;
+    console.log('Redirecting to:', redirectUrl);
+    return res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('Error in payment callback (GET):', error);
+    return res.redirect('/subscription?error=callback_failed');
+  }
 });
 
 // Verify a payment transaction

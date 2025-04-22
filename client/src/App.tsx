@@ -237,6 +237,13 @@ function Router() {
           <ProtectedRoute component={SubscriptionPage} />
         </CustomerLayout>
       </Route>
+      
+      {/* Add an extra route to handle /profile/subscription which might be in old links */}
+      <Route path="/profile/subscription">
+        <CustomerLayout>
+          <ProtectedRoute component={SubscriptionPage} />
+        </CustomerLayout>
+      </Route>
 
       <Route component={NotFound} />
     </Switch>

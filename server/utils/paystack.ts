@@ -180,21 +180,74 @@ export const initializeTransaction = async (
     
     console.log('Using callback URL:', callbackUrl);
     
-    const response = await createPaystackRequest('transaction/initialize', 'POST', {
-      amount,
-      email,
-      reference,
-      callback_url: callbackUrl,
-      metadata
-    });
+    // Check if this is a subscription payment with a plan_code
+    const isSubscription = metadata && metadata.plan_code;
+    let requestPayload;
     
-    const responseData = await response.json() as PaystackTransactionResponse;
-    
-    if (!response.ok || !responseData.status) {
-      throw new Error(`Failed to initialize transaction: ${responseData.message}`);
+    if (isSubscription) {
+      console.log('Initializing SUBSCRIPTION payment with plan code:', metadata.plan_code);
+      
+      // Create customer first if it's a subscription
+      const customer = await getOrCreateCustomer(email, {
+        first_name: metadata.first_name || '',
+        last_name: metadata.last_name || '',
+        phone: metadata.phone || ''
+      });
+      
+      console.log('Customer for subscription:', customer.customer_code);
+      
+      // Store customer code in metadata
+      metadata.customer_code = customer.customer_code;
+      
+      // For subscriptions, we need to use a different endpoint and data structure
+      requestPayload = {
+        customer: customer.customer_code,
+        plan: metadata.plan_code,
+        reference,
+        callback_url: callbackUrl,
+        metadata
+      };
+      
+      console.log('Subscription payment payload:', requestPayload);
+      
+      const response = await createPaystackRequest('transaction/initialize', 'POST', {
+        email,
+        amount,
+        reference,
+        callback_url: callbackUrl,
+        metadata,
+        plan: metadata.plan_code
+      });
+      
+      const responseData = await response.json() as PaystackTransactionResponse;
+      
+      if (!response.ok || !responseData.status) {
+        throw new Error(`Failed to initialize subscription transaction: ${responseData.message}`);
+      }
+      
+      console.log('Subscription payment initialized successfully');
+      return responseData.data;
+    } else {
+      // Regular one-time payment
+      console.log('Initializing ONE-TIME payment');
+      
+      const response = await createPaystackRequest('transaction/initialize', 'POST', {
+        amount,
+        email,
+        reference,
+        callback_url: callbackUrl,
+        metadata
+      });
+      
+      const responseData = await response.json() as PaystackTransactionResponse;
+      
+      if (!response.ok || !responseData.status) {
+        throw new Error(`Failed to initialize transaction: ${responseData.message}`);
+      }
+      
+      console.log('One-time payment initialized successfully');
+      return responseData.data;
     }
-    
-    return responseData.data;
     
   } catch (error) {
     console.error('Error initializing Paystack transaction:', error);
