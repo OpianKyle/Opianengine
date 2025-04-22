@@ -1,0 +1,90 @@
+queryClient.ts:312 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/subscription 500 (Internal Server Error)
+apiRequest @ queryClient.ts:312
+queryFn @ SubscriptionPage.tsx:54
+fetchFn @ @tanstack_react-query.js?v=0ed66f2b:840
+run @ @tanstack_react-query.js?v=0ed66f2b:494
+start @ @tanstack_react-query.js?v=0ed66f2b:536
+fetch @ @tanstack_react-query.js?v=0ed66f2b:926
+executeFetch_fn @ @tanstack_react-query.js?v=0ed66f2b:2211
+onSubscribe @ @tanstack_react-query.js?v=0ed66f2b:1898
+subscribe @ @tanstack_react-query.js?v=0ed66f2b:24
+(anonymous) @ @tanstack_react-query.js?v=0ed66f2b:3022
+subscribeToStore @ chunk-276SZO74.js?v=0ed66f2b:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=0ed66f2b:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=0ed66f2b:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=0ed66f2b:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=0ed66f2b:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=0ed66f2b:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=0ed66f2b:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=0ed66f2b:19447
+commitRootImpl @ chunk-276SZO74.js?v=0ed66f2b:19416
+commitRoot @ chunk-276SZO74.js?v=0ed66f2b:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=0ed66f2b:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=0ed66f2b:9119
+(anonymous) @ chunk-276SZO74.js?v=0ed66f2b:18627Understand this error
+queryClient.ts:186 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/subscription?_t=1745324627713 500 (Internal Server Error)
+queryFn @ queryClient.ts:186
+fetchFn @ @tanstack_react-query.js?v=0ed66f2b:840
+run @ @tanstack_react-query.js?v=0ed66f2b:494
+start @ @tanstack_react-query.js?v=0ed66f2b:536
+fetch @ @tanstack_react-query.js?v=0ed66f2b:926
+fetchQuery @ @tanstack_react-query.js?v=0ed66f2b:1743
+prefetchQuery @ @tanstack_react-query.js?v=0ed66f2b:1746
+(anonymous) @ queryClient.ts:175
+prefetchData @ queryClient.ts:174
+prefetchCustomerData @ queryClient.ts:134
+onMouseEnter @ customer-layout.tsx:138
+callCallback2 @ chunk-276SZO74.js?v=0ed66f2b:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=0ed66f2b:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=0ed66f2b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=0ed66f2b:3736
+executeDispatch @ chunk-276SZO74.js?v=0ed66f2b:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=0ed66f2b:7034
+processDispatchQueue @ chunk-276SZO74.js?v=0ed66f2b:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=0ed66f2b:7051
+(anonymous) @ chunk-276SZO74.js?v=0ed66f2b:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=0ed66f2b:18913
+batchedUpdates @ chunk-276SZO74.js?v=0ed66f2b:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=0ed66f2b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=0ed66f2b:5478
+dispatchEvent @ chunk-276SZO74.js?v=0ed66f2b:5472
+dispatchContinuousEvent @ chunk-276SZO74.js?v=0ed66f2b:5461Understand this error
+queryClient.ts:194 Failed to prefetch /api/subscription: 500
+queryFn @ queryClient.ts:194
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=0ed66f2b:840
+run @ @tanstack_react-query.js?v=0ed66f2b:494
+start @ @tanstack_react-query.js?v=0ed66f2b:536
+fetch @ @tanstack_react-query.js?v=0ed66f2b:926
+fetchQuery @ @tanstack_react-query.js?v=0ed66f2b:1743
+prefetchQuery @ @tanstack_react-query.js?v=0ed66f2b:1746
+(anonymous) @ queryClient.ts:175
+prefetchData @ queryClient.ts:174
+prefetchCustomerData @ queryClient.ts:134
+onMouseEnter @ customer-layout.tsx:138
+callCallback2 @ chunk-276SZO74.js?v=0ed66f2b:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=0ed66f2b:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=0ed66f2b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=0ed66f2b:3736
+executeDispatch @ chunk-276SZO74.js?v=0ed66f2b:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=0ed66f2b:7034
+processDispatchQueue @ chunk-276SZO74.js?v=0ed66f2b:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=0ed66f2b:7051
+(anonymous) @ chunk-276SZO74.js?v=0ed66f2b:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=0ed66f2b:18913
+batchedUpdates @ chunk-276SZO74.js?v=0ed66f2b:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=0ed66f2b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=0ed66f2b:5478
+dispatchEvent @ chunk-276SZO74.js?v=0ed66f2b:5472
+dispatchContinuousEvent @ chunk-276SZO74.js?v=0ed66f2b:5461Understand this warning
+2queryClient.ts:210 ✅ Prefetched customer-subscription data for instant access
+queryClient.ts:312 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/subscription 500 (Internal Server Error)
