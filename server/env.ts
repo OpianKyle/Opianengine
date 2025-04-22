@@ -34,6 +34,8 @@ const envSchema = z.object({
   DB_NAME: z.string().min(1, 'DB_NAME is required'),
   DB_PORT: z.string().default('3306'),
   DATABASE_URL: z.string().optional(),
+  PAYSTACK_SECRET_KEY: z.string().min(1, 'PAYSTACK_SECRET_KEY is required'),
+  PAYSTACK_PUBLIC_KEY: z.string().optional(),
 });
 
 // Parse and validate
@@ -47,10 +49,12 @@ try {
     DB_NAME: process.env.DB_NAME,
     DB_PORT: process.env.DB_PORT,
     DATABASE_URL: process.env.DATABASE_URL,
+    PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY,
+    PAYSTACK_PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY,
   });
 
   // Export validated values
-  export const {
+  const {
     SESSION_SECRET,
     JWT_SECRET,
     DB_HOST,
@@ -59,7 +63,22 @@ try {
     DB_NAME,
     DB_PORT,
     DATABASE_URL,
+    PAYSTACK_SECRET_KEY,
+    PAYSTACK_PUBLIC_KEY,
   } = env;
+  
+  export {
+    SESSION_SECRET,
+    JWT_SECRET,
+    DB_HOST,
+    DB_USER,
+    DB_PASSWORD,
+    DB_NAME,
+    DB_PORT,
+    DATABASE_URL,
+    PAYSTACK_SECRET_KEY,
+    PAYSTACK_PUBLIC_KEY
+  };
 
   // Log validated config
   console.log('Environment validated:', {
@@ -68,6 +87,7 @@ try {
     hasJwtSecret: true,
     hasDbConnection: true,
     dbHost: DB_HOST,
+    hasPaystackKey: !!PAYSTACK_SECRET_KEY,
   });
 
 } catch (error) {
