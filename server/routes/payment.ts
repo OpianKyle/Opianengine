@@ -130,6 +130,8 @@ router.post('/callback', async (req, res) => {
     const reference = req.body.reference || req.query.reference || req.body.trxref || req.query.trxref;
     console.log('Payment callback received (POST):', { reference, body: req.body, query: req.query });
     
+    let verificationResult = { success: false, message: 'No reference provided' };
+    
     if (reference) {
       // Auto-verify the transaction server-side
       try {
@@ -140,13 +142,89 @@ router.post('/callback', async (req, res) => {
           amount: transaction.amount,
           metadata: transaction.metadata
         });
+        
+        // Immediately update subscription in database
+        if (transaction.status === 'success' && transaction.metadata && 
+            transaction.metadata.type === 'SUBSCRIPTION' && transaction.metadata.subscription_id) {
+          
+          // Update subscription status directly in callback
+          const connection = await pool.getConnection();
+          try {
+            // Update the subscription to ACTIVE status
+            await connection.query(
+              `UPDATE subscriptions SET 
+               status = 'ACTIVE', 
+               last_payment_date = ?,
+               next_payment_date = ?,
+               updated_at = ?,
+               payment_reference = ?
+               WHERE id = ?`,
+              [
+                new Date(),
+                new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
+                new Date(),
+                reference,
+                transaction.metadata.subscription_id
+              ]
+            );
+            
+            console.log(`Subscription ${transaction.metadata.subscription_id} activated directly in callback!`);
+            verificationResult = { 
+              success: true, 
+              message: 'Payment verified and subscription activated', 
+              subscription_id: transaction.metadata.subscription_id 
+            };
+            
+            // Also try to create Paystack subscription if we have customerCode and planCode
+            const customerCode = transaction.metadata.customer_code;
+            const planCode = transaction.metadata.plan_code;
+            
+            if (customerCode && planCode) {
+              try {
+                const { createSubscription } = await import('../utils/paystack');
+                const subscriptionData = await createSubscription(
+                  customerCode, 
+                  planCode, 
+                  {
+                    reference,
+                    local_subscription_id: transaction.metadata.subscription_id
+                  }
+                );
+                
+                // Update our database with the Paystack subscription code
+                await connection.query(
+                  `UPDATE subscriptions SET 
+                   paystack_subscription_code = ?, 
+                   paystack_customer_code = ?,
+                   updated_at = ?
+                   WHERE id = ?`,
+                  [
+                    subscriptionData.subscription_code,
+                    customerCode,
+                    new Date(),
+                    transaction.metadata.subscription_id
+                  ]
+                );
+                
+                console.log(`Updated subscription with Paystack code ${subscriptionData.subscription_code}`);
+              } catch (subscriptionError) {
+                console.error('Failed to create Paystack subscription in callback:', subscriptionError);
+              }
+            }
+          } catch (dbError) {
+            console.error('Error updating subscription in database:', dbError);
+          } finally {
+            connection.release();
+          }
+        }
       } catch (error) {
         console.error('Auto-verification failed but continuing with redirect:', error);
+        verificationResult = { success: false, message: 'Verification failed: ' + error.message };
       }
     }
     
-    // Always redirect to subscription page with reference (client will verify again)
-    const redirectUrl = `/subscription?reference=${reference}`;
+    // Always redirect to subscription page with reference (but now the subscription should already be ACTIVE)
+    const redirectUrl = `/subscription?reference=${reference}&verified=${verificationResult.success}`;
     console.log('Redirecting to:', redirectUrl);
     return res.redirect(redirectUrl);
   } catch (error) {
@@ -162,6 +240,8 @@ router.get('/callback', async (req, res) => {
     const reference = req.query.reference || req.query.trxref;
     console.log('Payment callback received (GET):', { reference, query: req.query });
     
+    let verificationResult = { success: false, message: 'No reference provided' };
+    
     if (reference) {
       // Auto-verify the transaction server-side
       try {
@@ -172,13 +252,89 @@ router.get('/callback', async (req, res) => {
           amount: transaction.amount,
           metadata: transaction.metadata
         });
+        
+        // Immediately update subscription in database
+        if (transaction.status === 'success' && transaction.metadata && 
+            transaction.metadata.type === 'SUBSCRIPTION' && transaction.metadata.subscription_id) {
+          
+          // Update subscription status directly in callback
+          const connection = await pool.getConnection();
+          try {
+            // Update the subscription to ACTIVE status
+            await connection.query(
+              `UPDATE subscriptions SET 
+               status = 'ACTIVE', 
+               last_payment_date = ?,
+               next_payment_date = ?,
+               updated_at = ?,
+               payment_reference = ?
+               WHERE id = ?`,
+              [
+                new Date(),
+                new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
+                new Date(),
+                reference,
+                transaction.metadata.subscription_id
+              ]
+            );
+            
+            console.log(`Subscription ${transaction.metadata.subscription_id} activated directly in callback!`);
+            verificationResult = { 
+              success: true, 
+              message: 'Payment verified and subscription activated', 
+              subscription_id: transaction.metadata.subscription_id 
+            };
+            
+            // Also try to create Paystack subscription if we have customerCode and planCode
+            const customerCode = transaction.metadata.customer_code;
+            const planCode = transaction.metadata.plan_code;
+            
+            if (customerCode && planCode) {
+              try {
+                const { createSubscription } = await import('../utils/paystack');
+                const subscriptionData = await createSubscription(
+                  customerCode, 
+                  planCode, 
+                  {
+                    reference,
+                    local_subscription_id: transaction.metadata.subscription_id
+                  }
+                );
+                
+                // Update our database with the Paystack subscription code
+                await connection.query(
+                  `UPDATE subscriptions SET 
+                   paystack_subscription_code = ?, 
+                   paystack_customer_code = ?,
+                   updated_at = ?
+                   WHERE id = ?`,
+                  [
+                    subscriptionData.subscription_code,
+                    customerCode,
+                    new Date(),
+                    transaction.metadata.subscription_id
+                  ]
+                );
+                
+                console.log(`Updated subscription with Paystack code ${subscriptionData.subscription_code}`);
+              } catch (subscriptionError) {
+                console.error('Failed to create Paystack subscription in callback:', subscriptionError);
+              }
+            }
+          } catch (dbError) {
+            console.error('Error updating subscription in database:', dbError);
+          } finally {
+            connection.release();
+          }
+        }
       } catch (error) {
         console.error('Auto-verification failed but continuing with redirect:', error);
+        verificationResult = { success: false, message: 'Verification failed: ' + error.message };
       }
     }
     
-    // Always redirect to subscription page with reference (client will verify again)
-    const redirectUrl = `/subscription?reference=${reference}`;
+    // Always redirect to subscription page with reference (but now the subscription should already be ACTIVE)
+    const redirectUrl = `/subscription?reference=${reference}&verified=${verificationResult.success}`;
     console.log('Redirecting to:', redirectUrl);
     return res.redirect(redirectUrl);
   } catch (error) {
@@ -255,24 +411,84 @@ router.get('/verify/:reference', async (req, res) => {
       // Update subscription status if this was a subscription payment
       if (transaction.metadata && transaction.metadata.type === 'SUBSCRIPTION' && transaction.metadata.subscription_id) {
         const subscriptionId = transaction.metadata.subscription_id;
+        const packageType = transaction.metadata.package_type;
+        const planCode = transaction.metadata.plan_code;
+        const customerCode = transaction.metadata.customer_code;
         
-        // Update the subscription to ACTIVE status
+        console.log(`Processing successful subscription payment:`, {
+          subscriptionId,
+          packageType,
+          planCode,
+          customerCode,
+          reference
+        });
+        
+        // 1. Update the subscription to ACTIVE status in our database
         await connection.query(
           `UPDATE subscriptions SET 
            status = 'ACTIVE', 
            last_payment_date = ?,
            next_payment_date = ?,
-           updated_at = ?
+           updated_at = ?,
+           paystack_customer_code = ?,
+           payment_reference = ?
            WHERE id = ?`,
           [
             new Date(),
             new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
             new Date(),
+            customerCode || null,
+            reference,
             subscriptionId
           ]
         );
         
-        console.log(`Subscription ${subscriptionId} activated after payment verification`);
+        console.log(`Subscription ${subscriptionId} activated in database after payment verification`);
+        
+        // 2. Now also make sure the subscription is created in Paystack if it wasn't already
+        try {
+          if (customerCode && planCode) {
+            const { createSubscription } = await import('../utils/paystack');
+            
+            try {
+              // Create the subscription in Paystack
+              const subscriptionData = await createSubscription(
+                customerCode, 
+                planCode, 
+                {
+                  reference,
+                  local_subscription_id: subscriptionId,
+                  user_id: user.id,
+                  email: user.email
+                }
+              );
+              
+              console.log('Successfully created Paystack subscription after payment:', subscriptionData.subscription_code);
+              
+              // Update our database with the Paystack subscription code
+              await connection.query(
+                `UPDATE subscriptions SET 
+                 paystack_subscription_code = ?, 
+                 updated_at = ?
+                 WHERE id = ?`,
+                [
+                  subscriptionData.subscription_code,
+                  new Date(),
+                  subscriptionId
+                ]
+              );
+              
+              console.log(`Updated local subscription ${subscriptionId} with Paystack code ${subscriptionData.subscription_code}`);
+            } catch (subscriptionError) {
+              console.error('Failed to create Paystack subscription after payment:', subscriptionError);
+              // We continue anyway as the payment was successful
+            }
+          } else {
+            console.warn('Missing required data for creating Paystack subscription:', { customerCode, planCode });
+          }
+        } catch (error) {
+          console.error('Error handling Paystack subscription creation:', error);
+        }
       }
       
       // Get the newly created transaction

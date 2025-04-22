@@ -163,6 +163,68 @@ export const getOrCreateCustomer = async (
 };
 
 /**
+ * Interface for Paystack Subscription API response
+ */
+interface PaystackSubscriptionResponse {
+  status: boolean;
+  message: string;
+  data: {
+    customer: any;
+    plan: any;
+    integration: number;
+    domain: string;
+    start_date: string;
+    status: string;
+    quantity: number;
+    amount: number;
+    authorization: any;
+    subscription_code: string;
+    email_token: string;
+    id: number;
+    next_payment_date: string;
+    cancelledAt: string | null;
+  };
+}
+
+/**
+ * Create a subscription directly with Paystack
+ */
+export const createSubscription = async (
+  customerCode: string,
+  planCode: string,
+  metadata: any = {},
+  startDate?: string
+): Promise<any> => {
+  try {
+    console.log(`Creating Paystack subscription: customer=${customerCode}, plan=${planCode}`);
+    
+    const payload: any = {
+      customer: customerCode,
+      plan: planCode,
+      metadata
+    };
+    
+    // Add start date if provided (allows for future subscription starts)
+    if (startDate) {
+      payload.start_date = startDate;
+    }
+    
+    const response = await createPaystackRequest('subscription', 'POST', payload);
+    const data = await response.json();
+    
+    if (!response.ok || !data.status) {
+      throw new Error(`Failed to create subscription: ${data.message}`);
+    }
+    
+    console.log('Subscription created successfully:', data.data.subscription_code);
+    return data.data;
+  } catch (error) {
+    console.error('Error creating Paystack subscription:', error);
+    throw error;
+  }
+};
+
+/**
  * Initialize a payment transaction
  */
 export const initializeTransaction = async (
@@ -182,51 +244,62 @@ export const initializeTransaction = async (
     
     // Check if this is a subscription payment with a plan_code
     const isSubscription = metadata && metadata.plan_code;
-    let requestPayload;
     
     if (isSubscription) {
       console.log('Initializing SUBSCRIPTION payment with plan code:', metadata.plan_code);
       
-      // Create customer first if it's a subscription
-      const customer = await getOrCreateCustomer(email, {
-        first_name: metadata.first_name || '',
-        last_name: metadata.last_name || '',
-        phone: metadata.phone || ''
-      });
-      
-      console.log('Customer for subscription:', customer.customer_code);
-      
-      // Store customer code in metadata
-      metadata.customer_code = customer.customer_code;
-      
-      // For subscriptions, we need to use a different endpoint and data structure
-      requestPayload = {
-        customer: customer.customer_code,
-        plan: metadata.plan_code,
-        reference,
-        callback_url: callbackUrl,
-        metadata
-      };
-      
-      console.log('Subscription payment payload:', requestPayload);
-      
-      const response = await createPaystackRequest('transaction/initialize', 'POST', {
-        email,
-        amount,
-        reference,
-        callback_url: callbackUrl,
-        metadata,
-        plan: metadata.plan_code
-      });
-      
-      const responseData = await response.json() as PaystackTransactionResponse;
-      
-      if (!response.ok || !responseData.status) {
-        throw new Error(`Failed to initialize subscription transaction: ${responseData.message}`);
+      try {
+        // Create customer first if it's a subscription
+        const customer = await getOrCreateCustomer(email, {
+          first_name: metadata.first_name || '',
+          last_name: metadata.last_name || '',
+          phone: metadata.phone || ''
+        });
+        
+        console.log('Customer for subscription:', customer.customer_code);
+        
+        // Store customer code in metadata for later use
+        metadata.customer_code = customer.customer_code;
+        
+        // Create a one-time payment that will later be connected to the subscription
+        const response = await createPaystackRequest('transaction/initialize', 'POST', {
+          email,
+          amount,
+          reference,
+          callback_url: callbackUrl,
+          metadata,
+          plan: metadata.plan_code
+        });
+        
+        const responseData = await response.json() as PaystackTransactionResponse;
+        
+        if (!response.ok || !responseData.status) {
+          throw new Error(`Failed to initialize subscription payment: ${responseData.message}`);
+        }
+        
+        console.log('Subscription payment initialized successfully');
+        
+        // After successful payment initialization, also try to create the subscription directly
+        try {
+          // This runs in the background, we don't wait for it
+          createSubscription(customer.customer_code, metadata.plan_code, {
+            ...metadata,
+            payment_reference: reference
+          }).then(subscription => {
+            console.log('Subscription also created directly:', subscription);
+          }).catch(err => {
+            console.warn('Failed to create direct subscription, will retry after payment:', err.message);
+          });
+        } catch (subscriptionError) {
+          console.error('Error creating direct subscription:', subscriptionError);
+          // We continue anyway as we'll create the subscription after payment verification
+        }
+        
+        return responseData.data;
+      } catch (error) {
+        console.error('Error in subscription flow:', error);
+        throw error;
       }
-      
-      console.log('Subscription payment initialized successfully');
-      return responseData.data;
     } else {
       // Regular one-time payment
       console.log('Initializing ONE-TIME payment');

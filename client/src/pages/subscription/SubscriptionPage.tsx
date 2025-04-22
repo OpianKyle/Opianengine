@@ -54,58 +54,78 @@ const SubscriptionPage = () => {
     console.log('SubscriptionPage mounted, checking URL for payment reference...');
     const urlParams = new URLSearchParams(window.location.search);
     
-    // Check for both reference and trxref (Paystack might use either)
+    // Check for reference, trxref, and verified flag
     const reference = urlParams.get('reference') || urlParams.get('trxref');
+    const verified = urlParams.get('verified');
     console.log('Full URL parameters:', Object.fromEntries(urlParams.entries()));
     
     if (reference) {
       console.log('✅ Payment reference detected in URL:', reference);
+      console.log('Verified status from server callback:', verified);
       
-      // Verify the payment
-      const verifyPayment = async () => {
-        try {
-          console.log('Verifying payment with reference:', reference);
-          const verifyUrl = `/api/payment/verify/${reference}`;
-          console.log('Making verification request to:', verifyUrl);
-          
-          const response = await apiRequest('GET', verifyUrl);
-          const data = await response.json();
-          console.log('Payment verification response:', data);
-          
-          if (data.success) {
-            console.log('✅ Payment verification successful');
-            toast({
-              title: "Payment Successful",
-              description: "Your subscription payment has been processed successfully.",
-              variant: "default",
-            });
+      if (verified === 'true') {
+        // The payment was already verified on the server in the callback
+        console.log('✅ Payment was already verified by server in callback!');
+        toast({
+          title: "Payment Successful",
+          description: "Your subscription payment has been processed and activated successfully.",
+          variant: "default",
+        });
+        
+        // Refresh subscription data
+        console.log('Invalidating subscription queries to refresh data');
+        queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
+        
+        // Clean up URL params after processing
+        console.log('Cleaning up URL parameters');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        // Perform an additional verification as fallback
+        const verifyPayment = async () => {
+          try {
+            console.log('Verifying payment with reference:', reference);
+            const verifyUrl = `/api/payment/verify/${reference}`;
+            console.log('Making verification request to:', verifyUrl);
             
-            // Refresh subscription data
-            console.log('Invalidating subscription queries to refresh data');
-            queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
-          } else {
-            console.log('❌ Payment verification failed:', data.message);
+            const response = await apiRequest('GET', verifyUrl);
+            const data = await response.json();
+            console.log('Payment verification response:', data);
+            
+            if (data.success) {
+              console.log('✅ Payment verification successful');
+              toast({
+                title: "Payment Successful",
+                description: "Your subscription payment has been processed successfully.",
+                variant: "default",
+              });
+              
+              // Refresh subscription data
+              console.log('Invalidating subscription queries to refresh data');
+              queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
+            } else {
+              console.log('❌ Payment verification failed:', data.message);
+              toast({
+                title: "Payment Verification Failed",
+                description: data.message || "There was an issue verifying your payment. Please contact support.",
+                variant: "destructive",
+              });
+            }
+            
+            // Clean up URL params after processing
+            console.log('Cleaning up URL parameters');
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch (error) {
+            console.error('❌ Error verifying payment:', error);
             toast({
-              title: "Payment Verification Failed",
-              description: data.message || "There was an issue verifying your payment. Please contact support.",
+              title: "Verification Error",
+              description: "Failed to verify payment. Please check your account status.",
               variant: "destructive",
             });
           }
-          
-          // Clean up URL params after processing
-          console.log('Cleaning up URL parameters');
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (error) {
-          console.error('❌ Error verifying payment:', error);
-          toast({
-            title: "Verification Error",
-            description: "Failed to verify payment. Please check your account status.",
-            variant: "destructive",
-          });
-        }
-      };
-      
-      verifyPayment();
+        };
+        
+        verifyPayment();
+      }
     } else {
       console.log('No payment reference found in URL');
     }
