@@ -74,7 +74,7 @@ const joyrideStyles = {
   },
   buttonClose: {
     color: "#43EB3E", // Green cross
-    fontSize: "14px", // Smaller cross for better fit in circle
+    fontSize: "12px", // Even smaller cross to fit properly in circle
     fontWeight: "bold", // Make it bolder
     backgroundColor: "#1b75bc", // Solid blue background
     borderRadius: "50%", // Circular background
@@ -89,7 +89,7 @@ const joyrideStyles = {
     // The following properties handle positioning without using position: absolute
     marginTop: "-18px", // Move up from default position
     marginRight: "-18px", // Move right from default position
-    lineHeight: "14px", // Center the X vertically
+    lineHeight: "12px", // Adjusted to match font size
     textAlign: "center", // Center the X horizontally
   },
 };
