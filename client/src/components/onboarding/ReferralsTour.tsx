@@ -61,21 +61,26 @@ const joyrideStyles = {
     backgroundColor: "#43EB3E", // Green for the primary action button
     borderRadius: "4px",
     color: "#011d3d", // Dark text for contrast on green
-    fontWeight: "bold",
+    fontWeight: "normal", // Less bold text
     padding: "8px 16px",
     boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    cursor: "pointer", // Make sure cursor indicates it's clickable
   },
   buttonBack: {
     marginRight: "10px",
     color: "#43EB3E", // Green for better visibility on dark background
+    fontWeight: "normal", // Less bold text
+    cursor: "pointer", // Make sure cursor indicates it's clickable
   },
   buttonSkip: {
     color: "#43EB3E", // Green for better visibility on dark background
+    fontWeight: "normal", // Less bold text
+    cursor: "pointer", // Make sure cursor indicates it's clickable
   },
   buttonClose: {
     color: "#43EB3E", // Green cross
     fontSize: "12px", // Even smaller cross to fit properly in circle
-    fontWeight: "bold", // Make it bolder
+    fontWeight: "normal", // Less bold text
     backgroundColor: "#1b75bc", // Solid blue background
     borderRadius: "50%", // Circular background
     width: "22px",
@@ -86,11 +91,14 @@ const joyrideStyles = {
     border: "1px solid #43EB3E", // Green border
     padding: 0, // Remove padding
     boxShadow: "0 0 4px rgba(67, 235, 62, 0.5)", // Subtle green glow
-    // The following properties handle positioning without using position: absolute
-    marginTop: "-18px", // Move up from default position
-    marginRight: "-18px", // Move right from default position
+    // Ensure the button is properly clickable by removing margin positioning
+    position: "absolute", // Use absolute positioning 
+    top: "-11px", // Position from top
+    right: "-11px", // Position from right
     lineHeight: "12px", // Adjusted to match font size
     textAlign: "center", // Center the X horizontally
+    zIndex: 10, // Ensure it's above other elements
+    cursor: "pointer", // Make sure cursor indicates it's clickable
   },
 };
 
