@@ -7,7 +7,7 @@ import { mysqlTable, timestamp, varchar, int, mysqlEnum } from 'drizzle-orm/mysq
 
 const router = express.Router();
 
-// Package prices
+// Package prices in South African Rand (ZAR)
 const PACKAGE_PRICES = {
   OPPORTUNITY: 350,
   MOMENTUM: 450,
