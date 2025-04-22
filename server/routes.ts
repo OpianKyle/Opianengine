@@ -16,6 +16,7 @@ import agentRouter from './routes/agent';
 import migrationRouter from './routes/migration';
 import manualMigrationRouter from './routes/manual-migration';
 import packageTypesRouter from './routes/package-types';
+import paymentRouter from './routes/payment';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
@@ -1110,6 +1111,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/migration', migrationRouter);
   app.use('/api/manual-migration', manualMigrationRouter);
   app.use('/api/package-types', packageTypesRouter);
+  app.use('/api/payment', paymentRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {

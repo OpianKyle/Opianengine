@@ -38,6 +38,18 @@ const envSchema = z.object({
   PAYSTACK_PUBLIC_KEY: z.string().optional(),
 });
 
+// Prepare variables for export
+let SESSION_SECRET: string;
+let JWT_SECRET: string;
+let DB_HOST: string;
+let DB_USER: string;
+let DB_PASSWORD: string;
+let DB_NAME: string;
+let DB_PORT: string;
+let DATABASE_URL: string | undefined;
+let PAYSTACK_SECRET_KEY: string;
+let PAYSTACK_PUBLIC_KEY: string | undefined;
+
 // Parse and validate
 try {
   const env = envSchema.parse({
@@ -53,32 +65,17 @@ try {
     PAYSTACK_PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY,
   });
 
-  // Export validated values
-  const {
-    SESSION_SECRET,
-    JWT_SECRET,
-    DB_HOST,
-    DB_USER,
-    DB_PASSWORD,
-    DB_NAME,
-    DB_PORT,
-    DATABASE_URL,
-    PAYSTACK_SECRET_KEY,
-    PAYSTACK_PUBLIC_KEY,
-  } = env;
-  
-  export {
-    SESSION_SECRET,
-    JWT_SECRET,
-    DB_HOST,
-    DB_USER,
-    DB_PASSWORD,
-    DB_NAME,
-    DB_PORT,
-    DATABASE_URL,
-    PAYSTACK_SECRET_KEY,
-    PAYSTACK_PUBLIC_KEY
-  };
+  // Assign validated values to the variables
+  SESSION_SECRET = env.SESSION_SECRET;
+  JWT_SECRET = env.JWT_SECRET;
+  DB_HOST = env.DB_HOST;
+  DB_USER = env.DB_USER;
+  DB_PASSWORD = env.DB_PASSWORD;
+  DB_NAME = env.DB_NAME;
+  DB_PORT = env.DB_PORT;
+  DATABASE_URL = env.DATABASE_URL;
+  PAYSTACK_SECRET_KEY = env.PAYSTACK_SECRET_KEY;
+  PAYSTACK_PUBLIC_KEY = env.PAYSTACK_PUBLIC_KEY;
 
   // Log validated config
   console.log('Environment validated:', {
@@ -94,3 +91,17 @@ try {
   console.error('Environment validation failed:', error);
   process.exit(1);
 }
+
+// Export variables
+export {
+  SESSION_SECRET,
+  JWT_SECRET,
+  DB_HOST,
+  DB_USER,
+  DB_PASSWORD,
+  DB_NAME,
+  DB_PORT,
+  DATABASE_URL,
+  PAYSTACK_SECRET_KEY,
+  PAYSTACK_PUBLIC_KEY
+};

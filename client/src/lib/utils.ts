@@ -141,7 +141,16 @@ export function formatTransactionType(type: string): string {
     'MANUAL_ADJUSTMENT': 'Manual Adjustment',
     'SYSTEM_ADJUSTMENT': 'System Adjustment',
     'REWARD_REDEMPTION': 'Reward Redemption',
-    'ACCOUNT_CREDIT': 'Account Credit'
+    'ACCOUNT_CREDIT': 'Account Credit',
+    'FUNDING': 'Account Funding',
+    'FUNDING_FAILED': 'Failed Funding',
+    'EARNED': 'Points Earned',
+    'REDEEMED': 'Points Redeemed',
+    'ADMIN_ADJUSTMENT': 'Admin Adjustment',
+    'CASH_REDEMPTION': 'Cash Redemption',
+    'WELCOME_BONUS': 'Welcome Bonus',
+    'QUOTE_REQUEST': 'Quote Request',
+    'AGENT_COMMISSION': 'Agent Commission'
   };
   
   return typeMap[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());

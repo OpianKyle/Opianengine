@@ -8,23 +8,22 @@ import express from 'express';
 import { db } from '../../db';
 import { users, transactions } from '../../db/schema';
 import { eq } from 'drizzle-orm';
+import type { User } from '../../db/schema';
+import { paystackConfig } from '../config/paystack';
 import { 
   createOrGetCustomer, 
   initializeTransaction, 
-  verifyTransaction, 
-  listCustomerTransactions, 
+  verifyTransaction,  
   generateReference 
 } from '../utils/paystack';
-import { paystackConfig } from '../config/paystack';
-import { checkAuth } from '../middleware/auth';
 
 const router = express.Router();
 
 // Initialize a payment transaction
-router.post('/initialize', checkAuth, async (req, res) => {
+router.post('/initialize', async (req, res) => {
   try {
     const { amount, purpose, metadata } = req.body;
-    const user = req.user;
+    const user = req.user as User | undefined;
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
@@ -35,10 +34,16 @@ router.post('/initialize', checkAuth, async (req, res) => {
     }
 
     // Ensure the user exists in Paystack
-    const customer = await createOrGetCustomer(user);
+    const customer = await createOrGetCustomer({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber || ''
+    });
     
     // Convert amount to lowest unit (cents)
-    const amountInCents = paystackConfig.convertAmountToLowestUnit(amount);
+    const amountInCents = Math.floor(amount * 100);
     
     // Create a reference code for this transaction
     const reference = generateReference();
@@ -74,10 +79,10 @@ router.post('/initialize', checkAuth, async (req, res) => {
 });
 
 // Verify a transaction
-router.get('/verify/:reference', checkAuth, async (req, res) => {
+router.get('/verify/:reference', async (req, res) => {
   try {
     const { reference } = req.params;
-    const user = req.user;
+    const user = req.user as User | undefined;
     
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
@@ -88,25 +93,26 @@ router.get('/verify/:reference', checkAuth, async (req, res) => {
     
     if (verificationData.status === 'success') {
       // Convert amount from kobo/cents to rand
-      const amountInRand = paystackConfig.convertFromLowestUnit(verificationData.amount);
+      const amountInRand = verificationData.amount / 100;
       
       // Record the transaction
       const transactionRecord = await db.insert(transactions).values({
-        userId: user.id,
-        reference: reference,
-        amount: amountInRand,
-        status: 'COMPLETED',
         type: 'FUNDING',
+        points: 0,
         description: verificationData.metadata?.purpose || 'Account funding',
+        userId: user.id,
         paymentMethod: 'PAYSTACK',
         paymentReference: reference,
-        createdAt: new Date()
+        metadata: JSON.stringify({
+          paystack_reference: reference,
+          amount: amountInRand
+        })
       }).execute();
       
       // Update user balance
       await db.update(users)
         .set({ 
-          walletBalance: user.walletBalance + amountInRand,
+          walletBalance: (user.walletBalance || 0) + amountInRand,
           lastFundingDate: new Date()
         })
         .where(eq(users.id, user.id))
@@ -125,15 +131,17 @@ router.get('/verify/:reference', checkAuth, async (req, res) => {
     } else {
       // Record failed transaction
       await db.insert(transactions).values({
-        userId: user.id,
-        reference: reference,
-        amount: paystackConfig.convertFromLowestUnit(verificationData.amount),
-        status: 'FAILED',
-        type: 'FUNDING',
+        type: 'FUNDING_FAILED',
+        points: 0,
         description: 'Failed payment',
+        userId: user.id,
         paymentMethod: 'PAYSTACK',
         paymentReference: reference,
-        createdAt: new Date()
+        metadata: JSON.stringify({
+          paystack_reference: reference,
+          amount: verificationData.amount / 100,
+          error: 'Payment verification failed'
+        })
       }).execute();
       
       return res.json({
@@ -156,9 +164,9 @@ router.get('/verify/:reference', checkAuth, async (req, res) => {
 });
 
 // Get user's transaction history
-router.get('/transactions', checkAuth, async (req, res) => {
+router.get('/transactions', async (req, res) => {
   try {
-    const user = req.user;
+    const user = req.user as User | undefined;
     
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
@@ -167,7 +175,7 @@ router.get('/transactions', checkAuth, async (req, res) => {
     const userTransactions = await db.select()
       .from(transactions)
       .where(eq(transactions.userId, user.id))
-      .orderBy(transactions.createdAt, 'desc')
+      .orderBy(transactions.createdAt)
       .limit(10)
       .execute();
     

@@ -1,0 +1,37 @@
+export interface User {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  isSouthAfrican?: boolean;
+  idNumber?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  occupation?: string;
+  industry?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  selectedPackage?: string;
+  bankName?: string;
+  accountType?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
+  branchCode?: string;
+  hasCreditCard?: boolean;
+  signature?: string;
+  mandateAccepted?: boolean;
+  mandateAcceptedAt?: string;
+  isAdmin: boolean;
+  isAgent: boolean;
+  isSuperAdmin: boolean;
+  isEnabled: boolean;
+  points: number;
+  walletBalance: number;
+  lastFundingDate?: string;
+  referralCode?: string;
+  referredBy?: string;
+  agentId?: number;
+  createdAt: string;
+}

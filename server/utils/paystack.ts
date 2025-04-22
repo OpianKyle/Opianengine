@@ -1,191 +1,199 @@
 /**
- * Paystack API Utility Functions
+ * Paystack API Utilities
  * 
  * This file contains utility functions for interacting with the Paystack API.
- * It handles operations like:
- * - Customer creation and management
- * - Payment initialization
- * - Transaction verification
- * - Subscription management
  */
 
-import Paystack from 'paystack-api';
-import { User } from '../../db/schema';
-import { paystackConfig } from '../config/paystack';
+import { PAYSTACK_SECRET_KEY } from '../env';
+import type { User } from '../../db/schema';
 
-// Initialize Paystack with the secret key
-const paystack = Paystack(paystackConfig.secretKey);
+interface Customer {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+}
+
+interface PaystackCreateCustomerResponse {
+  status: boolean;
+  message: string;
+  data: {
+    id: number;
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone: string;
+    customer_code: string;
+  };
+}
+
+interface PaystackTransactionResponse {
+  status: boolean;
+  message: string;
+  data: {
+    authorization_url: string;
+    access_code: string;
+    reference: string;
+  };
+}
+
+interface PaystackVerificationResponse {
+  status: boolean;
+  message: string;
+  data: {
+    id: number;
+    status: string;
+    reference: string;
+    amount: number;
+    channel: string;
+    currency: string;
+    paid_at: string;
+    metadata: any;
+    message?: string;
+  };
+}
 
 /**
- * Create a Paystack customer if one doesn't already exist
- * @param user The user for whom to create a Paystack customer
- * @returns The Paystack customer object
+ * Create a Paystack API request with proper headers
  */
-export async function createOrGetCustomer(user: User) {
-  try {
-    // First check if the customer already exists
-    const customerResponse = await paystack.customer.list({
-      email: user.email,
-    });
-
-    if (customerResponse.data && customerResponse.data.length > 0) {
-      // Customer already exists
-      return customerResponse.data[0];
-    }
-
-    // Create a new customer
-    const newCustomer = await paystack.customer.create({
-      email: user.email,
-      first_name: user.firstName || '',
-      last_name: user.lastName || '',
-      phone: user.phoneNumber || '',
-      metadata: {
-        userId: user.id,
-      },
-    });
-
-    return newCustomer.data;
-  } catch (error) {
-    console.error('Error creating or fetching Paystack customer:', error);
-    throw new Error('Failed to create or get Paystack customer');
+const createPaystackRequest = (path: string, method: string = 'GET', body: any = null) => {
+  const url = `https://api.paystack.co/${path}`;
+  
+  const headers = {
+    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+    'Content-Type': 'application/json'
+  };
+  
+  const requestOptions: RequestInit = {
+    method,
+    headers
+  };
+  
+  if (body && (method === 'POST' || method === 'PUT')) {
+    requestOptions.body = JSON.stringify(body);
   }
-}
+  
+  return fetch(url, requestOptions);
+};
+
+/**
+ * Create a new customer in Paystack or get existing customer
+ */
+export const createOrGetCustomer = async (user: Customer): Promise<PaystackCreateCustomerResponse['data']> => {
+  try {
+    // First check if customer exists
+    const checkCustomerResponse = await createPaystackRequest(`customer/${user.email}`);
+    const checkCustomerData = await checkCustomerResponse.json();
+    
+    if (checkCustomerResponse.ok && checkCustomerData.status) {
+      console.log('Existing Paystack customer found:', checkCustomerData.data.customer_code);
+      return checkCustomerData.data;
+    }
+    
+    // Create new customer if doesn't exist
+    const createCustomerResponse = await createPaystackRequest('customer', 'POST', {
+      email: user.email,
+      first_name: user.firstName,
+      last_name: user.lastName,
+      phone: user.phoneNumber,
+      metadata: {
+        user_id: user.id
+      }
+    });
+    
+    const createCustomerData = await createCustomerResponse.json() as PaystackCreateCustomerResponse;
+    
+    if (!createCustomerResponse.ok || !createCustomerData.status) {
+      throw new Error(`Failed to create customer: ${createCustomerData.message}`);
+    }
+    
+    console.log('New Paystack customer created:', createCustomerData.data.customer_code);
+    return createCustomerData.data;
+    
+  } catch (error) {
+    console.error('Error creating/getting Paystack customer:', error);
+    throw error;
+  }
+};
 
 /**
  * Initialize a payment transaction
- * @param amount Amount in the smallest currency unit (e.g., kobo for NGN)
- * @param email Customer email
- * @param reference Optional reference
- * @param metadata Optional metadata
- * @returns Initialized transaction data
  */
-export async function initializeTransaction(
-  amount: number,
-  email: string,
-  reference?: string,
-  metadata?: any
-) {
+export const initializeTransaction = async (
+  amount: number, 
+  email: string, 
+  reference: string, 
+  metadata: any = {}
+): Promise<PaystackTransactionResponse['data']> => {
   try {
-    const transaction = await paystack.transaction.initialize({
+    const response = await createPaystackRequest('transaction/initialize', 'POST', {
       amount,
       email,
       reference,
-      metadata,
-      callback_url: `/payment/callback`,
+      callback_url: `${process.env.APP_URL || 'https://opian.replit.app'}/api/payment/callback`,
+      metadata
     });
     
-    return transaction.data;
+    const responseData = await response.json() as PaystackTransactionResponse;
+    
+    if (!response.ok || !responseData.status) {
+      throw new Error(`Failed to initialize transaction: ${responseData.message}`);
+    }
+    
+    return responseData.data;
+    
   } catch (error) {
     console.error('Error initializing Paystack transaction:', error);
-    throw new Error('Failed to initialize payment');
+    throw error;
   }
-}
+};
 
 /**
- * Verify a transaction using its reference
- * @param reference Transaction reference to verify
- * @returns Verified transaction data
+ * Verify a transaction
  */
-export async function verifyTransaction(reference: string) {
+export const verifyTransaction = async (reference: string): Promise<PaystackVerificationResponse['data']> => {
   try {
-    const verification = await paystack.transaction.verify({ reference });
-    return verification.data;
+    const response = await createPaystackRequest(`transaction/verify/${reference}`);
+    const responseData = await response.json() as PaystackVerificationResponse;
+    
+    if (!response.ok) {
+      throw new Error(`Failed to verify transaction: ${responseData.message}`);
+    }
+    
+    return responseData.data;
+    
   } catch (error) {
     console.error('Error verifying Paystack transaction:', error);
-    throw new Error('Failed to verify transaction');
+    throw error;
   }
-}
+};
 
 /**
- * List a customer's transactions
- * @param customerEmail Email of the customer
- * @returns List of transactions
+ * List transactions for a customer
  */
-export async function listCustomerTransactions(customerEmail: string) {
+export const listCustomerTransactions = async (customerEmail: string) => {
   try {
-    const transactions = await paystack.transaction.list({
-      customer: customerEmail,
-      perPage: 20,
-    });
-    return transactions.data;
+    const response = await createPaystackRequest(`transaction?customer=${encodeURIComponent(customerEmail)}`);
+    const responseData = await response.json();
+    
+    if (!response.ok || !responseData.status) {
+      throw new Error(`Failed to list customer transactions: ${responseData.message}`);
+    }
+    
+    return responseData.data;
+    
   } catch (error) {
     console.error('Error listing customer transactions:', error);
-    throw new Error('Failed to list customer transactions');
+    throw error;
   }
-}
+};
 
 /**
- * Create a payment plan for subscription
- * @param name Plan name
- * @param amount Amount in smallest currency unit
- * @param interval Billing interval ('hourly', 'daily', 'weekly', 'monthly', 'annually')
- * @returns Created plan data
+ * Generate a unique reference for transactions
  */
-export async function createPlan(name: string, amount: number, interval: string) {
-  try {
-    const plan = await paystack.plan.create({
-      name,
-      amount,
-      interval,
-    });
-    return plan.data;
-  } catch (error) {
-    console.error('Error creating Paystack plan:', error);
-    throw new Error('Failed to create payment plan');
-  }
-}
-
-/**
- * Create a subscription for a customer to a plan
- * @param customerEmail Email of the customer
- * @param planCode Code of the plan
- * @returns Created subscription data
- */
-export async function createSubscription(customerEmail: string, planCode: string) {
-  try {
-    const subscription = await paystack.subscription.create({
-      customer: customerEmail,
-      plan: planCode,
-    });
-    return subscription.data;
-  } catch (error) {
-    console.error('Error creating Paystack subscription:', error);
-    throw new Error('Failed to create subscription');
-  }
-}
-
-/**
- * Charge a card token or authorization code
- * @param email Customer's email
- * @param amount Amount in smallest currency unit
- * @param authorizationCode Authorization code from previous transaction
- * @returns Charge data
- */
-export async function chargeAuthorization(
-  email: string,
-  amount: number,
-  authorizationCode: string
-) {
-  try {
-    const charge = await paystack.transaction.charge({
-      email,
-      amount,
-      authorization_code: authorizationCode,
-    });
-    return charge.data;
-  } catch (error) {
-    console.error('Error charging authorization:', error);
-    throw new Error('Failed to charge card');
-  }
-}
-
-/**
- * Generate a unique payment reference
- * @param prefix Optional prefix for the reference
- * @returns Unique reference string
- */
-export function generateReference(prefix = 'OPIAN') {
+export const generateReference = (): string => {
   const timestamp = Date.now().toString();
   const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-  return `${prefix}_${timestamp}_${random}`;
-}
+  return `opian_${timestamp}_${random}`;
+};

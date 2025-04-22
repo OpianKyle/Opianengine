@@ -34,7 +34,9 @@ const TRANSACTION_TYPES = [
   "WELCOME_BONUS",
   "REFERRAL_BONUS",
   "QUOTE_REQUEST",
-  "AGENT_COMMISSION"
+  "AGENT_COMMISSION",
+  "FUNDING",
+  "FUNDING_FAILED"
 ] as const;
 
 const TRANSACTION_STATUS = ["PENDING", "PROCESSED"] as const;
@@ -123,6 +125,8 @@ export const users = mysqlTable("users", {
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
   isEnabled: boolean("is_enabled").default(true).notNull(),
   points: int("points").default(2500).notNull(),
+  walletBalance: int("wallet_balance").default(0).notNull(),
+  lastFundingDate: timestamp("last_funding_date"),
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),
   agentId: int("agent_id").references(() => users.id),
@@ -160,6 +164,9 @@ export const transactions = mysqlTable("transactions", {
   status: mysqlEnum("status", TRANSACTION_STATUS).default("PENDING"),
   processedAt: timestamp("processed_at"),
   processedBy: int("processed_by").references(() => users.id),
+  paymentMethod: text("payment_method"),
+  paymentReference: text("payment_reference"),
+  metadata: text("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
