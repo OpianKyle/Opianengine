@@ -23,7 +23,7 @@ const router = express.Router();
 // Initialize a payment transaction
 router.post('/initialize', async (req, res) => {
   try {
-    const { amount, purpose, metadata } = req.body;
+    const { amount, purpose, metadata, planCode } = req.body;
     const user = req.user as User | undefined;
 
     if (!user) {
@@ -49,6 +49,14 @@ router.post('/initialize', async (req, res) => {
     // Create a reference code for this transaction
     const reference = generateReference();
     
+    console.log('Initializing Paystack transaction for:', {
+      user: user.email,
+      amount: amountInCents,
+      reference,
+      planCode,
+      metadata
+    });
+    
     // Initialize the transaction
     const transaction = await initializeTransaction(
       amountInCents,
@@ -57,9 +65,13 @@ router.post('/initialize', async (req, res) => {
       {
         user_id: user.id,
         purpose: purpose || 'Account funding',
+        plan_code: planCode || undefined,
+        subscription: planCode ? true : false,
         ...metadata
       }
     );
+    
+    console.log('Transaction initialized successfully:', transaction);
     
     return res.json({
       success: true,
@@ -74,7 +86,7 @@ router.post('/initialize', async (req, res) => {
     console.error('Payment initialization error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to initialize payment'
+      message: error instanceof Error ? error.message : 'Failed to initialize payment'
     });
   }
 });
@@ -114,15 +126,21 @@ router.get('/transactions', async (req, res) => {
 // Callback URL for Paystack - handle both POST and GET requests
 router.post('/callback', async (req, res) => {
   // This is a redirect URL after payment
-  const reference = req.body.reference || req.query.reference;
-  return res.redirect(`/profile/subscription?reference=${reference}&status=success`);
+  const reference = req.body.reference || req.query.reference || req.body.trxref || req.query.trxref;
+  console.log('Payment callback received (POST):', { reference, body: req.body, query: req.query });
+  
+  // Simply pass along the reference - the frontend will verify it
+  return res.redirect(`/profile/subscription?reference=${reference}`);
 });
 
 // GET version for the callback URL (Paystack might redirect with GET)
 router.get('/callback', async (req, res) => {
   // Extract reference from query params
   const reference = req.query.reference || req.query.trxref;
-  return res.redirect(`/profile/subscription?reference=${reference}&status=success`);
+  console.log('Payment callback received (GET):', { reference, query: req.query });
+  
+  // Simply pass along the reference - the frontend will verify it
+  return res.redirect(`/profile/subscription?reference=${reference}`);
 });
 
 // Verify a payment transaction

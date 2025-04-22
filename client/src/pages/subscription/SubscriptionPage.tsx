@@ -52,15 +52,19 @@ const SubscriptionPage = () => {
   // Check for payment reference from Paystack redirect
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const reference = urlParams.get('reference');
-    const status = urlParams.get('status');
+    // Check for both reference and trxref (Paystack might use either)
+    const reference = urlParams.get('reference') || urlParams.get('trxref');
     
-    if (reference && status === 'success') {
+    if (reference) {
+      console.log('Payment reference detected in URL:', reference);
+      
       // Verify the payment
       const verifyPayment = async () => {
         try {
+          console.log('Verifying payment with reference:', reference);
           const response = await apiRequest('GET', `/api/payment/verify/${reference}`);
           const data = await response.json();
+          console.log('Payment verification response:', data);
           
           if (data.success) {
             toast({
@@ -71,7 +75,7 @@ const SubscriptionPage = () => {
           } else {
             toast({
               title: "Payment Verification Failed",
-              description: "There was an issue verifying your payment. Please contact support.",
+              description: data.message || "There was an issue verifying your payment. Please contact support.",
               variant: "destructive",
             });
           }

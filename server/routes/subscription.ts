@@ -183,30 +183,18 @@ router.post("/api/subscription", async (req, res) => {
       // Get the inserted subscription ID
       const subscriptionId = result.insertId;
 
-      // Initialize Paystack payment
-      const paymentData = {
-        amount: subscriptionData.amount,
-        purpose: `${packageType} Package Subscription`,
-        plan_code: PAYSTACK_PLAN_CODES[packageType],
-        metadata: {
-          subscription_id: subscriptionId,
-          package_type: packageType,
-          type: 'SUBSCRIPTION',
-          plan_code: PAYSTACK_PLAN_CODES[packageType]
-        }
-      };
-
-      // Get base URL for the current server
-      const protocol = req.protocol;
-      const host = req.get('host') || 'localhost:5000';
-      const baseUrl = `${protocol}://${host}`;
-      
       // Import payment initialization function directly
-      const { initializeTransaction } = await import('../utils/paystack');
+      const { initializeTransaction, generateReference } = await import('../utils/paystack');
       
       // Generate a unique reference for this transaction
-      const { generateReference } = await import('../utils/paystack');
       const reference = generateReference();
+      
+      console.log('Creating subscription payment for:', {
+        user: user.email,
+        packageType,
+        subscriptionId,
+        planCode: PAYSTACK_PLAN_CODES[packageType]
+      });
       
       // Initialize transaction directly with Paystack
       const transaction = await initializeTransaction(
@@ -217,9 +205,12 @@ router.post("/api/subscription", async (req, res) => {
           subscription_id: subscriptionId,
           package_type: packageType,
           type: 'SUBSCRIPTION',
+          user_id: user.id,
           plan_code: PAYSTACK_PLAN_CODES[packageType]
         }
       );
+      
+      console.log('Subscription payment initialized:', transaction);
       
       // Store payment reference
       await connection.query(
