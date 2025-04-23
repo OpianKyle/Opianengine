@@ -196,6 +196,36 @@ const SubscriptionPage = () => {
       console.error('Error reactivating subscription:', error);
     }
   });
+  
+  // Sync subscription with Paystack mutation
+  const syncSubscriptionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('GET', `/api/subscription/sync`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: "Subscription synchronized",
+          description: data.message || "Your subscription has been synchronized with Paystack.",
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
+      } else {
+        toast({
+          title: "Synchronization notice",
+          description: data.message || "No changes were needed for your subscription.",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to synchronize subscription with Paystack. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Error synchronizing subscription:', error);
+    }
+  });
 
   // New subscription mutation
   const newSubscriptionMutation = useMutation({
@@ -329,7 +359,22 @@ const SubscriptionPage = () => {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex flex-col gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => syncSubscriptionMutation.mutate()}
+                    disabled={syncSubscriptionMutation.isPending}
+                  >
+                    {syncSubscriptionMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Syncing...
+                      </>
+                    ) : (
+                      'Sync with Paystack'
+                    )}
+                  </Button>
                   <Button 
                     variant="outline" 
                     className="w-full"
