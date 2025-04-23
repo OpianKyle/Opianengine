@@ -32,6 +32,7 @@ const packageColors: Record<string, string> = {
   'PROSPER': 'bg-green-100 text-green-800 border-green-200',
   'PRESTIGE': 'bg-purple-100 text-purple-800 border-purple-200',
   'PINNACLE': 'bg-amber-100 text-amber-800 border-amber-200',
+  'TEST': 'bg-indigo-100 text-indigo-800 border-indigo-200',
 };
 
 const statusColors: Record<string, string> = {
@@ -448,6 +449,13 @@ const SubscriptionPage = () => {
                   <li>All Prestige features</li>
                   <li>Highest earning potential</li>
                   <li>Exclusive VIP events</li>
+                </ul>
+              )}
+              {packageType === 'TEST' && (
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Test package for development</li>
+                  <li>All premium features available</li>
+                  <li>Minimal cost for testing</li>
                 </ul>
               )}
             </CardContent>

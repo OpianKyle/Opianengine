@@ -13,7 +13,8 @@ const PACKAGE_PRICES = {
   MOMENTUM: 450,
   PROSPER: 550,
   PRESTIGE: 695,
-  PINNACLE: 825
+  PINNACLE: 825,
+  TEST: 10  // Test package with minimal price for testing
 };
 
 // Paystack plan codes for each package type
@@ -22,7 +23,8 @@ const PAYSTACK_PLAN_CODES = {
   MOMENTUM: 'PLN_ronq4bf0oiodxuq',
   PROSPER: 'PLN_o7wt6oekkdhx6nz',
   PRESTIGE: 'PLN_1nt0ne30xcgw4h6',
-  PINNACLE: 'PLN_46rhhthybf7wlzv'
+  PINNACLE: 'PLN_46rhhthybf7wlzv',
+  TEST: 'PLN_edod11i4kaynjit'  // Test plan code
 };
 
 // Get subscription information for the current user
@@ -112,6 +114,16 @@ router.get("/api/subscription", async (req, res) => {
             'Custom solutions'
           ],
           color: 'bg-amber-400'
+        },
+        TEST: {
+          name: 'TEST',
+          price: PACKAGE_PRICES.TEST,
+          features: [
+            'Test package with minimal features',
+            'For development testing only',
+            'All premium features available'
+          ],
+          color: 'bg-indigo-400'
         }
       };
 
