@@ -17,6 +17,7 @@ import {
   verifyTransaction,  
   generateReference 
 } from '../utils/paystack';
+import { checkAdmin, getUserFromTokenOrSession } from '../auth';
 
 const router = express.Router();
 
@@ -525,13 +526,10 @@ router.get('/verify/:reference', async (req, res) => {
 });
 
 // Special route to manually fix any pending subscriptions
-router.post('/fix-pending', async (req, res) => {
+router.post('/fix-pending', checkAdmin, async (req, res) => {
   try {
-    // Both admins and super admins can use this route
-    const user = req.user as User | undefined;
-    if (!user || !(user.is_admin || user.is_super_admin)) {
-      return res.status(403).json({ success: false, message: 'Unauthorized - Admin permissions required' });
-    }
+    // Auth middleware already verified admin status
+    const user = req.user as User;
 
     const connection = await pool.getConnection();
     try {
