@@ -164,10 +164,10 @@ const SubscriptionPage = () => {
       const response = await apiRequest('DELETE', `/api/subscription/${subscriptionId}`);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Subscription cancelled",
-        description: "Your subscription has been cancelled successfully.",
+        description: data.message || "Your subscription has been cancelled successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
       setIsConfirmDialogOpen(false);
@@ -502,7 +502,7 @@ const SubscriptionPage = () => {
                       'Sync with Paystack'
                     )}
                   </Button>
-                  {user?.isAdmin && (
+                  {user?.is_admin && (
                     <Button 
                       variant="outline" 
                       className="w-full"
