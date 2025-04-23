@@ -30,7 +30,6 @@ import AdminAgents from "@/pages/admin/agents";
 import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
 import Migrations from "@/pages/admin/migrations"; // Added import for Migrations
 import FixPendingPage from "@/pages/admin/FixPendingPage"; // Import the subscription fix page
-import SubscriptionsPage from "@/pages/admin/subscriptions"; // Import the subscription management page
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -110,9 +109,6 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   return <Component {...rest} />;
 }
 
-// Import our test login page
-import LoginTest from "@/pages/login-test";
-
 function Router() {
   return (
     <Switch>
@@ -122,9 +118,6 @@ function Router() {
       </Route>
       <Route path="/login">
         <LoginPage />
-      </Route>
-      <Route path="/login-test">
-        <LoginTest />
       </Route>
       <Route path="/register">
         <Register />
@@ -198,11 +191,6 @@ function Router() {
       <Route path="/admin/fix-pending">
         <AdminLayout>
           <ProtectedRoute component={FixPendingPage} admin />
-        </AdminLayout>
-      </Route>
-      <Route path="/admin/subscriptions">
-        <AdminLayout>
-          <ProtectedRoute component={SubscriptionsPage} admin />
         </AdminLayout>
       </Route>
 
