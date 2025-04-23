@@ -23,7 +23,7 @@ const PAYSTACK_PLAN_CODES = {
   MOMENTUM: 'PLN_ronq4bf0oiodxuq',
   PROSPER: 'PLN_o7wt6oekkdhx6nz',
   PRESTIGE: 'PLN_1nt0ne30xcgw4h6',
-  PINNACLE: 'PLN_46rhhthybf7wlzv',
+  PINNACLE: 'PLN_ksp8kcv39wx6gsq', // Updated plan code for PINNACLE
   TEST: 'PLN_edod11i4kaynjit'  // Test plan code
 };
 
