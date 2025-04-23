@@ -47,6 +47,34 @@ router.get("/api/subscription", async (req, res) => {
       const userSubscription = Array.isArray(userSubscriptionResult) && userSubscriptionResult.length > 0 
         ? userSubscriptionResult[0] 
         : null;
+        
+      // If this is an active subscription with missing payment dates, update them
+      if (userSubscription && userSubscription.status === 'ACTIVE') {
+        // Check if dates are missing
+        if (!userSubscription.last_payment_date && !userSubscription.next_payment_date) {
+          console.log('Fixing missing payment dates for active subscription:', userSubscription.id);
+          
+          const now = new Date();
+          const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+          
+          // Update the subscription with dates
+          await connection.query(
+            `UPDATE subscriptions SET 
+             last_payment_date = ?, 
+             next_payment_date = ?,
+             updated_at = ?
+             WHERE id = ?`,
+            [now, nextMonth, now, userSubscription.id]
+          );
+          
+          // Update the local subscription object as well
+          userSubscription.last_payment_date = now;
+          userSubscription.next_payment_date = nextMonth;
+          userSubscription.updated_at = now;
+          
+          console.log('Payment dates updated for subscription:', userSubscription.id);
+        }
+      }
 
       // Get package information
       const packageInfo = {
