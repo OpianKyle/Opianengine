@@ -163,22 +163,29 @@ router.post("/api/subscription", async (req, res) => {
     const connection = await pool.getConnection();
     try {
       // Create new subscription with PENDING status
+      const currentDate = new Date();
+      const nextMonthDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+      
       const subscriptionData = {
         user_id: user.id,
         package_type: packageType,
         status: 'PENDING', // Start with PENDING status until payment is confirmed
         amount: PACKAGE_PRICES[packageType],
-        start_date: new Date(),
-        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        start_date: currentDate,
+        end_date: nextMonthDate, // 30 days from now
         payment_method: 'PAYSTACK',
-        created_at: new Date(),
-        updated_at: new Date()
+        // Include the new payment date fields
+        last_payment_date: null, // Will be set after payment verification
+        next_payment_date: nextMonthDate,
+        created_at: currentDate,
+        updated_at: currentDate
       };
 
       const [result] = await connection.query(
         `INSERT INTO subscriptions 
-        (user_id, package_type, status, amount, start_date, end_date, payment_method, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (user_id, package_type, status, amount, start_date, end_date, payment_method, 
+         last_payment_date, next_payment_date, created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           subscriptionData.user_id,
           subscriptionData.package_type,
@@ -187,6 +194,8 @@ router.post("/api/subscription", async (req, res) => {
           subscriptionData.start_date,
           subscriptionData.end_date,
           subscriptionData.payment_method,
+          subscriptionData.last_payment_date,
+          subscriptionData.next_payment_date,
           subscriptionData.created_at,
           subscriptionData.updated_at
         ]
