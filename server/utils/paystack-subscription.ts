@@ -197,7 +197,25 @@ export const updateSubscriptionStatus = async (
  * Cancel a subscription
  */
 export const cancelSubscription = async (subscriptionCode: string): Promise<boolean> => {
-  return await updateSubscriptionStatus(subscriptionCode, 'disable');
+  try {
+    // Make direct request to Paystack for cancellation
+    const response = await createPaystackRequest('subscription/disable', 'POST', {
+      code: subscriptionCode,
+      token: 'cancel'  // This is the required token for cancellation
+    });
+    
+    const responseData = await response.json();
+    
+    if (!response.ok || !responseData.status) {
+      throw new Error(`Failed to cancel subscription: ${responseData.message}`);
+    }
+    
+    console.log('Successfully cancelled Paystack subscription:', subscriptionCode);
+    return true;
+  } catch (error) {
+    console.error('Error cancelling Paystack subscription:', error);
+    throw error;
+  }
 };
 
 /**

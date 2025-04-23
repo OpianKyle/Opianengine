@@ -854,47 +854,105 @@ router.delete("/api/subscription/:id", async (req, res) => {
       }
       
       const subscription = subscriptionArray[0];
+      let paystackCancellationSuccessful = false;
       
       // Check if subscription has Paystack codes
       if (subscription.paystack_subscription_code) {
         try {
-          // Import Paystack API
-          const { default: axios } = await import('axios');
-          const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+          // Try to cancel via our paystack utility function
+          const { cancelSubscription } = await import('../utils/paystack-subscription');
+          console.log(`Attempting to cancel Paystack subscription: ${subscription.paystack_subscription_code}`);
           
-          if (!PAYSTACK_SECRET_KEY) {
-            console.error('Missing Paystack secret key for subscription cancellation');
-            // Continue with local cancellation even if Paystack key is missing
-          } else {
-            console.log(`Attempting to cancel Paystack subscription: ${subscription.paystack_subscription_code}`);
-            
-            // Send cancellation request to Paystack
-            const cancelResponse = await axios.post(
-              `https://api.paystack.co/subscription/disable`,
-              {
-                code: subscription.paystack_subscription_code,
-                token: 'cancel' // This is required by Paystack's API
-              },
-              {
-                headers: {
-                  'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
-                  'Content-Type': 'application/json'
-                }
-              }
-            );
-            
-            if (cancelResponse.data?.status) {
-              console.log(`Successfully cancelled Paystack subscription: ${subscription.paystack_subscription_code}`);
-            } else {
-              console.log('Paystack API responded without success status:', cancelResponse.data);
-            }
-          }
+          paystackCancellationSuccessful = await cancelSubscription(subscription.paystack_subscription_code);
+          console.log(`Successfully cancelled Paystack subscription: ${subscription.paystack_subscription_code}`);
         } catch (paystackError) {
           console.error('Error cancelling subscription in Paystack:', paystackError);
-          // Continue with local cancellation even if Paystack API fails
+          
+          // If the subscription doesn't exist in Paystack, we'll still mark it as cancelled locally
+          if (paystackError.message && paystackError.message.includes('not found')) {
+            console.log('Subscription not found in Paystack, continuing with local cancellation');
+          } else {
+            // For all other errors, try a direct API call as backup
+            try {
+              // Import Paystack API for direct access
+              const { default: axios } = await import('axios');
+              const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+              
+              if (!PAYSTACK_SECRET_KEY) {
+                console.error('Missing Paystack secret key for subscription cancellation');
+              } else {
+                console.log(`Attempting direct API call to cancel Paystack subscription: ${subscription.paystack_subscription_code}`);
+                
+                // Send cancellation request to Paystack
+                const cancelResponse = await axios.post(
+                  `https://api.paystack.co/subscription/disable`,
+                  {
+                    code: subscription.paystack_subscription_code,
+                    token: 'cancel' // This is required by Paystack's API
+                  },
+                  {
+                    headers: {
+                      'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
+                      'Content-Type': 'application/json'
+                    }
+                  }
+                );
+                
+                if (cancelResponse.data?.status) {
+                  console.log(`Successfully cancelled Paystack subscription via direct API: ${subscription.paystack_subscription_code}`);
+                  paystackCancellationSuccessful = true;
+                } else {
+                  console.log('Paystack API responded without success status:', cancelResponse.data);
+                }
+              }
+            } catch (directApiError) {
+              console.error('Error in direct Paystack API call:', directApiError);
+            }
+          }
+        }
+      } else if (subscription.paystack_customer_code) {
+        // Try to find and cancel subscription by customer code
+        try {
+          const { listCustomerSubscriptions, cancelSubscription } = await import('../utils/paystack-subscription');
+          
+          // Get user details to find their email
+          const [userResult] = await connection.query(
+            `SELECT email FROM users WHERE id = ?`,
+            [user.id]
+          );
+          
+          if (Array.isArray(userResult) && userResult.length > 0) {
+            const userEmail = userResult[0].email;
+            console.log(`Looking for subscriptions for customer ${userEmail}`);
+            
+            // List all subscriptions for this customer
+            const customerSubscriptions = await listCustomerSubscriptions(userEmail);
+            console.log(`Found ${customerSubscriptions.length} subscriptions for customer ${userEmail}`);
+            
+            // Cancel any active subscriptions
+            for (const sub of customerSubscriptions) {
+              if (sub.status === 'active') {
+                try {
+                  await cancelSubscription(sub.subscription_code);
+                  console.log(`Cancelled Paystack subscription: ${sub.subscription_code}`);
+                  paystackCancellationSuccessful = true;
+                  
+                  // Update our database with this subscription code for future reference
+                  await connection.query(
+                    `UPDATE subscriptions SET paystack_subscription_code = ? WHERE id = ?`,
+                    [sub.subscription_code, subscriptionId]
+                  );
+                } catch (subCancelError) {
+                  console.error(`Error cancelling subscription ${sub.subscription_code}:`, subCancelError);
+                }
+              }
+            }
+          }
+        } catch (listError) {
+          console.error('Error finding customer subscriptions:', listError);
         }
       } else {
-        console.log('No Paystack subscription code found, only cancelling locally');
+        console.log('No Paystack subscription or customer code found, only cancelling locally');
       }
 
       // Cancel subscription in local database
@@ -903,10 +961,21 @@ router.delete("/api/subscription/:id", async (req, res) => {
         [new Date(), new Date(), subscriptionId]
       );
 
+      // Create a descriptive message for the user
+      let message = "Subscription cancelled successfully in OPIAN";
+      if (subscription.paystack_subscription_code || subscription.paystack_customer_code) {
+        if (paystackCancellationSuccessful) {
+          message += " and Paystack";
+        } else {
+          message += ". However, there was an issue cancelling the subscription in Paystack. " +
+                    "Please check your Paystack account to ensure the subscription is fully cancelled.";
+        }
+      }
+
       return res.json({
         success: true,
-        message: "Subscription cancelled successfully in OPIAN" + 
-                 (subscription.paystack_subscription_code ? " and Paystack" : "")
+        message: message,
+        paystackCancellationSuccessful
       });
     } finally {
       connection.release();
