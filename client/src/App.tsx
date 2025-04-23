@@ -30,6 +30,7 @@ import AdminAgents from "@/pages/admin/agents";
 import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
 import Migrations from "@/pages/admin/migrations"; // Added import for Migrations
 import FixPendingPage from "@/pages/admin/FixPendingPage"; // Import the subscription fix page
+import SubscriptionsPage from "@/pages/admin/subscriptions"; // Import the subscription management page
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -191,6 +192,11 @@ function Router() {
       <Route path="/admin/fix-pending">
         <AdminLayout>
           <ProtectedRoute component={FixPendingPage} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/subscriptions">
+        <AdminLayout>
+          <ProtectedRoute component={SubscriptionsPage} admin />
         </AdminLayout>
       </Route>
 

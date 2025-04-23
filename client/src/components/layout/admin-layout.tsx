@@ -18,6 +18,7 @@ import {
   UserCheck,
   Mail,
   RefreshCw,
+  CreditCard,
 } from "lucide-react";
 import { prefetchAdminData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -33,7 +34,7 @@ const getSectionFromHref = (href: string): 'dashboard' | 'users' | 'agents' | 'p
   if (href === '/admin/rewards') return 'rewards';
   if (href === '/admin/cash-redemptions') return 'redemptions';
   if (href === '/admin/logs' || href === '/admin/email-logs') return 'logs';
-  if (href === '/admin/fix-pending') return 'subscriptions';
+  if (href === '/admin/fix-pending' || href === '/admin/subscriptions') return 'subscriptions';
   return 'all';
 };
 
@@ -74,6 +75,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "Customers", href: "/admin/customers", icon: <Users className="h-4 w-4 mr-2" /> },
     { label: "Products", href: "/admin/products", icon: <Package className="h-4 w-4 mr-2" /> },
     { label: "Quote Requests", href: "/admin/quote-requests", icon: <FileText className="h-4 w-4 mr-2" /> },
+    { label: "Subscriptions", href: "/admin/subscriptions", icon: <CreditCard className="h-4 w-4 mr-2" /> },
     { label: "Rewards", href: "/admin/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Cash Redemptions", href: "/admin/cash-redemptions", icon: <DollarSign className="h-4 w-4 mr-2" /> },
     { label: "Fix Subscriptions", href: "/admin/fix-pending", icon: <RefreshCw className="h-4 w-4 mr-2" /> },

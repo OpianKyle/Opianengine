@@ -42,6 +42,7 @@ import { db } from "@db";
 import mysql from 'mysql2/promise';
 import agentRouter from './routes/agent';
 import adminRouter from './routes/admin';
+import adminSubscriptionRouter from './routes/admin-subscription';
 import migrationRouter from './routes/migration';
 import subscriptionRouter from './routes/subscription';
 import paymentRouter from './routes/payment';
@@ -186,6 +187,7 @@ app.use((req: any, res, next) => {
     // Register routes
     app.use('/api/agent', agentRouter);
     app.use('/api/admin', adminRouter);
+    app.use(adminSubscriptionRouter);
     app.use('/api/migration', migrationRouter);
     app.use(subscriptionRouter);
     app.use('/api/payment', paymentRouter);
