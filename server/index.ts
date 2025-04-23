@@ -122,6 +122,32 @@ app.use((req: any, res, next) => {
   try {
     console.log('Starting server initialization...');
     
+    // Detect current domain for Replit environment
+    // This is used for callback URLs in Paystack and other external services
+    if (!process.env.CURRENT_DOMAIN) {
+      let currentDomain = '';
+      
+      // First check for REPLIT_DOMAINS (most reliable)
+      if (process.env.REPLIT_DOMAINS) {
+        currentDomain = `https://${process.env.REPLIT_DOMAINS}`;
+        console.log(`Using REPLIT_DOMAINS for callback URL: ${currentDomain}`);
+      }
+      // Then check for REPLIT_DEV_DOMAIN (fallback)
+      else if (process.env.REPLIT_DEV_DOMAIN) {
+        currentDomain = `https://${process.env.REPLIT_DEV_DOMAIN}`;
+        console.log(`Using REPLIT_DEV_DOMAIN for callback URL: ${currentDomain}`);
+      } 
+      // Default to production domain
+      else {
+        currentDomain = 'https://opian.replit.app';
+        console.log(`No Replit domain found, using production URL: ${currentDomain}`);
+      }
+      
+      // Set it as an environment variable for use throughout the application
+      process.env.CURRENT_DOMAIN = currentDomain;
+      console.log(`Set current domain: ${currentDomain}`);
+    }
+    
     // Start the server early to meet the port opening deadline
     // Use port 5000 for Replit workflow compatibility, regardless of environment variable
     const SERVER_PORT = 5000;

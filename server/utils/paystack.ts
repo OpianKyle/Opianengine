@@ -236,8 +236,18 @@ export const initializeTransaction = async (
   try {
     console.log('Setting up Paystack callback URL...');
     
-    // Use the most reliable URL format to ensure callback works
-    const baseUrl = process.env.APP_URL || 'https://opian.replit.app';
+    // Dynamically determine current domain from request headers if available
+    let baseUrl: string;
+    
+    // Check if we're running in development mode (Replit with random subdomain)
+    if (process.env.NODE_ENV === 'development' || process.env.REPLIT_SLUG) {
+      // Use dynamic detection, REPLIT_SLUG may contain domain information
+      baseUrl = process.env.CURRENT_DOMAIN || 'https://janeway.replit.dev';
+    } else {
+      // Use specified production URL
+      baseUrl = process.env.APP_URL || 'https://opian.replit.app';
+    }
+    
     const callbackUrl = `${baseUrl}/api/payment/callback`;
     
     console.log('Using callback URL:', callbackUrl);
