@@ -46,6 +46,7 @@ import adminSubscriptionRouter from './routes/admin-subscription';
 import migrationRouter from './routes/migration';
 import subscriptionRouter from './routes/subscription';
 import paymentRouter from './routes/payment';
+import { setupTestAuth } from './routes/test-auth';
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
@@ -182,6 +183,14 @@ app.use((req: any, res, next) => {
     // Setup authentication
     console.log('Setting up authentication...');
     setupAuth(app);
+    
+    // Setup test authentication endpoint for development only
+    if (process.env.NODE_ENV !== "production") {
+      console.log('Setting up test authentication endpoint...');
+      setupTestAuth(app);
+      console.log('Test authentication endpoint setup complete');
+    }
+    
     console.log('Authentication setup complete');
 
     // Register routes

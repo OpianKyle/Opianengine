@@ -110,6 +110,9 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   return <Component {...rest} />;
 }
 
+// Import our test login page
+import LoginTest from "@/pages/login-test";
+
 function Router() {
   return (
     <Switch>
@@ -119,6 +122,9 @@ function Router() {
       </Route>
       <Route path="/login">
         <LoginPage />
+      </Route>
+      <Route path="/login-test">
+        <LoginTest />
       </Route>
       <Route path="/register">
         <Register />
