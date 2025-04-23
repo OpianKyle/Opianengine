@@ -580,32 +580,52 @@ router.post('/webhook', async (req, res) => {
 
 async function handleSuccessfulCharge(data) {
   try {
-    const { reference, metadata } = data;
-    console.log('Processing successful charge webhook:', { reference, metadata });
+    const { reference, metadata, customer, authorization } = data;
+    console.log('Processing successful charge webhook:', { 
+      reference, 
+      metadata,
+      customerCode: customer?.customer_code,
+      customerEmail: customer?.email,
+      authorization: authorization?.authorization_code
+    });
     
     // If this is a subscription-related payment
     if (metadata && metadata.type === 'SUBSCRIPTION' && metadata.subscription_id) {
       const connection = await pool.getConnection();
       try {
-        // Update the subscription status
+        // Get the paystack subscription details for this customer
+        const paystackSubscriptionCode = metadata.paystack_subscription_code || null;
+        const paystackCustomerCode = customer?.customer_code || null;
+        
+        console.log(`Updating subscription with Paystack details:`, {
+          subscriptionId: metadata.subscription_id,
+          paystackSubscriptionCode,
+          paystackCustomerCode
+        });
+        
+        // Update the subscription status and Paystack details
         await connection.query(
           `UPDATE subscriptions SET 
            status = 'ACTIVE', 
            last_payment_date = ?,
            next_payment_date = ?,
            updated_at = ?,
-           payment_reference = ?
+           payment_reference = ?,
+           paystack_subscription_code = ?,
+           paystack_customer_code = ?
            WHERE id = ?`,
           [
             new Date(),
             new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
             new Date(),
             reference,
+            paystackSubscriptionCode,
+            paystackCustomerCode,
             metadata.subscription_id
           ]
         );
         
-        console.log(`Subscription ${metadata.subscription_id} activated from webhook`);
+        console.log(`Subscription ${metadata.subscription_id} activated from webhook with Paystack details`);
       } catch (error) {
         console.error('Error updating subscription from webhook:', error);
       } finally {
@@ -619,8 +639,73 @@ async function handleSuccessfulCharge(data) {
 
 async function handleSubscriptionCreated(data) {
   try {
-    const { subscription_code, customer, plan, status } = data;
-    console.log('Subscription created webhook:', { subscription_code, customer, plan, status });
+    const { subscription_code, customer, plan, status, email_token } = data;
+    console.log('Subscription created webhook:', { 
+      subscription_code, 
+      customerCode: customer?.customer_code,
+      customerEmail: customer?.email,
+      planCode: plan?.plan_code,
+      planName: plan?.name,
+      status, 
+      email_token 
+    });
+    
+    // Find any pending subscriptions that might match this user's email
+    if (customer?.email) {
+      const connection = await pool.getConnection();
+      try {
+        // First, find the user ID by email
+        const [userResults] = await connection.query(
+          'SELECT id FROM users WHERE email = ?',
+          [customer.email]
+        );
+        
+        const users = Array.isArray(userResults) ? userResults : [];
+        
+        if (users.length > 0) {
+          const userId = users[0].id;
+          
+          // Find the most recent pending subscription for this user
+          const [subscriptionResults] = await connection.query(
+            `SELECT id FROM subscriptions 
+             WHERE user_id = ? AND status = 'PENDING'
+             ORDER BY created_at DESC LIMIT 1`,
+            [userId]
+          );
+          
+          const subscriptions = Array.isArray(subscriptionResults) ? subscriptionResults : [];
+          
+          if (subscriptions.length > 0) {
+            const subscriptionId = subscriptions[0].id;
+            
+            // Update the subscription with Paystack details
+            await connection.query(
+              `UPDATE subscriptions SET 
+               paystack_subscription_code = ?,
+               paystack_customer_code = ?,
+               updated_at = ?
+               WHERE id = ?`,
+              [
+                subscription_code,
+                customer.customer_code,
+                new Date(),
+                subscriptionId
+              ]
+            );
+            
+            console.log(`Updated subscription ${subscriptionId} with Paystack details: ${subscription_code}`);
+          } else {
+            console.log(`No pending subscription found for user ${userId}`);
+          }
+        } else {
+          console.log(`No user found with email: ${customer.email}`);
+        }
+      } catch (error) {
+        console.error('Error updating subscription with Paystack details:', error);
+      } finally {
+        connection.release();
+      }
+    }
   } catch (error) {
     console.error('Error handling subscription created webhook:', error);
   }

@@ -317,6 +317,159 @@ router.post("/api/subscription", async (req, res) => {
   }
 });
 
+// Synchronize subscription with Paystack
+router.get("/api/subscription/sync", async (req, res) => {
+  try {
+    const user = await verifySession(req);
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // Only allow admins to access this endpoint
+    if (!user.is_admin) {
+      return res.status(403).json({ error: "Forbidden - Admin access required" });
+    }
+    
+    const connection = await pool.getConnection();
+    try {
+      // Get all active subscriptions that don't have Paystack details
+      const [subscriptionsResult] = await connection.query(
+        `SELECT s.id, s.user_id, s.status, s.amount, s.package_type, s.payment_reference, 
+                u.email, u.first_name, u.last_name 
+         FROM subscriptions s
+         JOIN users u ON s.user_id = u.id
+         WHERE s.status = 'ACTIVE' 
+         AND (s.paystack_subscription_code IS NULL OR s.paystack_customer_code IS NULL)`
+      );
+      
+      const subscriptions = Array.isArray(subscriptionsResult) ? subscriptionsResult : [];
+      const results = {
+        total: subscriptions.length,
+        syncedCount: 0,
+        notFoundCount: 0,
+        errors: 0,
+        details: []
+      };
+      
+      // No subscriptions to synchronize
+      if (subscriptions.length === 0) {
+        return res.json({
+          success: true,
+          message: "No subscriptions need synchronization",
+          results
+        });
+      }
+      
+      // Import Paystack API
+      const { default: axios } = await import('axios');
+      const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+      
+      // Attempt to find and sync each subscription
+      for (const subscription of subscriptions) {
+        try {
+          // Try to find the customer on Paystack by email
+          const customerResponse = await axios.get(
+            `https://api.paystack.co/customer?email=${encodeURIComponent(subscription.email)}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`
+              }
+            }
+          );
+          
+          // Check if customer exists
+          if (customerResponse.data?.status && customerResponse.data?.data?.customer_code) {
+            const customerCode = customerResponse.data.data.customer_code;
+            
+            // Now try to find subscriptions for this customer
+            const subscriptionsResponse = await axios.get(
+              `https://api.paystack.co/subscription?customer=${customerCode}&perPage=5`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`
+                }
+              }
+            );
+            
+            if (subscriptionsResponse.data?.status && 
+                subscriptionsResponse.data?.data?.length > 0) {
+              
+              // Get the most recent subscription (should be at index 0)
+              const paystackSubscription = subscriptionsResponse.data.data[0];
+              const subscriptionCode = paystackSubscription.subscription_code;
+              
+              // Update our database with the Paystack details
+              await connection.query(
+                `UPDATE subscriptions SET
+                 paystack_subscription_code = ?,
+                 paystack_customer_code = ?,
+                 updated_at = ?
+                 WHERE id = ?`,
+                [
+                  subscriptionCode,
+                  customerCode,
+                  new Date(),
+                  subscription.id
+                ]
+              );
+              
+              results.syncedCount++;
+              results.details.push({
+                subscription_id: subscription.id,
+                user_id: subscription.user_id,
+                email: subscription.email,
+                result: 'SYNCED',
+                paystack_subscription_code: subscriptionCode,
+                paystack_customer_code: customerCode
+              });
+              
+              console.log(`Synced subscription ${subscription.id} with Paystack details`);
+            } else {
+              results.notFoundCount++;
+              results.details.push({
+                subscription_id: subscription.id,
+                user_id: subscription.user_id,
+                email: subscription.email,
+                result: 'NO_PAYSTACK_SUBSCRIPTION',
+                paystack_customer_code: customerCode
+              });
+            }
+          } else {
+            results.notFoundCount++;
+            results.details.push({
+              subscription_id: subscription.id,
+              user_id: subscription.user_id,
+              email: subscription.email,
+              result: 'NO_PAYSTACK_CUSTOMER'
+            });
+          }
+        } catch (syncError) {
+          console.error(`Error syncing subscription ${subscription.id}:`, syncError);
+          results.errors++;
+          results.details.push({
+            subscription_id: subscription.id,
+            user_id: subscription.user_id,
+            email: subscription.email,
+            result: 'ERROR',
+            error: syncError.message || 'Unknown error'
+          });
+        }
+      }
+      
+      return res.json({
+        success: true,
+        message: `Synchronized ${results.syncedCount} of ${results.total} subscriptions`,
+        results
+      });
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error("Error syncing subscriptions with Paystack:", error);
+    res.status(500).json({ error: "Failed to synchronize subscriptions" });
+  }
+});
+
 // Cancel subscription
 router.delete("/api/subscription/:id", async (req, res) => {
   try {
