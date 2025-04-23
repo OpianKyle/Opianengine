@@ -223,10 +223,17 @@ router.post('/callback', async (req, res) => {
       }
     }
     
-    // Always redirect to login page after payment with reference (to handle login after payment)
-    const redirectUrl = `/login?paymentComplete=true&reference=${reference}&verified=${verificationResult.success}`;
-    console.log('Redirecting to:', redirectUrl);
-    return res.redirect(redirectUrl);
+    // Check if the user is authenticated and redirect them to subscription page directly
+    if (req.isAuthenticated()) {
+      const redirectUrl = `/subscription?paymentComplete=true&reference=${reference}&verified=${verificationResult.success}`;
+      console.log('User authenticated, redirecting to subscription page:', redirectUrl);
+      return res.redirect(redirectUrl);
+    } else {
+      // Redirect to login page with payment information for unauthenticated users
+      const redirectUrl = `/login?paymentComplete=true&reference=${reference}&verified=${verificationResult.success}`;
+      console.log('User not authenticated, redirecting to login page:', redirectUrl);
+      return res.redirect(redirectUrl);
+    }
   } catch (error) {
     console.error('Error in payment callback (POST):', error);
     return res.redirect('/login?error=payment_failed');
@@ -332,10 +339,17 @@ router.get('/callback', async (req, res) => {
       }
     }
     
-    // Always redirect to login page after payment with reference (to handle login after payment)
-    const redirectUrl = `/login?paymentComplete=true&reference=${reference}&verified=${verificationResult.success}`;
-    console.log('Redirecting to:', redirectUrl);
-    return res.redirect(redirectUrl);
+    // Check if the user is authenticated and redirect them to subscription page directly
+    if (req.isAuthenticated()) {
+      const redirectUrl = `/subscription?paymentComplete=true&reference=${reference}&verified=${verificationResult.success}`;
+      console.log('User authenticated, redirecting to subscription page:', redirectUrl);
+      return res.redirect(redirectUrl);
+    } else {
+      // Redirect to login page with payment information for unauthenticated users
+      const redirectUrl = `/login?paymentComplete=true&reference=${reference}&verified=${verificationResult.success}`;
+      console.log('User not authenticated, redirecting to login page:', redirectUrl);
+      return res.redirect(redirectUrl);
+    }
   } catch (error) {
     console.error('Error in payment callback (GET):', error);
     return res.redirect('/login?error=payment_failed');
