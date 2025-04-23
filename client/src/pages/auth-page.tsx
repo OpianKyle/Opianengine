@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Redirect } from "wouter";
+import { useState, useEffect } from "react";
+import { Redirect, useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,9 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // Form validation schemas
 const loginSchema = z.object({
@@ -38,6 +41,63 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("login");
+  const [location] = useLocation();
+  const { toast } = useToast();
+  const [paymentAlert, setPaymentAlert] = useState<{
+    show: boolean;
+    type: 'success' | 'error';
+    message: string;
+  }>({ show: false, type: 'success', message: '' });
+
+  // Check for payment completion parameters in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentComplete = params.get('paymentComplete');
+    const verified = params.get('verified');
+    const error = params.get('error');
+    const reference = params.get('reference');
+    
+    if (paymentComplete === 'true') {
+      // Payment was completed
+      if (verified === 'true') {
+        setPaymentAlert({
+          show: true,
+          type: 'success',
+          message: 'Your payment was successful! Please log in to access your account.'
+        });
+        
+        toast({
+          title: "Payment Successful",
+          description: "Your subscription has been activated. Please log in to continue.",
+          variant: "default",
+        });
+      } else {
+        setPaymentAlert({
+          show: true,
+          type: 'error',
+          message: 'Your payment needs verification. Please log in to check your subscription status.'
+        });
+      }
+      
+      // Clean URL parameters after processing
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (error === 'payment_failed') {
+      setPaymentAlert({
+        show: true,
+        type: 'error',
+        message: 'There was an issue with your payment. Please try again or contact support.'
+      });
+      
+      toast({
+        title: "Payment Failed",
+        description: "There was an issue processing your payment. Please try again.",
+        variant: "destructive",
+      });
+      
+      // Clean URL parameters after processing
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [location, toast]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -91,6 +151,23 @@ export default function AuthPage() {
       {/* Form Section */}
       <div className="flex-1 flex items-center justify-center p-8">
         <Card className="w-full max-w-md p-6">
+          {paymentAlert.show && (
+            <Alert 
+              className={`mb-4 ${paymentAlert.type === 'success' ? 'bg-green-50' : 'bg-amber-50'}`}
+              variant={paymentAlert.type === 'success' ? 'default' : 'destructive'}
+            >
+              {paymentAlert.type === 'success' ? (
+                <CheckCircle className="h-4 w-4" />
+              ) : (
+                <AlertTriangle className="h-4 w-4" />
+              )}
+              <AlertTitle>
+                {paymentAlert.type === 'success' ? 'Payment Successful' : 'Payment Notification'}
+              </AlertTitle>
+              <AlertDescription>{paymentAlert.message}</AlertDescription>
+            </Alert>
+          )}
+          
           <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-2 mb-6">
               <TabsTrigger value="login">Login</TabsTrigger>
@@ -215,6 +292,7 @@ export default function AuthPage() {
                             <option value="PROSPER">Prosper (R550)</option>
                             <option value="PRESTIGE">Prestige (R695)</option>
                             <option value="PINNACLE">Pinnacle (R825)</option>
+                            <option value="TEST">Test (R10)</option>
                           </select>
                         </FormControl>
                         <FormMessage />

@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,9 +17,14 @@ export default function LoginPage() {
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [paymentAlert, setPaymentAlert] = useState<{
+    show: boolean;
+    type: 'success' | 'error';
+    message: string;
+  }>({ show: false, type: 'success', message: '' });
 
   const { loginMutation, user, isLoading } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -26,6 +32,48 @@ export default function LoginPage() {
       navigate(Boolean(user.is_admin) || Boolean(user.is_super_admin) ? '/admin' : '/dashboard');
     }
   }, [user, navigate]);
+  
+  // Check for payment status in URL parameters
+  useEffect(() => {
+    // Parse the URL search parameters
+    const params = new URLSearchParams(window.location.search);
+    const paymentComplete = params.get('paymentComplete');
+    const verified = params.get('verified');
+    const reference = params.get('reference');
+    
+    if (paymentComplete === 'true') {
+      if (verified === 'true') {
+        setPaymentAlert({
+          show: true,
+          type: 'success',
+          message: 'Your subscription has been activated. Please log in to continue.'
+        });
+        
+        toast({
+          title: "Payment Successful",
+          description: "Your subscription has been activated. Please log in to continue."
+        });
+      } else {
+        setPaymentAlert({
+          show: true,
+          type: 'error',
+          message: 'There was an issue with your payment. Please log in and try again.'
+        });
+        
+        toast({
+          variant: "destructive",
+          title: "Payment Failed",
+          description: "There was an issue with your payment. Please log in and try again."
+        });
+      }
+      
+      // Clean the URL by removing the query parameters
+      // Use history.replaceState to avoid a page reload
+      const url = new URL(window.location.href);
+      url.search = '';
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [location, toast]);
 
   if (isLoading) {
     return (
@@ -105,6 +153,22 @@ export default function LoginPage() {
           />
           <h2 className="mt-6 text-2xl font-semibold">Welcome Back</h2>
         </div>
+        
+        {paymentAlert.show && (
+          <Alert variant={paymentAlert.type === 'success' ? 'default' : 'destructive'} className={paymentAlert.type === 'success' ? 'border-green-500 bg-green-50' : ''}>
+            {paymentAlert.type === 'success' ? (
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            ) : (
+              <AlertTriangle className="h-4 w-4" />
+            )}
+            <AlertTitle>
+              {paymentAlert.type === 'success' ? 'Payment Successful' : 'Payment Failed'}
+            </AlertTitle>
+            <AlertDescription>
+              {paymentAlert.message}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-4">

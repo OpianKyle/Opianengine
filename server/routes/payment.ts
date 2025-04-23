@@ -172,8 +172,7 @@ router.post('/callback', async (req, res) => {
             console.log(`Subscription ${transaction.metadata.subscription_id} activated directly in callback!`);
             verificationResult = { 
               success: true, 
-              message: 'Payment verified and subscription activated', 
-              subscription_id: transaction.metadata.subscription_id 
+              message: 'Payment verified and subscription activated'
             };
             
             // Also try to create Paystack subscription if we have customerCode and planCode
@@ -220,17 +219,17 @@ router.post('/callback', async (req, res) => {
         }
       } catch (error) {
         console.error('Auto-verification failed but continuing with redirect:', error);
-        verificationResult = { success: false, message: 'Verification failed: ' + error.message };
+        verificationResult = { success: false, message: 'Verification failed: ' + error };
       }
     }
     
-    // Always redirect to subscription page with reference (but now the subscription should already be ACTIVE)
-    const redirectUrl = `/subscription?reference=${reference}&verified=${verificationResult.success}`;
+    // Always redirect to login page after payment with reference (to handle login after payment)
+    const redirectUrl = `/login?paymentComplete=true&reference=${reference}&verified=${verificationResult.success}`;
     console.log('Redirecting to:', redirectUrl);
     return res.redirect(redirectUrl);
   } catch (error) {
     console.error('Error in payment callback (POST):', error);
-    return res.redirect('/subscription?error=callback_failed');
+    return res.redirect('/login?error=payment_failed');
   }
 });
 
@@ -282,8 +281,7 @@ router.get('/callback', async (req, res) => {
             console.log(`Subscription ${transaction.metadata.subscription_id} activated directly in callback!`);
             verificationResult = { 
               success: true, 
-              message: 'Payment verified and subscription activated', 
-              subscription_id: transaction.metadata.subscription_id 
+              message: 'Payment verified and subscription activated'
             };
             
             // Also try to create Paystack subscription if we have customerCode and planCode
@@ -330,17 +328,17 @@ router.get('/callback', async (req, res) => {
         }
       } catch (error) {
         console.error('Auto-verification failed but continuing with redirect:', error);
-        verificationResult = { success: false, message: 'Verification failed: ' + error.message };
+        verificationResult = { success: false, message: 'Verification failed: ' + error };
       }
     }
     
-    // Always redirect to subscription page with reference (but now the subscription should already be ACTIVE)
-    const redirectUrl = `/subscription?reference=${reference}&verified=${verificationResult.success}`;
+    // Always redirect to login page after payment with reference (to handle login after payment)
+    const redirectUrl = `/login?paymentComplete=true&reference=${reference}&verified=${verificationResult.success}`;
     console.log('Redirecting to:', redirectUrl);
     return res.redirect(redirectUrl);
   } catch (error) {
     console.error('Error in payment callback (GET):', error);
-    return res.redirect('/subscription?error=callback_failed');
+    return res.redirect('/login?error=payment_failed');
   }
 });
 
@@ -438,184 +436,275 @@ router.get('/verify/:reference', async (req, res) => {
             new Date(),
             new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
             new Date(),
-            customerCode || null,
+            customerCode,
             reference,
             subscriptionId
           ]
         );
         
-        console.log(`Subscription ${subscriptionId} activated in database after payment verification`);
+        console.log(`Updated subscription ${subscriptionId} to ACTIVE status`);
         
-        // 2. Now also make sure the subscription is created in Paystack if it wasn't already
-        try {
-          if (customerCode && planCode) {
+        // 2. Create Paystack subscription
+        if (customerCode && planCode) {
+          try {
             const { createSubscription } = await import('../utils/paystack');
+            const subscriptionData = await createSubscription(
+              customerCode, 
+              planCode, 
+              {
+                reference,
+                transactionId,
+                local_subscription_id: subscriptionId
+              }
+            );
             
-            try {
-              // Create the subscription in Paystack
-              const subscriptionData = await createSubscription(
-                customerCode, 
-                planCode, 
-                {
-                  reference,
-                  local_subscription_id: subscriptionId,
-                  user_id: user.id,
-                  email: user.email
-                }
-              );
-              
-              console.log('Successfully created Paystack subscription after payment:', subscriptionData.subscription_code);
-              
-              // Update our database with the Paystack subscription code
-              await connection.query(
-                `UPDATE subscriptions SET 
-                 paystack_subscription_code = ?, 
-                 updated_at = ?
-                 WHERE id = ?`,
-                [
-                  subscriptionData.subscription_code,
-                  new Date(),
-                  subscriptionId
-                ]
-              );
-              
-              console.log(`Updated local subscription ${subscriptionId} with Paystack code ${subscriptionData.subscription_code}`);
-            } catch (subscriptionError) {
-              console.error('Failed to create Paystack subscription after payment:', subscriptionError);
-              // We continue anyway as the payment was successful
-            }
-          } else {
-            console.warn('Missing required data for creating Paystack subscription:', { customerCode, planCode });
-          }
-        } catch (error) {
-          console.error('Error handling Paystack subscription creation:', error);
-        }
-      }
-      
-      // Get the newly created transaction
-      const [newTransactions] = await connection.query(
-        `SELECT * FROM transactions WHERE id = ? LIMIT 1`,
-        [transactionId]
-      );
-      
-      if (Array.isArray(newTransactions) && newTransactions.length > 0) {
-        transactionRecord = newTransactions[0];
-      }
-      
-    } catch (error) {
-      console.error('Error processing payment verification:', error);
-      throw error;
-    } finally {
-      connection.release();
-    }
-    
-    return res.json({
-      success: true,
-      message: 'Payment verified successfully',
-      transaction: transactionRecord
-    });
-    
-  } catch (error) {
-    console.error('Error verifying payment:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to verify payment',
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    });
-  }
-});
-
-// Special route to manually fix any pending subscriptions
-router.post('/fix-pending', checkAdmin, async (req, res) => {
-  try {
-    // Auth middleware already verified admin status
-    const user = req.user as User;
-
-    const connection = await pool.getConnection();
-    try {
-      // Find all PENDING subscriptions
-      const [pendingSubscriptions] = await connection.query(
-        `SELECT * FROM subscriptions WHERE status = 'PENDING' ORDER BY created_at DESC`
-      );
-      
-      if (!Array.isArray(pendingSubscriptions) || pendingSubscriptions.length === 0) {
-        return res.json({ success: true, message: 'No pending subscriptions found' });
-      }
-      
-      console.log(`Found ${pendingSubscriptions.length} pending subscriptions to fix`);
-      
-      // Process each pending subscription
-      const results = [];
-      for (const subscription of pendingSubscriptions) {
-        // Get reference
-        const reference = subscription.payment_reference;
-        if (!reference) {
-          results.push({
-            id: subscription.id,
-            status: 'SKIPPED',
-            reason: 'No payment reference'
-          });
-          continue;
-        }
-        
-        try {
-          // Try to verify the payment
-          const transaction = await verifyTransaction(reference);
-          
-          if (transaction.status === 'success') {
-            // Update the subscription to ACTIVE
+            console.log('Created Paystack subscription:', {
+              subscription_code: subscriptionData.subscription_code,
+              email_token: subscriptionData.email_token,
+              customer: subscriptionData.customer
+            });
+            
+            // 3. Update our subscription with Paystack subscription details
             await connection.query(
               `UPDATE subscriptions SET 
-               status = 'ACTIVE', 
-               last_payment_date = ?,
-               next_payment_date = ?,
+               paystack_subscription_code = ?,
                updated_at = ?
                WHERE id = ?`,
               [
+                subscriptionData.subscription_code,
                 new Date(),
-                new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
-                new Date(),
-                subscription.id
+                subscriptionId
               ]
             );
             
-            results.push({
-              id: subscription.id,
-              status: 'FIXED',
-              message: 'Payment verified and subscription activated'
-            });
-          } else {
-            results.push({
-              id: subscription.id,
-              status: 'SKIPPED',
-              reason: `Payment not successful: ${transaction.status}`
-            });
+            console.log(`Updated subscription ${subscriptionId} with Paystack code ${subscriptionData.subscription_code}`);
+          } catch (error) {
+            console.error('Error creating Paystack subscription:', error);
           }
-        } catch (verifyError) {
-          results.push({
-            id: subscription.id,
-            status: 'ERROR',
-            error: verifyError.message
-          });
         }
       }
       
+      // Return verification result
       return res.json({
         success: true,
-        message: `Processed ${pendingSubscriptions.length} pending subscriptions`,
-        results
+        message: 'Payment successfully verified',
+        transaction: {
+          id: transactionId,
+          user_id: user.id,
+          amount: transaction.amount / 100,
+          payment_reference: reference,
+          created_at: new Date()
+        }
+      });
+    } catch (error) {
+      console.error('Error processing verified transaction:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error processing transaction after verification'
       });
     } finally {
       connection.release();
     }
   } catch (error) {
-    console.error('Error fixing pending subscriptions:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fix pending subscriptions',
-      error: error.message 
+    console.error('Error verifying payment:', error);
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to verify payment'
     });
   }
 });
+
+// Webhook endpoint for Paystack (used for server-to-server notifications)
+router.post('/webhook', async (req, res) => {
+  try {
+    // Paystack recommends this response even if processing fails
+    res.status(200).send('Webhook received');
+    
+    // Verify the webhook payload
+    const hash = req.headers['x-paystack-signature'];
+    if (!hash) {
+      console.error('Webhook signature missing');
+      return;
+    }
+    
+    const event = req.body;
+    console.log('Webhook event received:', {
+      event: event.event,
+      reference: event.data?.reference
+    });
+    
+    // Handle different event types
+    switch (event.event) {
+      case 'charge.success':
+        await handleSuccessfulCharge(event.data);
+        break;
+      
+      case 'subscription.create':
+        await handleSubscriptionCreated(event.data);
+        break;
+      
+      case 'subscription.disable':
+        await handleSubscriptionDisabled(event.data);
+        break;
+      
+      case 'subscription.enable':
+        await handleSubscriptionEnabled(event.data);
+        break;
+      
+      case 'invoice.payment_failed':
+        await handleFailedPayment(event.data);
+        break;
+      
+      // Handle other event types as needed
+      default:
+        console.log(`Unhandled webhook event type: ${event.event}`);
+    }
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+  }
+});
+
+async function handleSuccessfulCharge(data) {
+  try {
+    const { reference, metadata } = data;
+    console.log('Processing successful charge webhook:', { reference, metadata });
+    
+    // If this is a subscription-related payment
+    if (metadata && metadata.type === 'SUBSCRIPTION' && metadata.subscription_id) {
+      const connection = await pool.getConnection();
+      try {
+        // Update the subscription status
+        await connection.query(
+          `UPDATE subscriptions SET 
+           status = 'ACTIVE', 
+           last_payment_date = ?,
+           next_payment_date = ?,
+           updated_at = ?,
+           payment_reference = ?
+           WHERE id = ?`,
+          [
+            new Date(),
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
+            new Date(),
+            reference,
+            metadata.subscription_id
+          ]
+        );
+        
+        console.log(`Subscription ${metadata.subscription_id} activated from webhook`);
+      } catch (error) {
+        console.error('Error updating subscription from webhook:', error);
+      } finally {
+        connection.release();
+      }
+    }
+  } catch (verifyError) {
+    console.error('Error handling successful charge webhook:', verifyError);
+  }
+}
+
+async function handleSubscriptionCreated(data) {
+  try {
+    const { subscription_code, customer, plan, status } = data;
+    console.log('Subscription created webhook:', { subscription_code, customer, plan, status });
+  } catch (error) {
+    console.error('Error handling subscription created webhook:', error);
+  }
+}
+
+async function handleSubscriptionDisabled(data) {
+  try {
+    const { subscription_code } = data;
+    console.log('Subscription disabled webhook:', { subscription_code });
+    
+    // Update our record to cancel the subscription
+    const connection = await pool.getConnection();
+    try {
+      await connection.query(
+        `UPDATE subscriptions SET 
+         status = 'CANCELLED', 
+         cancelled_at = ?,
+         updated_at = ?
+         WHERE paystack_subscription_code = ?`,
+        [
+          new Date(),
+          new Date(),
+          subscription_code
+        ]
+      );
+      
+      console.log(`Subscription ${subscription_code} cancelled from webhook`);
+    } catch (error) {
+      console.error('Error updating cancelled subscription from webhook:', error);
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Error handling subscription disabled webhook:', error);
+  }
+}
+
+async function handleSubscriptionEnabled(data) {
+  try {
+    const { subscription_code } = data;
+    console.log('Subscription enabled webhook:', { subscription_code });
+    
+    // Update our record to reactivate the subscription
+    const connection = await pool.getConnection();
+    try {
+      await connection.query(
+        `UPDATE subscriptions SET 
+         status = 'ACTIVE', 
+         cancelled_at = NULL,
+         updated_at = ?
+         WHERE paystack_subscription_code = ?`,
+        [
+          new Date(),
+          subscription_code
+        ]
+      );
+      
+      console.log(`Subscription ${subscription_code} reactivated from webhook`);
+    } catch (error) {
+      console.error('Error updating reactivated subscription from webhook:', error);
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Error handling subscription enabled webhook:', error);
+  }
+}
+
+async function handleFailedPayment(data) {
+  try {
+    const { subscription } = data;
+    console.log('Failed payment webhook:', { subscription });
+    
+    if (subscription && subscription.subscription_code) {
+      // Update our record to mark the subscription as past due
+      const connection = await pool.getConnection();
+      try {
+        await connection.query(
+          `UPDATE subscriptions SET 
+           status = 'PAST_DUE', 
+           updated_at = ?
+           WHERE paystack_subscription_code = ?`,
+          [
+            new Date(),
+            subscription.subscription_code
+          ]
+        );
+        
+        console.log(`Subscription ${subscription.subscription_code} marked as PAST_DUE from webhook`);
+      } catch (error) {
+        console.error('Error updating past due subscription from webhook:', error);
+      } finally {
+        connection.release();
+      }
+    }
+  } catch (error) {
+    console.error('Error handling failed payment webhook:', error);
+  }
+}
 
 export default router;
