@@ -27,10 +27,14 @@ const PAYSTACK_PLAN_CODES = {
   TEST: 'PLN_edod11i4kaynjit'  // Test plan code
 };
 
+// Import the getUserFromTokenOrSession function correctly
+import { getUserFromTokenOrSession } from '../auth';
+
 // Get subscription information for the current user
 router.get("/api/subscription", async (req, res) => {
   try {
-    const user = await verifySession(req);
+    // Try to get user from either token or session
+    const user = await getUserFromTokenOrSession(req);
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -205,7 +209,8 @@ router.get("/api/subscription", async (req, res) => {
 // Create or update subscription
 router.post("/api/subscription", async (req, res) => {
   try {
-    const user = await verifySession(req);
+    // Try to get user from either token or session
+    const user = await getUserFromTokenOrSession(req);
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -320,7 +325,8 @@ router.post("/api/subscription", async (req, res) => {
 // Cancel subscription
 router.delete("/api/subscription/:id", async (req, res) => {
   try {
-    const user = await verifySession(req);
+    // Try to get user from either token or session
+    const user = await getUserFromTokenOrSession(req);
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
