@@ -161,8 +161,35 @@ router.get("/api/subscription", async (req, res) => {
         currentPackage = userSubscription.package_type;
       }
 
+      // Transform database column names to camelCase for frontend
+      const transformedSubscription = userSubscription ? {
+        id: userSubscription.id,
+        userId: userSubscription.user_id,
+        packageType: userSubscription.package_type,
+        status: userSubscription.status,
+        amount: userSubscription.amount,
+        createdAt: userSubscription.created_at,
+        updatedAt: userSubscription.updated_at,
+        // Convert snake_case to camelCase for payment dates
+        lastPaymentDate: userSubscription.last_payment_date,
+        nextPaymentDate: userSubscription.next_payment_date,
+        paystackSubscriptionCode: userSubscription.paystack_subscription_code,
+        paystackCustomerCode: userSubscription.paystack_customer_code,
+        paymentMethod: userSubscription.payment_method,
+        startDate: userSubscription.start_date,
+        endDate: userSubscription.end_date,
+        paymentReference: userSubscription.payment_reference,
+        cancelledAt: userSubscription.cancelled_at
+      } : null;
+      
+      // Log the transformed subscription for debugging
+      console.log('Transformed subscription for frontend:', {
+        original: userSubscription,
+        transformed: transformedSubscription
+      });
+      
       return res.json({
-        subscription: userSubscription || null,
+        subscription: transformedSubscription,
         packages: packageInfo,
         currentPackage: currentPackage
       });
