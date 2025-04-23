@@ -607,14 +607,16 @@ router.get("/api/subscription/sync", async (req, res) => {
             console.log('No Paystack subscriptions found for customer code:', customerCode);
             return res.json({
               success: false,
-              message: "No subscription found on Paystack for your account"
+              message: "No subscription found on Paystack for your account",
+              suggestion: "Your email was found on Paystack, but no active subscription was found. Please try manual sync with your Paystack customer code."
             });
           }
         } else {
           console.log('No Paystack customer found for email:', user.email);
           return res.json({
             success: false,
-            message: "No customer record found on Paystack for your email"
+            message: "No customer record found on Paystack for your email",
+            suggestion: "Your email address in OPIAN might differ from the one used in Paystack. Try the manual sync option with your customer code."
           });
         }
       } catch (syncError) {
@@ -630,6 +632,199 @@ router.get("/api/subscription/sync", async (req, res) => {
     }
   } catch (error) {
     console.error("Error syncing subscription with Paystack:", error);
+    res.status(500).json({ error: "Failed to synchronize subscription" });
+  }
+});
+
+// Manual sync with customer and subscription codes
+router.post("/api/subscription/manual-sync", async (req, res) => {
+  try {
+    // Get user from both token and session
+    const user = await getUserFromTokenOrSession(req);
+    if (!user) {
+      console.log('User authentication failed in manual sync endpoint');
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    const { customerCode, subscriptionCode } = req.body;
+    
+    if (!customerCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Customer code is required"
+      });
+    }
+    
+    console.log('Manual sync attempt:', { userId: user.id, customerCode, subscriptionCode });
+    
+    const connection = await pool.getConnection();
+    try {
+      // Get the user's active subscription
+      const [subscriptionResult] = await connection.query(
+        `SELECT s.id, s.user_id, s.status, s.amount, s.package_type, s.payment_reference, 
+                s.paystack_subscription_code, s.paystack_customer_code,
+                u.email, u.first_name, u.last_name 
+         FROM subscriptions s
+         JOIN users u ON s.user_id = u.id
+         WHERE s.user_id = ? AND s.status = 'ACTIVE'
+         ORDER BY s.created_at DESC
+         LIMIT 1`,
+        [user.id]
+      );
+      
+      const subscriptions = Array.isArray(subscriptionResult) ? subscriptionResult : [];
+      
+      // No subscription found
+      if (subscriptions.length === 0) {
+        console.log('No active subscription found for user', user.id);
+        return res.json({
+          success: false,
+          message: "No active subscription found for your account"
+        });
+      }
+      
+      const subscription = subscriptions[0];
+      console.log('Found active subscription for user', user.id, ':', subscription.id);
+      
+      // Import Paystack API
+      const { default: axios } = await import('axios');
+      const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+      
+      if (!PAYSTACK_SECRET_KEY) {
+        console.error('Missing Paystack secret key');
+        return res.status(500).json({
+          success: false,
+          message: "Server configuration error - Paystack key missing"
+        });
+      }
+      
+      // Verify the customer code actually exists in Paystack
+      try {
+        const customerResponse = await axios.get(
+          `https://api.paystack.co/customer/${customerCode}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`
+            }
+          }
+        );
+        
+        if (!customerResponse.data?.status) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid customer code. Please verify and try again."
+          });
+        }
+        
+        // Find subscription code if not provided
+        let finalSubscriptionCode = subscriptionCode;
+        let paystackSubscriptionDetails = null;
+        
+        if (!finalSubscriptionCode) {
+          // Try to find subscription for this customer
+          const subscriptionsResponse = await axios.get(
+            `https://api.paystack.co/subscription?customer=${customerCode}&perPage=5`,
+            {
+              headers: {
+                'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`
+              }
+            }
+          );
+          
+          if (subscriptionsResponse.data?.status && 
+              subscriptionsResponse.data?.data?.length > 0) {
+            // Get the most recent subscription (should be at index 0)
+            const paystackSubscription = subscriptionsResponse.data.data[0];
+            finalSubscriptionCode = paystackSubscription.subscription_code;
+            paystackSubscriptionDetails = paystackSubscription;
+            console.log('Found Paystack subscription code:', finalSubscriptionCode);
+          } else {
+            console.log('No Paystack subscriptions found for customer code:', customerCode);
+            // Continue without subscription code
+          }
+        } else {
+          // Verify the subscription code
+          try {
+            const subscriptionResponse = await axios.get(
+              `https://api.paystack.co/subscription/${finalSubscriptionCode}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`
+                }
+              }
+            );
+            
+            if (subscriptionResponse.data?.status) {
+              paystackSubscriptionDetails = subscriptionResponse.data.data;
+            } else {
+              console.log('Invalid subscription code:', finalSubscriptionCode);
+              // Continue with just the customer code
+              finalSubscriptionCode = null;
+            }
+          } catch (subscriptionError) {
+            console.error('Error verifying subscription code:', subscriptionError);
+            // Continue with just the customer code
+            finalSubscriptionCode = null;
+          }
+        }
+        
+        // Update our database with the Paystack details
+        await connection.query(
+          `UPDATE subscriptions SET
+           paystack_subscription_code = ?,
+           paystack_customer_code = ?,
+           updated_at = ?
+           WHERE id = ?`,
+          [
+            finalSubscriptionCode,
+            customerCode,
+            new Date(),
+            subscription.id
+          ]
+        );
+        
+        console.log(`Manually synced user ${user.id} subscription ${subscription.id} with Paystack details`);
+        
+        // Prepare success response
+        const responseData = {
+          success: true,
+          message: finalSubscriptionCode 
+            ? "Successfully synchronized your subscription with Paystack" 
+            : "Successfully linked your customer code. No subscription was found.",
+          subscription: {
+            id: subscription.id,
+            status: subscription.status,
+            package_type: subscription.package_type,
+            paystack_subscription_code: finalSubscriptionCode,
+            paystack_customer_code: customerCode
+          }
+        };
+        
+        // Add Paystack details if we have them
+        if (paystackSubscriptionDetails) {
+          responseData.paystackDetails = {
+            status: paystackSubscriptionDetails.status,
+            plan: paystackSubscriptionDetails.plan?.name || 'Unknown plan',
+            amount: paystackSubscriptionDetails.amount / 100, // Convert from kobo to naira
+            createdAt: paystackSubscriptionDetails.createdAt,
+            nextPaymentDate: paystackSubscriptionDetails.next_payment_date
+          };
+        }
+        
+        return res.json(responseData);
+      } catch (manualSyncError) {
+        console.error(`Error manually syncing user ${user.id} subscription ${subscription.id}:`, manualSyncError);
+        return res.status(500).json({
+          success: false, 
+          message: "Error connecting to Paystack",
+          error: manualSyncError.message || "Unknown error"
+        });
+      }
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error("Error manually syncing subscription with Paystack:", error);
     res.status(500).json({ error: "Failed to synchronize subscription" });
   }
 });

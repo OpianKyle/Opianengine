@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
 import { useLocation } from 'wouter';
 
 // Types for subscriptions
@@ -48,6 +52,9 @@ const SubscriptionPage = () => {
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'cancel' | 'reactivate' | null>(null);
+  const [showManualSyncDialog, setShowManualSyncDialog] = useState(false);
+  const [customerCode, setCustomerCode] = useState('');
+  const [subscriptionCode, setSubscriptionCode] = useState('');
   const [, params] = useLocation();
   
   // Check for payment reference from Paystack redirect
@@ -215,6 +222,11 @@ const SubscriptionPage = () => {
           title: "Synchronization notice",
           description: data.message || "No changes were needed for your subscription.",
         });
+        
+        // If there's a suggestion to use manual sync, show the manual sync dialog
+        if (data.suggestion && subscription) {
+          setShowManualSyncDialog(true);
+        }
       }
     },
     onError: (error) => {
@@ -224,6 +236,44 @@ const SubscriptionPage = () => {
         variant: "destructive",
       });
       console.error('Error synchronizing subscription:', error);
+    }
+  });
+  
+  // Manual sync with Paystack codes
+  const manualSyncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', `/api/subscription/manual-sync`, {
+        customerCode,
+        subscriptionCode: subscriptionCode || undefined
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: "Manual sync successful",
+          description: data.message || "Your subscription has been manually synchronized with Paystack.",
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
+        // Reset form and close dialog
+        setShowManualSyncDialog(false);
+        setCustomerCode('');
+        setSubscriptionCode('');
+      } else {
+        toast({
+          title: "Sync failed",
+          description: data.message || "Failed to manually sync your subscription.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to manually synchronize subscription. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Error manually synchronizing subscription:', error);
     }
   });
 
@@ -315,6 +365,81 @@ const SubscriptionPage = () => {
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">My Subscriptions</h1>
       
+      {/* Manual Sync Dialog */}
+      <Dialog open={showManualSyncDialog} onOpenChange={setShowManualSyncDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manual Subscription Sync</DialogTitle>
+            <DialogDescription>
+              Enter your Paystack customer code to manually sync your subscription.
+              You can find this in your Paystack dashboard or email receipts.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="customerCode" className="text-left">
+                Customer Code <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="customerCode"
+                placeholder="e.g. CUS_1hjlwa7sb0glsb1"
+                value={customerCode}
+                onChange={(e) => setCustomerCode(e.target.value)}
+                className="w-full"
+                required
+              />
+              <p className="text-sm text-muted-foreground">
+                You can find this in your Paystack email receipts or dashboard (starts with CUS_)
+              </p>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="subscriptionCode" className="text-left">
+                Subscription Code <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="subscriptionCode"
+                placeholder="e.g. SUB_e5k8qp4op8fvuqc"
+                value={subscriptionCode}
+                onChange={(e) => setSubscriptionCode(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-sm text-muted-foreground">
+                If you have multiple subscriptions, enter the specific subscription code (starts with SUB_)
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter className="sm:justify-between">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowManualSyncDialog(false);
+                setCustomerCode('');
+                setSubscriptionCode('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              onClick={() => manualSyncMutation.mutate()}
+              disabled={!customerCode || manualSyncMutation.isPending}
+            >
+              {manualSyncMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                'Sync Subscription'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
       {(!subscriptions || subscriptions.length === 0) && (
         <Alert className="mb-6">
           <AlertCircle className="h-4 w-4" />
@@ -374,6 +499,14 @@ const SubscriptionPage = () => {
                     ) : (
                       'Sync with Paystack'
                     )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setShowManualSyncDialog(true)}
+                  >
+                    <Info className="mr-2 h-4 w-4" />
+                    Manual Sync
                   </Button>
                   <Button 
                     variant="outline" 
