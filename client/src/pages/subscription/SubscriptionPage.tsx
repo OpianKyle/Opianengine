@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { Loader2, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +50,7 @@ const statusColors: Record<string, string> = {
 const SubscriptionPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth(); // Use the auth hook to get user data
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'cancel' | 'reactivate' | null>(null);
@@ -500,14 +502,16 @@ const SubscriptionPage = () => {
                       'Sync with Paystack'
                     )}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => setShowManualSyncDialog(true)}
-                  >
-                    <Info className="mr-2 h-4 w-4" />
-                    Manual Sync
-                  </Button>
+                  {user?.isAdmin && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => setShowManualSyncDialog(true)}
+                    >
+                      <Info className="mr-2 h-4 w-4" />
+                      Manual Sync (Admin)
+                    </Button>
+                  )}
                   <Button 
                     variant="outline" 
                     className="w-full"

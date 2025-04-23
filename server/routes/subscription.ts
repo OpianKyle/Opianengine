@@ -616,7 +616,7 @@ router.get("/api/subscription/sync", async (req, res) => {
           return res.json({
             success: false,
             message: "No customer record found on Paystack for your email",
-            suggestion: "Your email address in OPIAN might differ from the one used in Paystack. Try the manual sync option with your customer code."
+            suggestion: "Your email address in OPIAN might differ from the one used in Paystack. Please contact support at support@opianrewards.com for assistance with linking your subscription."
           });
         }
       } catch (syncError) {
