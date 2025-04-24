@@ -250,6 +250,8 @@ export const cancelSubscription = async (subscriptionCode: string): Promise<bool
     
     const responseData = await response.json();
     
+    console.log('Paystack subscription cancellation response:', responseData);
+    
     if (!response.ok || !responseData.status) {
       throw new Error(`Failed to cancel subscription: ${responseData.message}`);
     }

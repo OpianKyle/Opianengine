@@ -77,7 +77,7 @@ export default function TestSubscriptionTool() {
     if (!subscriptionId.trim()) {
       toast({
         title: "Subscription ID Required",
-        description: "Please enter a subscription ID to cancel.",
+        description: "Please enter a subscription ID or subscription code to cancel.",
         variant: "destructive",
       });
       return;
@@ -197,6 +197,14 @@ export default function TestSubscriptionTool() {
                     <span className="col-span-2">{result.subscription?.id || 'N/A'}</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium">Subscription Code:</span>
+                    <span className="col-span-2">{result.subscription?.subscription_code || 'N/A'}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium">Email Token:</span>
+                    <span className="col-span-2">{result.subscription?.email_token || 'N/A'}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
                     <span className="font-medium">Customer Code:</span>
                     <span className="col-span-2">{result.customer?.customer_code || 'N/A'}</span>
                   </div>
@@ -226,15 +234,18 @@ export default function TestSubscriptionTool() {
           <TabsContent value="cancel" className="space-y-4 mt-4">
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="subscription_id">Subscription ID</Label>
+                <Label htmlFor="subscription_id">Subscription ID or Code</Label>
                 <Input
                   id="subscription_id"
                   type="text"
-                  placeholder="Enter subscription ID"
+                  placeholder="Enter database ID or Paystack subscription code"
                   value={subscriptionId}
                   onChange={(e) => setSubscriptionId(e.target.value)}
                   disabled={status === 'loading'}
                 />
+                <p className="text-xs text-muted-foreground">
+                  You can enter either the database ID (number) or the Paystack subscription code (e.g. SUB_xxxxxxxx)
+                </p>
               </div>
 
               <Button 
@@ -267,6 +278,10 @@ export default function TestSubscriptionTool() {
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <span className="font-medium">Subscription ID:</span>
                     <span className="col-span-2">{result.subscription_id || 'N/A'}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium">Subscription Code:</span>
+                    <span className="col-span-2">{result.subscription_code || 'N/A'}</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <span className="font-medium">Status:</span>

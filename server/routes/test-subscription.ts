@@ -110,14 +110,49 @@ router.post('/cancel', async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Only admin users can cancel test subscriptions' });
     }
 
-    // Get the subscription record from the database to retrieve email_token
+    // Get the subscription record from the database to retrieve email_token and subscription_code
     const [subscriptionRecord] = await pool.query(
       'SELECT * FROM subscriptions WHERE id = ?',
       [subscription_id]
     );
 
     if (!subscriptionRecord || !Array.isArray(subscriptionRecord) || subscriptionRecord.length === 0) {
-      return res.status(404).json({ message: 'Subscription not found' });
+      // If not found by ID, try looking up by Paystack subscription code
+      const [subscriptionByCode] = await pool.query(
+        'SELECT * FROM subscriptions WHERE paystack_subscription_code = ?',
+        [subscription_id]
+      );
+
+      if (!subscriptionByCode || !Array.isArray(subscriptionByCode) || subscriptionByCode.length === 0) {
+        return res.status(404).json({ message: 'Subscription not found' });
+      }
+
+      // Use the subscription found by code
+      const subscription = subscriptionByCode[0] as any;
+      console.log('Found subscription to cancel by code:', subscription);
+
+      // Cancel the subscription in Paystack
+      const result = await cancelSubscription(
+        subscription.paystack_subscription_code
+      );
+
+      if (!result) {
+        return res.status(500).json({ message: 'Failed to cancel subscription' });
+      }
+
+      // Update the subscription in the database
+      await pool.query(
+        'UPDATE subscriptions SET status = ?, cancelled_at = NOW() WHERE id = ?',
+        ['cancelled', subscription.id]
+      );
+
+      // Return success
+      return res.status(200).json({
+        message: 'Test subscription cancelled successfully',
+        subscription_id: subscription.id,
+        subscription_code: subscription.paystack_subscription_code,
+        status: 'cancelled',
+      });
     }
 
     const subscription = subscriptionRecord[0] as any;
@@ -142,6 +177,7 @@ router.post('/cancel', async (req: Request, res: Response) => {
     return res.status(200).json({
       message: 'Test subscription cancelled successfully',
       subscription_id,
+      subscription_code: subscription.paystack_subscription_code,
       status: 'cancelled',
     });
   } catch (error: any) {
