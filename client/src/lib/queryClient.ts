@@ -48,7 +48,8 @@ export const CUSTOMER_API_ENDPOINTS = {
     '/api/products',
     '/api/transactions',
     '/api/statistics',
-    '/api/referral'
+    '/api/referral',
+    '/api/subscription'
   ],
   dashboard: [
     '/api/profile',
@@ -63,6 +64,10 @@ export const CUSTOMER_API_ENDPOINTS = {
   ],
   referral: [
     '/api/referral'
+  ],
+  subscription: [
+    '/api/subscription',
+    '/api/profile'
   ]
 };
 
@@ -122,7 +127,7 @@ export const prefetchAgentData = async (token?: string, section?: 'dashboard' | 
  * @param token JWT token for authenticated requests
  * @param section Optional section name to prefetch only specific endpoints
  */
-export const prefetchCustomerData = async (token?: string, section?: 'dashboard' | 'products' | 'rewards' | 'referral' | 'all') => {
+export const prefetchCustomerData = async (token?: string, section?: 'dashboard' | 'products' | 'rewards' | 'referral' | 'subscription' | 'all') => {
   // If section is specified, prefetch only that section's endpoints
   const endpointKey = section || 'all';
   const endpoints = CUSTOMER_API_ENDPOINTS[endpointKey];
