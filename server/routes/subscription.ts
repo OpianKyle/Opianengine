@@ -17,6 +17,12 @@ const packageSchema = z.object({
   packageType: z.enum(['OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'])
 });
 
+// Validate cancellation reason
+const cancellationSchema = z.object({
+  reason: z.string().optional(),
+  feedback: z.string().optional()
+});
+
 // Subscription prices (in cents - ZAR)
 const PACKAGE_PRICES = {
   OPPORTUNITY: 35000, // R350
@@ -146,29 +152,72 @@ router.get('/verify', async (req, res) => {
         { user_id: userId }
       );
       
-      // Update user with subscription information
-      await connection.query(
-        `UPDATE users SET 
-          subscription_status = ?,
-          selectedPackage = ?,
-          paystack_customer_code = ?,
-          paystack_subscription_code = ?,
-          paystack_email_token = ?,
-          subscription_start_date = NOW(),
-          subscription_end_date = DATE_ADD(NOW(), INTERVAL 1 MONTH)
-        WHERE id = ?`,
-        [
-          'active',
-          packageType,
-          subscriptionResponse.customer.customer_code,
-          subscriptionResponse.subscription_code,
-          subscriptionResponse.email_token,
-          userId
-        ]
-      );
+      // Transaction amount in Rand (from kobo/cents)
+      const amountPaid = response.amount / 100;
       
-      // Redirect to the subscription page
-      return res.redirect('/dashboard/subscription');
+      // Begin transaction
+      await connection.beginTransaction();
+      
+      try {
+        // 1. Update user with subscription information
+        await connection.query(
+          `UPDATE users SET 
+            subscription_status = ?,
+            selectedPackage = ?,
+            paystack_customer_code = ?,
+            paystack_subscription_code = ?,
+            paystack_email_token = ?
+          WHERE id = ?`,
+          [
+            'active',
+            packageType,
+            subscriptionResponse.customer.customer_code,
+            subscriptionResponse.subscription_code,
+            subscriptionResponse.email_token,
+            userId
+          ]
+        );
+        
+        // 2. Create a new entry in the subscriptions table
+        const [subscriptionResult] = await connection.query(
+          `INSERT INTO subscriptions (
+            user_id,
+            package_type,
+            subscription_code,
+            customer_code,
+            email_token,
+            status,
+            amount,
+            currency,
+            payment_reference,
+            start_date,
+            end_date,
+            next_payment_date,
+            created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 1 MONTH), DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
+          [
+            userId,
+            packageType,
+            subscriptionResponse.subscription_code,
+            subscriptionResponse.customer.customer_code,
+            subscriptionResponse.email_token,
+            'active',
+            amountPaid,
+            'ZAR',
+            reference
+          ]
+        );
+        
+        // Commit transaction
+        await connection.commit();
+        
+        // Redirect to the subscription page
+        return res.redirect('/dashboard/subscription');
+      } catch (error) {
+        // Rollback transaction in case of error
+        await connection.rollback();
+        throw error;
+      }
     } finally {
       connection.release();
     }
@@ -194,27 +243,70 @@ router.get('/details', isAuthenticated, async (req: any, res) => {
       return res.status(404).json({ error: 'No active subscription found' });
     }
     
-    // Get subscription details from Paystack
-    const response = await paystackService.getSubscription(user.paystack_subscription_code);
+    const connection = await pool.getConnection();
     
-    // Format the response
-    const formattedSubscription = {
-      code: response.subscription_code,
-      status: response.status,
-      amount: response.amount / 100, // Convert from kobo to rand
-      startDate: user.subscription_start_date,
-      endDate: user.subscription_end_date,
-      nextPaymentDate: response.next_payment_date,
-      plan: {
-        name: response.plan.name,
-        interval: response.plan.interval
+    try {
+      // Get subscription details from database
+      const [subscriptions] = await connection.query(
+        `SELECT * FROM subscriptions 
+         WHERE user_id = ? AND subscription_code = ? 
+         ORDER BY created_at DESC LIMIT 1`,
+        [user.id, user.paystack_subscription_code]
+      );
+      
+      if (!Array.isArray(subscriptions) || subscriptions.length === 0) {
+        // If not found in database, try to get from Paystack
+        const response = await paystackService.getSubscription(user.paystack_subscription_code);
+        
+        // Format the response
+        const formattedSubscription = {
+          code: response.subscription_code,
+          status: response.status,
+          amount: response.amount / 100, // Convert from kobo to rand
+          startDate: new Date(),
+          endDate: null,
+          nextPaymentDate: response.next_payment_date,
+          packageType: user.selectedPackage,
+          plan: {
+            name: response.plan.name,
+            interval: response.plan.interval
+          }
+        };
+        
+        return res.status(200).json({
+          success: true,
+          subscription: formattedSubscription
+        });
       }
-    };
-    
-    return res.status(200).json({
-      success: true,
-      subscription: formattedSubscription
-    });
+      
+      const subscription = subscriptions[0] as any;
+      
+      // Get subscription details from Paystack as well for latest status
+      const response = await paystackService.getSubscription(user.paystack_subscription_code);
+      
+      // Format the response
+      const formattedSubscription = {
+        id: subscription.id,
+        code: subscription.subscription_code,
+        status: response.status || subscription.status,
+        amount: subscription.amount,
+        startDate: subscription.start_date,
+        endDate: subscription.end_date,
+        nextPaymentDate: response.next_payment_date || subscription.next_payment_date,
+        packageType: subscription.package_type,
+        plan: {
+          name: response.plan?.name || subscription.package_type,
+          interval: response.plan?.interval || 'monthly'
+        }
+      };
+      
+      return res.status(200).json({
+        success: true,
+        subscription: formattedSubscription
+      });
+    } finally {
+      connection.release();
+    }
   } catch (error: any) {
     console.error('Subscription details error:', error);
     return res.status(500).json({ error: error.message || 'Failed to retrieve subscription details' });
@@ -228,6 +320,7 @@ router.get('/details', isAuthenticated, async (req: any, res) => {
 router.post('/cancel', isAuthenticated, async (req: any, res) => {
   try {
     const user = req.user;
+    const { reason, feedback } = cancellationSchema.parse(req.body);
     
     if (!user) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -243,16 +336,65 @@ router.post('/cancel', isAuthenticated, async (req: any, res) => {
     const connection = await pool.getConnection();
     
     try {
-      // Update the user record
-      await connection.query(
-        'UPDATE users SET subscription_status = ? WHERE id = ?',
-        ['cancelled', user.id]
-      );
+      // Begin transaction
+      await connection.beginTransaction();
       
-      return res.status(200).json({
-        success: true,
-        message: 'Subscription cancelled successfully'
-      });
+      try {
+        // 1. Update the user record
+        await connection.query(
+          'UPDATE users SET subscription_status = ? WHERE id = ?',
+          ['cancelled', user.id]
+        );
+        
+        // 2. Get the subscription id
+        const [subscriptions] = await connection.query(
+          `SELECT id FROM subscriptions 
+           WHERE user_id = ? AND subscription_code = ? 
+           ORDER BY created_at DESC LIMIT 1`,
+          [user.id, user.paystack_subscription_code]
+        );
+        
+        if (Array.isArray(subscriptions) && subscriptions.length > 0) {
+          const subscription = subscriptions[0] as any;
+          
+          // 3. Update the subscription record
+          await connection.query(
+            'UPDATE subscriptions SET status = ?, updated_at = NOW() WHERE id = ?',
+            ['cancelled', subscription.id]
+          );
+          
+          // 4. Create cancellation record
+          await connection.query(
+            `INSERT INTO subscription_cancellations (
+              subscription_id, 
+              user_id, 
+              reason, 
+              additional_feedback, 
+              is_admin_cancelled,
+              created_at
+            ) VALUES (?, ?, ?, ?, ?, NOW())`,
+            [
+              subscription.id,
+              user.id,
+              reason || 'No reason provided',
+              feedback || null,
+              false
+            ]
+          );
+        }
+        
+        // Commit transaction
+        await connection.commit();
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Subscription cancelled successfully'
+        });
+      } catch (error) {
+        // Rollback transaction in case of error
+        await connection.rollback();
+        throw error;
+      }
     } finally {
       connection.release();
     }
@@ -284,16 +426,46 @@ router.post('/reactivate', isAuthenticated, async (req: any, res) => {
     const connection = await pool.getConnection();
     
     try {
-      // Update the user record
-      await connection.query(
-        'UPDATE users SET subscription_status = ? WHERE id = ?',
-        ['active', user.id]
-      );
+      // Begin transaction
+      await connection.beginTransaction();
       
-      return res.status(200).json({
-        success: true,
-        message: 'Subscription reactivated successfully'
-      });
+      try {
+        // 1. Update the user record
+        await connection.query(
+          'UPDATE users SET subscription_status = ? WHERE id = ?',
+          ['active', user.id]
+        );
+        
+        // 2. Get the subscription id
+        const [subscriptions] = await connection.query(
+          `SELECT id FROM subscriptions 
+           WHERE user_id = ? AND subscription_code = ? 
+           ORDER BY created_at DESC LIMIT 1`,
+          [user.id, user.paystack_subscription_code]
+        );
+        
+        if (Array.isArray(subscriptions) && subscriptions.length > 0) {
+          const subscription = subscriptions[0] as any;
+          
+          // 3. Update the subscription record
+          await connection.query(
+            'UPDATE subscriptions SET status = ?, updated_at = NOW() WHERE id = ?',
+            ['active', subscription.id]
+          );
+        }
+        
+        // Commit transaction
+        await connection.commit();
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Subscription reactivated successfully'
+        });
+      } catch (error) {
+        // Rollback transaction in case of error
+        await connection.rollback();
+        throw error;
+      }
     } finally {
       connection.release();
     }
@@ -329,6 +501,53 @@ router.get('/update-link', isAuthenticated, async (req: any, res) => {
   } catch (error: any) {
     console.error('Update link error:', error);
     return res.status(500).json({ error: error.message || 'Failed to generate update link' });
+  }
+});
+
+/**
+ * Get subscription history
+ * GET /api/subscription/history
+ */
+router.get('/history', isAuthenticated, async (req: any, res) => {
+  try {
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const connection = await pool.getConnection();
+    
+    try {
+      // Get subscription history from database
+      const [subscriptions] = await connection.query(
+        `SELECT * FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC`,
+        [user.id]
+      );
+      
+      // Format the subscription history
+      const formattedHistory = Array.isArray(subscriptions) 
+        ? (subscriptions as any[]).map(sub => ({
+            id: sub.id,
+            packageType: sub.package_type,
+            status: sub.status,
+            amount: sub.amount,
+            startDate: sub.start_date,
+            endDate: sub.end_date,
+            createdAt: sub.created_at
+          }))
+        : [];
+      
+      return res.status(200).json({
+        success: true,
+        history: formattedHistory
+      });
+    } finally {
+      connection.release();
+    }
+  } catch (error: any) {
+    console.error('Subscription history error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to retrieve subscription history' });
   }
 });
 

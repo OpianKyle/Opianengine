@@ -85,6 +85,7 @@ interface AuthContextType {
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<User, Error, RegisterData>;
+  refreshUser: () => Promise<void>;
 }
 
 // Create the auth context
@@ -415,6 +416,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  // Function to refresh user data
+  const refreshUser = useCallback(async () => {
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await userQuery.refetch();
+    } catch (error) {
+      console.error("Error refreshing user data:", error);
+    }
+  }, [queryClient, userQuery]);
+
   // Create the context value
   const authContextValue: AuthContextType = {
     user: userQuery.data || null,
@@ -425,6 +436,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginMutation,
     logoutMutation,
     registerMutation,
+    refreshUser
   };
 
   return (

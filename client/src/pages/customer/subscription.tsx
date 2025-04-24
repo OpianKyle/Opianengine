@@ -1,18 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PaystackSubscription } from '@/components/subscription/PaystackSubscription';
+import { SubscriptionHistory } from '@/components/subscription/SubscriptionHistory';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
+import { Info, AlertCircle, CreditCard, History, BookOpen } from 'lucide-react';
 
 const SubscriptionPage: React.FC = () => {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated, refreshUser } = useAuth();
   const { toast } = useToast();
+  const [showHistory, setShowHistory] = useState(false);
 
   if (isLoading) {
     return (
@@ -31,11 +42,16 @@ const SubscriptionPage: React.FC = () => {
     return null;
   }
 
-  const handleSubscriptionSuccess = () => {
+  const handleSubscriptionSuccess = async () => {
     toast({
       title: "Subscription Updated",
       description: "Your subscription has been successfully updated.",
     });
+    await refreshUser();
+  };
+
+  const handleSubscriptionCancel = async () => {
+    await refreshUser();
   };
 
   // Find user's current package
@@ -47,151 +63,199 @@ const SubscriptionPage: React.FC = () => {
   return (
     <div>
       <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold mb-8">Manage Your Subscription</h1>
-        
-        <div className="mb-8 bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <h2 className="text-lg font-semibold text-blue-800 mb-2">Important Information</h2>
-          <p className="text-blue-700">
-            Packages with PROSPER level and above include access to the referral program. 
-            Subscribe to unlock the ability to refer others and earn points.
-          </p>
-        </div>
-
-        <Tabs defaultValue={defaultTab} className="w-full">
-          <TabsList className="grid grid-cols-5 mb-8">
-            <TabsTrigger value="OPPORTUNITY" className="relative">
-              <span className="inline-block w-3 h-3 rounded-full bg-zinc-400 mr-2"></span>
-              OPPORTUNITY
-            </TabsTrigger>
-            <TabsTrigger value="MOMENTUM" className="relative">
-              <span className="inline-block w-3 h-3 rounded-full bg-blue-400 mr-2"></span>
-              MOMENTUM
-            </TabsTrigger>
-            <TabsTrigger value="PROSPER" className="relative">
-              <span className="inline-block w-3 h-3 rounded-full bg-green-400 mr-2"></span>
-              PROSPER
-            </TabsTrigger>
-            <TabsTrigger value="PRESTIGE" className="relative">
-              <span className="inline-block w-3 h-3 rounded-full bg-purple-400 mr-2"></span>
-              PRESTIGE
-            </TabsTrigger>
-            <TabsTrigger value="PINNACLE" className="relative">
-              <span className="inline-block w-3 h-3 rounded-full bg-amber-400 mr-2"></span>
-              PINNACLE
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="grid grid-cols-1 gap-8">
-            <TabsContent value="OPPORTUNITY">
-              <PaystackSubscription 
-                packageType="OPPORTUNITY"
-                onSuccess={handleSubscriptionSuccess}
-              />
-            </TabsContent>
-            <TabsContent value="MOMENTUM">
-              <PaystackSubscription 
-                packageType="MOMENTUM"
-                onSuccess={handleSubscriptionSuccess}
-              />
-            </TabsContent>
-            <TabsContent value="PROSPER">
-              <PaystackSubscription 
-                packageType="PROSPER"
-                onSuccess={handleSubscriptionSuccess}
-              />
-            </TabsContent>
-            <TabsContent value="PRESTIGE">
-              <PaystackSubscription 
-                packageType="PRESTIGE"
-                onSuccess={handleSubscriptionSuccess}
-              />
-            </TabsContent>
-            <TabsContent value="PINNACLE">
-              <PaystackSubscription 
-                packageType="PINNACLE"
-                onSuccess={handleSubscriptionSuccess}
-              />
-            </TabsContent>
-          </div>
-        </Tabs>
-
-        <div className="mt-8 space-y-4">
-          <h2 className="text-xl font-semibold">Subscription Benefits</h2>
+        <div className="flex flex-wrap justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Manage Your Subscription</h1>
           
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="bg-white p-4 rounded-lg shadow">
-                <h3 className="font-semibold mb-2 flex items-center">
-                  <span className="inline-block w-3 h-3 rounded-full bg-zinc-400 mr-2"></span>
-                  OPPORTUNITY
-                </h3>
-                <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
-                  <li>Essential rewards program</li>
-                  <li>Monthly newsletter</li>
-                  <li>Basic customer support</li>
-                </ul>
-              </div>
-              
-              <div className="bg-white p-4 rounded-lg shadow">
-                <h3 className="font-semibold mb-2 flex items-center">
-                  <span className="inline-block w-3 h-3 rounded-full bg-blue-400 mr-2"></span>
-                  MOMENTUM
-                </h3>
-                <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
-                  <li>Enhanced rewards program</li>
-                  <li>Quarterly digital magazine</li>
-                  <li>Priority email support</li>
-                  <li>Additional reward opportunities</li>
-                </ul>
-              </div>
-              
-              <div className="bg-white p-4 rounded-lg shadow">
-                <h3 className="font-semibold mb-2 flex items-center">
-                  <span className="inline-block w-3 h-3 rounded-full bg-green-400 mr-2"></span>
-                  PROSPER
-                </h3>
-                <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
-                  <li>Premium rewards program</li>
-                  <li>Access to referral program</li>
-                  <li>Dedicated support agent</li>
-                  <li>Monthly exclusive offers</li>
-                  <li>Priority processing</li>
-                </ul>
-              </div>
-              
-              <div className="bg-white p-4 rounded-lg shadow">
-                <h3 className="font-semibold mb-2 flex items-center">
-                  <span className="inline-block w-3 h-3 rounded-full bg-purple-400 mr-2"></span>
-                  PRESTIGE
-                </h3>
-                <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
-                  <li>Elite rewards program</li>
-                  <li>VIP referral benefits</li>
-                  <li>24/7 priority support</li>
-                  <li>Exclusive member events</li>
-                  <li>Quarterly performance reviews</li>
-                  <li>Enhanced reward multipliers</li>
-                </ul>
-              </div>
-              
-              <div className="bg-white p-4 rounded-lg shadow">
-                <h3 className="font-semibold mb-2 flex items-center">
-                  <span className="inline-block w-3 h-3 rounded-full bg-amber-400 mr-2"></span>
-                  PINNACLE
-                </h3>
-                <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
-                  <li>Ultimate rewards experience</li>
-                  <li>Maximum referral benefits</li>
-                  <li>Dedicated account manager</li>
-                  <li>Customized rewards strategy</li>
-                  <li>Exclusive VIP events</li>
-                  <li>Premium reward multipliers</li>
-                  <li>Early access to new features</li>
-                </ul>
+          <div className="flex space-x-2 mt-4 md:mt-0">
+            <Button 
+              variant={showHistory ? "outline" : "default"}
+              size="sm"
+              onClick={() => setShowHistory(false)}
+              className="flex items-center"
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Packages
+            </Button>
+            <Button 
+              variant={showHistory ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowHistory(true)}
+              className="flex items-center"
+            >
+              <History className="mr-2 h-4 w-4" />
+              History
+            </Button>
+          </div>
+        </div>
+        
+        <Card className="mb-8 border-blue-200 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="flex">
+              <Info className="h-5 w-5 text-blue-800 mr-2 flex-shrink-0 mt-0.5" />
+              <div>
+                <h2 className="text-lg font-semibold text-blue-800 mb-1">Important Information</h2>
+                <p className="text-blue-700">
+                  Access to the referral program is only available with PROSPER level packages and above. 
+                  Upgrade your subscription to unlock the ability to refer others and earn rewards.
+                </p>
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        {showHistory ? (
+          <SubscriptionHistory userId={user?.id} />
+        ) : (
+          <>
+            <Tabs defaultValue={defaultTab} className="w-full">
+              <TabsList className="grid grid-cols-5 mb-8">
+                <TabsTrigger value="OPPORTUNITY" className="relative">
+                  <span className="inline-block w-3 h-3 rounded-full bg-zinc-400 mr-2"></span>
+                  OPPORTUNITY
+                </TabsTrigger>
+                <TabsTrigger value="MOMENTUM" className="relative">
+                  <span className="inline-block w-3 h-3 rounded-full bg-blue-400 mr-2"></span>
+                  MOMENTUM
+                </TabsTrigger>
+                <TabsTrigger value="PROSPER" className="relative">
+                  <span className="inline-block w-3 h-3 rounded-full bg-green-400 mr-2"></span>
+                  PROSPER
+                </TabsTrigger>
+                <TabsTrigger value="PRESTIGE" className="relative">
+                  <span className="inline-block w-3 h-3 rounded-full bg-purple-400 mr-2"></span>
+                  PRESTIGE
+                </TabsTrigger>
+                <TabsTrigger value="PINNACLE" className="relative">
+                  <span className="inline-block w-3 h-3 rounded-full bg-amber-400 mr-2"></span>
+                  PINNACLE
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="grid grid-cols-1 gap-8">
+                <TabsContent value="OPPORTUNITY">
+                  <PaystackSubscription 
+                    packageType="OPPORTUNITY"
+                    onSuccess={handleSubscriptionSuccess}
+                    onCancel={handleSubscriptionCancel}
+                  />
+                </TabsContent>
+                <TabsContent value="MOMENTUM">
+                  <PaystackSubscription 
+                    packageType="MOMENTUM"
+                    onSuccess={handleSubscriptionSuccess}
+                    onCancel={handleSubscriptionCancel}
+                  />
+                </TabsContent>
+                <TabsContent value="PROSPER">
+                  <PaystackSubscription 
+                    packageType="PROSPER"
+                    onSuccess={handleSubscriptionSuccess}
+                    onCancel={handleSubscriptionCancel}
+                  />
+                </TabsContent>
+                <TabsContent value="PRESTIGE">
+                  <PaystackSubscription 
+                    packageType="PRESTIGE"
+                    onSuccess={handleSubscriptionSuccess}
+                    onCancel={handleSubscriptionCancel}
+                  />
+                </TabsContent>
+                <TabsContent value="PINNACLE">
+                  <PaystackSubscription 
+                    packageType="PINNACLE"
+                    onSuccess={handleSubscriptionSuccess}
+                    onCancel={handleSubscriptionCancel}
+                  />
+                </TabsContent>
+              </div>
+            </Tabs>
+
+            <Card className="mt-12">
+              <CardHeader className="border-b">
+                <CardTitle className="flex items-center">
+                  <BookOpen className="mr-2 h-5 w-5 text-muted-foreground" />
+                  Subscription Benefits
+                </CardTitle>
+                <CardDescription>
+                  Compare features across different subscription tiers
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div className="bg-white p-4 rounded-lg shadow border">
+                    <h3 className="font-semibold mb-2 flex items-center">
+                      <span className="inline-block w-3 h-3 rounded-full bg-zinc-400 mr-2"></span>
+                      OPPORTUNITY
+                    </h3>
+                    <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
+                      <li>Essential rewards program</li>
+                      <li>Monthly newsletter</li>
+                      <li>Basic customer support</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded-lg shadow border">
+                    <h3 className="font-semibold mb-2 flex items-center">
+                      <span className="inline-block w-3 h-3 rounded-full bg-blue-400 mr-2"></span>
+                      MOMENTUM
+                    </h3>
+                    <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
+                      <li>Enhanced rewards program</li>
+                      <li>Quarterly digital magazine</li>
+                      <li>Priority email support</li>
+                      <li>Additional reward opportunities</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded-lg shadow border-2 border-green-300">
+                    <h3 className="font-semibold mb-2 flex items-center">
+                      <span className="inline-block w-3 h-3 rounded-full bg-green-400 mr-2"></span>
+                      PROSPER
+                    </h3>
+                    <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
+                      <li className="font-medium text-green-700">Access to referral program</li>
+                      <li>Premium rewards program</li>
+                      <li>Dedicated support agent</li>
+                      <li>Monthly exclusive offers</li>
+                      <li>Priority processing</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded-lg shadow border">
+                    <h3 className="font-semibold mb-2 flex items-center">
+                      <span className="inline-block w-3 h-3 rounded-full bg-purple-400 mr-2"></span>
+                      PRESTIGE
+                    </h3>
+                    <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
+                      <li className="font-medium text-green-700">VIP referral benefits</li>
+                      <li>Elite rewards program</li>
+                      <li>24/7 priority support</li>
+                      <li>Exclusive member events</li>
+                      <li>Quarterly performance reviews</li>
+                      <li>Enhanced reward multipliers</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded-lg shadow border">
+                    <h3 className="font-semibold mb-2 flex items-center">
+                      <span className="inline-block w-3 h-3 rounded-full bg-amber-400 mr-2"></span>
+                      PINNACLE
+                    </h3>
+                    <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
+                      <li className="font-medium text-green-700">Maximum referral benefits</li>
+                      <li>Ultimate rewards experience</li>
+                      <li>Dedicated account manager</li>
+                      <li>Customized rewards strategy</li>
+                      <li>Exclusive VIP events</li>
+                      <li>Premium reward multipliers</li>
+                      <li>Early access to new features</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
