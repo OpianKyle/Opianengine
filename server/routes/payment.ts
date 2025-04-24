@@ -683,13 +683,11 @@ async function handleSubscriptionCreated(data) {
               `UPDATE subscriptions SET 
                paystack_subscription_code = ?,
                paystack_customer_code = ?,
-               email_token = ?,
                updated_at = ?
                WHERE id = ?`,
               [
                 subscription_code,
                 customer.customer_code,
-                email_token, // Store email token for cancellation
                 new Date(),
                 subscriptionId
               ]

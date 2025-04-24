@@ -883,12 +883,12 @@ router.delete("/api/subscription/:id", async (req, res) => {
               } else {
                 console.log(`Attempting direct API call to cancel Paystack subscription: ${subscription.paystack_subscription_code}`);
                 
-                // Send cancellation request to Paystack with the email token if available
+                // Send cancellation request to Paystack
                 const cancelResponse = await axios.post(
                   `https://api.paystack.co/subscription/disable`,
                   {
                     code: subscription.paystack_subscription_code,
-                    token: subscription.email_token || 'cancel' // Use the stored email token if available
+                    token: 'cancel' // This is required by Paystack's API
                   },
                   {
                     headers: {

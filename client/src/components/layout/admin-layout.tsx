@@ -18,7 +18,6 @@ import {
   UserCheck,
   Mail,
   RefreshCw,
-  TestTube,
 } from "lucide-react";
 import { prefetchAdminData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -34,7 +33,7 @@ const getSectionFromHref = (href: string): 'dashboard' | 'users' | 'agents' | 'p
   if (href === '/admin/rewards') return 'rewards';
   if (href === '/admin/cash-redemptions') return 'redemptions';
   if (href === '/admin/logs' || href === '/admin/email-logs') return 'logs';
-  if (href === '/admin/fix-pending' || href === '/admin/test-subscription') return 'subscriptions';
+  if (href === '/admin/fix-pending') return 'subscriptions';
   return 'all';
 };
 
@@ -78,7 +77,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "Rewards", href: "/admin/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Cash Redemptions", href: "/admin/cash-redemptions", icon: <DollarSign className="h-4 w-4 mr-2" /> },
     { label: "Fix Subscriptions", href: "/admin/fix-pending", icon: <RefreshCw className="h-4 w-4 mr-2" /> },
-    { label: "Test Subscriptions", href: "/admin/test-subscription", icon: <TestTube className="h-4 w-4 mr-2" /> },
     { label: "Migrations", href: "/admin/migrations", icon: <RefreshCw className="h-4 w-4 mr-2" /> },
     { label: "Action Logs", href: "/admin/logs", icon: <ScrollText className="h-4 w-4 mr-2" /> },
     { label: "Email Logs", href: "/admin/email-logs", icon: <Mail className="h-4 w-4 mr-2" /> },

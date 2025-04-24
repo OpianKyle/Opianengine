@@ -281,7 +281,6 @@ export const subscriptions = mysqlTable("subscriptions", {
   amount: int("amount").notNull(),
   paystackCustomerCode: text("paystack_customer_code").notNull(),
   paystackSubscriptionCode: text("paystack_subscription_code"),
-  emailToken: text("email_token"),
   paystackAuthorizationCode: text("paystack_authorization_code"),
   authEmail: text("auth_email").notNull(),
   status: mysqlEnum("status", SUBSCRIPTION_STATUS).default("ACTIVE").notNull(),

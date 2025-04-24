@@ -174,25 +174,9 @@ export const updateSubscriptionStatus = async (
   action: 'enable' | 'disable'
 ): Promise<boolean> => {
   try {
-    // For subscription disable/cancel, we need to get the email token first
-    let tokenValue = action === 'disable' ? 'cancel' : subscriptionCode;
-    
-    if (action === 'disable') {
-      try {
-        // Try to get the email token
-        const subscription = await getSubscription(subscriptionCode);
-        if (subscription?.email_token) {
-          tokenValue = subscription.email_token;
-          console.log(`Using email token for subscription ${subscriptionCode}: ${tokenValue}`);
-        }
-      } catch (tokenError) {
-        console.warn(`Could not get email token for subscription ${subscriptionCode}, using fallback value`);
-      }
-    }
-    
     const response = await createPaystackRequest(`subscription/${action}`, 'POST', {
       code: subscriptionCode,
-      token: tokenValue
+      token: subscriptionCode
     });
     
     const responseData = await response.json();
@@ -210,47 +194,17 @@ export const updateSubscriptionStatus = async (
 };
 
 /**
- * Get email token for a subscription (needed for cancellation)
- */
-export const getSubscriptionEmailToken = async (subscriptionCode: string): Promise<string> => {
-  try {
-    // Fetch subscription details to get the email token
-    const subscription = await getSubscription(subscriptionCode);
-    
-    if (!subscription || !subscription.email_token) {
-      throw new Error(`Could not find email token for subscription: ${subscriptionCode}`);
-    }
-    
-    return subscription.email_token;
-  } catch (error) {
-    console.error('Error getting subscription email token:', error);
-    throw error;
-  }
-};
-
-/**
  * Cancel a subscription
  */
 export const cancelSubscription = async (subscriptionCode: string): Promise<boolean> => {
   try {
-    // First try to get the subscription details to find the email token
-    let emailToken = '';
-    try {
-      emailToken = await getSubscriptionEmailToken(subscriptionCode);
-      console.log(`Found email token for subscription ${subscriptionCode}: ${emailToken}`);
-    } catch (tokenError) {
-      console.error('Could not retrieve email token, attempting direct cancellation:', tokenError);
-    }
-
     // Make direct request to Paystack for cancellation
     const response = await createPaystackRequest('subscription/disable', 'POST', {
       code: subscriptionCode,
-      token: emailToken || 'cancel'  // Use the email token if found, otherwise fallback to 'cancel'
+      token: 'cancel'  // This is the required token for cancellation
     });
     
     const responseData = await response.json();
-    
-    console.log('Paystack subscription cancellation response:', responseData);
     
     if (!response.ok || !responseData.status) {
       throw new Error(`Failed to cancel subscription: ${responseData.message}`);

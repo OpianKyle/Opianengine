@@ -18,7 +18,6 @@ import manualMigrationRouter from './routes/manual-migration';
 import packageTypesRouter from './routes/package-types';
 import paymentRouter from './routes/payment';
 import subscriptionRouter from './routes/subscription';
-import testSubscriptionRouter from './routes/test-subscription';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
@@ -1115,12 +1114,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/package-types', packageTypesRouter);
   app.use('/api/payment', paymentRouter);
   app.use('/api/subscription', subscriptionRouter);
-  
-  // Only add test routes in development environment
-  if (process.env.NODE_ENV !== 'production') {
-    app.use('/api/test/subscription', testSubscriptionRouter);
-    console.log('Test subscription routes enabled in development mode');
-  }
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
