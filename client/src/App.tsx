@@ -115,7 +115,7 @@ function Router() {
   return (
     <Switch>
       {/* Public Routes */}
-      <Route path="/" >
+      <Route path="/" exact>
         <Home />
       </Route>
       <Route path="/login">
@@ -132,7 +132,7 @@ function Router() {
       </Route>
 
       {/* Admin Routes */}
-      <Route path="/admin">
+      <Route path="/admin" exact>
         <AdminLayout>
           <ProtectedRoute component={AdminDashboard} admin />
         </AdminLayout>
@@ -189,7 +189,7 @@ function Router() {
       </Route>
 
       {/* Agent Routes */}
-      <Route path="/agent">
+      <Route path="/agent" exact>
         <AgentLayout>
           <ProtectedRoute component={AgentDashboard} agent />
         </AgentLayout>
@@ -206,33 +206,33 @@ function Router() {
       </Route>
 
       {/* Customer Routes */}
-      <Route path="/dashboard">
+      <Route path="/dashboard" exact>
         <CustomerLayout>
           <ProtectedRoute component={CustomerDashboard} />
         </CustomerLayout>
       </Route>
-      <Route path="/rewards">
+      <Route path="/rewards" exact>
         <CustomerLayout>
           <ProtectedRoute component={CustomerRewards} />
         </CustomerLayout>
       </Route>
-      <Route path="/referrals">
+      <Route path="/referrals" exact>
         <CustomerLayout>
           <ProtectedRoute component={ReferralsPage} />
         </CustomerLayout>
       </Route>
-      <Route path="/profile">
+      <Route path="/profile" exact>
         <CustomerLayout>
           <ProtectedRoute component={ProfilePage} />
         </CustomerLayout>
       </Route>
-      <Route path="/products">
+      <Route path="/products" exact>
         <CustomerLayout>
           <ProtectedRoute component={CustomerProducts} />
         </CustomerLayout>
       </Route>
       
-      <Route path="/subscription">
+      <Route path="/subscription" exact>
         <CustomerLayout>
           <ProtectedRoute component={SubscriptionPage} />
         </CustomerLayout>
