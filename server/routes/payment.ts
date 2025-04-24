@@ -683,17 +683,19 @@ async function handleSubscriptionCreated(data) {
               `UPDATE subscriptions SET 
                paystack_subscription_code = ?,
                paystack_customer_code = ?,
+               paystack_email_token = ?,
                updated_at = ?
                WHERE id = ?`,
               [
                 subscription_code,
                 customer.customer_code,
+                email_token,
                 new Date(),
                 subscriptionId
               ]
             );
             
-            console.log(`Updated subscription ${subscriptionId} with Paystack details: ${subscription_code}`);
+            console.log(`Updated subscription ${subscriptionId} with Paystack details: ${subscription_code} and email token captured`);
           } else {
             console.log(`No pending subscription found for user ${userId}`);
           }
