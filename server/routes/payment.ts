@@ -432,16 +432,18 @@ router.post('/verify', async (req, res) => {
       console.error('Error processing verified transaction:', error);
       return res.status(500).json({
         success: false,
-        message: 'Error processing transaction after verification'
+        message: 'Error processing transaction after verification',
+        error: error instanceof Error ? error.toString() : JSON.stringify(error)
       });
     } finally {
-      connection.release();
+      if (connection) connection.release();
     }
   } catch (error) {
     console.error('Error verifying payment:', error);
     return res.status(500).json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to verify payment'
+      message: error instanceof Error ? error.message : 'Failed to verify payment',
+      error: error instanceof Error ? error.toString() : 'Unknown error'
     });
   }
 });

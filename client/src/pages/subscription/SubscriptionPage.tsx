@@ -113,7 +113,7 @@ const SubscriptionPage = () => {
               console.log('Invalidating subscription queries to refresh data');
               queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
             } else {
-              console.log('❌ Payment verification failed:', data.message);
+              console.log('❌ Payment verification failed:', data.message, data.error);
               toast({
                 title: "Payment Verification Failed",
                 description: data.message || "There was an issue verifying your payment. Please contact support.",
@@ -128,7 +128,7 @@ const SubscriptionPage = () => {
             console.error('❌ Error verifying payment:', error);
             toast({
               title: "Verification Error",
-              description: "Failed to verify payment. Please check your account status.",
+              description: error instanceof Error ? error.message : "Failed to verify payment. Please check your account status.",
               variant: "destructive",
             });
           }
