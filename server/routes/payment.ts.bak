@@ -5,33 +5,37 @@
  */
 
 import express from 'express';
-import { transactions, users } from '../../db/schema';
 import { db, pool } from '../../db';
+import { users, transactions } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import { generateReference, initializeTransaction, verifyTransaction } from '../utils/paystack';
 import type { User } from '../../db/schema';
-import { getUserFromTokenOrSession } from '../auth';
+import { paystackConfig } from '../config/paystack';
+import mysql from 'mysql2/promise';
+import { 
+  createOrGetCustomer, 
+  initializeTransaction, 
+  verifyTransaction,  
+  generateReference 
+} from '../utils/paystack';
+import { checkAdmin, getUserFromTokenOrSession } from '../auth';
 
 const router = express.Router();
 
-// Initialize a payment
+// Initialize a payment transaction
 router.post('/initialize', async (req, res) => {
   try {
-    const { amount, purpose, planCode, metadata = {} } = req.body;
-    
-    // Get user from both token and session
-    const user = await getUserFromTokenOrSession(req);
+    const { amount, purpose, metadata, planCode } = req.body;
+    const user = req.user as User | undefined;
+
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
-    
-    // Check if amount is valid
-    if (!amount || isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ success: false, message: 'Invalid amount' });
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid payment amount' });
     }
-    
-    // Create customer or get existing
-    const { createOrGetCustomer } = await import('../utils/paystack');
+
+    // Ensure the user exists in Paystack
     const customer = await createOrGetCustomer({
       id: user.id,
       email: user.email,
@@ -88,7 +92,9 @@ router.post('/initialize', async (req, res) => {
   }
 });
 
-// Get a user's transaction history
+// Simplified transaction verification logic is now in the new /verify/:reference endpoint below
+
+// Get user's transaction history
 router.get('/transactions', async (req, res) => {
   try {
     const user = req.user as User | undefined;
@@ -185,24 +191,22 @@ router.post('/callback', async (req, res) => {
                   }
                 );
                 
-                // Update our database with the Paystack subscription code and email token
+                // Update our database with the Paystack subscription code
                 await connection.query(
                   `UPDATE subscriptions SET 
                    paystack_subscription_code = ?, 
                    paystack_customer_code = ?,
-                   paystack_email_token = ?,
                    updated_at = ?
                    WHERE id = ?`,
                   [
                     subscriptionData.subscription_code,
                     customerCode,
-                    subscriptionData.email_token || null,
                     new Date(),
                     transaction.metadata.subscription_id
                   ]
                 );
                 
-                console.log(`Updated subscription with Paystack code ${subscriptionData.subscription_code} and email token`);
+                console.log(`Updated subscription with Paystack code ${subscriptionData.subscription_code}`);
               } catch (subscriptionError) {
                 console.error('Failed to create Paystack subscription in callback:', subscriptionError);
               }
@@ -236,21 +240,113 @@ router.post('/callback', async (req, res) => {
   }
 });
 
-// Handle GET request for callback to support both types
+// GET version for the callback URL (Paystack might redirect with GET)
 router.get('/callback', async (req, res) => {
   try {
+    // Extract reference from query params
     const reference = req.query.reference || req.query.trxref;
     console.log('Payment callback received (GET):', { reference, query: req.query });
     
-    // Create the same redirect logic as the POST handler
-    // Check if the user is authenticated
+    let verificationResult = { success: false, message: 'No reference provided' };
+    
+    if (reference) {
+      // Auto-verify the transaction server-side
+      try {
+        const transaction = await verifyTransaction(reference.toString());
+        console.log('Auto-verification in callback successful:', {
+          status: transaction.status,
+          reference: transaction.reference,
+          amount: transaction.amount,
+          metadata: transaction.metadata
+        });
+        
+        // Immediately update subscription in database
+        if (transaction.status === 'success' && transaction.metadata && 
+            transaction.metadata.type === 'SUBSCRIPTION' && transaction.metadata.subscription_id) {
+          
+          // Update subscription status directly in callback
+          const connection = await pool.getConnection();
+          try {
+            // Update the subscription to ACTIVE status
+            await connection.query(
+              `UPDATE subscriptions SET 
+               status = 'ACTIVE', 
+               last_payment_date = ?,
+               next_payment_date = ?,
+               updated_at = ?,
+               payment_reference = ?
+               WHERE id = ?`,
+              [
+                new Date(),
+                new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
+                new Date(),
+                reference,
+                transaction.metadata.subscription_id
+              ]
+            );
+            
+            console.log(`Subscription ${transaction.metadata.subscription_id} activated directly in callback!`);
+            verificationResult = { 
+              success: true, 
+              message: 'Payment verified and subscription activated'
+            };
+            
+            // Also try to create Paystack subscription if we have customerCode and planCode
+            const customerCode = transaction.metadata.customer_code;
+            const planCode = transaction.metadata.plan_code;
+            
+            if (customerCode && planCode) {
+              try {
+                const { createSubscription } = await import('../utils/paystack');
+                const subscriptionData = await createSubscription(
+                  customerCode, 
+                  planCode, 
+                  {
+                    reference,
+                    local_subscription_id: transaction.metadata.subscription_id
+                  }
+                );
+                
+                // Update our database with the Paystack subscription code
+                await connection.query(
+                  `UPDATE subscriptions SET 
+                   paystack_subscription_code = ?, 
+                   paystack_customer_code = ?,
+                   updated_at = ?
+                   WHERE id = ?`,
+                  [
+                    subscriptionData.subscription_code,
+                    customerCode,
+                    new Date(),
+                    transaction.metadata.subscription_id
+                  ]
+                );
+                
+                console.log(`Updated subscription with Paystack code ${subscriptionData.subscription_code}`);
+              } catch (subscriptionError) {
+                console.error('Failed to create Paystack subscription in callback:', subscriptionError);
+              }
+            }
+          } catch (dbError) {
+            console.error('Error updating subscription in database:', dbError);
+          } finally {
+            connection.release();
+          }
+        }
+      } catch (error) {
+        console.error('Auto-verification failed but continuing with redirect:', error);
+        verificationResult = { success: false, message: 'Verification failed: ' + error };
+      }
+    }
+    
+    // Check if the user is authenticated and redirect them to subscription page directly
     if (req.isAuthenticated()) {
-      const redirectUrl = `/subscription?paymentComplete=true&reference=${reference}`;
+      const redirectUrl = `/subscription?paymentComplete=true&reference=${reference}&verified=${verificationResult.success}`;
       console.log('User authenticated, redirecting to subscription page:', redirectUrl);
       return res.redirect(redirectUrl);
     } else {
       // Redirect to login page with payment information for unauthenticated users
-      const redirectUrl = `/login?paymentComplete=true&reference=${reference}`;
+      const redirectUrl = `/login?paymentComplete=true&reference=${reference}&verified=${verificationResult.success}`;
       console.log('User not authenticated, redirecting to login page:', redirectUrl);
       return res.redirect(redirectUrl);
     }
@@ -260,27 +356,23 @@ router.get('/callback', async (req, res) => {
   }
 });
 
-// Verify a payment
-router.post('/verify', async (req, res) => {
+// Verify a payment transaction
+router.get('/verify/:reference', async (req, res) => {
   try {
-    const { reference } = req.body;
-    
-    if (!reference) {
-      return res.status(400).json({ success: false, message: 'Reference is required' });
-    }
-    
-    console.log('Verifying payment reference:', reference);
-    
-    // Get user from both token and session
-    const user = await getUserFromTokenOrSession(req);
+    const { reference } = req.params;
+    const user = req.user as User | undefined;
+
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
-    
-    // Verify the transaction
+
+    if (!reference) {
+      return res.status(400).json({ success: false, message: 'Payment reference is required' });
+    }
+
+    // Verify the transaction with Paystack
     const transaction = await verifyTransaction(reference);
     
-    // Process successful transactions
     if (transaction.status !== 'success') {
       return res.status(400).json({ 
         success: false, 
@@ -341,30 +433,32 @@ router.post('/verify', async (req, res) => {
           packageType,
           planCode,
           customerCode,
-          nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          reference
         });
         
-        // Update the subscription to ACTIVE status
+        // 1. Update the subscription to ACTIVE status in our database
         await connection.query(
           `UPDATE subscriptions SET 
            status = 'ACTIVE', 
            last_payment_date = ?,
            next_payment_date = ?,
            updated_at = ?,
+           paystack_customer_code = ?,
            payment_reference = ?
            WHERE id = ?`,
           [
             new Date(),
             new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
             new Date(),
+            customerCode,
             reference,
             subscriptionId
           ]
         );
         
-        console.log(`Subscription ${subscriptionId} activated successfully!`);
+        console.log(`Updated subscription ${subscriptionId} to ACTIVE status`);
         
-        // Try to create subscription in Paystack if needed
+        // 2. Create Paystack subscription
         if (customerCode && planCode) {
           try {
             const { createSubscription } = await import('../utils/paystack');
@@ -373,30 +467,33 @@ router.post('/verify', async (req, res) => {
               planCode, 
               {
                 reference,
+                transactionId,
                 local_subscription_id: subscriptionId
               }
             );
             
-            // Update database with Paystack subscription details
+            console.log('Created Paystack subscription:', {
+              subscription_code: subscriptionData.subscription_code,
+              email_token: subscriptionData.email_token,
+              customer: subscriptionData.customer
+            });
+            
+            // 3. Update our subscription with Paystack subscription details
             await connection.query(
               `UPDATE subscriptions SET 
-               paystack_subscription_code = ?, 
-               paystack_customer_code = ?,
-               paystack_email_token = ?,
+               paystack_subscription_code = ?,
                updated_at = ?
                WHERE id = ?`,
               [
                 subscriptionData.subscription_code,
-                customerCode,
-                subscriptionData.email_token || null,
                 new Date(),
                 subscriptionId
               ]
             );
             
-            console.log(`Created Paystack subscription ${subscriptionData.subscription_code} for local subscription ${subscriptionId}`);
-          } catch (subscriptionError) {
-            console.error('Failed to create Paystack subscription:', subscriptionError);
+            console.log(`Updated subscription ${subscriptionId} with Paystack code ${subscriptionData.subscription_code}`);
+          } catch (error) {
+            console.error('Error creating Paystack subscription:', error);
           }
         }
       }
@@ -483,34 +580,52 @@ router.post('/webhook', async (req, res) => {
 
 async function handleSuccessfulCharge(data) {
   try {
-    const { reference, metadata } = data;
-    console.log('Successful charge webhook:', { 
+    const { reference, metadata, customer, authorization } = data;
+    console.log('Processing successful charge webhook:', { 
       reference, 
-      amount: data.amount, 
-      metadata 
+      metadata,
+      customerCode: customer?.customer_code,
+      customerEmail: customer?.email,
+      authorization: authorization?.authorization_code
     });
     
-    // Update subscription directly if this is a subscription payment
-    if (metadata && metadata.subscription_id) {
+    // If this is a subscription-related payment
+    if (metadata && metadata.type === 'SUBSCRIPTION' && metadata.subscription_id) {
       const connection = await pool.getConnection();
       try {
-        // Update the subscription to ACTIVE status
+        // Get the paystack subscription details for this customer
+        const paystackSubscriptionCode = metadata.paystack_subscription_code || null;
+        const paystackCustomerCode = customer?.customer_code || null;
+        
+        console.log(`Updating subscription with Paystack details:`, {
+          subscriptionId: metadata.subscription_id,
+          paystackSubscriptionCode,
+          paystackCustomerCode
+        });
+        
+        // Update the subscription status and Paystack details
         await connection.query(
           `UPDATE subscriptions SET 
            status = 'ACTIVE', 
            last_payment_date = ?,
            next_payment_date = ?,
-           updated_at = ?
+           updated_at = ?,
+           payment_reference = ?,
+           paystack_subscription_code = ?,
+           paystack_customer_code = ?
            WHERE id = ?`,
           [
             new Date(),
             new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
             new Date(),
+            reference,
+            paystackSubscriptionCode,
+            paystackCustomerCode,
             metadata.subscription_id
           ]
         );
         
-        console.log(`Subscription ${metadata.subscription_id} activated from webhook!`);
+        console.log(`Subscription ${metadata.subscription_id} activated from webhook with Paystack details`);
       } catch (error) {
         console.error('Error updating subscription from webhook:', error);
       } finally {
