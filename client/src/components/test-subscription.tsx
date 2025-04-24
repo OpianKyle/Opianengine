@@ -15,7 +15,7 @@ export default function TestSubscriptionTool() {
   const { toast } = useToast();
   const { token } = useAuth();
   
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('kylem@opianfsgroup.com'); // Default to a user with auth
   const [subscriptionId, setSubscriptionId] = useState('');
   const [customerCode, setCustomerCode] = useState('');
   const [status, setStatus] = useState<TestSubscriptionStatus>('idle');
@@ -227,6 +227,15 @@ export default function TestSubscriptionTool() {
                   Error Creating Subscription
                 </h3>
                 <p className="text-sm text-red-600">{error}</p>
+                
+                {error.includes("no saved authorizations") && (
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-amber-800 text-xs">
+                    <strong>Note:</strong> Paystack requires a customer to have a saved payment method before subscribing.
+                    <br /><br />
+                    For test purposes, please use the email <strong>kylem@opianfsgroup.com</strong> which already 
+                    has a test authorization set up.
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>

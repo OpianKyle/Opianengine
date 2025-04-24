@@ -64,6 +64,15 @@ router.post('/create', async (req: Request, res: Response) => {
     }
 
     console.log('Test customer created:', customer);
+    
+    // Check if customer has authorization (required for subscription)
+    if (!customer.authorizations || customer.authorizations.length === 0) {
+      return res.status(400).json({ 
+        message: 'The customer has no payment authorizations',
+        error: 'For test subscriptions, use kylem@opianfsgroup.com which already has a test authorization. In a real environment, the customer needs to complete a payment first before subscribing.',
+        customer: customer
+      });
+    }
 
     // Create a test subscription
     const subscription = await createSubscription(
@@ -78,8 +87,31 @@ router.post('/create', async (req: Request, res: Response) => {
 
     console.log('Test subscription created:', subscription);
 
-    // Don't create a database record yet - the webhook will do that
-    // We're just testing the Paystack integration
+    // Store the subscription in the database for tracking
+    try {
+      // Add to our database
+      await pool.query(
+        `INSERT INTO subscriptions 
+         (user_id, email, package_type, status, amount, 
+          paystack_subscription_code, paystack_customer_code, 
+          payment_method, email_token) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.user.id,
+          email,
+          'TEST',
+          subscription.status,
+          200, // Test amount (R200)
+          subscription.subscription_code,
+          customer.customer_code,
+          'card',
+          subscription.email_token
+        ]
+      );
+    } catch (dbError: any) {
+      console.error('Warning: Failed to save subscription to database:', dbError);
+      // Continue anyway - this is just a test
+    }
 
     // Return the subscription details
     return res.status(200).json({
