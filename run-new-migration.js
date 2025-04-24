@@ -1,15 +1,15 @@
 /**
- * Run the new subscription_status field migration
+ * Run the subscription cancellations table migration
  */
 import mysql from 'mysql2/promise';
 import * as dotenv from 'dotenv';
-import { up } from './migrations/0009_add_subscription_status_field.js';
+import { up } from './migrations/0012_create_subscription_cancellations_table.js';
 
 dotenv.config();
 
 async function main() {
   try {
-    console.log('Starting database migration for subscription_status field...');
+    console.log('Starting database migration for subscription_cancellations table...');
     
     // Create database connection
     const connection = await mysql.createConnection({
