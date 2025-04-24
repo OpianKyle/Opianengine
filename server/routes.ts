@@ -16,9 +16,6 @@ import agentRouter from './routes/agent';
 import migrationRouter from './routes/migration';
 import manualMigrationRouter from './routes/manual-migration';
 import packageTypesRouter from './routes/package-types';
-import paymentRouter from './routes/payment';
-import subscriptionRouter from './routes/subscription';
-import subscriptionReactivateRouter from './routes/subscription-reactivate';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
@@ -1113,9 +1110,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/migration', migrationRouter);
   app.use('/api/manual-migration', manualMigrationRouter);
   app.use('/api/package-types', packageTypesRouter);
-  app.use('/api/payment', paymentRouter);
-  app.use('/api/subscription', subscriptionRouter);
-  app.use('/api/subscription', subscriptionReactivateRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
@@ -5035,10 +5029,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         isAgent: Boolean(user.is_agent),
         isEnabled: Boolean(user.is_enabled),
         points: parseFloat(user.points || '0'),
-        wallet_balance: parseFloat(user.wallet_balance || '0'),
-        walletBalance: parseFloat(user.wallet_balance || '0'),
-        last_funding_date: user.last_funding_date,
-        lastFundingDate: user.last_funding_date,
         referral_code: user.referral_code,
         referralCode: user.referral_code,
         referred_by: user.referred_by,

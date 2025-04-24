@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Home, Gift, Users, User, Menu, X, ShoppingBag, CreditCard } from "lucide-react";
+import { Home, Gift, Users, User, Menu, X, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/NotificationBell";
 import { prefetchCustomerData } from "@/lib/queryClient";
@@ -10,12 +10,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 
 // Helper function for section determination
-const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' | 'referral' | 'subscription' | 'all' => {
+const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' | 'referral' | 'all' => {
   if (href === '/dashboard') return 'dashboard';
   if (href === '/products') return 'products';
   if (href === '/rewards') return 'rewards';
   if (href === '/referrals') return 'referral';
-  if (href === '/subscription') return 'subscription';
   return 'all';
 };
 
@@ -53,7 +52,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     { label: "Products", href: "/products", icon: <ShoppingBag className="h-4 w-4 mr-2" /> },
     { label: "Rewards", href: "/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Referrals", href: "/referrals", icon: <Users className="h-4 w-4 mr-2" /> },
-    { label: "Subscription", href: "/subscription", icon: <CreditCard className="h-4 w-4 mr-2" /> },
     { label: "Profile", href: "/profile", icon: <User className="h-4 w-4 mr-2" />, className: "profile-link" },
   ];
 

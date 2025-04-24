@@ -4,9 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import LoginPage from "@/pages/login";
+import Login from "@/pages/login";
 import Register from "@/pages/register";
-import AuthPage from "@/pages/auth-page"; // Import combined auth page
 import ResetPassword from "@/pages/reset-password";
 import ReferralPage from "@/pages/referral"; // Import the referral form page
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
@@ -29,7 +28,6 @@ import AdminQuoteRequests from "@/pages/admin/quote-requests";
 import AdminAgents from "@/pages/admin/agents";
 import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
 import Migrations from "@/pages/admin/migrations"; // Added import for Migrations
-import FixPendingPage from "@/pages/admin/FixPendingPage"; // Import the subscription fix page
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -38,8 +36,6 @@ import CustomerLayout from "@/components/layout/customer-layout";
 import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
-import PaymentPage from "@/pages/payments/PaymentPage"; // Import payment page
-import SubscriptionPage from "@/pages/subscription/SubscriptionPage"; // Import subscription page
 
 // Agent pages
 import AgentDashboard from "@/pages/agent";
@@ -117,13 +113,10 @@ function Router() {
         <Home />
       </Route>
       <Route path="/login">
-        <LoginPage />
+        <Login />
       </Route>
       <Route path="/register">
         <Register />
-      </Route>
-      <Route path="/auth">
-        <AuthPage />
       </Route>
       <Route path="/reset-password">
         <ResetPassword />
@@ -188,11 +181,6 @@ function Router() {
           <ProtectedRoute component={Migrations} admin />
         </AdminLayout>
       </Route>
-      <Route path="/admin/fix-pending">
-        <AdminLayout>
-          <ProtectedRoute component={FixPendingPage} admin />
-        </AdminLayout>
-      </Route>
 
       {/* Agent Routes */}
       <Route path="/agent">
@@ -235,23 +223,6 @@ function Router() {
       <Route path="/products">
         <CustomerLayout>
           <ProtectedRoute component={CustomerProducts} />
-        </CustomerLayout>
-      </Route>
-      <Route path="/profile/payments">
-        <CustomerLayout>
-          <ProtectedRoute component={PaymentPage} />
-        </CustomerLayout>
-      </Route>
-      <Route path="/subscription">
-        <CustomerLayout>
-          <ProtectedRoute component={SubscriptionPage} />
-        </CustomerLayout>
-      </Route>
-      
-      {/* Add an extra route to handle /profile/subscription which might be in old links */}
-      <Route path="/profile/subscription">
-        <CustomerLayout>
-          <ProtectedRoute component={SubscriptionPage} />
         </CustomerLayout>
       </Route>
 

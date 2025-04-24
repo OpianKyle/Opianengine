@@ -24,8 +24,6 @@ export interface User {
   is_super_admin: boolean;
   is_enabled: boolean;
   points: number;
-  wallet_balance: number;
-  last_funding_date: string | null;
   referral_code: string | null;
   referred_by: string | null;
 }

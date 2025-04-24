@@ -852,8 +852,6 @@ export async function getUserFromTokenOrSession(req: Request): Promise<any> {
           is_agent: Boolean(user.is_agent),
           is_enabled: Boolean(user.is_enabled),
           points: user.points || 0,
-          wallet_balance: user.wallet_balance || 0,
-          last_funding_date: user.last_funding_date,
           referral_code: user.referral_code,
           referred_by: user.referred_by
         };

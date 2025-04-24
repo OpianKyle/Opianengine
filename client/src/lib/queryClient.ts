@@ -48,8 +48,7 @@ export const CUSTOMER_API_ENDPOINTS = {
     '/api/products',
     '/api/transactions',
     '/api/statistics',
-    '/api/referral',
-    '/api/subscription'
+    '/api/referral'
   ],
   dashboard: [
     '/api/profile',
@@ -64,9 +63,6 @@ export const CUSTOMER_API_ENDPOINTS = {
   ],
   referral: [
     '/api/referral'
-  ],
-  subscription: [
-    '/api/subscription'
   ]
 };
 
@@ -79,8 +75,7 @@ export const ADMIN_API_ENDPOINTS = {
     '/api/admin/products',
     '/api/admin/logs',
     '/api/admin/quote-requests',
-    '/api/admin/redemptions',
-    '/api/admin/subscriptions/pending'
+    '/api/admin/redemptions'
   ],
   dashboard: [
     '/api/admin/statistics',
@@ -106,9 +101,6 @@ export const ADMIN_API_ENDPOINTS = {
   ],
   logs: [
     '/api/admin/logs'
-  ],
-  subscriptions: [
-    '/api/admin/subscriptions/pending'
   ]
 };
 
@@ -130,7 +122,7 @@ export const prefetchAgentData = async (token?: string, section?: 'dashboard' | 
  * @param token JWT token for authenticated requests
  * @param section Optional section name to prefetch only specific endpoints
  */
-export const prefetchCustomerData = async (token?: string, section?: 'dashboard' | 'products' | 'rewards' | 'referral' | 'subscription' | 'all') => {
+export const prefetchCustomerData = async (token?: string, section?: 'dashboard' | 'products' | 'rewards' | 'referral' | 'all') => {
   // If section is specified, prefetch only that section's endpoints
   const endpointKey = section || 'all';
   const endpoints = CUSTOMER_API_ENDPOINTS[endpointKey];
@@ -143,7 +135,7 @@ export const prefetchCustomerData = async (token?: string, section?: 'dashboard'
  * @param token JWT token for authenticated requests
  * @param section Optional section name to prefetch only specific endpoints
  */
-export const prefetchAdminData = async (token?: string, section?: 'dashboard' | 'users' | 'agents' | 'products' | 'rewards' | 'quotes' | 'redemptions' | 'logs' | 'subscriptions' | 'all') => {
+export const prefetchAdminData = async (token?: string, section?: 'dashboard' | 'users' | 'agents' | 'products' | 'rewards' | 'quotes' | 'redemptions' | 'logs' | 'all') => {
   // If section is specified, prefetch only that section's endpoints
   const endpointKey = section || 'all';
   const endpoints = ADMIN_API_ENDPOINTS[endpointKey];
