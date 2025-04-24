@@ -114,40 +114,65 @@ export function setupAuth(app: Express): void {
     return timingSafeEqual(hashedBuf, suppliedBuf);
   }
   
-  // Configure Local Strategy for username/password login
+  // Configure Local Strategy for username/password login using custom callback
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
+    new LocalStrategy({
+      usernameField: 'email', // Use email field instead of username
+      passwordField: 'password',
+      passReqToCallback: true, // Pass the request to the callback for more flexibility
+    }, async (req, email, password, done) => {
+      console.log('LocalStrategy called with credentials:', { 
+        requestBody: req.body,
+        email: email || 'not provided', 
+        passwordProvided: !!password 
+      });
+
+      // Check if credentials are present
+      if (!email || !password) {
+        console.log('Missing credentials in request');
+        return done(null, false, { message: 'Missing credentials' });
+      }
+      
       try {
         const connection = await createConnection();
         try {
-          // Find user by username or email
+          console.log(`Looking up user with email: ${email}`);
+          
+          // Find user by email
           const [users] = await connection.execute(
-            'SELECT * FROM users WHERE username = ? OR email = ?',
-            [username, username]
+            'SELECT * FROM users WHERE email = ? OR username = ?',
+            [email, email]
           );
           
           if (!Array.isArray(users) || users.length === 0) {
-            return done(null, false, { message: 'Incorrect username or password' });
+            console.log('No user found with email/username:', email);
+            return done(null, false, { message: 'Invalid email or password' });
           }
           
           const user = users[0];
+          console.log(`Found user: ID=${user.id}, email=${user.email}`);
           
           // Check if user is enabled
           if (user.is_enabled === 0) {
+            console.log('User account is disabled');
             return done(null, false, { message: 'Account is disabled' });
           }
           
           // Verify password
+          console.log('Verifying password');
           const isValid = await comparePasswords(password, user.password);
           if (!isValid) {
-            return done(null, false, { message: 'Incorrect username or password' });
+            console.log('Password verification failed');
+            return done(null, false, { message: 'Invalid email or password' });
           }
           
+          console.log('Login successful for user:', user.email);
           return done(null, user);
         } finally {
           await connection.end();
         }
       } catch (error) {
+        console.error('Authentication error:', error);
         return done(error);
       }
     })
