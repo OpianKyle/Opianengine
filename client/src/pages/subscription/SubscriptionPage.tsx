@@ -94,10 +94,10 @@ const SubscriptionPage = () => {
         const verifyPayment = async () => {
           try {
             console.log('Verifying payment with reference:', reference);
-            const verifyUrl = `/api/payment/verify/${reference}`;
+            const verifyUrl = `/api/payment/verify`;
             console.log('Making verification request to:', verifyUrl);
             
-            const response = await apiRequest('GET', verifyUrl);
+            const response = await apiRequest('POST', verifyUrl, { reference });
             const data = await response.json();
             console.log('Payment verification response:', data);
             
