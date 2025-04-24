@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { Loader2, AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { Loader2, AlertCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -663,20 +663,40 @@ const SubscriptionPage = () => {
 
       {/* Confirmation Dialog */}
       <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {confirmAction === 'cancel' ? 'Cancel Subscription?' : 'Reactivate Subscription?'}
             </DialogTitle>
             <DialogDescription>
               {confirmAction === 'cancel' 
-                ? 'Are you sure you want to cancel this subscription? You will lose access to premium features.'
+                ? (
+                  <div className="space-y-2 mt-2">
+                    <p>Are you sure you want to cancel this subscription? You will lose access to premium features.</p>
+                    <div className="mt-4 bg-amber-50 p-4 rounded-md border border-amber-200">
+                      <h4 className="font-medium text-amber-800 flex items-center mb-2">
+                        <AlertTriangle className="h-4 w-4 mr-2" /> Important Payment Information
+                      </h4>
+                      <p className="text-amber-700 text-sm">
+                        Cancelling your subscription in OPIAN does not automatically stop future payments in Paystack.
+                      </p>
+                      <p className="text-amber-700 text-sm mt-2">
+                        <strong>To fully cancel your subscription:</strong>
+                      </p>
+                      <ol className="text-amber-700 text-sm mt-2 list-decimal pl-5 space-y-1">
+                        <li>Cancel here in OPIAN to stop access to premium features</li>
+                        <li>Visit your Paystack account to cancel recurring payments</li>
+                        <li>If you need assistance, contact our support team</li>
+                      </ol>
+                    </div>
+                  </div>
+                )
                 : 'Are you sure you want to reactivate this subscription? You will be billed for the next payment period.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsConfirmDialogOpen(false)}>
-              Cancel
+              Go Back
             </Button>
             <Button 
               variant={confirmAction === 'cancel' ? 'destructive' : 'default'}
@@ -689,7 +709,7 @@ const SubscriptionPage = () => {
                   Processing...
                 </>
               ) : (
-                confirmAction === 'cancel' ? 'Confirm Cancellation' : 'Confirm Reactivation'
+                confirmAction === 'cancel' ? 'I Understand, Cancel My Subscription' : 'Confirm Reactivation'
               )}
             </Button>
           </DialogFooter>

@@ -830,6 +830,12 @@ router.post("/api/subscription/manual-sync", async (req, res) => {
 });
 
 // Cancel subscription
+// ORIGINAL CANCELLATION ENDPOINT - COMMENTED OUT FOR REFERENCE
+/*
+router.delete("/api/subscription/:id", async (req, res) => {
+*/
+
+// NEW IMPROVED CANCELLATION ENDPOINT
 router.delete("/api/subscription/:id", async (req, res) => {
   try {
     const user = await verifySession(req);
@@ -955,11 +961,29 @@ router.delete("/api/subscription/:id", async (req, res) => {
         console.log('No Paystack subscription or customer code found, only cancelling locally');
       }
 
-      // Cancel subscription in local database
-      await connection.query(
-        `UPDATE subscriptions SET status = 'CANCELLED', updated_at = ?, cancelled_at = ? WHERE id = ?`,
-        [new Date(), new Date(), subscriptionId]
-      );
+      // Cancel subscription in local database with better error handling
+      const now = new Date();
+      const formattedDate = now.toISOString().slice(0, 19).replace('T', ' ');
+      
+      try {
+        // First try with cancelled_at column (which should exist after migration)
+        console.log(`Updating subscription ${subscriptionId} to CANCELLED with cancelled_at=${formattedDate}`);
+        await connection.query(
+          `UPDATE subscriptions SET status = 'CANCELLED', updated_at = ?, cancelled_at = ? WHERE id = ?`,
+          [formattedDate, formattedDate, subscriptionId]
+        );
+        console.log('Subscription cancelled successfully with cancelled_at column');
+      } catch (dbError) {
+        console.error('Error updating with cancelled_at column:', dbError);
+        
+        // Fallback if cancelled_at column doesn't exist
+        console.log('Trying fallback query without cancelled_at');
+        await connection.query(
+          `UPDATE subscriptions SET status = 'CANCELLED', updated_at = ? WHERE id = ?`,
+          [formattedDate, subscriptionId]
+        );
+        console.log('Subscription cancelled successfully with fallback query');
+      }
 
       // Create a descriptive message for the user
       let message = "Subscription cancelled successfully in OPIAN";
@@ -982,7 +1006,12 @@ router.delete("/api/subscription/:id", async (req, res) => {
     }
   } catch (error) {
     console.error("Error cancelling subscription:", error);
-    res.status(500).json({ error: "Failed to cancel subscription" });
+    // Provide more detailed error information for debugging
+    res.status(500).json({ 
+      error: "Failed to cancel subscription", 
+      details: error.message || "Unknown error",
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
