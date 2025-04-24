@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { AlertCircle, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/hooks/use-user';
+import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 // Package prices in ZAR
@@ -76,7 +76,7 @@ export function PaystackSubscription({
   const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user } = useAuth();
 
   // Check if user is on this package already
   const isCurrentPackage = 

@@ -36,7 +36,7 @@ import CustomerLayout from "@/components/layout/customer-layout";
 import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
-import SubscriptionPage from "@/pages/subscription/index"; // Import subscription page
+import SubscriptionPage from "@/pages/customer/subscription"; // Import subscription page
 
 // Agent pages
 import AgentDashboard from "@/pages/agent";
