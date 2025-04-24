@@ -167,31 +167,16 @@ export const createSubscription = async (
 };
 
 /**
- * Enable or disable a subscription
+ * Store subscription details including email token
+ * This is important for later reactivation if needed
  */
-export const updateSubscriptionStatus = async (
-  subscriptionCode: string,
-  action: 'enable' | 'disable'
-): Promise<boolean> => {
-  try {
-    const response = await createPaystackRequest(`subscription/${action}`, 'POST', {
-      code: subscriptionCode,
-      token: subscriptionCode
-    });
-    
-    const responseData = await response.json();
-    
-    if (!response.ok || !responseData.status) {
-      throw new Error(`Failed to ${action} subscription: ${responseData.message}`);
-    }
-    
-    return true;
-    
-  } catch (error) {
-    console.error(`Error ${action}ing Paystack subscription:`, error);
-    throw error;
-  }
-};
+export interface PaystackSubscriptionDetails {
+  subscription_code: string;
+  email_token: string;
+  customer_code?: string;
+  status?: string;
+  next_payment_date?: string;
+}
 
 /**
  * Cancel a subscription
@@ -220,15 +205,36 @@ export const cancelSubscription = async (subscriptionCode: string): Promise<bool
 
 /**
  * Reactivate a subscription
+ * @param subscriptionCode The subscription code from Paystack
+ * @param emailToken The email token associated with the subscription (required for enabling)
  */
-export const reactivateSubscription = async (subscriptionCode: string): Promise<boolean> => {
-  return await updateSubscriptionStatus(subscriptionCode, 'enable');
+export const reactivateSubscription = async (subscriptionCode: string, emailToken: string): Promise<boolean> => {
+  try {
+    // Make direct request to Paystack for subscription reactivation
+    const response = await createPaystackRequest('subscription/enable', 'POST', {
+      code: subscriptionCode,
+      token: emailToken  // Email token is required for enabling subscriptions
+    });
+    
+    const responseData = await response.json();
+    
+    if (!response.ok || !responseData.status) {
+      throw new Error(`Failed to reactivate subscription: ${responseData.message}`);
+    }
+    
+    console.log('Successfully reactivated Paystack subscription:', subscriptionCode);
+    return true;
+  } catch (error) {
+    console.error('Error reactivating Paystack subscription:', error);
+    throw error;
+  }
 };
 
 /**
- * Get subscription details
+ * Get subscription details with email token
+ * Returns subscription details including the important email_token field
  */
-export const getSubscription = async (subscriptionCode: string): Promise<any> => {
+export const getSubscription = async (subscriptionCode: string): Promise<PaystackSubscriptionDetails> => {
   try {
     const response = await createPaystackRequest(`subscription/${subscriptionCode}`);
     const responseData = await response.json();
@@ -237,7 +243,24 @@ export const getSubscription = async (subscriptionCode: string): Promise<any> =>
       throw new Error(`Failed to get subscription details: ${responseData.message}`);
     }
     
-    return responseData.data;
+    const data = responseData.data;
+    
+    // Extract the key fields we need, especially the email_token
+    const subscriptionDetails: PaystackSubscriptionDetails = {
+      subscription_code: data.subscription_code,
+      email_token: data.email_token || null,
+      customer_code: data.customer?.customer_code,
+      status: data.status,
+      next_payment_date: data.next_payment_date
+    };
+    
+    console.log(`Retrieved subscription details for ${subscriptionCode}:`, {
+      status: subscriptionDetails.status,
+      has_email_token: !!subscriptionDetails.email_token
+    });
+    
+    // Return subscription details with key fields
+    return subscriptionDetails;
     
   } catch (error) {
     console.error('Error fetching Paystack subscription details:', error);

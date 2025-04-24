@@ -185,13 +185,13 @@ const SubscriptionPage = () => {
   // Reactivate subscription mutation
   const reactivateMutation = useMutation({
     mutationFn: async (subscriptionId: number) => {
-      const response = await apiRequest('PUT', `/api/subscription/${subscriptionId}`);
+      const response = await apiRequest('POST', `/api/subscription/reactivate/${subscriptionId}`);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Subscription reactivated",
-        description: "Your subscription has been reactivated successfully.",
+        description: data.message || "Your subscription has been reactivated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/subscription'] });
       setIsConfirmDialogOpen(false);

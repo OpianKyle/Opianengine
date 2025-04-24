@@ -398,16 +398,32 @@ router.get("/api/subscription/sync/all", async (req, res) => {
               const paystackSubscription = subscriptionsResponse.data.data[0];
               const subscriptionCode = paystackSubscription.subscription_code;
               
+              // Get the subscription details to retrieve the email_token
+              let emailToken = null;
+              try {
+                const { getSubscription } = await import('../utils/paystack-subscription');
+                const subscriptionDetails = await getSubscription(subscriptionCode);
+                if (subscriptionDetails && subscriptionDetails.email_token) {
+                  emailToken = subscriptionDetails.email_token;
+                  console.log(`Retrieved email token for subscription ${subscriptionCode}: ${emailToken}`);
+                }
+              } catch (getTokenError) {
+                console.error(`Error getting email token for subscription ${subscriptionCode}:`, getTokenError);
+                // Continue without email token
+              }
+              
               // Update our database with the Paystack details
               await connection.query(
                 `UPDATE subscriptions SET
                  paystack_subscription_code = ?,
                  paystack_customer_code = ?,
+                 paystack_email_token = ?, 
                  updated_at = ?
                  WHERE id = ?`,
                 [
                   subscriptionCode,
                   customerCode,
+                  emailToken,
                   new Date(),
                   subscription.id
                 ]
@@ -575,16 +591,39 @@ router.get("/api/subscription/sync", async (req, res) => {
             const subscriptionCode = paystackSubscription.subscription_code;
             console.log('Found Paystack subscription code:', subscriptionCode);
             
+            // Get the email token for the subscription if available
+            let emailToken = null;
+            try {
+              // Try to extract email token directly from the subscription data
+              if (paystackSubscription.email_token) {
+                emailToken = paystackSubscription.email_token;
+                console.log(`Found email token directly from subscription data: ${emailToken}`);
+              } else {
+                // Alternatively, get detailed subscription info
+                const { getSubscription } = await import('../utils/paystack-subscription');
+                const subscriptionDetails = await getSubscription(subscriptionCode);
+                if (subscriptionDetails && subscriptionDetails.email_token) {
+                  emailToken = subscriptionDetails.email_token;
+                  console.log(`Retrieved email token for subscription ${subscriptionCode}: ${emailToken}`);
+                }
+              }
+            } catch (tokenError) {
+              console.error(`Error retrieving email token for subscription ${subscriptionCode}:`, tokenError);
+              // Continue without email token
+            }
+            
             // Update our database with the Paystack details
             await connection.query(
               `UPDATE subscriptions SET
                paystack_subscription_code = ?,
                paystack_customer_code = ?,
+               paystack_email_token = ?,
                updated_at = ?
                WHERE id = ?`,
               [
                 subscriptionCode,
                 customerCode,
+                emailToken,
                 new Date(),
                 subscription.id
               ]
@@ -768,16 +807,25 @@ router.post("/api/subscription/manual-sync", async (req, res) => {
           }
         }
         
+        // Extract email token if available
+        let emailToken = null;
+        if (paystackSubscriptionDetails && paystackSubscriptionDetails.email_token) {
+          emailToken = paystackSubscriptionDetails.email_token;
+          console.log(`Found email token for subscription ${finalSubscriptionCode}: ${emailToken}`);
+        }
+        
         // Update our database with the Paystack details
         await connection.query(
           `UPDATE subscriptions SET
            paystack_subscription_code = ?,
            paystack_customer_code = ?,
+           paystack_email_token = ?,
            updated_at = ?
            WHERE id = ?`,
           [
             finalSubscriptionCode,
             customerCode,
+            emailToken,
             new Date(),
             subscription.id
           ]
