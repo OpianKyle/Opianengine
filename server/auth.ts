@@ -989,6 +989,35 @@ export async function checkAgent(req: Request, res: Response, next: NextFunction
   }
 }
 
+/**
+ * Middleware to check if the user is authenticated
+ * A simpler version of checkAdmin/checkAgent that only verifies authentication
+ */
+export async function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+  try {
+    console.log('Running authentication middleware');
+
+    // Get user from token or session
+    const user = await getUserFromTokenOrSession(req);
+    if (!user) {
+      console.log('User not authenticated via session or token');
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    console.log('Authentication passed for user:', {
+      userId: user.id,
+      email: user.email
+    });
+    
+    // Attach user to request object for later use
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Error in authentication middleware:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 // Add global error handler
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);

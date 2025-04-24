@@ -26,6 +26,14 @@ export interface User {
   points: number;
   referral_code: string | null;
   referred_by: string | null;
+  // Subscription-related fields
+  selectedPackage?: string;
+  subscription_status?: string;
+  subscription_start_date?: string;
+  subscription_end_date?: string;
+  paystack_customer_code?: string;
+  paystack_subscription_code?: string;
+  paystack_email_token?: string;
 }
 
 // Login credentials type
@@ -73,6 +81,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: Error | null;
   token: string | null;
+  isAuthenticated: boolean;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<User, Error, RegisterData>;
@@ -412,6 +421,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: userQuery.isLoading,
     error: userQuery.error as Error | null,
     token,
+    isAuthenticated: !!userQuery.data,
     loginMutation,
     logoutMutation,
     registerMutation,
