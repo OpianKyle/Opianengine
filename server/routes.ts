@@ -477,63 +477,84 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     res.status(status).json({ error: message });
   });
 
-  app.post("/api/login", passport.authenticate("local"), async (req, res) => {
-    const connection = await createConnection();
-    try {
-      // Get complete user data including points with explicit numeric conversion
-      const [userData] = await connection.execute(
-        `SELECT 
-          id,
-          email, 
-          first_name,
-          last_name,
-          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
-          is_admin,
-          is_super_admin,
-          is_agent
-        FROM users
-        WHERE id = ?`,
-        [req.user?.id]
-      );
-
-      console.log('Login user data:', {
-        id: userData[0]?.id,
-        email: userData[0]?.email,
-        rawPoints: userData[0]?.points,
-        pointsType: typeof userData[0]?.points
-      });
-
-      // Ensure points is a number
-      const points = parseFloat(userData[0]?.points || '0');
-
-      console.log('Processed points:', {
-        points,
-        pointsType: typeof points
-      });
-
-      // Send user data with properly typed points
-      res.json({
-        id: userData[0]?.id,
-        email: userData[0]?.email,
-        firstName: userData[0]?.first_name,
-        lastName: userData[0]?.last_name,
-        points: points,
-        isAdmin: Boolean(userData[0]?.is_admin),
-        isSuperAdmin: Boolean(userData[0]?.is_super_admin),
-        isAgent: Boolean(userData[0]?.is_agent)
-      });
-
-      // Update session with points
-      if (req.session && req.user) {
-        req.session.points = points;
+  app.post("/api/login", (req, res, next) => {
+    // Use the authenticate method with a custom callback to handle failures
+    passport.authenticate('local', (err, user, info) => {
+      if (err) {
+        console.error('Authentication error:', err);
+        return res.status(500).json({ error: 'Authentication error' });
       }
+      
+      if (!user) {
+        console.log('Login failed, user not found or invalid credentials. Info:', info);
+        return res.status(401).json({ error: info?.message || 'Invalid username or password' });
+      }
+      
+      // If authentication is successful, log the user in and proceed
+      req.login(user, async (loginErr) => {
+        if (loginErr) {
+          console.error('Login error after authentication:', loginErr);
+          return res.status(500).json({ error: 'Login error' });
+        }
+        
+        // Continue with fetching user data
+        const connection = await createConnection();
+        try {
+          // Get complete user data including points with explicit numeric conversion
+          const [userData] = await connection.execute(
+            `SELECT 
+              id,
+              email, 
+              first_name,
+              last_name,
+              CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
+              is_admin,
+              is_super_admin,
+              is_agent
+            FROM users
+            WHERE id = ?`,
+            [req.user?.id]
+          );
 
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      res.status(500).json({ error: 'Failed to fetch user data' });
-    } finally {
-      await connection.end();
-    }
+          console.log('Login user data:', {
+            id: userData[0]?.id,
+            email: userData[0]?.email,
+            rawPoints: userData[0]?.points,
+            pointsType: typeof userData[0]?.points
+          });
+
+          // Ensure points is a number
+          const points = parseFloat(userData[0]?.points || '0');
+
+          console.log('Processed points:', {
+            points,
+            pointsType: typeof points
+          });
+
+          // Send user data with properly typed points
+          res.json({
+            id: userData[0]?.id,
+            email: userData[0]?.email,
+            firstName: userData[0]?.first_name,
+            lastName: userData[0]?.last_name,
+            points: points,
+            isAdmin: Boolean(userData[0]?.is_admin),
+            isSuperAdmin: Boolean(userData[0]?.is_super_admin),
+            isAgent: Boolean(userData[0]?.is_agent)
+          });
+
+          // Update session with points
+          if (req.session && req.user) {
+            req.session.points = points;
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          res.status(500).json({ error: 'Failed to fetch user data' });
+        } finally {
+          await connection.end();
+        }
+      });
+    })(req, res, next);
   });
 
   // Enhanced logout handling 
