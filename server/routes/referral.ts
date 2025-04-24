@@ -1,7 +1,49 @@
 import { Router, Request, Response } from 'express';
 import { createConnection } from '../db';
 import { verifyReferralCode, formatReferralCode, getAgentByReferralCode } from '../utils/referral';
-import { checkAgent, processReferralPoints } from '../auth';
+// Import verifySession from auth.ts
+import { verifySession } from '../auth';
+
+// Define our own checkAgent and processReferralPoints functions
+async function checkAgent(req: any, res: any, next: any) {
+  const user = await verifySession(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  if (!user.is_agent) {
+    return res.status(403).json({ error: 'Agent access required' });
+  }
+  
+  req.user = user;
+  next();
+}
+
+async function processReferralPoints(userId: number, points: number, description: string) {
+  const connection = await createConnection();
+  try {
+    // Add points to user's balance
+    await connection.execute(
+      'UPDATE users SET points = points + ? WHERE id = ?',
+      [points, userId]
+    );
+    
+    // Record the transaction
+    await connection.execute(
+      `INSERT INTO transactions 
+       (user_id, points, type, description, status, created_at) 
+       VALUES (?, ?, 'REFERRAL', ?, 'PROCESSED', NOW())`,
+      [userId, points, description]
+    );
+    
+    return true;
+  } catch (error) {
+    console.error('Error processing referral points:', error);
+    return false;
+  } finally {
+    await connection.end();
+  }
+}
 import { queryCache } from '../utils/query-cache';
 import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from '../utils/emailService';
 

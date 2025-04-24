@@ -6,7 +6,7 @@ const importMigrationScript = async () => {
   const migrationModule = await import('../../scripts/migrate-agent-customers.js');
   return migrationModule.migrateAgentCustomers;
 };
-import { getUserFromTokenOrSession } from '../auth';
+import { verifySession } from '../auth';
 
 const migrationRouter = Router();
 
@@ -29,7 +29,7 @@ migrationRouter.post('/agent-customers', async (req: Request, res: Response) => 
   });
   
   // Get user from session or JWT token
-  const user = await getUserFromTokenOrSession(req);
+  const user = await verifySession(req);
   
   if (!user) {
     console.log('Authentication failed, no user found');

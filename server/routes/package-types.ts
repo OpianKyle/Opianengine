@@ -1,5 +1,20 @@
 import { Router, Request, Response } from 'express';
-import { checkAdmin } from '../auth';
+import { verifySession } from '../auth';
+
+// Local implementation of checkAdmin middleware
+async function checkAdmin(req: Request, res: Response, next: Function) {
+  const user = await verifySession(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  if (!user.is_admin && !user.is_super_admin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  req.user = user;
+  next();
+}
 import { updatePackageTypes } from '../../scripts/update-package-types.js';
 
 const packageTypesRouter = Router();

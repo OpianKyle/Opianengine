@@ -1,5 +1,20 @@
 import express, { Request, Response } from 'express';
-import { checkAdmin } from '../auth';
+import { verifySession } from '../auth';
+
+// Local implementation of checkAdmin middleware
+async function checkAdmin(req: any, res: any, next: any) {
+  const user = await verifySession(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  if (!user.is_admin && !user.is_super_admin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  req.user = user;
+  next();
+}
 import { exec } from 'child_process';
 import path from 'path';
 

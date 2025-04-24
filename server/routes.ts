@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
-import { setupAuth, checkAgent, checkAdmin, verifyJwtToken, getUserFromTokenOrSession } from "./auth";
+import { setupAuth, verifySession } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { getAgentByReferralCode } from "./utils/referral";
 import { createConnection } from './db';
@@ -81,6 +81,36 @@ async function getPackagePrice(connection: any, packageName: string): Promise<nu
   });
 
   return prices.length > 0 ? Number(prices[0].premium_amount) : 0;
+}
+
+// Middleware for agent authentication
+async function checkAgent(req: Request, res: Response, next: NextFunction) {
+  const user = await verifySession(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  if (!user.is_agent) {
+    return res.status(403).json({ error: 'Agent access required' });
+  }
+  
+  req.user = user;
+  next();
+}
+
+// Middleware for admin authentication
+async function checkAdmin(req: Request, res: Response, next: NextFunction) {
+  const user = await verifySession(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  if (!user.is_admin && !user.is_super_admin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  req.user = user;
+  next();
 }
 
 // Helper function to calculate referral commission points
@@ -5000,12 +5030,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         hasAuthHeader: !!req.headers.authorization
       });
 
-      // Try to get user from either JWT token or session using the helper function
+      // Try to get user using verifySession
       let user;
       try {
-        user = await getUserFromTokenOrSession(req);
+        user = await verifySession(req);
       } catch (error) {
-        console.error('Error in getUserFromTokenOrSession:', error);
+        console.error('Error in verifySession:', error);
         return res.status(401).json({ error: "Authentication error" });
       }
 

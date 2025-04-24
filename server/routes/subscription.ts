@@ -1,5 +1,5 @@
 import express from "express";
-import { verifySession, getUserFromTokenOrSession } from "../auth";
+import { verifySession } from "../auth";
 import { pool } from "@db";
 import { subscriptions } from "@db/schema";
 import { eq } from "drizzle-orm";
@@ -473,8 +473,8 @@ router.get("/api/subscription/sync/all", async (req, res) => {
 // Synchronize current user's subscription with Paystack (available to all users)
 router.get("/api/subscription/sync", async (req, res) => {
   try {
-    // Get user from both token and session
-    const user = await getUserFromTokenOrSession(req);
+    // Get user from session
+    const user = await verifySession(req);
     if (!user) {
       console.log('User authentication failed in sync endpoint');
       return res.status(401).json({ error: "Unauthorized" });
@@ -639,8 +639,8 @@ router.get("/api/subscription/sync", async (req, res) => {
 // Manual sync with customer and subscription codes
 router.post("/api/subscription/manual-sync", async (req, res) => {
   try {
-    // Get user from both token and session
-    const user = await getUserFromTokenOrSession(req);
+    // Get user from session
+    const user = await verifySession(req);
     if (!user) {
       console.log('User authentication failed in manual sync endpoint');
       return res.status(401).json({ error: "Unauthorized" });
