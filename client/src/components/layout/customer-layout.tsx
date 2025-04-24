@@ -15,7 +15,7 @@ const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' 
   if (href === '/products') return 'products';
   if (href === '/rewards') return 'rewards';
   if (href === '/referrals') return 'referral';
-  if (href === '/dashboard/subscription') return 'subscription';
+  if (href === '/subscription') return 'subscription';
   return 'all';
 };
 
@@ -53,7 +53,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     { label: "Products", href: "/products", icon: <ShoppingBag className="h-4 w-4 mr-2" /> },
     { label: "Rewards", href: "/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Referrals", href: "/referrals", icon: <Users className="h-4 w-4 mr-2" /> },
-    { label: "Subscription", href: "/dashboard/subscription", icon: <CreditCard className="h-4 w-4 mr-2" /> },
+    { label: "Subscription", href: "/subscription", icon: <CreditCard className="h-4 w-4 mr-2" /> },
     { label: "Profile", href: "/profile", icon: <User className="h-4 w-4 mr-2" />, className: "profile-link" },
   ];
 

@@ -1,5 +1,4 @@
 import React from 'react';
-import CustomerLayout from '@/components/layout/customer-layout';
 import { PaystackSubscription } from '@/components/subscription/PaystackSubscription';
 import {
   Tabs,
@@ -28,7 +27,7 @@ const SubscriptionPage: React.FC = () => {
   const [, navigate] = useLocation();
   
   if (!isAuthenticated) {
-    navigate("/login?redirect=/dashboard/subscription");
+    navigate("/login?redirect=/subscription");
     return null;
   }
 

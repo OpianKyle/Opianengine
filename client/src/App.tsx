@@ -36,7 +36,7 @@ import CustomerLayout from "@/components/layout/customer-layout";
 import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
-import SubscriptionPage from "@/pages/subscription"; // Import subscription page
+import SubscriptionPage from "@/pages/subscription/index"; // Import subscription page
 
 // Agent pages
 import AgentDashboard from "@/pages/agent";
@@ -227,7 +227,7 @@ function Router() {
         </CustomerLayout>
       </Route>
       
-      <Route path="/dashboard/subscription">
+      <Route path="/subscription">
         <CustomerLayout>
           <ProtectedRoute component={SubscriptionPage} />
         </CustomerLayout>
