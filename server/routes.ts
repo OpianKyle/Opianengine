@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
-import { setupAuth, verifySession } from "./auth";
+import { setupAuth, checkAgent, checkAdmin, verifyJwtToken, getUserFromTokenOrSession } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { getAgentByReferralCode } from "./utils/referral";
 import { createConnection } from './db';
@@ -18,7 +18,6 @@ import manualMigrationRouter from './routes/manual-migration';
 import packageTypesRouter from './routes/package-types';
 import paymentRouter from './routes/payment';
 import subscriptionRouter from './routes/subscription';
-import subscriptionCancelRouter from './routes/subscription-cancel';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
@@ -81,36 +80,6 @@ async function getPackagePrice(connection: any, packageName: string): Promise<nu
   });
 
   return prices.length > 0 ? Number(prices[0].premium_amount) : 0;
-}
-
-// Middleware for agent authentication
-async function checkAgent(req: Request, res: Response, next: NextFunction) {
-  const user = await verifySession(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  
-  if (!user.is_agent) {
-    return res.status(403).json({ error: 'Agent access required' });
-  }
-  
-  req.user = user;
-  next();
-}
-
-// Middleware for admin authentication
-async function checkAdmin(req: Request, res: Response, next: NextFunction) {
-  const user = await verifySession(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  
-  if (!user.is_admin && !user.is_super_admin) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  
-  req.user = user;
-  next();
 }
 
 // Helper function to calculate referral commission points
@@ -477,84 +446,63 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     res.status(status).json({ error: message });
   });
 
-  app.post("/api/login", (req, res, next) => {
-    // Use the authenticate method with a custom callback to handle failures
-    passport.authenticate('local', (err, user, info) => {
-      if (err) {
-        console.error('Authentication error:', err);
-        return res.status(500).json({ error: 'Authentication error' });
-      }
-      
-      if (!user) {
-        console.log('Login failed, user not found or invalid credentials. Info:', info);
-        return res.status(401).json({ error: info?.message || 'Invalid username or password' });
-      }
-      
-      // If authentication is successful, log the user in and proceed
-      req.login(user, async (loginErr) => {
-        if (loginErr) {
-          console.error('Login error after authentication:', loginErr);
-          return res.status(500).json({ error: 'Login error' });
-        }
-        
-        // Continue with fetching user data
-        const connection = await createConnection();
-        try {
-          // Get complete user data including points with explicit numeric conversion
-          const [userData] = await connection.execute(
-            `SELECT 
-              id,
-              email, 
-              first_name,
-              last_name,
-              CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
-              is_admin,
-              is_super_admin,
-              is_agent
-            FROM users
-            WHERE id = ?`,
-            [req.user?.id]
-          );
+  app.post("/api/login", passport.authenticate("local"), async (req, res) => {
+    const connection = await createConnection();
+    try {
+      // Get complete user data including points with explicit numeric conversion
+      const [userData] = await connection.execute(
+        `SELECT 
+          id,
+          email, 
+          first_name,
+          last_name,
+          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
+          is_admin,
+          is_super_admin,
+          is_agent
+        FROM users
+        WHERE id = ?`,
+        [req.user?.id]
+      );
 
-          console.log('Login user data:', {
-            id: userData[0]?.id,
-            email: userData[0]?.email,
-            rawPoints: userData[0]?.points,
-            pointsType: typeof userData[0]?.points
-          });
-
-          // Ensure points is a number
-          const points = parseFloat(userData[0]?.points || '0');
-
-          console.log('Processed points:', {
-            points,
-            pointsType: typeof points
-          });
-
-          // Send user data with properly typed points
-          res.json({
-            id: userData[0]?.id,
-            email: userData[0]?.email,
-            firstName: userData[0]?.first_name,
-            lastName: userData[0]?.last_name,
-            points: points,
-            isAdmin: Boolean(userData[0]?.is_admin),
-            isSuperAdmin: Boolean(userData[0]?.is_super_admin),
-            isAgent: Boolean(userData[0]?.is_agent)
-          });
-
-          // Update session with points
-          if (req.session && req.user) {
-            req.session.points = points;
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-          res.status(500).json({ error: 'Failed to fetch user data' });
-        } finally {
-          await connection.end();
-        }
+      console.log('Login user data:', {
+        id: userData[0]?.id,
+        email: userData[0]?.email,
+        rawPoints: userData[0]?.points,
+        pointsType: typeof userData[0]?.points
       });
-    })(req, res, next);
+
+      // Ensure points is a number
+      const points = parseFloat(userData[0]?.points || '0');
+
+      console.log('Processed points:', {
+        points,
+        pointsType: typeof points
+      });
+
+      // Send user data with properly typed points
+      res.json({
+        id: userData[0]?.id,
+        email: userData[0]?.email,
+        firstName: userData[0]?.first_name,
+        lastName: userData[0]?.last_name,
+        points: points,
+        isAdmin: Boolean(userData[0]?.is_admin),
+        isSuperAdmin: Boolean(userData[0]?.is_super_admin),
+        isAgent: Boolean(userData[0]?.is_agent)
+      });
+
+      // Update session with points
+      if (req.session && req.user) {
+        req.session.points = points;
+      }
+
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      res.status(500).json({ error: 'Failed to fetch user data' });
+    } finally {
+      await connection.end();
+    }
   });
 
   // Enhanced logout handling 
@@ -1166,7 +1114,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/package-types', packageTypesRouter);
   app.use('/api/payment', paymentRouter);
   app.use('/api/subscription', subscriptionRouter);
-  app.use(subscriptionCancelRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
@@ -5051,12 +4998,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         hasAuthHeader: !!req.headers.authorization
       });
 
-      // Try to get user using verifySession
+      // Try to get user from either JWT token or session using the helper function
       let user;
       try {
-        user = await verifySession(req);
+        user = await getUserFromTokenOrSession(req);
       } catch (error) {
-        console.error('Error in verifySession:', error);
+        console.error('Error in getUserFromTokenOrSession:', error);
         return res.status(401).json({ error: "Authentication error" });
       }
 

@@ -3,22 +3,7 @@ import { createConnection } from '../db';
 import { generateReferralCode } from '../utils/referral';
 import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from '../utils/emailService';
 import { queryCache } from '../utils/query-cache';
-import { verifySession } from '../auth';
-
-// Define our own checkAgent middleware
-async function checkAgent(req: any, res: any, next: any) {
-  const user = await verifySession(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  
-  if (!user.is_agent) {
-    return res.status(403).json({ error: 'Agent access required' });
-  }
-  
-  req.user = user;
-  next();
-}
+import { checkAgent } from '../auth';
 
 const router = Router();
 
