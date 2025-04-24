@@ -309,7 +309,12 @@ router.post('/verify', async (req, res) => {
         });
       }
       
-      // Insert transaction record
+      // Insert transaction record with safe handling of metadata
+      // Make sure we have fallbacks for all fields that might be missing
+      const packageType = transaction.metadata?.packageType || 
+                          transaction.metadata?.package_type || 
+                          'unknown package';
+      
       const [insertResult] = await connection.query(
         `INSERT INTO transactions 
          (user_id, amount, type, description, status, payment_reference, metadata, created_at, updated_at) 
@@ -318,7 +323,7 @@ router.post('/verify', async (req, res) => {
           user.id,
           transaction.amount / 100, // Convert from kobo to naira
           'SUBSCRIPTION_PAYMENT',
-          `Subscription payment for ${transaction.metadata?.packageType || 'unknown package'}`,
+          `Subscription payment for ${packageType}`,
           'COMPLETED',
           reference,
           JSON.stringify(transaction),
@@ -330,11 +335,21 @@ router.post('/verify', async (req, res) => {
       const transactionId = insertResult.insertId;
       
       // Update subscription status if this was a subscription payment
-      if (transaction.metadata && transaction.metadata.type === 'SUBSCRIPTION' && transaction.metadata.subscription_id) {
-        const subscriptionId = transaction.metadata.subscription_id;
-        const packageType = transaction.metadata.package_type;
-        const planCode = transaction.metadata.plan_code;
-        const customerCode = transaction.metadata.customer_code;
+      // Handle potentially missing metadata fields with safe defaults
+      if (transaction.metadata) {
+        // Extract values with fallbacks for all possible field names
+        const subscriptionId = transaction.metadata.subscription_id || 
+                               transaction.metadata.subscriptionId || 
+                               null;
+        const packageType = transaction.metadata.package_type || 
+                            transaction.metadata.packageType || 
+                            null;
+        const planCode = transaction.metadata.plan_code ||
+                         transaction.metadata.planCode ||
+                         null;
+        const customerCode = transaction.metadata.customer_code || 
+                             transaction.metadata.customerCode ||
+                             null;
         
         console.log(`Processing successful subscription payment:`, {
           subscriptionId,
@@ -490,31 +505,38 @@ async function handleSuccessfulCharge(data) {
       metadata 
     });
     
-    // Update subscription directly if this is a subscription payment
-    if (metadata && metadata.subscription_id) {
-      const connection = await pool.getConnection();
-      try {
-        // Update the subscription to ACTIVE status
-        await connection.query(
-          `UPDATE subscriptions SET 
-           status = 'ACTIVE', 
-           last_payment_date = ?,
-           next_payment_date = ?,
-           updated_at = ?
-           WHERE id = ?`,
-          [
-            new Date(),
-            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
-            new Date(),
-            metadata.subscription_id
-          ]
-        );
-        
-        console.log(`Subscription ${metadata.subscription_id} activated from webhook!`);
-      } catch (error) {
-        console.error('Error updating subscription from webhook:', error);
-      } finally {
-        connection.release();
+    // Update subscription directly if this is a subscription payment with robust fallbacks
+    if (metadata) {
+      // Extract values with fallbacks for all possible field names
+      const subscriptionId = metadata.subscription_id || 
+                             metadata.subscriptionId || 
+                             null;
+                             
+      if (subscriptionId) {
+        const connection = await pool.getConnection();
+        try {
+          // Update the subscription to ACTIVE status
+          await connection.query(
+            `UPDATE subscriptions SET 
+             status = 'ACTIVE', 
+             last_payment_date = ?,
+             next_payment_date = ?,
+             updated_at = ?
+             WHERE id = ?`,
+            [
+              new Date(),
+              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next payment in 30 days
+              new Date(),
+              subscriptionId
+            ]
+          );
+          
+          console.log(`Subscription ${subscriptionId} activated from webhook!`);
+        } catch (error) {
+          console.error('Error updating subscription from webhook:', error);
+        } finally {
+          connection.release();
+        }
       }
     }
   } catch (verifyError) {
