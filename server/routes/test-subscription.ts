@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { pool } from '@db';
 import jwt from 'jsonwebtoken';
-import { getOrCreateCustomer } from '../utils/paystack';
+import { getOrCreateCustomer, hasCustomerAuthorizations } from '../utils/paystack';
 import { createSubscription, cancelSubscription } from '../utils/paystack-subscription';
 import { getUserFromTokenOrSession, checkAdmin } from '../auth';
 
@@ -54,6 +54,21 @@ router.post('/create', async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Only admin users can create test subscriptions' });
     }
 
+    console.log('Checking if customer has saved authorizations...');
+    
+    // First, explicitly check if the customer has authorizations using our utility function
+    const hasAuthorizations = await hasCustomerAuthorizations(email);
+    
+    if (!hasAuthorizations) {
+      return res.status(400).json({ 
+        message: 'The customer has no saved payment authorizations',
+        error: 'For test subscriptions, use kylem@opianfsgroup.com which should have a test authorization. In a real environment, the customer needs to complete a payment first before subscribing.',
+        customer_email: email
+      });
+    }
+    
+    console.log('✅ Customer has saved authorizations, proceeding with subscription creation');
+    
     // Create a test customer in Paystack using getOrCreateCustomer
     const customer = await getOrCreateCustomer(email, {
       first_name: 'Test',
@@ -63,16 +78,7 @@ router.post('/create', async (req: Request, res: Response) => {
       return res.status(500).json({ message: 'Failed to create customer in Paystack' });
     }
 
-    console.log('Test customer created:', customer);
-    
-    // Check if customer has authorization (required for subscription)
-    if (!customer.authorizations || customer.authorizations.length === 0) {
-      return res.status(400).json({ 
-        message: 'The customer has no payment authorizations',
-        error: 'For test subscriptions, use kylem@opianfsgroup.com which already has a test authorization. In a real environment, the customer needs to complete a payment first before subscribing.',
-        customer: customer
-      });
-    }
+    console.log('Test customer fetched:', customer);
 
     // Create a test subscription
     const subscription = await createSubscription(

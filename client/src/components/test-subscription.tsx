@@ -228,12 +228,15 @@ export default function TestSubscriptionTool() {
                 </h3>
                 <p className="text-sm text-red-600">{error}</p>
                 
-                {error.includes("no saved authorizations") && (
+                {(error.includes("no saved authorizations") || error.includes("no payment authorizations")) && (
                   <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-amber-800 text-xs">
                     <strong>Note:</strong> Paystack requires a customer to have a saved payment method before subscribing.
                     <br /><br />
                     For test purposes, please use the email <strong>kylem@opianfsgroup.com</strong> which already 
                     has a test authorization set up.
+                    <br /><br />
+                    If you're still seeing this error with kylem@opianfsgroup.com, the saved authorization may have 
+                    expired or been removed. You'll need to make a test payment with this email first.
                   </div>
                 )}
               </div>
