@@ -138,10 +138,10 @@ export function setupAuth(app: Express): void {
         try {
           console.log(`Looking up user with email: ${email}`);
           
-          // Find user by email
+          // Find user by email only (no username column in OPIAN database)
           const [users] = await connection.execute(
-            'SELECT * FROM users WHERE email = ? OR username = ?',
-            [email, email]
+            'SELECT * FROM users WHERE email = ?',
+            [email]
           );
           
           if (!Array.isArray(users) || users.length === 0) {
@@ -208,22 +208,22 @@ export function setupAuth(app: Express): void {
   // Register auth routes
   app.post('/api/register', async (req, res, next) => {
     try {
-      const { username, email, password, firstName, lastName } = req.body;
+      const { email, password, firstName, lastName, mobileNumber, selectedPackage, referralCode } = req.body;
       
-      if (!username || !email || !password) {
-        return res.status(400).json({ error: 'Username, email, and password are required' });
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
       }
       
       const connection = await createConnection();
       try {
-        // Check if username or email already exists
+        // Check if email already exists
         const [existingUsers] = await connection.execute(
-          'SELECT * FROM users WHERE username = ? OR email = ?',
-          [username, email]
+          'SELECT * FROM users WHERE email = ?',
+          [email]
         );
         
         if (Array.isArray(existingUsers) && existingUsers.length > 0) {
-          return res.status(400).json({ error: 'Username or email already in use' });
+          return res.status(400).json({ error: 'Email already in use' });
         }
         
         // Hash the password
@@ -232,12 +232,14 @@ export function setupAuth(app: Express): void {
         // Begin transaction
         await connection.beginTransaction();
         
-        // Insert the new user
+        // Insert the new user - match the schema for OPIAN Rewards
         const [result] = await connection.execute(
           `INSERT INTO users (
-            username, email, password, first_name, last_name, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
-          [username, email, hashedPassword, firstName || null, lastName || null]
+            email, password, first_name, last_name, phone_number, 
+            selected_package, referral_code, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+          [email, hashedPassword, firstName || null, lastName || null, mobileNumber || null, 
+           selectedPackage || 'OPPORTUNITY', referralCode || null]
         );
         
         // Get the new user ID
@@ -273,5 +275,43 @@ export function setupAuth(app: Express): void {
       console.error('Registration error:', error);
       res.status(500).json({ error: 'Registration failed' });
     }
+  });
+  
+  // Login route with detailed logging and error handling
+  app.post('/api/login', (req, res, next) => {
+    console.log('Login request received:', {
+      hasEmail: !!req.body.email,
+      hasPassword: !!req.body.password,
+      bodyKeys: Object.keys(req.body)
+    });
+    
+    // Use custom authenticate callback for better error handling
+    passport.authenticate('local', (err, user, info) => {
+      console.log('Passport authenticate result:', { 
+        error: err ? 'Error occurred' : 'No error', 
+        userFound: !!user, 
+        info 
+      });
+      
+      if (err) {
+        console.error('Login error:', err);
+        return res.status(500).json({ error: 'Authentication error' });
+      }
+      
+      if (!user) {
+        console.log('Login failed, user not found or invalid credentials. Info:', info);
+        return res.status(401).json({ error: info?.message || 'Invalid credentials' });
+      }
+      
+      req.logIn(user, (err) => {
+        if (err) {
+          console.error('Session login error:', err);
+          return res.status(500).json({ error: 'Session error' });
+        }
+        
+        console.log('User successfully authenticated:', user.email);
+        return res.status(200).json(user);
+      });
+    })(req, res, next);
   });
 }
