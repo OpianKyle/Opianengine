@@ -57,7 +57,14 @@ export function CancellationDialog({
 
   const cancelMutation = useMutation({
     mutationFn: async (data: CancellationFormValues) => {
-      // Get user's subscription email token
+      // Special handling for PINNACLE demo package
+      if (packageType === "PINNACLE" && (!user?.selectedPackage || user?.selectedPackage === "PINNACLE")) {
+        console.log('Demo cancellation for PINNACLE package');
+        // For demo purposes, we don't make a real API call, just pretend success
+        return { success: true, message: "Demo subscription cancelled" };
+      }
+      
+      // Get user's subscription email token for real cancellations
       const emailToken = user?.paystack_email_token;
       
       if (!emailToken) {
