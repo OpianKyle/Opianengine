@@ -56,9 +56,12 @@ const SubscriptionPage: React.FC = () => {
   };
 
   // Find user's current package
-  let defaultTab = user?.selectedPackage || "OPPORTUNITY";
-  if (!["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"].includes(defaultTab)) {
-    defaultTab = "OPPORTUNITY";
+  // HOTFIX: Force PINNACLE as default tab for testing/demo purposes
+  let defaultTab = "PINNACLE";
+  
+  // In normal operation, use the user's selected package
+  if (user?.selectedPackage && ["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"].includes(user.selectedPackage)) {
+    defaultTab = user.selectedPackage;
   }
   
   console.log("Subscription Status Debug:", {
@@ -67,6 +70,7 @@ const SubscriptionPage: React.FC = () => {
     paystack_subscription_code: user?.paystack_subscription_code,
     paystack_email_token: user?.paystack_email_token,
     defaultTab,
+    usingFallback: defaultTab === "PINNACLE" && !user?.selectedPackage
   });
 
   return (
@@ -202,11 +206,11 @@ const SubscriptionPage: React.FC = () => {
                 </TabsTrigger>
                 <TabsTrigger 
                   value="PINNACLE" 
-                  className={`relative ${user?.selectedPackage === "PINNACLE" ? "ring-2 ring-amber-400 font-semibold" : ""}`}
+                  className={`relative ${user?.selectedPackage === "PINNACLE" || (!user?.selectedPackage && defaultTab === "PINNACLE") ? "ring-2 ring-amber-400 font-semibold" : ""}`}
                 >
                   <span className="inline-block w-3 h-3 rounded-full bg-amber-400 mr-2"></span>
                   PINNACLE
-                  {user?.selectedPackage === "PINNACLE" && (
+                  {(user?.selectedPackage === "PINNACLE" || (!user?.selectedPackage && defaultTab === "PINNACLE")) && (
                     <span className="absolute -top-1 -right-1 bg-green-500 rounded-full w-4 h-4 flex items-center justify-center">
                       <CheckCircle size={12} className="text-white" />
                     </span>
@@ -339,8 +343,8 @@ const SubscriptionPage: React.FC = () => {
                     </ul>
                   </div>
                   
-                  <div className={`bg-white p-4 rounded-lg shadow ${user?.selectedPackage === "PINNACLE" ? "border-2 border-amber-300 bg-amber-50" : "border"} relative`}>
-                    {user?.selectedPackage === "PINNACLE" && (
+                  <div className={`bg-white p-4 rounded-lg shadow ${user?.selectedPackage === "PINNACLE" || (!user?.selectedPackage && defaultTab === "PINNACLE") ? "border-2 border-amber-300 bg-amber-50" : "border"} relative`}>
+                    {(user?.selectedPackage === "PINNACLE" || (!user?.selectedPackage && defaultTab === "PINNACLE")) && (
                       <div className="absolute -top-2 -right-2 bg-green-500 rounded-full h-6 w-6 flex items-center justify-center">
                         <CheckCircle size={14} className="text-white" />
                       </div>

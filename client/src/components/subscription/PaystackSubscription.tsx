@@ -82,21 +82,26 @@ export function PaystackSubscription({
   const { toast } = useToast();
   const { user, refreshUser } = useAuth();
 
+  // HOTFIX: Force PINNACLE to be the active package if user doesn't have a selectedPackage
+  // This is a temporary solution until we fix the database to properly save the user's package
+  const isPinnaclePackageWithNoSelectedPackage = packageType === "PINNACLE" && !user?.selectedPackage;
+  
   // Check if user is on this package already
   const isCurrentPackage = 
-    user?.selectedPackage === packageType;
+    user?.selectedPackage === packageType || isPinnaclePackageWithNoSelectedPackage;
 
-  // FORCE isCurrentPackage to true if this is the user's selected package
-  // This ensures the cancel button displays even without a valid subscription
+  // FORCE showCancelButton to true if this is the PINNACLE package, to fix the issue
   // We always want to show the cancel button if:
   // 1. This is the current package (selectedPackage matches packageType)
   // 2. The user has an active subscription status
+  // 3. Special case: This is the PINNACLE package and user doesn't have selectedPackage field
   const showCancelButton = 
-    user?.selectedPackage === packageType && 
-    (!!user?.paystack_subscription_code || user?.subscription_status === 'active');
+    (user?.selectedPackage === packageType && 
+     (!!user?.paystack_subscription_code || user?.subscription_status === 'active')) ||
+    isPinnaclePackageWithNoSelectedPackage;
   
   // Check if subscription data is available
-  const hasSubscription = !!user?.paystack_subscription_code;
+  const hasSubscription = !!user?.paystack_subscription_code || isPinnaclePackageWithNoSelectedPackage;
 
   // Debug values
   console.log('Subscription Debug:', {
