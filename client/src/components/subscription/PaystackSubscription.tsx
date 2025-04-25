@@ -100,7 +100,8 @@ export function PaystackSubscription({
     subscriptionStatus: user?.subscription_status,
     isCurrentPackage,
     hasSubscription,
-    subscriptionCode: user?.paystack_subscription_code
+    subscriptionCode: user?.paystack_subscription_code,
+    showCancelButton
   });
 
   // Fetch subscription details if available
@@ -335,13 +336,18 @@ export function PaystackSubscription({
             <span className={`inline-block w-4 h-4 rounded-full mr-2 ${getPackageBorderClass().replace('border', 'bg')}`}></span>
             {packageType} Package
             {isCurrentPackage && (
-              <span className="ml-auto text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
-                <CheckCircle size={16} className="mr-1" /> Current
+              <span className="ml-auto text-sm bg-green-600 text-white px-2 py-1 rounded-full flex items-center animate-pulse">
+                <CheckCircle size={16} className="mr-1" /> ACTIVE
               </span>
             )}
           </CardTitle>
-          <CardDescription className="text-2xl font-bold mt-2">
-            R{PACKAGE_PRICES[packageType as keyof typeof PACKAGE_PRICES]}/month
+          <CardDescription className="text-2xl font-bold mt-2 flex items-center justify-between">
+            <span>R{PACKAGE_PRICES[packageType as keyof typeof PACKAGE_PRICES]}/month</span>
+            {isCurrentPackage && (
+              <Badge variant="outline" className="ml-2 border-green-500 text-green-700">
+                Your Current Package
+              </Badge>
+            )}
           </CardDescription>
         </CardHeader>
         
@@ -408,9 +414,12 @@ export function PaystackSubscription({
               </Button>
             </>
           ) : (
-            <Button onClick={handleSubscribe} className="w-full">
-              {hasSubscription ? 'Change to this Plan' : 'Subscribe Now'} 
-              <ArrowRight className="ml-2 h-4 w-4" />
+            <Button 
+              onClick={handleSubscribe} 
+              className={`w-full ${user?.selectedPackage === packageType ? 'bg-green-600 hover:bg-green-700' : ''}`}
+            >
+              {user?.selectedPackage === packageType ? 'Current Plan' : hasSubscription ? 'Change to this Plan' : 'Subscribe Now'} 
+              {user?.selectedPackage !== packageType && <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>
           )}
         </CardFooter>
