@@ -58,7 +58,11 @@ export function CancellationDialog({
   const cancelMutation = useMutation({
     mutationFn: async (data: CancellationFormValues) => {
       // Get user's subscription email token
-      const emailToken = user?.paystack_email_token || '';
+      const emailToken = user?.paystack_email_token;
+      
+      if (!emailToken) {
+        throw new Error('Unable to cancel subscription: Missing email token. Please contact support.');
+      }
       
       // Make API request to cancel subscription
       return await post('/api/subscription/cancel', {
@@ -106,9 +110,9 @@ export function CancellationDialog({
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="bg-white max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-900">Cancel Subscription</DialogTitle>
+          <DialogTitle className="text-xl font-semibold text-gray-900">Cancel {packageType} Subscription</DialogTitle>
           <DialogDescription className="text-gray-600">
-            We're sorry to see you go. Please let us know why you're cancelling your subscription.
+            We're sorry to see you go. Your subscription will remain active until the end of your current billing period. Please let us know why you're cancelling so we can improve our service.
           </DialogDescription>
         </DialogHeader>
         

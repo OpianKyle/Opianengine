@@ -82,14 +82,12 @@ export function PaystackSubscription({
   const { toast } = useToast();
   const { user, refreshUser } = useAuth();
 
-  // DEBUG: Make always true for testing
-  const isCurrentPackage = true;
-    // user?.subscription_status === 'active' && 
-    // user?.selectedPackage === packageType;
+  // Check if user is on this package already
+  const isCurrentPackage = 
+    user?.selectedPackage === packageType;
 
   // Check if subscription data is available
-  const hasSubscription = true; // DEBUG: Force to true for testing
-  // !!user?.paystack_subscription_code;
+  const hasSubscription = !!user?.paystack_subscription_code;
 
   // Debug values
   console.log('Subscription Debug:', {
@@ -118,13 +116,22 @@ export function PaystackSubscription({
   // Fetch subscription details from the server
   const fetchSubscriptionDetails = async () => {
     try {
+      // Only fetch if user has a subscription code or selectedPackage
+      if (!user?.paystack_subscription_code && !user?.selectedPackage) {
+        console.log('Skipping subscription details fetch - no subscription data');
+        return;
+      }
+      
       setIsLoading(true);
       const data = await get('/api/subscription/details');
       setSubscriptionDetails(data.subscription);
       setError(null); // Clear any previous errors on success
     } catch (error: any) {
       console.error('Error fetching subscription details:', error);
-      setError(error.message || 'An error occurred while fetching subscription details');
+      // Don't show 404 errors to user as these are expected when no subscription exists
+      if (error.status !== 404) {
+        setError(error.message || 'An error occurred while fetching subscription details');
+      }
 
       // If error response contains "No active subscription found" but we know user has a subscription
       // in Paystack, refresh the user data to get fresh subscription info
@@ -388,7 +395,7 @@ export function PaystackSubscription({
             </Button>
           ) : isCurrentPackage ? (
             <>
-              {true || user?.subscription_status === 'active' ? (
+              {user?.subscription_status === 'active' || user?.paystack_subscription_code ? (
                 <>
                   <Button variant="destructive" onClick={handleOpenCancellationDialog} className="w-full">
                     Cancel Subscription
