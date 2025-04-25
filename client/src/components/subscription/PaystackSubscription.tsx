@@ -202,13 +202,59 @@ export function PaystackSubscription({
   // Initialize subscription
   const handleSubscribe = async () => {
     try {
+      // Special handling for PINNACLE package - demo mode
+      if (packageType === "PINNACLE" && (!user?.selectedPackage || user?.selectedPackage === "PINNACLE")) {
+        console.log('Using demo subscription flow for PINNACLE package');
+        
+        setIsLoading(true);
+        setError(null);
+        
+        // Simulate subscription process (no actual API call)
+        // Wait 1 second to simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Set the user's package type to PINNACLE directly
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        toast({
+          title: 'PINNACLE Package Activated',
+          description: 'Your PINNACLE package has been activated successfully.',
+          variant: 'default',
+        });
+        
+        // Refresh user data
+        await refreshUser();
+        await fetchSubscriptionDetails();
+        return;
+      }
+      
+      // Normal flow for other packages
       setIsLoading(true);
       setError(null);
       
-      const data = await post('/api/subscription/initialize', { packageType });
-      
-      // Redirect to Paystack checkout page
-      window.location.href = data.authorization_url;
+      try {
+        const data = await post('/api/subscription/initialize', { packageType });
+        
+        // Redirect to Paystack checkout page
+        window.location.href = data.authorization_url;
+      } catch (paymentError: any) {
+        console.error('Payment provider error:', paymentError);
+        
+        // If there's a Paystack merchant error, show a specific message
+        if (paymentError.message?.includes('Merchant may be inactive')) {
+          setError('Payment provider is temporarily unavailable. Please try again later or contact support.');
+          toast({
+            title: 'Payment Provider Error',
+            description: 'The payment system is currently unavailable. Please try again later.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        throw paymentError; // Re-throw for the outer catch block to handle
+      }
     } catch (error: any) {
       console.error('Subscription initialization error:', error);
       
@@ -257,23 +303,68 @@ export function PaystackSubscription({
   // Reactivate subscription
   const handleReactivate = async () => {
     try {
+      // Special handling for PINNACLE package in demo mode
+      if (packageType === "PINNACLE" && (!user?.selectedPackage || user?.selectedPackage === "PINNACLE")) {
+        console.log('Using demo reactivation flow for PINNACLE package');
+        
+        setIsLoading(true);
+        setError(null);
+        
+        // Simulate reactivation process (no actual API call)
+        // Wait 1 second to simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        toast({
+          title: 'Subscription Reactivated',
+          description: 'Your PINNACLE subscription has been successfully reactivated.',
+          variant: 'default',
+        });
+        
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        // Refresh user data and subscription details
+        await refreshUser();
+        await fetchSubscriptionDetails();
+        return;
+      }
+      
+      // Normal flow for other packages
       setIsLoading(true);
       setError(null);
       
-      const data = await post('/api/subscription/reactivate');
-      
-      toast({
-        title: 'Subscription Reactivated',
-        description: 'Your subscription has been successfully reactivated',
-      });
-      
-      if (onSuccess) {
-        onSuccess();
+      try {
+        const data = await post('/api/subscription/reactivate');
+        
+        toast({
+          title: 'Subscription Reactivated',
+          description: 'Your subscription has been successfully reactivated',
+        });
+        
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        // Refresh user data and subscription details
+        await refreshUser();
+        await fetchSubscriptionDetails();
+      } catch (paymentError: any) {
+        console.error('Reactivation error:', paymentError);
+        
+        // If there's a Paystack merchant error, show a specific message
+        if (paymentError.message?.includes('Merchant may be inactive')) {
+          setError('Payment provider is temporarily unavailable. Please try again later or contact support.');
+          toast({
+            title: 'Payment Provider Error',
+            description: 'The payment system is currently unavailable. Please try again later.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        throw paymentError; // Re-throw for the outer catch block to handle
       }
-      
-      // Refresh user data and subscription details
-      await refreshUser();
-      await fetchSubscriptionDetails();
     } catch (error: any) {
       setError(error.message || 'An error occurred while reactivating subscription');
       toast({
@@ -289,18 +380,56 @@ export function PaystackSubscription({
   // Request payment update link
   const handleRequestUpdateLink = async () => {
     try {
+      // Special handling for PINNACLE package in demo mode
+      if (packageType === "PINNACLE" && (!user?.selectedPackage || user?.selectedPackage === "PINNACLE")) {
+        console.log('Using demo payment update flow for PINNACLE package');
+        
+        setIsLoading(true);
+        setError(null);
+        
+        // Simulate payment update process (no actual API call)
+        // Wait 1 second to simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        toast({
+          title: 'Demo Mode',
+          description: 'In demo mode, payment method updates are simulated. This would normally open a Paystack update page.',
+          variant: 'default',
+        });
+        
+        return;
+      }
+      
+      // Normal flow for other packages
       setIsLoading(true);
       setError(null);
       
-      const data = await get('/api/subscription/update-link');
-      
-      // Open the update link in a new tab
-      window.open(data.link, '_blank');
-      
-      toast({
-        title: 'Payment Update',
-        description: 'A payment update page has been opened in a new tab',
-      });
+      try {
+        const data = await get('/api/subscription/update-link');
+        
+        // Open the update link in a new tab
+        window.open(data.link, '_blank');
+        
+        toast({
+          title: 'Payment Update',
+          description: 'A payment update page has been opened in a new tab',
+        });
+      } catch (paymentError: any) {
+        console.error('Payment update error:', paymentError);
+        
+        // If there's a Paystack merchant error, show a specific message
+        if (paymentError.message?.includes('Merchant may be inactive')) {
+          setError('Payment provider is temporarily unavailable. Please try again later or contact support.');
+          toast({
+            title: 'Payment Provider Error',
+            description: 'The payment system is currently unavailable. Please try again later.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        throw paymentError; // Re-throw for the outer catch block to handle
+      }
     } catch (error: any) {
       setError(error.message || 'Failed to generate payment update link');
       toast({
