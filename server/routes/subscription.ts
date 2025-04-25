@@ -23,6 +23,122 @@ const cancellationSchema = z.object({
   feedback: z.string().optional()
 });
 
+/**
+ * Utility function to sync subscription data from Paystack into our database
+ * This is useful when a subscription exists in Paystack but not in our database
+ */
+async function syncSubscriptionData(userId: number, email: string, connection: any) {
+  try {
+    console.log(`Syncing subscription data for user ${userId} (${email})`);
+    
+    // Get all subscriptions for this user from Paystack
+    const subscriptions = await paystackService.listCustomerSubscriptions(email);
+    
+    if (!subscriptions || subscriptions.length === 0) {
+      console.log('No subscriptions found in Paystack');
+      return null;
+    }
+    
+    // Find the active subscription (or the most recent one)
+    let activeSubscription = subscriptions.find((sub: any) => sub.status === 'active');
+    
+    if (!activeSubscription && subscriptions.length > 0) {
+      // If no active subscription, use the most recent one
+      activeSubscription = subscriptions[0];
+    }
+    
+    if (!activeSubscription) {
+      console.log('No active or recent subscription found');
+      return null;
+    }
+    
+    console.log(`Found subscription: ${activeSubscription.subscription_code} (${activeSubscription.status})`);
+    
+    // Get the package type from the plan code
+    let packageType = null;
+    for (const [key, value] of Object.entries(paystackService.PLAN_CODES)) {
+      if (value === activeSubscription.plan.plan_code) {
+        packageType = key;
+        break;
+      }
+    }
+    
+    if (!packageType) {
+      console.log('Could not determine package type from plan code');
+      return null;
+    }
+    
+    // Update user with subscription information
+    await connection.query(
+      `UPDATE users SET 
+        subscription_status = ?,
+        selectedPackage = ?,
+        paystack_customer_code = ?,
+        paystack_subscription_code = ?,
+        paystack_email_token = ?
+      WHERE id = ?`,
+      [
+        activeSubscription.status,
+        packageType,
+        activeSubscription.customer.customer_code,
+        activeSubscription.subscription_code,
+        activeSubscription.email_token,
+        userId
+      ]
+    );
+    
+    // Check if subscription exists in our database
+    const [existingSubscriptions] = await connection.query(
+      `SELECT id FROM subscriptions WHERE subscription_code = ?`,
+      [activeSubscription.subscription_code]
+    );
+    
+    if (Array.isArray(existingSubscriptions) && existingSubscriptions.length > 0) {
+      console.log('Subscription already exists in database');
+      return activeSubscription;
+    }
+    
+    // Create a new entry in the subscriptions table
+    const amount = activeSubscription.plan.amount / 100; // Convert from kobo to rand
+    
+    await connection.query(
+      `INSERT INTO subscriptions (
+        user_id,
+        package_type,
+        subscription_code,
+        customer_code,
+        email_token,
+        status,
+        amount,
+        currency,
+        payment_reference,
+        start_date,
+        end_date,
+        next_payment_date,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 1 MONTH), ?, NOW())`,
+      [
+        userId,
+        packageType,
+        activeSubscription.subscription_code,
+        activeSubscription.customer.customer_code,
+        activeSubscription.email_token,
+        activeSubscription.status,
+        amount,
+        'ZAR',
+        activeSubscription.subscription_code, // Use subscription code as reference since the original is unknown
+        activeSubscription.next_payment_date || null
+      ]
+    );
+    
+    console.log('Successfully synced subscription data to database');
+    return activeSubscription;
+  } catch (error: any) {
+    console.error('Error syncing subscription data:', error);
+    return null;
+  }
+}
+
 // Subscription prices (in cents - ZAR)
 const PACKAGE_PRICES = {
   OPPORTUNITY: 35000, // R350
@@ -239,13 +355,24 @@ router.get('/details', isAuthenticated, async (req: any, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    if (!user.paystack_subscription_code) {
-      return res.status(404).json({ error: 'No active subscription found' });
-    }
-    
     const connection = await pool.getConnection();
     
     try {
+      // Check if we have Paystack subscription code in user record
+      if (!user.paystack_subscription_code) {
+        // Try to sync from Paystack
+        console.log(`User ${user.id} has no subscription code, attempting to sync from Paystack`);
+        const syncedSubscription = await syncSubscriptionData(user.id, user.email, connection);
+        
+        if (!syncedSubscription) {
+          return res.status(404).json({ error: 'No active subscription found' });
+        }
+        
+        // Update user object with subscription code for future use
+        user.paystack_subscription_code = syncedSubscription.subscription_code;
+        user.selectedPackage = syncedSubscription.plan?.name;
+      }
+      
       // Get subscription details from database
       const [subscriptions] = await connection.query(
         `SELECT * FROM subscriptions 
@@ -254,12 +381,17 @@ router.get('/details', isAuthenticated, async (req: any, res) => {
         [user.id, user.paystack_subscription_code]
       );
       
+      let formattedSubscription: any;
+      
       if (!Array.isArray(subscriptions) || subscriptions.length === 0) {
         // If not found in database, try to get from Paystack
         const response = await paystackService.getSubscription(user.paystack_subscription_code);
         
+        // Try to sync the subscription data to our database
+        await syncSubscriptionData(user.id, user.email, connection);
+        
         // Format the response
-        const formattedSubscription = {
+        formattedSubscription = {
           code: response.subscription_code,
           status: response.status,
           amount: response.amount / 100, // Convert from kobo to rand
@@ -272,33 +404,28 @@ router.get('/details', isAuthenticated, async (req: any, res) => {
             interval: response.plan.interval
           }
         };
+      } else {
+        const subscription = subscriptions[0] as any;
         
-        return res.status(200).json({
-          success: true,
-          subscription: formattedSubscription
-        });
+        // Get subscription details from Paystack as well for latest status
+        const response = await paystackService.getSubscription(user.paystack_subscription_code);
+        
+        // Format the response
+        formattedSubscription = {
+          id: subscription.id,
+          code: subscription.subscription_code,
+          status: response.status || subscription.status,
+          amount: subscription.amount,
+          startDate: subscription.start_date,
+          endDate: subscription.end_date,
+          nextPaymentDate: response.next_payment_date || subscription.next_payment_date,
+          packageType: subscription.package_type,
+          plan: {
+            name: response.plan?.name || subscription.package_type,
+            interval: response.plan?.interval || 'monthly'
+          }
+        };
       }
-      
-      const subscription = subscriptions[0] as any;
-      
-      // Get subscription details from Paystack as well for latest status
-      const response = await paystackService.getSubscription(user.paystack_subscription_code);
-      
-      // Format the response
-      const formattedSubscription = {
-        id: subscription.id,
-        code: subscription.subscription_code,
-        status: response.status || subscription.status,
-        amount: subscription.amount,
-        startDate: subscription.start_date,
-        endDate: subscription.end_date,
-        nextPaymentDate: response.next_payment_date || subscription.next_payment_date,
-        packageType: subscription.package_type,
-        plan: {
-          name: response.plan?.name || subscription.package_type,
-          interval: response.plan?.interval || 'monthly'
-        }
-      };
       
       return res.status(200).json({
         success: true,
@@ -548,6 +675,52 @@ router.get('/history', isAuthenticated, async (req: any, res) => {
   } catch (error: any) {
     console.error('Subscription history error:', error);
     return res.status(500).json({ error: error.message || 'Failed to retrieve subscription history' });
+  }
+});
+
+/**
+ * Sync subscription data from Paystack to local database
+ * POST /api/subscription/sync
+ */
+router.post('/sync', isAuthenticated, async (req: any, res) => {
+  try {
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const connection = await pool.getConnection();
+    
+    try {
+      // Use the syncSubscriptionData utility to synchronize data
+      const subscription = await syncSubscriptionData(user.id, user.email, connection);
+      
+      if (!subscription) {
+        return res.status(404).json({
+          success: false,
+          message: 'No active subscription found in Paystack'
+        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Subscription data synchronized successfully',
+        subscription: {
+          code: subscription.subscription_code,
+          status: subscription.status,
+          packageType: user.selectedPackage
+        }
+      });
+    } finally {
+      connection.release();
+    }
+  } catch (error: any) {
+    console.error('Subscription sync error:', error);
+    return res.status(500).json({ 
+      error: error.message || 'Failed to sync subscription data',
+      success: false
+    });
   }
 });
 

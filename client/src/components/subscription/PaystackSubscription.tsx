@@ -92,10 +92,17 @@ export function PaystackSubscription({
 
   // Fetch subscription details if available
   useEffect(() => {
-    if (hasSubscription && isCurrentPackage) {
+    // Always fetch subscription details if user has a subscription
+    // This helps with syncing data between Paystack and our database
+    if (hasSubscription) {
+      fetchSubscriptionDetails();
+    } 
+    // If the user has selected a package but no recorded subscription code,
+    // try to fetch details anyway as there might be a subscription in Paystack
+    else if (user?.selectedPackage === packageType && !user.paystack_subscription_code) {
       fetchSubscriptionDetails();
     }
-  }, [hasSubscription, isCurrentPackage]);
+  }, [hasSubscription, isCurrentPackage, user?.selectedPackage]);
 
   // Fetch subscription details from the server
   const fetchSubscriptionDetails = async () => {
@@ -103,8 +110,16 @@ export function PaystackSubscription({
       setIsLoading(true);
       const data = await get('/api/subscription/details');
       setSubscriptionDetails(data.subscription);
+      setError(null); // Clear any previous errors on success
     } catch (error: any) {
+      console.error('Error fetching subscription details:', error);
       setError(error.message || 'An error occurred while fetching subscription details');
+
+      // If error response contains "No active subscription found" but we know user has a subscription
+      // in Paystack, refresh the user data to get fresh subscription info
+      if (error.message?.includes('No active subscription') && user?.selectedPackage) {
+        await refreshUser();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -121,12 +136,29 @@ export function PaystackSubscription({
       // Redirect to Paystack checkout page
       window.location.href = data.authorization_url;
     } catch (error: any) {
-      setError(error.message || 'An error occurred while setting up subscription');
-      toast({
-        title: 'Subscription Error',
-        description: error.message || 'Failed to set up subscription',
-        variant: 'destructive',
-      });
+      console.error('Subscription initialization error:', error);
+      
+      // Check if the error message indicates subscription already exists
+      if (error.message?.includes('already') || error.message?.includes('exists')) {
+        // Refresh user data to get current subscription status
+        await refreshUser();
+        
+        toast({
+          title: 'Subscription Already Exists',
+          description: 'You already have this subscription. Refreshing subscription details...',
+          variant: 'default',
+        });
+        
+        // Fetch subscription details to update the UI
+        await fetchSubscriptionDetails();
+      } else {
+        setError(error.message || 'An error occurred while setting up subscription');
+        toast({
+          title: 'Subscription Error',
+          description: error.message || 'Failed to set up subscription',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }

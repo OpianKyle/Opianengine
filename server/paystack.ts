@@ -60,12 +60,13 @@ async function makePaystackRequest(endpoint: string, method: 'GET' | 'POST' | 'P
     const responseData = await response.json() as any;
     
     if (!response.ok) {
+      console.error('Paystack API error response:', JSON.stringify(responseData));
       throw new Error(responseData.message || 'Paystack API request failed');
     }
     
     return responseData.data;
-  } catch (error) {
-    console.error('Paystack API error:', error);
+  } catch (error: any) {
+    console.error('Paystack API error:', error.message);
     throw error;
   }
 }
@@ -106,27 +107,52 @@ export async function verifyTransaction(reference: string) {
  * @returns Subscription creation data
  */
 export async function createSubscription(customerEmail: string, planCode: string, metadata: any = {}) {
-  // Create or fetch customer first
-  const customers = await makePaystackRequest(`/customer?email=${encodeURIComponent(customerEmail)}`);
-  
-  let customerId: string;
-  
-  if (customers && customers.length > 0) {
-    customerId = customers[0].id;
-  } else {
-    // Create the customer
-    const newCustomer = await createCustomer(customerEmail);
-    customerId = newCustomer.id;
+  try {
+    // Create or fetch customer first
+    const customers = await makePaystackRequest(`/customer?email=${encodeURIComponent(customerEmail)}`);
+    
+    let customerId: string;
+    
+    if (customers && customers.length > 0) {
+      customerId = customers[0].id;
+    } else {
+      // Create the customer
+      const newCustomer = await createCustomer(customerEmail);
+      customerId = newCustomer.id;
+    }
+    
+    // Create the subscription
+    const data = {
+      customer: customerId,
+      plan: planCode,
+      metadata
+    };
+    
+    return makePaystackRequest('/subscription', 'POST', data);
+  } catch (error: any) {
+    // Check if error is "subscription already exists"
+    if (error.message && error.message.includes("already")) {
+      console.log('Subscription already exists, fetching existing subscription');
+      
+      // Try to get existing subscriptions for this customer
+      const subscriptions = await listCustomerSubscriptions(customerEmail);
+      
+      if (subscriptions && subscriptions.length > 0) {
+        // Find subscription with matching plan code
+        const existingSubscription = subscriptions.find((sub: any) => 
+          sub.plan && sub.plan.plan_code === planCode
+        );
+        
+        if (existingSubscription) {
+          console.log('Found existing subscription:', existingSubscription.subscription_code);
+          return existingSubscription;
+        }
+      }
+    }
+    
+    // Re-throw if it's not a "subscription already exists" error or we couldn't find the existing subscription
+    throw error;
   }
-  
-  // Create the subscription
-  const data = {
-    customer: customerId,
-    plan: planCode,
-    metadata
-  };
-  
-  return makePaystackRequest('/subscription', 'POST', data);
 }
 
 /**

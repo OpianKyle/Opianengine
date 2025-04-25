@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PaystackSubscription } from '@/components/subscription/PaystackSubscription';
 import { SubscriptionHistory } from '@/components/subscription/SubscriptionHistory';
+import { SubscriptionSyncButton } from '@/components/subscription/SubscriptionSyncButton';
 import {
   Tabs,
   TabsContent,
@@ -66,27 +67,61 @@ const SubscriptionPage: React.FC = () => {
         <div className="flex flex-wrap justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Manage Your Subscription</h1>
           
-          <div className="flex space-x-2 mt-4 md:mt-0">
-            <Button 
-              variant={showHistory ? "outline" : "default"}
-              size="sm"
-              onClick={() => setShowHistory(false)}
-              className="flex items-center"
-            >
-              <CreditCard className="mr-2 h-4 w-4" />
-              Packages
-            </Button>
-            <Button 
-              variant={showHistory ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowHistory(true)}
-              className="flex items-center"
-            >
-              <History className="mr-2 h-4 w-4" />
-              History
-            </Button>
+          <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mt-4 md:mt-0">
+            {/* Sync subscription button */}
+            {user?.selectedPackage && (
+              <SubscriptionSyncButton
+                onSyncComplete={refreshUser}
+                size="sm"
+                className="w-full md:w-auto mb-2 md:mb-0"
+              />
+            )}
+            
+            <div className="flex space-x-2">
+              <Button 
+                variant={showHistory ? "outline" : "default"}
+                size="sm"
+                onClick={() => setShowHistory(false)}
+                className="flex items-center"
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Packages
+              </Button>
+              <Button 
+                variant={showHistory ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowHistory(true)}
+                className="flex items-center"
+              >
+                <History className="mr-2 h-4 w-4" />
+                History
+              </Button>
+            </div>
           </div>
         </div>
+        
+        {/* Sync notification for users with packages */}
+        {user?.selectedPackage && !user?.paystack_subscription_code && (
+          <Card className="mb-4 border-amber-200 bg-amber-50">
+            <CardContent className="pt-6">
+              <div className="flex">
+                <AlertCircle className="h-5 w-5 text-amber-800 mr-2 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h2 className="text-lg font-semibold text-amber-800 mb-1">Subscription Data Sync Required</h2>
+                  <p className="text-amber-700 mb-3">
+                    We've detected you have a subscription but some details may be missing in our system.
+                    Click the "Sync Subscription" button above to refresh your subscription details.
+                  </p>
+                  <SubscriptionSyncButton 
+                    onSyncComplete={refreshUser}
+                    variant="default"
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
         <Card className="mb-8 border-blue-200 bg-blue-50">
           <CardContent className="pt-6">
