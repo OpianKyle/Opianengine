@@ -109,3 +109,50 @@ export function put<T = any>(endpoint: string, data?: any, options: RequestOptio
 export function del<T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   return apiRequest<T>(endpoint, { method: 'DELETE', ...options });
 }
+
+/**
+ * Cancel Paystack subscription
+ * 
+ * @param subscriptionCode - Paystack subscription code
+ * @param emailToken - Paystack email token for the subscription
+ * @param reason - Reason for cancellation
+ * @param additionalFeedback - Additional feedback about cancellation
+ * @returns Promise with the response data
+ */
+export async function cancelSubscription(
+  subscriptionCode: string,
+  emailToken: string,
+  reason: string,
+  additionalFeedback?: string
+): Promise<any> {
+  return post('/api/subscription/cancel', {
+    emailToken,
+    reason,
+    feedback: additionalFeedback
+  });
+}
+
+/**
+ * Reactivate Paystack subscription
+ * 
+ * @param subscriptionCode - Paystack subscription code
+ * @param emailToken - Paystack email token for the subscription
+ * @returns Promise with the response data
+ */
+export async function reactivateSubscription(
+  subscriptionCode: string,
+  emailToken?: string
+): Promise<any> {
+  return post('/api/subscription/reactivate', {
+    emailToken
+  });
+}
+
+/**
+ * Sync subscription data from Paystack
+ * 
+ * @returns Promise with the response data
+ */
+export async function syncSubscription(): Promise<any> {
+  return post('/api/subscription/sync');
+}

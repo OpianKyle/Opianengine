@@ -196,10 +196,10 @@ export async function listCustomerSubscriptions(customerEmail: string) {
  * @param activate - Whether to enable or disable the subscription
  * @returns Operation result
  */
-export async function updateSubscriptionStatus(subscriptionCode: string, activate: boolean = true) {
+export async function updateSubscriptionStatus(subscriptionCode: string, emailToken: string = '', activate: boolean = true) {
   const data = {
     code: subscriptionCode,
-    token: '' // Required by the API but not used for this operation
+    token: emailToken // Email token is required for disabling a subscription
   };
   
   return makePaystackRequest(

@@ -447,7 +447,11 @@ router.get('/details', isAuthenticated, async (req: any, res) => {
 router.post('/cancel', isAuthenticated, async (req: any, res) => {
   try {
     const user = req.user;
-    const { reason, feedback } = cancellationSchema.parse(req.body);
+    const { reason, feedback, emailToken } = z.object({
+      reason: z.string().optional(),
+      feedback: z.string().optional(),
+      emailToken: z.string() // Email token is required for cancellation
+    }).parse(req.body);
     
     if (!user) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -458,7 +462,7 @@ router.post('/cancel', isAuthenticated, async (req: any, res) => {
     }
     
     // Disable the subscription in Paystack
-    await paystackService.updateSubscriptionStatus(user.paystack_subscription_code, false);
+    await paystackService.updateSubscriptionStatus(user.paystack_subscription_code, emailToken, false);
     
     const connection = await pool.getConnection();
     
@@ -538,6 +542,9 @@ router.post('/cancel', isAuthenticated, async (req: any, res) => {
 router.post('/reactivate', isAuthenticated, async (req: any, res) => {
   try {
     const user = req.user;
+    const { emailToken } = z.object({
+      emailToken: z.string().optional() // Email token is optional for reactivation
+    }).parse(req.body);
     
     if (!user) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -548,7 +555,7 @@ router.post('/reactivate', isAuthenticated, async (req: any, res) => {
     }
     
     // Enable the subscription in Paystack
-    await paystackService.updateSubscriptionStatus(user.paystack_subscription_code, true);
+    await paystackService.updateSubscriptionStatus(user.paystack_subscription_code, emailToken || '', true);
     
     const connection = await pool.getConnection();
     

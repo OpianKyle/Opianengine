@@ -402,14 +402,12 @@ export function PaystackSubscription({
       </Card>
       
       {/* Cancellation Dialog */}
-      {showCancellationDialog && (
-        <CancellationDialog
-          open={showCancellationDialog}
-          onClose={() => setShowCancellationDialog(false)}
-          onCancelled={handleSubscriptionCancelled}
-          packageType={packageType}
-        />
-      )}
+      <CancellationDialog
+        open={showCancellationDialog}
+        onClose={() => setShowCancellationDialog(false)}
+        onCancelled={handleSubscriptionCancelled}
+        packageType={packageType}
+      />
     </>
   );
 }
