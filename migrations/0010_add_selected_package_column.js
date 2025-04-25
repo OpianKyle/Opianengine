@@ -6,60 +6,53 @@
  */
 
 export async function up(db) {
-  try {
-    console.log('Running migration to add selectedPackage column...');
+  console.log('Running migration to add selectedPackage column to users table');
 
-    // Check if the column already exists before trying to add it
+  try {
+    // Check if column already exists
     const [columns] = await db.query(`
-      SELECT COLUMN_NAME 
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_NAME = 'users' 
-      AND COLUMN_NAME = 'selectedPackage'
+      SHOW COLUMNS FROM users 
+      LIKE 'selectedPackage'
     `);
 
     if (columns.length === 0) {
-      // Add selectedPackage field if it doesn't exist
+      // Add new column
       await db.query(`
-        ALTER TABLE users 
-        ADD COLUMN selectedPackage ENUM('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE') DEFAULT NULL
+        ALTER TABLE users
+        ADD COLUMN selectedPackage VARCHAR(50) NULL
       `);
-      console.log('Added selectedPackage column to users table.');
+      console.log('Successfully added selectedPackage column to users table');
     } else {
-      console.log('selectedPackage column already exists in users table. Skipping.');
+      console.log('selectedPackage column already exists in users table');
     }
-    
-    return Promise.resolve();
   } catch (error) {
-    console.error('Error in migration:', error);
-    return Promise.reject(error);
+    console.error('Error adding selectedPackage column:', error);
+    throw error;
   }
 }
 
 export async function down(db) {
+  console.log('Running migration to remove selectedPackage column from users table');
+
   try {
-    console.log('Reverting migration to remove selectedPackage column...');
-    
-    // Check if the column exists before trying to drop it
+    // Check if column exists
     const [columns] = await db.query(`
-      SELECT COLUMN_NAME 
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_NAME = 'users' 
-      AND COLUMN_NAME = 'selectedPackage'
+      SHOW COLUMNS FROM users 
+      LIKE 'selectedPackage'
     `);
 
     if (columns.length > 0) {
+      // Remove column
       await db.query(`
-        ALTER TABLE users 
+        ALTER TABLE users
         DROP COLUMN selectedPackage
       `);
-      console.log('Removed selectedPackage column from users table.');
+      console.log('Successfully removed selectedPackage column from users table');
     } else {
-      console.log('selectedPackage column does not exist in users table. Skipping.');
+      console.log('selectedPackage column does not exist in users table');
     }
-    
-    return Promise.resolve();
   } catch (error) {
-    console.error('Error in migration:', error);
-    return Promise.reject(error);
+    console.error('Error removing selectedPackage column:', error);
+    throw error;
   }
 }

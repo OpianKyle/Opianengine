@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CancellationDialog } from './CancellationDialog';
 import { Badge } from '@/components/ui/badge';
+import { get, post } from '@/lib/api';
 
 // Package prices in ZAR
 const PACKAGE_PRICES = {
@@ -100,13 +101,7 @@ export function PaystackSubscription({
   const fetchSubscriptionDetails = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/subscription/details');
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch subscription details');
-      }
-      
+      const data = await get('/api/subscription/details');
       setSubscriptionDetails(data.subscription);
     } catch (error: any) {
       setError(error.message || 'An error occurred while fetching subscription details');
@@ -121,19 +116,7 @@ export function PaystackSubscription({
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/subscription/initialize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ packageType }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to initialize subscription');
-      }
+      const data = await post('/api/subscription/initialize', { packageType });
       
       // Redirect to Paystack checkout page
       window.location.href = data.authorization_url;
@@ -171,15 +154,7 @@ export function PaystackSubscription({
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/subscription/reactivate', {
-        method: 'POST',
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to reactivate subscription');
-      }
+      const data = await post('/api/subscription/reactivate');
       
       toast({
         title: 'Subscription Reactivated',
@@ -211,12 +186,7 @@ export function PaystackSubscription({
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/subscription/update-link');
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate update link');
-      }
+      const data = await get('/api/subscription/update-link');
       
       // Open the update link in a new tab
       window.open(data.link, '_blank');
@@ -293,7 +263,7 @@ export function PaystackSubscription({
   const formatStatus = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="success" className="bg-green-500">Active</Badge>;
+        return <Badge variant="default" className="bg-green-500 text-white">Active</Badge>;
       case 'cancelled':
         return <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">Cancelled</Badge>;
       case 'paused':

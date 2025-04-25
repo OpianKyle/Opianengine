@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Home, Gift, Users, User, Menu, X, ShoppingBag, CreditCard } from "lucide-react";
@@ -20,8 +19,7 @@ const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' 
 };
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
-  const { logoutMutation } = useUser();
-  const { token } = useAuth();
+  const { logoutMutation, token } = useAuth();
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasPrefetched, setHasPrefetched] = useState(false);

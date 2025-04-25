@@ -92,7 +92,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 // Helper to get stored token
-function getStoredToken(): string | null {
+export function getStoredToken(): string | null {
   try {
     return localStorage.getItem(AUTH_TOKEN_KEY);
   } catch (error) {

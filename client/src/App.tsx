@@ -115,7 +115,7 @@ function Router() {
   return (
     <Switch>
       {/* Public Routes */}
-      <Route path="/" exact>
+      <Route path="/">
         <Home />
       </Route>
       <Route path="/login">
@@ -132,7 +132,7 @@ function Router() {
       </Route>
 
       {/* Admin Routes */}
-      <Route path="/admin" exact>
+      <Route path="/admin">
         <AdminLayout>
           <ProtectedRoute component={AdminDashboard} admin />
         </AdminLayout>
@@ -189,7 +189,7 @@ function Router() {
       </Route>
 
       {/* Agent Routes */}
-      <Route path="/agent" exact>
+      <Route path="/agent">
         <AgentLayout>
           <ProtectedRoute component={AgentDashboard} agent />
         </AgentLayout>
@@ -206,33 +206,39 @@ function Router() {
       </Route>
 
       {/* Customer Routes */}
-      <Route path="/dashboard" exact>
+      <Route path="/dashboard">
         <CustomerLayout>
           <ProtectedRoute component={CustomerDashboard} />
         </CustomerLayout>
       </Route>
-      <Route path="/rewards" exact>
+      <Route path="/rewards">
         <CustomerLayout>
           <ProtectedRoute component={CustomerRewards} />
         </CustomerLayout>
       </Route>
-      <Route path="/referrals" exact>
+      <Route path="/referrals">
         <CustomerLayout>
           <ProtectedRoute component={ReferralsPage} />
         </CustomerLayout>
       </Route>
-      <Route path="/profile" exact>
+      <Route path="/profile">
         <CustomerLayout>
           <ProtectedRoute component={ProfilePage} />
         </CustomerLayout>
       </Route>
-      <Route path="/products" exact>
+      <Route path="/products">
         <CustomerLayout>
           <ProtectedRoute component={CustomerProducts} />
         </CustomerLayout>
       </Route>
       
-      <Route path="/subscription" exact>
+      <Route path="/subscription">
+        <CustomerLayout>
+          <ProtectedRoute component={SubscriptionPage} />
+        </CustomerLayout>
+      </Route>
+      
+      <Route path="/dashboard/subscription">
         <CustomerLayout>
           <ProtectedRoute component={SubscriptionPage} />
         </CustomerLayout>

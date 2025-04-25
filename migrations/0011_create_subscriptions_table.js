@@ -6,73 +6,72 @@
  */
 
 export async function up(db) {
-  try {
-    console.log('Running migration to create subscriptions table...');
+  console.log('Running migration to create subscriptions table');
 
+  try {
     // Check if table already exists
     const [tables] = await db.query(`
-      SELECT TABLE_NAME 
-      FROM INFORMATION_SCHEMA.TABLES 
-      WHERE TABLE_NAME = 'subscriptions' 
-      AND TABLE_SCHEMA = DATABASE()
+      SELECT TABLE_NAME
+      FROM information_schema.tables
+      WHERE table_schema = DATABASE()
+        AND table_name = 'subscriptions'
     `);
 
     if (tables.length === 0) {
-      // Create subscriptions table if it doesn't exist
-      await db.query(`
+      // Create subscriptions table
+      const createTableSql = `
         CREATE TABLE subscriptions (
           id INT AUTO_INCREMENT PRIMARY KEY,
           user_id INT NOT NULL,
-          paystack_subscription_code VARCHAR(255),
-          paystack_customer_code VARCHAR(255),
-          paystack_email_token VARCHAR(255),
-          package_type ENUM('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE') NOT NULL,
-          amount DECIMAL(10,2) NOT NULL,
-          status ENUM('active', 'inactive', 'cancelled', 'expired', 'pending') NOT NULL DEFAULT 'pending',
-          start_date DATETIME,
+          package_type VARCHAR(50) NOT NULL,
+          subscription_code VARCHAR(255) NOT NULL,
+          customer_code VARCHAR(255) NOT NULL,
+          email_token VARCHAR(255),
+          status VARCHAR(50) NOT NULL DEFAULT 'active',
+          amount DECIMAL(10, 2) NOT NULL,
+          currency VARCHAR(10) NOT NULL DEFAULT 'ZAR',
+          payment_reference VARCHAR(255),
+          start_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
           end_date DATETIME,
           next_payment_date DATETIME,
-          last_payment_date DATETIME,
-          payment_method VARCHAR(100) DEFAULT 'paystack',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
-      `);
-      console.log('Created subscriptions table.');
+      `;
+
+      await db.query(createTableSql);
+      console.log('Successfully created subscriptions table');
     } else {
-      console.log('Subscriptions table already exists. Skipping.');
+      console.log('Subscriptions table already exists');
     }
-    
-    return Promise.resolve();
   } catch (error) {
-    console.error('Error in migration:', error);
-    return Promise.reject(error);
+    console.error('Error creating subscriptions table:', error);
+    throw error;
   }
 }
 
 export async function down(db) {
+  console.log('Running migration to drop subscriptions table');
+
   try {
-    console.log('Reverting migration to drop subscriptions table...');
-    
-    // Check if table exists before trying to drop it
+    // Check if table exists
     const [tables] = await db.query(`
-      SELECT TABLE_NAME 
-      FROM INFORMATION_SCHEMA.TABLES 
-      WHERE TABLE_NAME = 'subscriptions' 
-      AND TABLE_SCHEMA = DATABASE()
+      SELECT TABLE_NAME
+      FROM information_schema.tables
+      WHERE table_schema = DATABASE()
+        AND table_name = 'subscriptions'
     `);
 
     if (tables.length > 0) {
-      await db.query(`DROP TABLE subscriptions`);
-      console.log('Dropped subscriptions table.');
+      // Drop table
+      await db.query('DROP TABLE IF EXISTS subscriptions');
+      console.log('Successfully dropped subscriptions table');
     } else {
-      console.log('Subscriptions table does not exist. Skipping.');
+      console.log('Subscriptions table does not exist');
     }
-    
-    return Promise.resolve();
   } catch (error) {
-    console.error('Error in migration:', error);
-    return Promise.reject(error);
+    console.error('Error dropping subscriptions table:', error);
+    throw error;
   }
 }

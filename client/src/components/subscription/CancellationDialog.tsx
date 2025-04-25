@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { post } from '@/lib/api';
 
 // Cancellation reasons
 const CANCELLATION_REASONS = [
@@ -81,19 +82,7 @@ export function CancellationDialog({
     try {
       setIsSubmitting(true);
       
-      const response = await fetch('/api/subscription/cancel', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to cancel subscription');
-      }
+      await post('/api/subscription/cancel', values);
       
       toast({
         title: 'Subscription Cancelled',

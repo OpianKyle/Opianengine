@@ -1,43 +1,61 @@
 /**
- * Run the subscription cancellations table migration
+ * Run the subscription tables migration
  */
-import mysql from 'mysql2/promise';
-import * as dotenv from 'dotenv';
-import { up } from './migrations/0012_create_subscription_cancellations_table.js';
 
-dotenv.config();
+// Load environment variables
+import 'dotenv/config';
+
+// Create database connection
+import mysql from 'mysql2/promise';
+
+// Import the migrations
+import * as subscriptionsMigration from './migrations/0011_create_subscriptions_table.js';
+import * as cancellationsMigration from './migrations/0012_create_subscription_cancellations_table.js';
 
 async function main() {
+  console.log('Starting subscription tables migration runner...');
+  
+  // Create a connection
+  const connection = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
+  });
+  
   try {
-    console.log('Starting database migration for subscription_cancellations table...');
+    // Start a transaction
+    await connection.beginTransaction();
     
-    // Create database connection
-    const connection = await mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      ssl: process.env.DB_SSL === 'true' ? {
-        rejectUnauthorized: false
-      } : false
-    });
+    // Run the subscriptions table migration
+    console.log('Running subscriptions table migration...');
+    await subscriptionsMigration.up(connection);
     
-    console.log('Connected to database successfully');
+    // Run the subscription_cancellations table migration
+    console.log('Running subscription cancellations table migration...');
+    await cancellationsMigration.up(connection);
     
-    // Run migration
-    await up(connection);
+    // Commit the transaction
+    await connection.commit();
+    console.log('Migrations applied successfully!');
     
-    console.log('Migration completed successfully');
+    // Verify tables
+    const [tables] = await connection.execute(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = DATABASE() 
+      AND table_name IN ('subscriptions', 'subscription_cancellations')
+    `);
     
-    // Close connection
-    await connection.end();
+    console.log('Verification: tables created:', tables.map((t) => t.table_name));
     
-    console.log('Database connection closed');
   } catch (error) {
-    console.error('Migration failed:', error);
-    process.exit(1);
+    console.error('Error running migrations:', error);
+    await connection.rollback();
+    console.log('Migrations rolled back due to error');
+  } finally {
+    await connection.end();
+    console.log('Migration runner completed');
   }
 }
 
-// Run the migration
-main();
+main().catch(console.error);

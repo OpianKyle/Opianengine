@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Calendar, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { get } from '@/lib/api';
 
 interface SubscriptionHistoryProps {
   userId?: number;
@@ -46,13 +47,7 @@ export function SubscriptionHistory({ userId }: SubscriptionHistoryProps) {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/subscription/history');
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch subscription history');
-      }
-      
+      const data = await get('/api/subscription/history');
       setHistory(data.history || []);
     } catch (error: any) {
       setError(error.message || 'An error occurred while fetching subscription history');
