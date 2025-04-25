@@ -86,6 +86,10 @@ export function PaystackSubscription({
   const isCurrentPackage = 
     user?.selectedPackage === packageType;
 
+  // FORCE isCurrentPackage to true if this is the user's selected package
+  // This ensures the cancel button displays even without a valid subscription
+  const showCancelButton = user?.selectedPackage === packageType;
+  
   // Check if subscription data is available
   const hasSubscription = !!user?.paystack_subscription_code;
 
@@ -393,22 +397,15 @@ export function PaystackSubscription({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Please wait
             </Button>
-          ) : isCurrentPackage ? (
+          ) : showCancelButton ? (
             <>
-              {user?.subscription_status === 'active' || user?.paystack_subscription_code ? (
-                <>
-                  <Button variant="destructive" onClick={handleOpenCancellationDialog} className="w-full">
-                    Cancel Subscription
-                  </Button>
-                  <Button variant="outline" onClick={handleRequestUpdateLink} className="w-full">
-                    Update Payment Method
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={handleReactivate} className="w-full">
-                  Reactivate Subscription
-                </Button>
-              )}
+              {/* Always show Cancel Subscription button for current package */}
+              <Button variant="destructive" onClick={handleOpenCancellationDialog} className="w-full">
+                Cancel Subscription
+              </Button>
+              <Button variant="outline" onClick={handleRequestUpdateLink} className="w-full">
+                Update Payment Method
+              </Button>
             </>
           ) : (
             <Button onClick={handleSubscribe} className="w-full">

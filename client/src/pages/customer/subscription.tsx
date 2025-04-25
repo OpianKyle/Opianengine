@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
-import { Info, AlertCircle, CreditCard, History, BookOpen } from 'lucide-react';
+import { Info, AlertCircle, CreditCard, History, BookOpen, CheckCircle } from 'lucide-react';
 
 const SubscriptionPage: React.FC = () => {
   const { user, isLoading, isAuthenticated, refreshUser } = useAuth();
@@ -144,25 +144,65 @@ const SubscriptionPage: React.FC = () => {
           <>
             <Tabs defaultValue={defaultTab} className="w-full">
               <TabsList className="grid grid-cols-5 mb-8">
-                <TabsTrigger value="OPPORTUNITY" className="relative">
+                <TabsTrigger 
+                  value="OPPORTUNITY" 
+                  className={`relative ${user?.selectedPackage === "OPPORTUNITY" ? "ring-2 ring-zinc-400 font-semibold" : ""}`}
+                >
                   <span className="inline-block w-3 h-3 rounded-full bg-zinc-400 mr-2"></span>
                   OPPORTUNITY
+                  {user?.selectedPackage === "OPPORTUNITY" && (
+                    <span className="absolute -top-1 -right-1 bg-green-500 rounded-full w-4 h-4 flex items-center justify-center">
+                      <CheckCircle size={12} className="text-white" />
+                    </span>
+                  )}
                 </TabsTrigger>
-                <TabsTrigger value="MOMENTUM" className="relative">
+                <TabsTrigger 
+                  value="MOMENTUM" 
+                  className={`relative ${user?.selectedPackage === "MOMENTUM" ? "ring-2 ring-blue-400 font-semibold" : ""}`}
+                >
                   <span className="inline-block w-3 h-3 rounded-full bg-blue-400 mr-2"></span>
                   MOMENTUM
+                  {user?.selectedPackage === "MOMENTUM" && (
+                    <span className="absolute -top-1 -right-1 bg-green-500 rounded-full w-4 h-4 flex items-center justify-center">
+                      <CheckCircle size={12} className="text-white" />
+                    </span>
+                  )}
                 </TabsTrigger>
-                <TabsTrigger value="PROSPER" className="relative">
+                <TabsTrigger 
+                  value="PROSPER" 
+                  className={`relative ${user?.selectedPackage === "PROSPER" ? "ring-2 ring-green-400 font-semibold" : ""}`}
+                >
                   <span className="inline-block w-3 h-3 rounded-full bg-green-400 mr-2"></span>
                   PROSPER
+                  {user?.selectedPackage === "PROSPER" && (
+                    <span className="absolute -top-1 -right-1 bg-green-500 rounded-full w-4 h-4 flex items-center justify-center">
+                      <CheckCircle size={12} className="text-white" />
+                    </span>
+                  )}
                 </TabsTrigger>
-                <TabsTrigger value="PRESTIGE" className="relative">
+                <TabsTrigger 
+                  value="PRESTIGE" 
+                  className={`relative ${user?.selectedPackage === "PRESTIGE" ? "ring-2 ring-purple-400 font-semibold" : ""}`}
+                >
                   <span className="inline-block w-3 h-3 rounded-full bg-purple-400 mr-2"></span>
                   PRESTIGE
+                  {user?.selectedPackage === "PRESTIGE" && (
+                    <span className="absolute -top-1 -right-1 bg-green-500 rounded-full w-4 h-4 flex items-center justify-center">
+                      <CheckCircle size={12} className="text-white" />
+                    </span>
+                  )}
                 </TabsTrigger>
-                <TabsTrigger value="PINNACLE" className="relative">
+                <TabsTrigger 
+                  value="PINNACLE" 
+                  className={`relative ${user?.selectedPackage === "PINNACLE" ? "ring-2 ring-amber-400 font-semibold" : ""}`}
+                >
                   <span className="inline-block w-3 h-3 rounded-full bg-amber-400 mr-2"></span>
                   PINNACLE
+                  {user?.selectedPackage === "PINNACLE" && (
+                    <span className="absolute -top-1 -right-1 bg-green-500 rounded-full w-4 h-4 flex items-center justify-center">
+                      <CheckCircle size={12} className="text-white" />
+                    </span>
+                  )}
                 </TabsTrigger>
               </TabsList>
 
@@ -217,7 +257,12 @@ const SubscriptionPage: React.FC = () => {
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  <div className="bg-white p-4 rounded-lg shadow border">
+                  <div className={`bg-white p-4 rounded-lg shadow ${user?.selectedPackage === "OPPORTUNITY" ? "border-2 border-zinc-300 bg-zinc-50" : "border"} relative`}>
+                    {user?.selectedPackage === "OPPORTUNITY" && (
+                      <div className="absolute -top-2 -right-2 bg-green-500 rounded-full h-6 w-6 flex items-center justify-center">
+                        <CheckCircle size={14} className="text-white" />
+                      </div>
+                    )}
                     <h3 className="font-semibold mb-2 flex items-center">
                       <span className="inline-block w-3 h-3 rounded-full bg-zinc-400 mr-2"></span>
                       OPPORTUNITY
@@ -229,7 +274,12 @@ const SubscriptionPage: React.FC = () => {
                     </ul>
                   </div>
                   
-                  <div className="bg-white p-4 rounded-lg shadow border">
+                  <div className={`bg-white p-4 rounded-lg shadow ${user?.selectedPackage === "MOMENTUM" ? "border-2 border-blue-300 bg-blue-50" : "border"} relative`}>
+                    {user?.selectedPackage === "MOMENTUM" && (
+                      <div className="absolute -top-2 -right-2 bg-green-500 rounded-full h-6 w-6 flex items-center justify-center">
+                        <CheckCircle size={14} className="text-white" />
+                      </div>
+                    )}
                     <h3 className="font-semibold mb-2 flex items-center">
                       <span className="inline-block w-3 h-3 rounded-full bg-blue-400 mr-2"></span>
                       MOMENTUM
@@ -242,7 +292,12 @@ const SubscriptionPage: React.FC = () => {
                     </ul>
                   </div>
                   
-                  <div className="bg-white p-4 rounded-lg shadow border-2 border-green-300">
+                  <div className={`bg-white p-4 rounded-lg shadow ${user?.selectedPackage === "PROSPER" ? "border-2 border-green-300 bg-green-50" : "border"} relative`}>
+                    {user?.selectedPackage === "PROSPER" && (
+                      <div className="absolute -top-2 -right-2 bg-green-500 rounded-full h-6 w-6 flex items-center justify-center">
+                        <CheckCircle size={14} className="text-white" />
+                      </div>
+                    )}
                     <h3 className="font-semibold mb-2 flex items-center">
                       <span className="inline-block w-3 h-3 rounded-full bg-green-400 mr-2"></span>
                       PROSPER
@@ -256,7 +311,12 @@ const SubscriptionPage: React.FC = () => {
                     </ul>
                   </div>
                   
-                  <div className="bg-white p-4 rounded-lg shadow border">
+                  <div className={`bg-white p-4 rounded-lg shadow ${user?.selectedPackage === "PRESTIGE" ? "border-2 border-purple-300 bg-purple-50" : "border"} relative`}>
+                    {user?.selectedPackage === "PRESTIGE" && (
+                      <div className="absolute -top-2 -right-2 bg-green-500 rounded-full h-6 w-6 flex items-center justify-center">
+                        <CheckCircle size={14} className="text-white" />
+                      </div>
+                    )}
                     <h3 className="font-semibold mb-2 flex items-center">
                       <span className="inline-block w-3 h-3 rounded-full bg-purple-400 mr-2"></span>
                       PRESTIGE
@@ -271,7 +331,12 @@ const SubscriptionPage: React.FC = () => {
                     </ul>
                   </div>
                   
-                  <div className="bg-white p-4 rounded-lg shadow border">
+                  <div className={`bg-white p-4 rounded-lg shadow ${user?.selectedPackage === "PINNACLE" ? "border-2 border-amber-300 bg-amber-50" : "border"} relative`}>
+                    {user?.selectedPackage === "PINNACLE" && (
+                      <div className="absolute -top-2 -right-2 bg-green-500 rounded-full h-6 w-6 flex items-center justify-center">
+                        <CheckCircle size={14} className="text-white" />
+                      </div>
+                    )}
                     <h3 className="font-semibold mb-2 flex items-center">
                       <span className="inline-block w-3 h-3 rounded-full bg-amber-400 mr-2"></span>
                       PINNACLE
