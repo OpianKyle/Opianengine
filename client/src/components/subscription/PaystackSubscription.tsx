@@ -88,7 +88,12 @@ export function PaystackSubscription({
 
   // FORCE isCurrentPackage to true if this is the user's selected package
   // This ensures the cancel button displays even without a valid subscription
-  const showCancelButton = user?.selectedPackage === packageType;
+  // We always want to show the cancel button if:
+  // 1. This is the current package (selectedPackage matches packageType)
+  // 2. The user has an active subscription status
+  const showCancelButton = 
+    user?.selectedPackage === packageType && 
+    (!!user?.paystack_subscription_code || user?.subscription_status === 'active');
   
   // Check if subscription data is available
   const hasSubscription = !!user?.paystack_subscription_code;
@@ -403,23 +408,30 @@ export function PaystackSubscription({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Please wait
             </Button>
-          ) : showCancelButton ? (
+          ) : user?.selectedPackage === packageType ? (
             <>
-              {/* Always show Cancel Subscription button for current package */}
+              {/* Always show Cancel Subscription button for current package regardless of subscription details */}
               <Button variant="destructive" onClick={handleOpenCancellationDialog} className="w-full">
                 Cancel Subscription
               </Button>
               <Button variant="outline" onClick={handleRequestUpdateLink} className="w-full">
                 Update Payment Method
               </Button>
+              <Button 
+                variant="secondary"
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                disabled
+              >
+                <CheckCircle size={16} className="mr-2" /> Currently Active
+              </Button>
             </>
           ) : (
             <Button 
               onClick={handleSubscribe} 
-              className={`w-full ${user?.selectedPackage === packageType ? 'bg-green-600 hover:bg-green-700' : ''}`}
+              className="w-full"
             >
-              {user?.selectedPackage === packageType ? 'Current Plan' : hasSubscription ? 'Change to this Plan' : 'Subscribe Now'} 
-              {user?.selectedPackage !== packageType && <ArrowRight className="ml-2 h-4 w-4" />}
+              {hasSubscription ? 'Change to this Plan' : 'Subscribe Now'} 
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           )}
         </CardFooter>

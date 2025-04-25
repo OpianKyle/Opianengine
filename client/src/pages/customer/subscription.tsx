@@ -60,6 +60,14 @@ const SubscriptionPage: React.FC = () => {
   if (!["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"].includes(defaultTab)) {
     defaultTab = "OPPORTUNITY";
   }
+  
+  console.log("Subscription Status Debug:", {
+    selectedPackage: user?.selectedPackage,
+    subscriptionStatus: user?.subscription_status,
+    paystack_subscription_code: user?.paystack_subscription_code,
+    paystack_email_token: user?.paystack_email_token,
+    defaultTab,
+  });
 
   return (
     <div>
