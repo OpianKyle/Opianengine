@@ -82,13 +82,24 @@ export function PaystackSubscription({
   const { toast } = useToast();
   const { user, refreshUser } = useAuth();
 
-  // Check if user is on this package already
-  const isCurrentPackage = 
-    user?.subscription_status === 'active' && 
-    user?.selectedPackage === packageType;
+  // DEBUG: Make always true for testing
+  const isCurrentPackage = true;
+    // user?.subscription_status === 'active' && 
+    // user?.selectedPackage === packageType;
 
   // Check if subscription data is available
-  const hasSubscription = !!user?.paystack_subscription_code;
+  const hasSubscription = true; // DEBUG: Force to true for testing
+  // !!user?.paystack_subscription_code;
+
+  // Debug values
+  console.log('Subscription Debug:', {
+    packageType,
+    userPackage: user?.selectedPackage,
+    subscriptionStatus: user?.subscription_status,
+    isCurrentPackage,
+    hasSubscription,
+    subscriptionCode: user?.paystack_subscription_code
+  });
 
   // Fetch subscription details if available
   useEffect(() => {
@@ -377,7 +388,7 @@ export function PaystackSubscription({
             </Button>
           ) : isCurrentPackage ? (
             <>
-              {user?.subscription_status === 'active' ? (
+              {true || user?.subscription_status === 'active' ? (
                 <>
                   <Button variant="destructive" onClick={handleOpenCancellationDialog} className="w-full">
                     Cancel Subscription
