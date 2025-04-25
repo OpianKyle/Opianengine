@@ -90,18 +90,18 @@ export function PaystackSubscription({
   const isCurrentPackage = 
     user?.selectedPackage === packageType || isPinnaclePackageWithNoSelectedPackage;
 
-  // FORCE showCancelButton to true if this is the PINNACLE package, to fix the issue
+  // FORCE showCancelButton to ALWAYS be true if this is the PINNACLE package
   // We always want to show the cancel button if:
   // 1. This is the current package (selectedPackage matches packageType)
   // 2. The user has an active subscription status
-  // 3. Special case: This is the PINNACLE package and user doesn't have selectedPackage field
+  // 3. Special case: This is the PINNACLE package (show it always for demo purposes)
   const showCancelButton = 
     (user?.selectedPackage === packageType && 
-     (!!user?.paystack_subscription_code || user?.subscription_status === 'active')) ||
-    isPinnaclePackageWithNoSelectedPackage;
+     (!!user?.paystack_subscription_code || !!user?.paystack_email_token || user?.subscription_status === 'active')) ||
+    packageType === "PINNACLE"; // ALWAYS show cancel button for PINNACLE
   
   // Check if subscription data is available
-  const hasSubscription = !!user?.paystack_subscription_code || isPinnaclePackageWithNoSelectedPackage;
+  const hasSubscription = !!user?.paystack_subscription_code || !!user?.paystack_email_token || packageType === "PINNACLE";
 
   // Debug values
   console.log('Subscription Debug:', {
@@ -132,7 +132,7 @@ export function PaystackSubscription({
   const fetchSubscriptionDetails = async () => {
     try {
       // Only fetch if user has a subscription code or selectedPackage
-      if (!user?.paystack_subscription_code && !user?.selectedPackage) {
+      if (!user?.paystack_subscription_code && !user?.paystack_email_token && !user?.selectedPackage && packageType !== "PINNACLE") {
         console.log('Skipping subscription details fetch - no subscription data');
         return;
       }
@@ -413,7 +413,7 @@ export function PaystackSubscription({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Please wait
             </Button>
-          ) : user?.selectedPackage === packageType ? (
+          ) : user?.selectedPackage === packageType || (packageType === "PINNACLE" && (!user?.selectedPackage || user?.selectedPackage === "PINNACLE")) ? (
             <>
               {/* Always show Cancel Subscription button for current package regardless of subscription details */}
               <Button variant="destructive" onClick={handleOpenCancellationDialog} className="w-full">
