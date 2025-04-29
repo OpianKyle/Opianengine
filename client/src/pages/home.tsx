@@ -444,9 +444,9 @@ export default function HomePage() {
                     
                     {/* Content positioned over the image */}
                     <div className="relative z-10 p-6 pt-10 flex flex-col h-full">
-                      <h3 className="text-3xl font-bold mb-6 text-white border-l-4 border-[#43EB3E] pl-4 mt-8">Earn Points Effortlessly</h3>
+                      <h3 className="text-3xl font-bold mb-6 text-white mt-8">Earn Points Effortlessly</h3>
                       <p className="text-gray-100 mb-8 text-lg">
-                        Opian Rewards is designed to make your financial life more rewarding:
+                        Opian Rewards is designed to make your financial life more rewarding
                       </p>
                     </div>
                   </div>
