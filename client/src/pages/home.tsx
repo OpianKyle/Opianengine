@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { useUser } from "@/hooks/use-user";
 import { useLocation } from "wouter";
-import { Loader2, CheckCircle, ArrowRight, CreditCard, Users, Gift, ArrowUpRight, ShoppingCart, Receipt, BarChart2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, CheckCircle, ArrowRight, CreditCard, Users, Gift, ArrowUpRight, ShoppingCart, Receipt, BarChart2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -25,75 +25,170 @@ const PACKAGE_PRICES = {
   PINNACLE: 825
 };
 
-// Package descriptions
+// All features from Pinnacle package
+const ALL_FEATURES = [
+  { name: 'Activation Points', values: {
+      OPPORTUNITY: '2,500',
+      MOMENTUM: '5,000',
+      PROSPER: '7,500',
+      PRESTIGE: '10,000',
+      PINNACLE: '12,500'
+    }
+  },
+  { name: 'Funeral Cover', values: {
+      OPPORTUNITY: false,
+      MOMENTUM: 'R5,000',
+      PROSPER: 'R10,000',
+      PRESTIGE: 'R15,000',
+      PINNACLE: 'R20,000'
+    }
+  },
+  { name: 'Accidental Death Cover', values: {
+      OPPORTUNITY: false,
+      MOMENTUM: false,
+      PROSPER: 'R20,000',
+      PRESTIGE: 'R50,000',
+      PINNACLE: 'R100,000'
+    }
+  },
+  { name: 'Funeral Assist', values: {
+      OPPORTUNITY: false,
+      MOMENTUM: true,
+      PROSPER: true,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  },
+  { name: 'Family Income Benefit', values: {
+      OPPORTUNITY: false,
+      MOMENTUM: false,
+      PROSPER: 'R5,000 x6',
+      PRESTIGE: 'R5,000 x6',
+      PINNACLE: 'R5,000 x6'
+    }
+  },
+  { name: 'EMS Assist', values: {
+      OPPORTUNITY: true,
+      MOMENTUM: true,
+      PROSPER: true,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  },
+  { name: 'Legal Assist', values: {
+      OPPORTUNITY: true,
+      MOMENTUM: true,
+      PROSPER: true,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  },
+  { name: 'Lawyer Assist', values: {
+      OPPORTUNITY: false,
+      MOMENTUM: false,
+      PROSPER: false,
+      PRESTIGE: false,
+      PINNACLE: true
+    }
+  },
+  { name: 'Repatriation Cover', values: {
+      OPPORTUNITY: true,
+      MOMENTUM: true,
+      PROSPER: true,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  },
+  { name: 'Celebrate Life', values: {
+      OPPORTUNITY: true,
+      MOMENTUM: true,
+      PROSPER: true,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  },
+  { name: '24/7 Nurse On-Call', values: {
+      OPPORTUNITY: true,
+      MOMENTUM: true,
+      PROSPER: true,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  },
+  { name: 'Virtual GP Assistant', values: {
+      OPPORTUNITY: false,
+      MOMENTUM: false,
+      PROSPER: true,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  },
+  { name: 'Medical Second Opinion', values: {
+      OPPORTUNITY: false,
+      MOMENTUM: false,
+      PROSPER: true,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  },
+  { name: 'Crime Victim Assist', values: {
+      OPPORTUNITY: false,
+      MOMENTUM: false,
+      PROSPER: false,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  },
+  { name: 'Assault & Trauma Assist', values: {
+      OPPORTUNITY: false,
+      MOMENTUM: false,
+      PROSPER: false,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  },
+  { name: 'Emergency Medical Services', values: {
+      OPPORTUNITY: false,
+      MOMENTUM: false,
+      PROSPER: false,
+      PRESTIGE: true,
+      PINNACLE: true
+    }
+  }
+];
+
+// Legacy feature lists for compatibility with existing code
 const PACKAGE_FEATURES = {
-  OPPORTUNITY: [
-    'Activation Points: 2,500',
-    'EMS Assist',
-    'Legal Assist',
-    'Repatriation Cover',
-    'Celebrate Life',
-    '24/7 Nurse On-Call'
-  ],
-  MOMENTUM: [
-    'Activation Points: 5,000',
-    'Funeral Cover: R5,000',
-    'Funeral Assist',
-    'EMS Assist',
-    'Legal Assist',
-    'Repatriation Cover',
-    'Celebrate Life',
-    '24/7 Nurse On-Call'
-  ],
-  PROSPER: [
-    'Activation Points: 7,500',
-    'Funeral Cover: R10,000',
-    'Accidental Death Cover: R20,000',
-    'Funeral Assist',
-    'Family Income Benefit: R5,000 x6',
-    'EMS Assist',
-    'Legal Assist',
-    'Repatriation Cover',
-    'Celebrate Life',
-    '24/7 Nurse On-Call',
-    'Virtual GP Assistant',
-    'Medical Second Opinion'
-  ],
-  PRESTIGE: [
-    'Activation Points: 10,000',
-    'Funeral Cover: R15,000',
-    'Accidental Death Cover: R50,000',
-    'Funeral Assist',
-    'Family Income Benefit: R5,000 x6',
-    'EMS Assist',
-    'Legal Assist',
-    'Repatriation Cover',
-    'Celebrate Life',
-    '24/7 Nurse On-Call',
-    'Virtual GP Assistant',
-    'Medical Second Opinion',
-    'Crime Victim Assist',
-    'Assault & Trauma Assist',
-    'Emergency Medical Services'
-  ],
-  PINNACLE: [
-    'Activation Points: 12,500',
-    'Funeral Cover: R20,000',
-    'Accidental Death Cover: R100,000',
-    'Funeral Assist',
-    'Family Income Benefit: R5,000 x6',
-    'EMS Assist',
-    'Legal Assist',
-    'Lawyer Assist',
-    'Repatriation Cover',
-    'Celebrate Life',
-    '24/7 Nurse On-Call',
-    'Virtual GP Assistant',
-    'Medical Second Opinion',
-    'Crime Victim Assist',
-    'Assault & Trauma Assist',
-    'Emergency Medical Services'
-  ]
+  OPPORTUNITY: ALL_FEATURES.map(feature => {
+    const value = feature.values.OPPORTUNITY;
+    if (typeof value === 'string') return `${feature.name}: ${value}`;
+    if (value === true) return feature.name;
+    return null;
+  }).filter(Boolean),
+  MOMENTUM: ALL_FEATURES.map(feature => {
+    const value = feature.values.MOMENTUM;
+    if (typeof value === 'string') return `${feature.name}: ${value}`;
+    if (value === true) return feature.name;
+    return null;
+  }).filter(Boolean),
+  PROSPER: ALL_FEATURES.map(feature => {
+    const value = feature.values.PROSPER;
+    if (typeof value === 'string') return `${feature.name}: ${value}`;
+    if (value === true) return feature.name;
+    return null;
+  }).filter(Boolean),
+  PRESTIGE: ALL_FEATURES.map(feature => {
+    const value = feature.values.PRESTIGE;
+    if (typeof value === 'string') return `${feature.name}: ${value}`;
+    if (value === true) return feature.name;
+    return null;
+  }).filter(Boolean),
+  PINNACLE: ALL_FEATURES.map(feature => {
+    const value = feature.values.PINNACLE;
+    if (typeof value === 'string') return `${feature.name}: ${value}`;
+    if (value === true) return feature.name;
+    return null;
+  }).filter(Boolean)
 };
 
 // Package colors - using site theme colors
@@ -658,12 +753,22 @@ export default function HomePage() {
                 </CardHeader>
                 <CardContent className="pb-2 relative z-10 flex-grow">
                   <ul className="space-y-2">
-                    {features.map((feature, index) => (
-                      <li key={index} className="flex items-start">
-                        <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
-                        <span className="text-sm font-medium text-gray-200">{feature}</span>
-                      </li>
-                    ))}
+                    {ALL_FEATURES.map((feature, index) => {
+                      const value = feature.values[packageName as keyof typeof feature.values];
+                      const isAvailable = value !== false;
+                      return (
+                        <li key={index} className="flex items-start">
+                          {isAvailable ? (
+                            <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
+                          ) : (
+                            <X className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 text-red-500" />
+                          )}
+                          <span className={`text-sm font-medium ${isAvailable ? 'text-gray-200' : 'text-gray-500'}`}>
+                            {typeof value === 'string' ? `${feature.name}: ${value}` : feature.name}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </CardContent>
                 <CardFooter className="relative z-10 mt-auto">
