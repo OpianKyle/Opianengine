@@ -580,7 +580,7 @@ export default function HomePage() {
             {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
               <Card 
                 key={packageName} 
-                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-background dark:bg-[#01162f] text-foreground dark:text-white relative group`}
+                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group`}
               >
                 {/* Particle-like green shade overlay */}
                 <div className="absolute inset-0 bg-[#43EB3E] opacity-5 dark:opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
@@ -653,15 +653,15 @@ export default function HomePage() {
                   <Badge variant="outline" className={`mb-2 font-semibold border-[#43EB3E] text-[#43EB3E]`}>
                     {packageName}
                   </Badge>
-                  <CardTitle className="text-2xl font-bold text-foreground dark:text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
-                  <CardDescription className="text-muted-foreground dark:text-gray-300 font-medium">per month</CardDescription>
+                  <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
+                  <CardDescription className="text-gray-300 font-medium">per month</CardDescription>
                 </CardHeader>
                 <CardContent className="pb-4 relative z-10">
                   <ul className="space-y-2">
                     {features.map((feature, index) => (
                       <li key={index} className="flex items-start">
                         <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
-                        <span className="text-sm font-medium text-muted-foreground dark:text-gray-200">{feature}</span>
+                        <span className="text-sm font-medium text-gray-200">{feature}</span>
                       </li>
                     ))}
                   </ul>
