@@ -420,69 +420,65 @@ export default function HomePage() {
             </div>
           </div>
           
-          {/* Additional Info Sections - Clean layout without cards */}
-          <div className="mt-20">
-            <div className="bg-[#022b5c] p-8 rounded-xl shadow-lg border-l-4 border-[#43EB3E]">
-              <h3 className="text-2xl font-bold mb-6 text-white">Earn Points Effortlessly</h3>
-              <p className="text-gray-300 mb-8">
-                Opian Rewards is designed to make your financial life more rewarding:
-              </p>
+          {/* Additional Info Sections - Completely free-flowing layout */}
+          <div className="mt-20 mb-16 max-w-5xl mx-auto">
+            <h3 className="text-3xl font-bold mb-6 text-white border-l-4 border-[#43EB3E] pl-4">Earn Points Effortlessly</h3>
+            <p className="text-gray-300 mb-10 text-lg">
+              Opian Rewards is designed to make your financial life more rewarding:
+            </p>
+            
+            <div className="space-y-12">
+              <div className="flex items-start">
+                <div className="w-14 h-14 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-5 shadow-md">
+                  <ShoppingCart className="h-7 w-7 text-[#43EB3E]" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-xl mb-3">Shop Your Way</h4>
+                  <p className="text-gray-300 text-lg">
+                    Use your Opian Rewards Card for everyday purchases—from groceries to online shopping—and watch the points pile up!
+                  </p>
+                </div>
+              </div>
               
-              <div className="space-y-8">
-                <div className="flex items-start">
-                  <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-sm">
-                    <ShoppingCart className="h-6 w-6 text-[#43EB3E]" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white text-lg mb-2">Shop Your Way</h4>
-                    <p className="text-gray-300">
-                      Use your Opian Rewards Card for everyday purchases—from groceries to online shopping—and watch the points pile up!
-                    </p>
-                  </div>
+              <div className="flex items-start">
+                <div className="w-14 h-14 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-5 shadow-md">
+                  <Receipt className="h-7 w-7 text-[#43EB3E]" />
                 </div>
-                
-                <div className="flex items-start">
-                  <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-sm">
-                    <Receipt className="h-6 w-6 text-[#43EB3E]" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white text-lg mb-2">Pay Your Accounts</h4>
-                    <p className="text-gray-300">
-                      Simplify your bill payments and earn rewards at the same time. Every time you pay a bill with your Opian Rewards Card, you strengthen your point balance.
-                    </p>
-                  </div>
+                <div>
+                  <h4 className="font-bold text-white text-xl mb-3">Pay Your Accounts</h4>
+                  <p className="text-gray-300 text-lg">
+                    Simplify your bill payments and earn rewards at the same time. Every time you pay a bill with your Opian Rewards Card, you strengthen your point balance.
+                  </p>
                 </div>
-                
-                <div className="flex items-start">
-                  <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-sm">
-                    <BarChart2 className="h-6 w-6 text-[#43EB3E]" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white text-lg mb-2">Plan for Success</h4>
-                    <p className="text-gray-300">
-                      Engage in smart financial planning and decision-making—whether it's budgeting, saving, or investing. We believe in rewarding your financial savvy!
-                    </p>
-                  </div>
+              </div>
+              
+              <div className="flex items-start">
+                <div className="w-14 h-14 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-5 shadow-md">
+                  <BarChart2 className="h-7 w-7 text-[#43EB3E]" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-xl mb-3">Plan for Success</h4>
+                  <p className="text-gray-300 text-lg">
+                    Engage in smart financial planning and decision-making—whether it's budgeting, saving, or investing. We believe in rewarding your financial savvy!
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mb-16 mt-10">
-            <div className="bg-[#022b5c] p-8 rounded-xl shadow-lg border-l-4 border-[#43EB3E]">
-              <h3 className="text-2xl font-bold mb-6 text-white">Stack Your Rewards</h3>
-              <p className="text-gray-300 mb-6">
-                Accumulate points with every transaction and see how they can translate into real value. The points you earn can be converted into cash based on Opian Rewards' conditions, which take into account:
-              </p>
-              <ul className="list-disc pl-6 space-y-2 text-gray-300">
-                <li>Your points level</li>
-                <li>Your engagement with the program</li>
-                <li>Other applicable terms and conditions</li>
-              </ul>
-              <p className="text-gray-300 mt-4 font-medium">
-                The more involved you are, the greater your rewards can be!
-              </p>
-            </div>
+          <div className="mb-20 mt-16 max-w-5xl mx-auto">
+            <h3 className="text-3xl font-bold mb-6 text-white border-l-4 border-[#43EB3E] pl-4">Stack Your Rewards</h3>
+            <p className="text-gray-300 mb-8 text-lg">
+              Accumulate points with every transaction and see how they can translate into real value. The points you earn can be converted into cash based on Opian Rewards' conditions, which take into account:
+            </p>
+            <ul className="list-disc pl-8 space-y-3 text-gray-300 text-lg ml-5">
+              <li>Your points level</li>
+              <li>Your engagement with the program</li>
+              <li>Other applicable terms and conditions</li>
+            </ul>
+            <p className="text-gray-300 mt-6 font-medium text-lg">
+              The more involved you are, the greater your rewards can be!
+            </p>
           </div>
 
           <div className="mb-16">
