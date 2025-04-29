@@ -374,8 +374,8 @@ export default function HomePage() {
                         {/* Gradient overlay for better text readability */}
                         <div className="absolute inset-0 bg-gradient-to-r from-[#01162f] to-transparent opacity-90 rounded-xl z-10"></div>
                         
-                        {/* Content - centered with padding to avoid navigation buttons */}
-                        <div className="relative h-[500px] flex flex-col justify-center px-16 py-10 z-20">
+                        {/* Content - centered with increased padding to avoid navigation buttons */}
+                        <div className="relative h-[500px] flex flex-col justify-center px-24 py-10 z-20">
                           <div className="w-16 h-16 bg-[#01162f] text-white rounded-full flex items-center justify-center font-bold text-2xl mb-6 shadow-lg border-2 border-[#43EB3E]">
                             {index + 1}
                           </div>
