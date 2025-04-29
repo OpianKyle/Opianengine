@@ -25,39 +25,71 @@ const PACKAGE_PRICES = {
 // Package descriptions
 const PACKAGE_FEATURES = {
   OPPORTUNITY: [
-    'Essential rewards program',
-    'Monthly newsletter',
-    'Basic customer support'
+    'Activation Points: 2,500',
+    'EMS Assist',
+    'Legal Assist',
+    'Repatriation Cover',
+    'Celebrate Life',
+    '24/7 Nurse On-Call'
   ],
   MOMENTUM: [
-    'Enhanced rewards program',
-    'Quarterly digital magazine',
-    'Priority email support',
-    'Additional reward opportunities'
+    'Activation Points: 5,000',
+    'Funeral Cover: R5,000',
+    'Funeral Assist',
+    'EMS Assist',
+    'Legal Assist',
+    'Repatriation Cover',
+    'Celebrate Life',
+    '24/7 Nurse On-Call'
   ],
   PROSPER: [
-    'Premium rewards program',
-    'Access to referral program',
-    'Dedicated support agent',
-    'Monthly exclusive offers',
-    'Priority processing'
+    'Activation Points: 7,500',
+    'Funeral Cover: R10,000',
+    'Accidental Death Cover: R20,000',
+    'Funeral Assist',
+    'Family Income Benefit: R5,000 x6',
+    'EMS Assist',
+    'Legal Assist',
+    'Repatriation Cover',
+    'Celebrate Life',
+    '24/7 Nurse On-Call',
+    'Virtual GP Assistant',
+    'Medical Second Opinion'
   ],
   PRESTIGE: [
-    'Elite rewards program',
-    'VIP referral benefits',
-    '24/7 priority support',
-    'Exclusive member events',
-    'Quarterly performance reviews',
-    'Enhanced reward multipliers'
+    'Activation Points: 10,000',
+    'Funeral Cover: R15,000',
+    'Accidental Death Cover: R50,000',
+    'Funeral Assist',
+    'Family Income Benefit: R5,000 x6',
+    'EMS Assist',
+    'Legal Assist',
+    'Repatriation Cover',
+    'Celebrate Life',
+    '24/7 Nurse On-Call',
+    'Virtual GP Assistant',
+    'Medical Second Opinion',
+    'Crime Victim Assist',
+    'Assault & Trauma Assist',
+    'Emergency Medical Services'
   ],
   PINNACLE: [
-    'Ultimate rewards experience',
-    'Maximum referral benefits',
-    'Dedicated account manager',
-    'Customized rewards strategy',
-    'Exclusive VIP events',
-    'Premium reward multipliers',
-    'Early access to new features'
+    'Activation Points: 12,500',
+    'Funeral Cover: R20,000',
+    'Accidental Death Cover: R100,000',
+    'Funeral Assist',
+    'Family Income Benefit: R5,000 x6',
+    'EMS Assist',
+    'Legal Assist',
+    'Lawyer Assist',
+    'Repatriation Cover',
+    'Celebrate Life',
+    '24/7 Nurse On-Call',
+    'Virtual GP Assistant',
+    'Medical Second Opinion',
+    'Crime Victim Assist',
+    'Assault & Trauma Assist',
+    'Emergency Medical Services'
   ]
 };
 
