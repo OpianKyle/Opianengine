@@ -199,6 +199,15 @@ export default function HomePage() {
                 }}
               />
             </div>
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="outline" 
+                className="bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-[#01162f] transition-all duration-300"
+                onClick={() => navigate("/login")}
+              >
+                Login
+              </Button>
+            </div>
             <nav className="hidden md:flex space-x-8">
               <a href="#" className="text-white hover:text-[#43EB3E] transition-colors">Home</a>
               <a href="#how-it-works" className="text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
