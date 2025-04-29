@@ -93,13 +93,13 @@ const PACKAGE_FEATURES = {
   ]
 };
 
-// Package colors
+// Package colors - using site theme colors
 const PACKAGE_COLORS = {
-  OPPORTUNITY: 'bg-zinc-400',
-  MOMENTUM: 'bg-blue-400',
-  PROSPER: 'bg-green-400',
-  PRESTIGE: 'bg-purple-400',
-  PINNACLE: 'bg-amber-400'
+  OPPORTUNITY: 'bg-[#01162f]',
+  MOMENTUM: 'bg-[#022b5c]',
+  PROSPER: 'bg-[#43EB3E]',
+  PRESTIGE: 'bg-[#011d3d]',
+  PINNACLE: 'bg-[#3ad036]'
 };
 
 export default function HomePage() {
@@ -395,20 +395,20 @@ export default function HomePage() {
             {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
               <Card 
                 key={packageName} 
-                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2`}
+                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 ${packageName === 'OPPORTUNITY' || packageName === 'MOMENTUM' || packageName === 'PRESTIGE' ? 'text-white' : 'text-black'}`}
               >
                 <CardHeader className="pb-4">
-                  <Badge variant="outline" className={`mb-2 ${packageName === 'PROSPER' ? 'border-green-500 text-green-600' : ''}`}>
+                  <Badge variant="outline" className={`mb-2 ${packageName === 'PROSPER' ? 'border-[#43EB3E] text-[#43EB3E]' : packageName === 'OPPORTUNITY' || packageName === 'MOMENTUM' || packageName === 'PRESTIGE' ? 'border-white text-white' : 'border-black text-black'}`}>
                     {packageName}
                   </Badge>
                   <CardTitle className="text-2xl">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
-                  <CardDescription>per month</CardDescription>
+                  <CardDescription className={packageName === 'OPPORTUNITY' || packageName === 'MOMENTUM' || packageName === 'PRESTIGE' ? 'text-gray-300' : ''}>per month</CardDescription>
                 </CardHeader>
                 <CardContent className="pb-4">
                   <ul className="space-y-2">
                     {features.map((feature, index) => (
                       <li key={index} className="flex items-start">
-                        <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                        <CheckCircle className={`h-5 w-5 mr-2 flex-shrink-0 mt-0.5 ${packageName === 'PROSPER' || packageName === 'PINNACLE' ? 'text-[#011d3d]' : 'text-[#43EB3E]'}`} />
                         <span className="text-sm">{feature}</span>
                       </li>
                     ))}
@@ -416,7 +416,13 @@ export default function HomePage() {
                 </CardContent>
                 <CardFooter>
                   <Button 
-                    className={`w-full ${packageName === 'PROSPER' ? 'bg-[#43EB3E] hover:bg-[#3ad036] text-black' : ''}`}
+                    className={`w-full ${
+                      packageName === 'PROSPER' || packageName === 'PINNACLE' 
+                        ? 'bg-[#01162f] hover:bg-[#011d3d] text-white' 
+                        : packageName === 'OPPORTUNITY' || packageName === 'MOMENTUM' || packageName === 'PRESTIGE'
+                          ? 'bg-[#43EB3E] hover:bg-[#3ad036] text-black' 
+                          : ''
+                    }`}
                     onClick={() => navigate(`/register?package=${packageName}`)}
                   >
                     Get Started
