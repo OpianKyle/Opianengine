@@ -106,27 +106,27 @@ const PACKAGE_COLORS = {
 // Steps and their background images
 const STEPS = [
   {
-    title: "Submit Your Details",
+    title: "Personalized Support",
     description: "Submit your details and one of our friendly Opian agents will reach out to guide you through the sign-up process.",
-    backgroundImage: "/step1-bg.jpg",
+    backgroundImage: "/Personalized-Support-at-Your-Fingertips.jpg",
     fallbackColor: "#022b5c"
   },
   {
-    title: "Choose Your Product",
-    description: "Pick the rewards product that best suits your needs and lifestyle—each one comes with increasing value and earning potential.",
-    backgroundImage: "/step2-bg.jpg",
+    title: "Earn Points Effortlessly",
+    description: "Use your Opian card for everyday purchases and bill payments. Each transaction earns you reward points automatically.",
+    backgroundImage: "/Opian-Earn-Points-Effortlessly.jpg",
     fallbackColor: "#01162f"
   },
   {
-    title: "Receive Your Card & Load Funds",
-    description: "You'll get your personalised Opian Card, ready to be activated. Simply load funds to activate it and unlock your rewards journey.",
-    backgroundImage: "/step3-bg.jpg",
+    title: "Stack Your Rewards",
+    description: "Combine different rewards channels and watch your benefits multiply. The more you use your card, the more rewards you stack.",
+    backgroundImage: "/Stack-Your-Rewards.jpg",
     fallbackColor: "#022b5c"
   },
   {
-    title: "Start Earning Rewards",
-    description: "Watch your rewards build up every time you use your card for purchases or to pay bills. The more you use it, the more you earn.",
-    backgroundImage: "/step4-bg.jpg",
+    title: "Join Opian Rewards Today",
+    description: "Start your rewards journey now and transform how you shop, pay, and save. Join thousands of members already earning rewards.",
+    backgroundImage: "/Join-Opian-Rewards-Today.jpg",
     fallbackColor: "#01162f"
   }
 ];
