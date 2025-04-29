@@ -1475,10 +1475,10 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
       isAgent: user.is_agent
     });
     
-    // Use query cache for better performance
-    const cacheKey = `agent-commissions-${user.id}`;
+    // CRITICAL DEBUGGING - Commenting out cache for agent commissions to force fresh data
+    console.log('CACHE BYPASS - Getting fresh data for agent ID:', user.id);
     
-    // First check if we have any commissions directly in the database
+    // Directly query the database without using cache
     const connection = await createConnection();
     try {
       console.log('Checking agent commissions in database for agent ID:', user.id);
@@ -1501,7 +1501,7 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
       }
       
       console.log('Fetching commissions for agent ID:', user.id);
-      const [rawCommissions] = await connection.execute(
+      const [commissions] = await connection.execute(
         `SELECT 
           ac.id,
           ac.package_type as package_name,
@@ -1520,104 +1520,70 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
         [user.id]
       );
       
-      console.log('Raw commission result:', {
-        count: Array.isArray(rawCommissions) ? rawCommissions.length : 0,
-        sample: Array.isArray(rawCommissions) && rawCommissions.length > 0 ? rawCommissions[0] : null
+      console.log('FRESH DATA: Agent commissions found:', {
+        count: Array.isArray(commissions) ? commissions.length : 0,
+        agentId: user.id,
+        timestamp: new Date().toISOString()
       });
       
-      await connection.end();
-    } catch (error) {
-      console.error('Error in direct database check for commissions:', error);
+      // Calculate total earnings and paid/unpaid amounts
+      // @ts-ignore - MySQL2 results structure
+      const totalEarned = Array.isArray(commissions) ? commissions.reduce((sum, c) => sum + parseFloat(c.commission_amount), 0) : 0;
+      
+      // @ts-ignore - MySQL2 results structure
+      const totalPaid = Array.isArray(commissions) ? commissions.reduce((sum, c) => c.paid ? sum + parseFloat(c.commission_amount) : sum, 0) : 0;
+      
+      const totalUnpaid = totalEarned - totalPaid;
+      
+      // Transform data to match client expectations
+      const formattedCommissions = Array.isArray(commissions) ? commissions.map(c => {
+        // Create a customer name from first and last name
+        const customerName = `${c.first_name} ${c.last_name}`;
+        
+        // Determine if it's a renewal based on commission_type
+        const isRenewal = c.commission_type === 'RENEWAL';
+        
+        // Format the data to match client-side Commission interface
+        return {
+          id: c.id,
+          customerName,
+          packageName: c.package_name,
+          isRenewal,
+          commissionAmount: parseFloat(c.commission_amount),
+          commissionDate: c.created_at,
+          paidOut: c.paid,
+          packagePrice: parseFloat(c.package_price),
+          email: c.email
+        };
+      }) : [];
+      
+      const result = {
+        commissions: formattedCommissions,
+        stats: {
+          totalEarned,
+          totalPaid,
+          totalUnpaid
+        }
+      };
+      
+      // Clear the query cache entry - force other services to get fresh data
+      const cacheKey = `agent-commissions-${user.id}`;
+      queryCache.invalidate(cacheKey);
+      
+      // Also invalidate related agent statistics
+      queryCache.invalidate(`agent_statistics_${user.id}`);
+      
+      // Return the fresh data
+      return result;
+    } finally {
       await connection.end();
     }
     
-    const result = await queryCache.getOrFetch(
-      cacheKey,
-      async () => {
-        const connection = await createConnection();
-        try {
-          const [commissions] = await connection.execute(
-            `SELECT 
-              ac.id,
-              ac.package_type as package_name,
-              ac.premium_amount as package_price,
-              ac.commission_amount,
-              ac.commission_type,
-              ac.status = 'PAID' as paid,
-              ac.created_at,
-              u.first_name,
-              u.last_name,
-              u.email
-            FROM agent_commissions ac
-            JOIN users u ON ac.customer_id = u.id
-            WHERE ac.agent_id = ?
-            ORDER BY ac.created_at DESC`,
-            [user.id]
-          );
-          
-          console.log('Agent commissions found:', {
-            count: Array.isArray(commissions) ? commissions.length : 0,
-            agentId: user.id
-          });
-          
-          // Calculate total earnings and paid/unpaid amounts
-          // @ts-ignore - MySQL2 results structure
-          const totalEarned = Array.isArray(commissions) ? commissions.reduce((sum, c) => sum + parseFloat(c.commission_amount), 0) : 0;
-          
-          // @ts-ignore - MySQL2 results structure
-          const totalPaid = Array.isArray(commissions) ? commissions.reduce((sum, c) => c.paid ? sum + parseFloat(c.commission_amount) : sum, 0) : 0;
-          
-          const totalUnpaid = totalEarned - totalPaid;
-          
-          // Transform data to match client expectations
-          const formattedCommissions = Array.isArray(commissions) ? commissions.map(c => {
-            // Create a customer name from first and last name
-            const customerName = `${c.first_name} ${c.last_name}`;
-            
-            // Determine if it's a renewal based on commission_type
-            const isRenewal = c.commission_type === 'RENEWAL';
-            
-            // Format the data to match client-side Commission interface
-            return {
-              id: c.id,
-              customerName,
-              // Important: Map package_name (the SQL alias) to packageName (what frontend expects)
-              packageName: c.package_name,
-              isRenewal,
-              commissionAmount: parseFloat(c.commission_amount),
-              commissionDate: c.created_at,
-              paidOut: c.paid,
-              // Include other fields as needed by the client
-              packagePrice: parseFloat(c.package_price),
-              email: c.email
-            };
-          }) : [];
-          
-          return {
-            commissions: formattedCommissions,
-            stats: {
-              totalEarned,
-              totalPaid,
-              totalUnpaid
-            }
-          };
-        } finally {
-          await connection.end();
-        }
-      },
-      // Cache for 5 minutes (300000ms)
-      300000
-    );
-    
-    console.log('Returning commissions data:', {
-      success: true,
-      commissionCount: result.commissions ? result.commissions.length : 0,
-      stats: result.stats
-    });
-    
+        // Fix the proper response
     return res.status(200).json({
       success: true,
-      ...result
+      commissions: [],
+      stats: { totalEarned: 0, totalPaid: 0, totalUnpaid: 0 }
     });
   } catch (error) {
     console.error('Error processing commissions request:', error);
