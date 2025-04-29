@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "@/providers/theme-provider";
 
 // Package prices in ZAR
 const PACKAGE_PRICES = {
@@ -134,6 +135,7 @@ const STEPS = [
 
 export default function HomePage() {
   const { user, isLoading } = useUser();
+  const { theme } = useTheme();
   const [, navigate] = useLocation();
   
   // Carousel logic for How It Works section
@@ -185,12 +187,12 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <header className="bg-[#01162f] dark:bg-[#01162f] text-white">
+      <header className="bg-white dark:bg-[#01162f] text-foreground dark:text-white">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center">
               <img
-                src="/opian-logo-white.png"
+                src={`/opian-logo-${theme === 'dark' ? 'white' : 'dark'}.png`}
                 alt="OPIAN Rewards"
                 className="h-10 w-auto"
                 onError={(e) => {
@@ -201,15 +203,15 @@ export default function HomePage() {
               />
             </div>
             <nav className="hidden md:flex space-x-8">
-              <a href="#" className="text-white hover:text-[#43EB3E] transition-colors">Home</a>
-              <a href="#how-it-works" className="text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
-              <a href="#" className="text-white hover:text-[#43EB3E] transition-colors">FAQ</a>
+              <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Home</a>
+              <a href="#how-it-works" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
+              <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">FAQ</a>
             </nav>
             <div className="flex items-center space-x-4">
               <ThemeToggle />
               <Button 
                 variant="outline" 
-                className="bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-[#01162f] transition-all duration-300"
+                className="bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
                 onClick={() => navigate("/login")}
               >
                 Login
@@ -564,11 +566,11 @@ export default function HomePage() {
       </section>
 
       {/* Package Section */}
-      <section className="py-20 relative overflow-hidden text-white">
+      <section className="py-20 relative overflow-hidden text-foreground dark:text-white">
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">Unlock More, Earn More, Be More.</h2>
-            <p className="text-lg text-gray-300 max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground dark:text-white">Unlock More, Earn More, Be More.</h2>
+            <p className="text-lg text-muted-foreground dark:text-gray-300 max-w-3xl mx-auto">
               Choose the package that matches your ambitions. Each tier opens new possibilities 
               for rewards and benefits.
             </p>
@@ -578,12 +580,12 @@ export default function HomePage() {
             {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
               <Card 
                 key={packageName} 
-                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group`}
+                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-background dark:bg-[#01162f] text-foreground dark:text-white relative group`}
               >
                 {/* Particle-like green shade overlay */}
-                <div className="absolute inset-0 bg-[#43EB3E] opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
-                <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full bg-[#43EB3E] opacity-15 mix-blend-overlay group-hover:opacity-25 transition-all duration-700"></div>
-                <div className="absolute bottom-0 left-0 w-16 h-16 rounded-tr-full bg-[#43EB3E] opacity-15 mix-blend-overlay group-hover:opacity-25 transition-all duration-700"></div>
+                <div className="absolute inset-0 bg-[#43EB3E] opacity-5 dark:opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full bg-[#43EB3E] opacity-10 dark:opacity-15 mix-blend-overlay group-hover:opacity-20 dark:group-hover:opacity-25 transition-all duration-700"></div>
+                <div className="absolute bottom-0 left-0 w-16 h-16 rounded-tr-full bg-[#43EB3E] opacity-10 dark:opacity-15 mix-blend-overlay group-hover:opacity-20 dark:group-hover:opacity-25 transition-all duration-700"></div>
                 
                 {/* Small particle dots - first layer with hover animations */}
                 <div className="absolute top-[10%] right-[15%] w-2 h-2 rounded-full bg-[#43EB3E] opacity-20 
@@ -651,15 +653,15 @@ export default function HomePage() {
                   <Badge variant="outline" className={`mb-2 font-semibold border-[#43EB3E] text-[#43EB3E]`}>
                     {packageName}
                   </Badge>
-                  <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
-                  <CardDescription className="text-gray-300 font-medium">per month</CardDescription>
+                  <CardTitle className="text-2xl font-bold text-foreground dark:text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
+                  <CardDescription className="text-muted-foreground dark:text-gray-300 font-medium">per month</CardDescription>
                 </CardHeader>
                 <CardContent className="pb-4 relative z-10">
                   <ul className="space-y-2">
                     {features.map((feature, index) => (
                       <li key={index} className="flex items-start">
                         <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
-                        <span className="text-sm font-medium text-gray-200">{feature}</span>
+                        <span className="text-sm font-medium text-muted-foreground dark:text-gray-200">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -678,15 +680,15 @@ export default function HomePage() {
           </div>
         </div>
         
-        {/* Background decorations with blue base and green overlay */}
-        <div className="absolute top-0 left-0 w-full h-full bg-[#01162f] z-0"></div>
-        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-15 z-0"></div>
-        <div className="absolute top-20 left-0 w-full h-32 bg-[#022b5c] transform -skew-y-3 opacity-30 z-0"></div>
-        <div className="absolute bottom-20 left-0 w-full h-32 bg-[#022b5c] transform skew-y-3 opacity-30 z-0"></div>
+        {/* Background decorations with light/dark mode support */}
+        <div className="absolute top-0 left-0 w-full h-full bg-gray-50 dark:bg-[#01162f] z-0"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-5 dark:opacity-15 z-0"></div>
+        <div className="absolute top-20 left-0 w-full h-32 bg-gray-100 dark:bg-[#022b5c] transform -skew-y-3 opacity-30 z-0"></div>
+        <div className="absolute bottom-20 left-0 w-full h-32 bg-gray-100 dark:bg-[#022b5c] transform skew-y-3 opacity-30 z-0"></div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 text-white relative overflow-hidden">
+      <section className="py-16 text-foreground dark:text-white relative overflow-hidden">
         <div className="container mx-auto px-4 text-center relative z-10">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Join Opian Rewards Today!</h2>
           <p className="text-xl mb-8 max-w-3xl mx-auto">
@@ -709,7 +711,7 @@ export default function HomePage() {
             <Button 
               onClick={() => navigate("/login")}
               variant="outline" 
-              className="border-white text-white hover:bg-white/10 text-lg py-6 px-8 rounded-md"
+              className="border-foreground dark:border-white text-foreground dark:text-white hover:bg-foreground/10 dark:hover:bg-white/10 text-lg py-6 px-8 rounded-md"
               size="lg"
             >
               Sign In
@@ -717,22 +719,22 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Background decorations with blue base and green overlay */}
-        <div className="absolute top-0 left-0 w-full h-full bg-[#01162f] z-0"></div>
-        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-15 z-0"></div>
+        {/* Background decorations with light/dark mode support */}
+        <div className="absolute top-0 left-0 w-full h-full bg-gray-50 dark:bg-[#01162f] z-0"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-5 dark:opacity-15 z-0"></div>
         
         {/* Additional decorative elements */}
-        <div className="absolute bottom-0 left-0 w-1/3 h-2/3 bg-[#022b5c] transform -skew-x-12 -translate-x-1/4 rounded-tr-3xl z-0 opacity-50"></div>
-        <div className="absolute bottom-0 left-0 w-1/3 h-2/3 bg-[#43EB3E] transform -skew-x-12 -translate-x-1/4 rounded-tr-3xl mix-blend-overlay z-0 opacity-20"></div>
+        <div className="absolute bottom-0 left-0 w-1/3 h-2/3 bg-gray-100 dark:bg-[#022b5c] transform -skew-x-12 -translate-x-1/4 rounded-tr-3xl z-0 opacity-50"></div>
+        <div className="absolute bottom-0 left-0 w-1/3 h-2/3 bg-[#43EB3E] transform -skew-x-12 -translate-x-1/4 rounded-tr-3xl mix-blend-overlay opacity-10 dark:opacity-20 z-0"></div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#01162f] text-gray-300 py-12">
+      <footer className="bg-gray-100 dark:bg-[#01162f] text-gray-600 dark:text-gray-300 py-12">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between">
             <div className="mb-8 md:mb-0">
               <img 
-                src="/opian-logo-white.png" 
+                src={`/opian-logo-${theme === 'dark' ? 'white' : 'dark'}.png`}
                 alt="OPIAN Rewards" 
                 className="h-10 w-auto mb-4"
                 onError={(e) => {
@@ -741,7 +743,7 @@ export default function HomePage() {
                   img.src = '/logo-fallback.png';
                 }}
               />
-              <p className="text-gray-400 max-w-xs">
+              <p className="text-gray-500 dark:text-gray-400 max-w-xs">
                 OPIAN Rewards makes your money work harder. Earn rewards on every transaction, referral, and financial decision.
               </p>
             </div>
@@ -749,33 +751,33 @@ export default function HomePage() {
               <div>
                 <h3 className="text-lg font-semibold mb-4">Packages</h3>
                 <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Momentum</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Prosper</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Prestige</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Momentum</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prosper</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prestige</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
                 </ul>
               </div>
               <div>
                 <h3 className="text-lg font-semibold mb-4">Resources</h3>
                 <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Help Center</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">FAQs</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Blog</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Contact</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Help Center</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">FAQs</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Blog</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Contact</a></li>
                 </ul>
               </div>
               <div>
                 <h3 className="text-lg font-semibold mb-4">Legal</h3>
                 <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Privacy Policy</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Cookie Policy</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Privacy Policy</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Cookie Policy</a></li>
                 </ul>
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+          <div className="border-t border-gray-200 dark:border-gray-800 mt-12 pt-8 text-center text-gray-500 dark:text-gray-400">
             <p>&copy; {new Date().getFullYear()} OPIAN Rewards. All rights reserved.</p>
           </div>
         </div>
