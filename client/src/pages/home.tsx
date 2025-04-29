@@ -385,8 +385,8 @@ export default function HomePage() {
                         
                         {/* Content - centered with increased padding to avoid navigation buttons */}
                         <div className="relative h-[500px] flex flex-col justify-center px-24 py-10 z-20">
-                          <div className="w-16 h-16 bg-[#01162f] text-white rounded-full flex items-center justify-center font-bold text-2xl mb-6 shadow-lg border-2 border-[#43EB3E]">
-                            {index + 1}
+                          <div className="w-16 h-16 bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-lg border-2 border-[#43EB3E]">
+                            <div className="w-10 h-10 rounded-full bg-[#43EB3E]/20"></div>
                           </div>
                           <h3 className="text-2xl font-bold mb-4 text-white">{step.title}</h3>
                           <p className="text-gray-300 text-lg max-w-md">
