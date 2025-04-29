@@ -134,14 +134,13 @@ export default function HomePage() {
           <div className="flex flex-col lg:flex-row items-center">
             <div className="lg:w-1/2 z-10">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-                The Card that <span className="text-[#43EB3E]">Pays</span>
+                The Card that Works for You
               </h1>
               <p className="text-xl mb-6">
-                Opian Rewards makes every transaction <span className="text-[#43EB3E]">work for you</span>.<br />
-                Get <span className="text-[#43EB3E]">cash back</span> on every <span className="text-[#43EB3E]">swipe</span>, 
-                every <span className="text-[#43EB3E]">referral</span>, and every 
-                financial choice—effortlessly.<br />
-                Turn your everyday spending into real cash rewards.
+                Make your money go further with Opian Rewards. Earn Rewards when you purchase 
+                and pay accounts with your Opian Rewards Card, and enhance your Rewards when 
+                you make smart financial planning decisions. Reward yourself and effortlessly 
+                put more money in your pocket by doing every day things with Opian Rewards.
               </p>
               <Button 
                 onClick={() => navigate("/register")}
@@ -198,7 +197,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold mb-4 text-[#011d3d]">Build Your Own Reward Stack</h3>
               <p className="text-gray-600">
-                Combine spending, referrals, and bonuses to create a personalized stack of rewards.
+                Combine the power of our Rewards System with your current rewards cards to create Double Rewards in your pocket!
               </p>
             </div>
             
@@ -206,9 +205,9 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-[#43EB3E] rounded-full flex items-center justify-center mb-6 shadow-md">
                 <Users className="h-8 w-8 text-[#011d3d]" />
               </div>
-              <h3 className="text-xl font-bold mb-4 text-[#011d3d]">Make Money While You Share</h3>
+              <h3 className="text-xl font-bold mb-4 text-[#011d3d]">Make Your Money Work for You</h3>
               <p className="text-gray-600">
-                Spread the word about Opian and get paid every time someone joins through your referral.
+                With the help of our Financial Partners, make smarter financial planning decisions to Save and Earn extra money!
               </p>
             </div>
           </div>
@@ -226,7 +225,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
             <div className="bg-white p-8 rounded-xl shadow-md relative">
               <div className="absolute -top-5 -left-5 w-12 h-12 bg-[#011d3d] text-white rounded-full flex items-center justify-center font-bold text-xl">
                 1
@@ -269,6 +268,81 @@ export default function HomePage() {
                 Use your card for everyday purchases. Each swipe earns you points and brings you 
                 closer to powerful benefits.
               </p>
+            </div>
+          </div>
+
+          {/* Additional Info Sections */}
+          <div className="mb-16">
+            <div className="bg-white p-8 rounded-xl shadow-lg">
+              <h3 className="text-2xl font-bold mb-6 text-[#011d3d]">Earn Points Effortlessly</h3>
+              <p className="text-gray-600 mb-6">
+                Opian Rewards is designed to make your financial life more rewarding:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-5 border border-gray-100 rounded-lg bg-gray-50">
+                  <h4 className="font-bold text-[#011d3d] mb-2">Shop Your Way</h4>
+                  <p className="text-gray-600">
+                    Use your Opian Rewards Card for everyday purchases—from groceries to online shopping—and watch the points pile up!
+                  </p>
+                </div>
+                <div className="p-5 border border-gray-100 rounded-lg bg-gray-50">
+                  <h4 className="font-bold text-[#011d3d] mb-2">Pay Your Accounts</h4>
+                  <p className="text-gray-600">
+                    Simplify your bill payments and earn rewards at the same time. Every time you pay a bill with your Opian Rewards Card, you strengthen your point balance.
+                  </p>
+                </div>
+                <div className="p-5 border border-gray-100 rounded-lg bg-gray-50">
+                  <h4 className="font-bold text-[#011d3d] mb-2">Plan for Success</h4>
+                  <p className="text-gray-600">
+                    Engage in smart financial planning and decision-making—whether it's budgeting, saving, or investing. We believe in rewarding your financial savvy!
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-16">
+            <div className="bg-white p-8 rounded-xl shadow-lg">
+              <h3 className="text-2xl font-bold mb-6 text-[#011d3d]">Stack Your Rewards</h3>
+              <p className="text-gray-600 mb-6">
+                Accumulate points with every transaction and see how they can translate into real value. The points you earn can be converted into cash based on Opian Rewards' conditions, which take into account:
+              </p>
+              <ul className="list-disc pl-6 space-y-2 text-gray-600">
+                <li>Your points level</li>
+                <li>Your engagement with the program</li>
+                <li>Other applicable terms and conditions</li>
+              </ul>
+              <p className="text-gray-600 mt-4 font-medium">
+                The more involved you are, the greater your rewards can be!
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-16">
+            <div className="bg-white p-8 rounded-xl shadow-lg flex flex-col md:flex-row items-center">
+              <div className="md:w-2/3 md:pr-8">
+                <h3 className="text-2xl font-bold mb-6 text-[#011d3d]">Personalized Support at Your Fingertips</h3>
+                <p className="text-gray-600 mb-4">
+                  Ready to make the most out of your Opian Rewards Card? Complete our quick contact form, and an Opian Rewards agent will reach out to explain all the incredible benefits you can unlock.
+                </p>
+                <p className="text-gray-600">
+                  Our team is dedicated to guiding you through every step of the way, providing insights and support through a series of calls and emails on how to maximize your rewards.
+                </p>
+              </div>
+              <div className="md:w-1/3 flex justify-center mt-6 md:mt-0">
+                <div className="bg-[#43EB3E] px-6 py-8 rounded-lg shadow-lg text-center transform transition-transform hover:scale-105 duration-300">
+                  <h4 className="text-xl font-bold text-[#011d3d] mb-4">Join Opian Rewards Today!</h4>
+                  <p className="text-[#011d3d] mb-4">
+                    Don't miss out on making your everyday spending a source of cash rewards!
+                  </p>
+                  <Button
+                    onClick={() => navigate("/register")}
+                    className="bg-[#011d3d] hover:bg-[#022b5c] text-white w-full"
+                  >
+                    Get Started Now
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -326,10 +400,14 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="py-16 bg-[#011d3d] text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Start Your Rewards Journey?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Join Opian Rewards Today!</h2>
           <p className="text-xl mb-8 max-w-3xl mx-auto">
-            Join thousands of members who are already enjoying the benefits of OPIAN Rewards. 
-            Sign up today and start earning cash back immediately.
+            Don't miss out on making your everyday spending a source of cash rewards! Join the Opian Rewards 
+            community and start your journey towards a financially rewarding lifestyle. 
+            Fill out the contact form now, and let us help you start earning more from what you already do every day.
+          </p>
+          <p className="text-xl font-medium text-[#43EB3E] mb-8">
+            With Opian Rewards, every transaction is an opportunity waiting to be seized!
           </p>
           <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
             <Button 
