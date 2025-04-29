@@ -8,6 +8,7 @@ import { prefetchCustomerData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "@/providers/theme-provider";
 
 // Helper function for section determination
 const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' | 'referral' | 'all' => {
@@ -109,9 +110,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         <div className="flex flex-col h-full">
           <div className="p-4 md:p-6 border-b">
             <img 
-              src="/opian-logo-white.png" 
+              src={useTheme().theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo (R).png'} 
               alt="OPIAN Rewards"
-              className="h-8 md:h-12 w-auto object-contain mx-auto dark:invert"
+              className="h-8 md:h-12 w-auto object-contain mx-auto"
               onError={(e) => {
                 const img = e.target as HTMLImageElement;
                 img.onerror = null;

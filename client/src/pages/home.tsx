@@ -287,7 +287,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center">
               <img
-                src={`/opian-logo-${theme === 'dark' ? 'white' : 'dark'}.png`}
+                src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo (R).png'}
                 alt="OPIAN Rewards"
                 className="h-10 w-auto"
                 onError={(e) => {
@@ -839,7 +839,7 @@ export default function HomePage() {
           <div className="flex flex-col md:flex-row justify-between">
             <div className="mb-8 md:mb-0">
               <img 
-                src={`/opian-logo-${theme === 'dark' ? 'white' : 'dark'}.png`}
+                src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo (R).png'}
                 alt="OPIAN Rewards" 
                 className="h-10 w-auto mb-4"
                 onError={(e) => {
