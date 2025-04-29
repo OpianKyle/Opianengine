@@ -25,7 +25,7 @@ const PACKAGE_PRICING = {
 
 // Commission percentages
 const COMMISSION_PERCENTAGE = {
-  AGENT: 30, // 30% for agents (same as SIGNUP)
+  AGENT: 10, // 10% for renewal commissions (reduced from the 30% for initial sign-ups)
 };
 
 // Main function to process renewals
@@ -131,7 +131,7 @@ async function processMonthlyRenewals() {
         // Get the package price
         const packagePrice = PACKAGE_PRICING[customer.selected_package] || 350;
         
-        // Calculate commission (30% same as signup)
+        // Calculate commission (10% for renewals instead of 30% for signup)
         const commissionPercentage = COMMISSION_PERCENTAGE.AGENT;
         const commissionAmount = (packagePrice * commissionPercentage / 100).toFixed(2);
         
