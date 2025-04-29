@@ -471,7 +471,7 @@ export default function HomePage() {
                   </p>
                   <div className="relative mt-2">
                     <img 
-                      src="/attached_assets/Opian-Earn-Points-Effortlessly.jpg" 
+                      src="/Opian-Earn-Points-Effortlessly.jpg" 
                       alt="Woman earning points with Opian Rewards Card" 
                       className="rounded-xl w-full h-auto shadow-lg object-cover"
                     />
