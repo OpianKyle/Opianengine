@@ -206,9 +206,6 @@ export default function HomePage() {
                   <source src="/Title.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
-                <div className="absolute -right-4 -bottom-4 bg-[#43EB3E] text-black font-bold px-4 py-2 rounded-lg shadow-lg transform rotate-12">
-                  Premium Benefits
-                </div>
               </div>
             </div>
           </div>
