@@ -30,12 +30,16 @@ interface AgentStatistics {
 export default function AgentDashboard() {
   // State for filtering commissions by type
   const [filterType, setFilterType] = useState<'all' | 'upfront' | 'renewal'>('all');
+  // State to track manual refresh
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Query to fetch the agent's commissions with optimizations
-  const { data: commissionData, isLoading: isCommissionsLoading } = useQuery({
+  const { data: commissionData, isLoading: isCommissionsLoading, refetch: refetchCommissions } = useQuery({
     queryKey: ['/api/referral/agent/commissions'],
     queryFn: async () => {
-      const response = await fetch('/api/referral/agent/commissions');
+      console.log('Fetching fresh commission data...');
+      // Add timestamp to ensure no caching at the browser level
+      const response = await fetch(`/api/referral/agent/commissions?t=${Date.now()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch commissions');
       }
@@ -43,32 +47,42 @@ export default function AgentDashboard() {
       console.log('Commission data received:', data);
       return data;
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes before refetching (server cache is 5 minutes)
-    gcTime: 5 * 60 * 1000, // 5 minutes before removing from cache (cacheTime is renamed to gcTime in React Query v5)
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    staleTime: 0, // Always consider data stale immediately
+    gcTime: 5 * 60 * 1000, // 5 minutes before removing from cache
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
   
   // Extract and filter commissions based on the selected type
+  console.log('Raw commission data received:', commissionData);
+  
   const allCommissions: Commission[] = commissionData?.commissions || [];
+  console.log('Extracted commissions array:', allCommissions);
+  
   const commissions = filterType === 'all' 
     ? allCommissions 
     : allCommissions.filter((c: Commission) => 
         filterType === 'upfront' ? !c.isRenewal : c.isRenewal
       );
+      
+  console.log('Filtered commissions:', commissions);
 
-  // Query to fetch the agent statistics
-  const { data: statistics, isLoading: isStatsLoading } = useQuery<AgentStatistics>({
+  // Query to fetch the agent statistics with fresh data
+  const { data: statistics, isLoading: isStatsLoading, refetch: refetchStatistics } = useQuery<AgentStatistics>({
     queryKey: ['/api/agent/statistics'],
     queryFn: async () => {
-      const response = await fetch('/api/agent/statistics');
+      console.log('Fetching fresh agent statistics...');
+      // Add timestamp to ensure no caching at the browser level
+      const response = await fetch(`/api/agent/statistics?t=${Date.now()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch agent statistics');
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Agent statistics received:', data);
+      return data;
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes before refetching
+    staleTime: 0, // Always consider data stale immediately
     gcTime: 5 * 60 * 1000, // 5 minutes before removing from cache
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   const calculateTotalCommission = (isRenewal: boolean = false): number => {
@@ -127,11 +141,49 @@ export default function AgentDashboard() {
 
       {/* Commission Dashboard Section */}
       <Card>
-        <CardHeader>
-          <CardTitle>Commission Dashboard</CardTitle>
-          <CardDescription>
-            Track your commission earnings from referrals and renewals.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle>Commission Dashboard</CardTitle>
+            <CardDescription>
+              Track your commission earnings from referrals and renewals.
+            </CardDescription>
+          </div>
+          <button
+            onClick={async () => {
+              setIsRefreshing(true);
+              try {
+                await Promise.all([
+                  refetchCommissions(),
+                  // Also refetch statistics when refreshing commissions
+                  refetchStatistics(),
+                ]);
+                console.log("Manually refreshed commission and statistics data");
+              } catch (error) {
+                console.error("Error refreshing data:", error);
+              } finally {
+                setIsRefreshing(false);
+              }
+            }}
+            disabled={isLoading || isRefreshing}
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
+          >
+            {isRefreshing ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="-ml-0.5 mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh Data
+              </>
+            )}
+          </button>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">

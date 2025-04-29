@@ -1504,6 +1504,7 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
       const [commissions] = await connection.execute(
         `SELECT 
           ac.id,
+          ac.customer_id,
           ac.package_type as package_name,
           ac.premium_amount as package_price,
           ac.commission_amount,
@@ -1543,9 +1544,11 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
         // Determine if it's a renewal based on commission_type
         const isRenewal = c.commission_type === 'RENEWAL';
         
-        // Format the data to match client-side Commission interface
+        // Format the data to match client-side Commission interface EXACTLY
         return {
           id: c.id,
+          customerId: c.customer_id || 0, // Add missing fields expected by frontend
+          agentId: user.id,
           customerName,
           packageName: c.package_name,
           isRenewal,
@@ -1573,18 +1576,29 @@ referralRouter.get('/agent/commissions', checkAgent, async (req: Request, res: R
       // Also invalidate related agent statistics
       queryCache.invalidate(`agent_statistics_${user.id}`);
       
-      // Return the fresh data
-      return result;
+      // Format the response to match what the frontend expects
+      console.log('Returning formatted commissions data:', {
+        success: true, 
+        commissionCount: formattedCommissions.length,
+        totalEarned: totalEarned
+      });
+      
+      // Return the data in the exact format the frontend expects
+      return res.status(200).json({
+        success: true,
+        commissions: formattedCommissions,
+        stats: {
+          totalEarned,
+          totalPaid,
+          totalUnpaid
+        }
+      });
     } finally {
       await connection.end();
     }
     
-        // Fix the proper response
-    return res.status(200).json({
-      success: true,
-      commissions: [],
-      stats: { totalEarned: 0, totalPaid: 0, totalUnpaid: 0 }
-    });
+    // This line will never execute because we return from the try block
+    // We keep it only for type safety and to handle the case where the DB connection fails
   } catch (error) {
     console.error('Error processing commissions request:', error);
     return res.status(500).json({
