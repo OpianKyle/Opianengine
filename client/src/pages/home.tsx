@@ -185,7 +185,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <header className="bg-[#01162f] text-white">
+      <header className="bg-[#01162f] dark:bg-[#01162f] text-white">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center">
@@ -226,14 +226,14 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-[#01162f] text-white py-16 relative overflow-hidden">
+      <section className="bg-white dark:bg-[#01162f] text-foreground dark:text-white py-16 relative overflow-hidden">
         <div className="container mx-auto px-4 relative z-10">
           <div className="flex flex-col lg:flex-row items-center">
             <div className="lg:w-1/2 z-10">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 text-foreground dark:text-white">
                 The Card that Works for You
               </h1>
-              <p className="text-xl mb-6">
+              <p className="text-xl mb-6 text-foreground dark:text-white">
                 Make your money go further with Opian Rewards. Earn Rewards when you purchase 
                 and pay accounts with your Opian Rewards Card, and enhance your Rewards when 
                 you make smart financial planning decisions. Reward yourself and effortlessly 
@@ -276,46 +276,46 @@ export default function HomePage() {
           </div>
         </div>
         {/* Background decorations with blue base and green overlay */}
-        <div className="absolute top-0 left-0 w-full h-full bg-[#01162f] z-0"></div>
-        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-15 z-0"></div>
-        <div className="absolute top-0 right-0 w-2/3 h-full bg-[#022b5c] transform skew-x-12 translate-x-1/3 z-0 opacity-50"></div>
-        <div className="absolute top-0 right-0 w-2/3 h-full bg-[#43EB3E] transform skew-x-12 translate-x-1/3 mix-blend-overlay z-0 opacity-20"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-white dark:bg-[#01162f] z-0"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-15 dark:opacity-15 z-0"></div>
+        <div className="absolute top-0 right-0 w-2/3 h-full bg-gray-100 dark:bg-[#022b5c] transform skew-x-12 translate-x-1/3 z-0 opacity-50"></div>
+        <div className="absolute top-0 right-0 w-2/3 h-full bg-[#43EB3E] transform skew-x-12 translate-x-1/3 mix-blend-overlay z-0 opacity-10 dark:opacity-20"></div>
       </section>
 
       {/* Value Proposition Section */}
-      <section className="py-20 relative overflow-hidden text-white">
+      <section className="py-20 relative overflow-hidden text-foreground dark:text-white">
         <div className="container mx-auto px-4 relative z-10">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-white">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-foreground dark:text-white">
             What If Your Card Paid You Back?
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <div className="bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
-              <div className="w-16 h-16 bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
+            <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
                 <CreditCard className="h-8 w-8 text-[#43EB3E]" />
               </div>
-              <h3 className="text-xl font-bold mb-4 text-white">Cash Back on Everything</h3>
-              <p className="text-gray-300">
+              <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Cash Back on Everything</h3>
+              <p className="text-muted-foreground dark:text-gray-300">
                 Shopping, dining, paying bills—earn cash every time you swipe.
               </p>
             </div>
             
-            <div className="bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
-              <div className="w-16 h-16 bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
+            <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
                 <Gift className="h-8 w-8 text-[#43EB3E]" />
               </div>
-              <h3 className="text-xl font-bold mb-4 text-white">Build Your Own Reward Stack</h3>
-              <p className="text-gray-300">
+              <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Build Your Own Reward Stack</h3>
+              <p className="text-muted-foreground dark:text-gray-300">
                 Combine the power of our Rewards System with your current rewards cards to create Double Rewards in your pocket!
               </p>
             </div>
             
-            <div className="bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
-              <div className="w-16 h-16 bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
+            <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
                 <Users className="h-8 w-8 text-[#43EB3E]" />
               </div>
-              <h3 className="text-xl font-bold mb-4 text-white">Make Your Money Work for You</h3>
-              <p className="text-gray-300">
+              <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Make Your Money Work for You</h3>
+              <p className="text-muted-foreground dark:text-gray-300">
                 With the help of our Financial Partners, make smarter financial planning decisions to Save and Earn extra money!
               </p>
             </div>
@@ -323,22 +323,25 @@ export default function HomePage() {
         </div>
         
         {/* Background decorations with blue base and green overlay */}
-        <div className="absolute top-0 left-0 w-full h-full bg-[#01162f] z-0"></div>
-        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-15 z-0"></div>
-        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-32 h-64 bg-[#022b5c] rounded-r-full opacity-60 z-0"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-white dark:bg-[#01162f] z-0"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-5 dark:opacity-15 z-0"></div>
+        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-32 h-64 bg-gray-100 dark:bg-[#022b5c] rounded-r-full opacity-60 z-0"></div>
         <div className="absolute right-0 bottom-1/4 w-48 h-48 bg-[#43EB3E] rounded-full mix-blend-overlay opacity-10 z-0"></div>
       </section>
 
       {/* How It Works Section */}
-      <section id="how-it-works" className="py-20 relative overflow-hidden text-white">
+      <section id="how-it-works" className="py-20 relative overflow-hidden text-foreground dark:text-white">
+        {/* Background for light/dark mode */}
+        <div className="absolute top-0 left-0 w-full h-full bg-white dark:bg-[#01162f] z-0"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-5 dark:opacity-15 z-0"></div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="flex flex-col lg:flex-row gap-12">
             {/* Left side - Text content */}
             <div className="w-full lg:w-1/2">
-              <h2 className="text-3xl md:text-4xl font-bold mb-8 text-white">
+              <h2 className="text-3xl md:text-4xl font-bold mb-8 text-foreground dark:text-white">
                 Simple Steps.<br/>Serious Rewards.
               </h2>
-              <div className="text-lg text-gray-300 space-y-6">
+              <div className="text-lg text-muted-foreground dark:text-gray-300 space-y-6">
                 <p>
                   Getting started with Opian Rewards is simple and empowering. Every step is designed to help you 
                   earn more and unlock greater benefits—just by doing what you already do.
@@ -458,36 +461,36 @@ export default function HomePage() {
               {/* Right side - Content points - exactly 50% width */}
               <div className="w-full md:w-1/2 space-y-16 p-4 pl-8 md:order-1 flex flex-col justify-center">
                 <div className="flex items-start w-full">
-                  <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
+                  <div className="w-12 h-12 flex-shrink-0 bg-gray-100 dark:bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
                     <ShoppingCart className="h-5 w-5 text-[#43EB3E]" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-white text-lg mb-2">Shop Your Way</h4>
-                    <p className="text-gray-300 text-base">
+                    <h4 className="font-bold text-foreground dark:text-white text-lg mb-2">Shop Your Way</h4>
+                    <p className="text-muted-foreground dark:text-gray-300 text-base">
                       Use your Opian Rewards Card for everyday purchases—from groceries to online shopping—and watch the points pile up!
                     </p>
                   </div>
                 </div>
                 
                 <div className="flex items-start w-full">
-                  <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
+                  <div className="w-12 h-12 flex-shrink-0 bg-gray-100 dark:bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
                     <Receipt className="h-5 w-5 text-[#43EB3E]" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-white text-lg mb-2">Pay Your Accounts</h4>
-                    <p className="text-gray-300 text-base">
+                    <h4 className="font-bold text-foreground dark:text-white text-lg mb-2">Pay Your Accounts</h4>
+                    <p className="text-muted-foreground dark:text-gray-300 text-base">
                       Simplify your bill payments and earn rewards at the same time. Every time you pay a bill with your Opian Rewards Card, you strengthen your point balance.
                     </p>
                   </div>
                 </div>
                 
                 <div className="flex items-start w-full">
-                  <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
+                  <div className="w-12 h-12 flex-shrink-0 bg-gray-100 dark:bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
                     <BarChart2 className="h-5 w-5 text-[#43EB3E]" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-white text-lg mb-2">Plan for Success</h4>
-                    <p className="text-gray-300 text-base">
+                    <h4 className="font-bold text-foreground dark:text-white text-lg mb-2">Plan for Success</h4>
+                    <p className="text-muted-foreground dark:text-gray-300 text-base">
                       Engage in smart financial planning and decision-making—whether it's budgeting, saving, or investing. We believe in rewarding your financial savvy!
                     </p>
                   </div>
@@ -517,18 +520,18 @@ export default function HomePage() {
             <div className="container mx-auto px-4 flex flex-col md:flex-row items-center">
               {/* Left side - Content */}
               <div className="w-full md:w-3/5 md:pr-12 text-left">
-                <h3 className="text-3xl font-bold mb-6 text-white">Personalized Support at Your Fingertips</h3>
-                <p className="text-gray-300 mb-4 w-full">
+                <h3 className="text-3xl font-bold mb-6 text-foreground dark:text-white">Personalized Support at Your Fingertips</h3>
+                <p className="text-muted-foreground dark:text-gray-300 mb-4 w-full">
                   Ready to make the most out of your Opian Rewards Card? Complete our quick contact form, and an Opian Rewards agent will reach out to explain all the incredible benefits you can unlock.
                 </p>
-                <p className="text-gray-300 mb-8 w-full">
+                <p className="text-muted-foreground dark:text-gray-300 mb-8 w-full">
                   Our team is dedicated to guiding you through every step of the way, providing insights and support through a series of calls and emails on how to maximize your rewards.
                 </p>
               </div>
               
               {/* Right side - CTA */}
               <div className="w-full md:w-2/5 mt-8 md:mt-0 text-center">
-                <div className="relative transform transition-all duration-300 hover:scale-105 group bg-opacity-20 bg-[#043375] p-8 rounded-xl w-full">
+                <div className="relative transform transition-all duration-300 hover:scale-105 group bg-opacity-20 bg-gray-100 dark:bg-[#043375] p-8 rounded-xl w-full">
                   {/* Green particle dots with hover animations specific to the right side */}
                   <div className="absolute top-[10%] right-[20%] w-1.5 h-1.5 rounded-full bg-[#43EB3E] opacity-30 
                       group-hover:translate-x-1 group-hover:-translate-y-2 transition-all duration-700"></div>
@@ -538,7 +541,7 @@ export default function HomePage() {
                       group-hover:translate-x-3 group-hover:translate-y-2 transition-all duration-800"></div>
                   
                   <h4 className="text-2xl font-bold text-[#43EB3E] mb-4 relative z-10 w-full">Join Opian Rewards Today!</h4>
-                  <p className="text-white mb-8 relative z-10 w-full">
+                  <p className="text-foreground dark:text-white mb-8 relative z-10 w-full">
                     Don't miss out on making your everyday spending a source of cash rewards!
                   </p>
                   <Button
@@ -553,11 +556,11 @@ export default function HomePage() {
           </div>
         </div>
         
-        {/* Background decorations with blue base and green overlay */}
-        <div className="absolute top-0 left-0 w-full h-full bg-[#01162f] z-0"></div>
-        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-15 z-0"></div>
-        <div className="absolute right-0 top-1/4 w-64 h-64 bg-[#022b5c] rounded-full opacity-50 z-0"></div>
-        <div className="absolute left-0 bottom-1/4 w-32 h-32 bg-[#43EB3E] rounded-full mix-blend-overlay opacity-20 z-0"></div>
+        {/* Background decorations with light/dark mode support */}
+        <div className="absolute top-0 left-0 w-full h-full bg-white dark:bg-[#01162f] z-0"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-5 dark:opacity-15 z-0"></div>
+        <div className="absolute right-0 top-1/4 w-64 h-64 bg-gray-100 dark:bg-[#022b5c] rounded-full opacity-50 z-0"></div>
+        <div className="absolute left-0 bottom-1/4 w-32 h-32 bg-[#43EB3E] rounded-full mix-blend-overlay opacity-10 dark:opacity-20 z-0"></div>
       </section>
 
       {/* Package Section */}
