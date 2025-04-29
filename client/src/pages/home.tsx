@@ -423,8 +423,32 @@ export default function HomePage() {
           {/* Earn Points section with heading+image on right, content on left */}
           <div className="mt-20 mb-16 mx-auto container">
             <div className="flex flex-col md:flex-row">
-              {/* Left side - Content points - exactly 50% width */}
-              <div className="w-full md:w-1/2 space-y-12 md:order-1 lg:order-0 p-4">
+              {/* Left side - Image with heading overlay - exactly 50% width */}
+              <div className="w-full md:w-1/2 md:order-0">
+                <div className="relative h-full">
+                  {/* Background image covering the entire left section */}
+                  <div className="relative h-full min-h-[500px]">
+                    <img 
+                      src="/Opian-Earn-Points-Effortlessly.jpg" 
+                      alt="Woman earning points with Opian Rewards Card" 
+                      className="rounded-xl w-full h-full object-cover absolute inset-0"
+                    />
+                    {/* Gradient overlay to ensure text readability */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#01162f]/80 via-[#01162f]/40 to-[#01162f]/70 rounded-xl"></div>
+                    
+                    {/* Content positioned over the image */}
+                    <div className="relative z-10 p-6 flex flex-col h-full">
+                      <h3 className="text-3xl font-bold mb-6 text-white border-l-4 border-[#43EB3E] pl-4">Earn Points Effortlessly</h3>
+                      <p className="text-gray-100 mb-8 text-lg">
+                        Opian Rewards is designed to make your financial life more rewarding:
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Right side - Content points - exactly 50% width */}
+              <div className="w-full md:w-1/2 space-y-12 p-4 md:order-1">
                 <div className="flex items-start">
                   <div className="w-14 h-14 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-5 shadow-md">
                     <ShoppingCart className="h-7 w-7 text-[#43EB3E]" />
@@ -458,30 +482,6 @@ export default function HomePage() {
                     <p className="text-gray-300 text-lg">
                       Engage in smart financial planning and decision-making—whether it's budgeting, saving, or investing. We believe in rewarding your financial savvy!
                     </p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Right side - Image with heading overlay - exactly 50% width */}
-              <div className="w-full md:w-1/2 md:order-0 lg:order-1">
-                <div className="relative h-full">
-                  {/* Background image covering the entire right section */}
-                  <div className="relative h-full min-h-[500px]">
-                    <img 
-                      src="/Opian-Earn-Points-Effortlessly.jpg" 
-                      alt="Woman earning points with Opian Rewards Card" 
-                      className="rounded-xl w-full h-full object-cover absolute inset-0"
-                    />
-                    {/* Gradient overlay to ensure text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-[#01162f]/80 via-[#01162f]/40 to-[#01162f]/70 rounded-xl"></div>
-                    
-                    {/* Content positioned over the image */}
-                    <div className="relative z-10 p-6 flex flex-col h-full">
-                      <h3 className="text-3xl font-bold mb-6 text-white border-l-4 border-[#43EB3E] pl-4">Earn Points Effortlessly</h3>
-                      <p className="text-gray-100 mb-8 text-lg">
-                        Opian Rewards is designed to make your financial life more rewarding:
-                      </p>
-                    </div>
                   </div>
                 </div>
               </div>
