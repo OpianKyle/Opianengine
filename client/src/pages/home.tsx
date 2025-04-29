@@ -505,22 +505,22 @@ export default function HomePage() {
             <div className="w-1.5 h-1.5 absolute top-[65%] left-[35%] rounded-full bg-[#43EB3E] opacity-20
                 group-hover:translate-x-2 group-hover:-translate-y-2 transition-all duration-[1300ms]"></div>
             
-            {/* Left and right layout */}
-            <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center">
+            {/* Left and right layout - full width */}
+            <div className="container mx-auto px-4 flex flex-col md:flex-row items-center">
               {/* Left side - Content */}
               <div className="w-full md:w-3/5 md:pr-12 text-left">
                 <h3 className="text-3xl font-bold mb-6 text-white">Personalized Support at Your Fingertips</h3>
-                <p className="text-gray-300 mb-4">
+                <p className="text-gray-300 mb-4 w-full">
                   Ready to make the most out of your Opian Rewards Card? Complete our quick contact form, and an Opian Rewards agent will reach out to explain all the incredible benefits you can unlock.
                 </p>
-                <p className="text-gray-300 mb-8">
+                <p className="text-gray-300 mb-8 w-full">
                   Our team is dedicated to guiding you through every step of the way, providing insights and support through a series of calls and emails on how to maximize your rewards.
                 </p>
               </div>
               
               {/* Right side - CTA */}
               <div className="w-full md:w-2/5 mt-8 md:mt-0 text-center">
-                <div className="relative transform transition-all duration-300 hover:scale-105 group bg-opacity-20 bg-[#043375] p-8 rounded-xl">
+                <div className="relative transform transition-all duration-300 hover:scale-105 group bg-opacity-20 bg-[#043375] p-8 rounded-xl w-full">
                   {/* Green particle dots with hover animations specific to the right side */}
                   <div className="absolute top-[10%] right-[20%] w-1.5 h-1.5 rounded-full bg-[#43EB3E] opacity-30 
                       group-hover:translate-x-1 group-hover:-translate-y-2 transition-all duration-700"></div>
@@ -529,13 +529,13 @@ export default function HomePage() {
                   <div className="absolute top-[40%] right-[30%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-20
                       group-hover:translate-x-3 group-hover:translate-y-2 transition-all duration-800"></div>
                   
-                  <h4 className="text-2xl font-bold text-[#43EB3E] mb-4 relative z-10">Join Opian Rewards Today!</h4>
-                  <p className="text-white mb-8 relative z-10">
+                  <h4 className="text-2xl font-bold text-[#43EB3E] mb-4 relative z-10 w-full">Join Opian Rewards Today!</h4>
+                  <p className="text-white mb-8 relative z-10 w-full">
                     Don't miss out on making your everyday spending a source of cash rewards!
                   </p>
                   <Button
                     onClick={() => navigate("/register")}
-                    className="bg-[#43EB3E] hover:bg-[#3ad036] text-[#01162f] font-bold px-10 py-4 text-lg transform transition-all duration-300 hover:scale-105 hover:shadow-lg relative z-10"
+                    className="bg-[#43EB3E] hover:bg-[#3ad036] text-[#01162f] font-bold px-10 py-4 text-lg transform transition-all duration-300 hover:scale-105 hover:shadow-lg relative z-10 w-full md:w-auto"
                   >
                     Get Started Now
                   </Button>
