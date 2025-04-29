@@ -448,8 +448,8 @@ export default function HomePage() {
               </div>
               
               {/* Right side - Content points - exactly 50% width */}
-              <div className="w-full md:w-1/2 space-y-10 p-4 md:order-1">
-                <div className="flex items-start">
+              <div className="w-full md:w-1/2 space-y-16 p-4 md:order-1 flex flex-col justify-center items-center">
+                <div className="flex items-start max-w-md">
                   <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
                     <ShoppingCart className="h-5 w-5 text-[#43EB3E]" />
                   </div>
@@ -461,7 +461,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 
-                <div className="flex items-start">
+                <div className="flex items-start max-w-md">
                   <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
                     <Receipt className="h-5 w-5 text-[#43EB3E]" />
                   </div>
@@ -473,7 +473,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 
-                <div className="flex items-start">
+                <div className="flex items-start max-w-md">
                   <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
                     <BarChart2 className="h-5 w-5 text-[#43EB3E]" />
                   </div>
