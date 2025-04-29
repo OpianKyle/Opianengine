@@ -183,17 +183,29 @@ export default function HomePage() {
               </Button>
             </div>
             <div className="lg:w-1/2 mt-10 lg:mt-0 flex justify-center lg:justify-end relative z-10">
-              <div className="relative w-80 h-auto transform rotate-6 transition-transform hover:rotate-0 duration-500">
-                <img 
-                  src="/card-image.png" 
-                  alt="OPIAN Rewards Card" 
-                  className="w-full h-auto shadow-2xl rounded-xl"
+              <div className="relative w-full max-w-lg overflow-hidden rounded-xl shadow-2xl">
+                <video 
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline
+                  className="w-full h-auto"
+                  poster="/card-image.png"
                   onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    img.onerror = null;
-                    img.src = 'https://placehold.co/600x400/011d3d/FFFFFF/?text=OPIAN+Card';
+                    const video = e.target as HTMLVideoElement;
+                    video.onerror = null;
+                    // If video fails, we'll still show the poster image
+                    video.style.display = 'none';
+                    const img = document.createElement('img');
+                    img.src = '/card-image.png';
+                    img.className = 'w-full h-auto rounded-xl';
+                    img.alt = 'OPIAN Rewards Card';
+                    video.parentNode?.appendChild(img);
                   }}
-                />
+                >
+                  <source src="/Title.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
                 <div className="absolute -right-4 -bottom-4 bg-[#43EB3E] text-black font-bold px-4 py-2 rounded-lg shadow-lg transform rotate-12">
                   Premium Benefits
                 </div>
