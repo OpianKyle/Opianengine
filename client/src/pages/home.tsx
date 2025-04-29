@@ -488,20 +488,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="mb-20 mt-16 max-w-5xl mx-auto">
-            <h3 className="text-3xl font-bold mb-6 text-white border-l-4 border-[#43EB3E] pl-4">Stack Your Rewards</h3>
-            <p className="text-gray-300 mb-8 text-lg">
-              Accumulate points with every transaction and see how they can translate into real value. The points you earn can be converted into cash based on Opian Rewards' conditions, which take into account:
-            </p>
-            <ul className="list-disc pl-8 space-y-3 text-gray-300 text-lg ml-5">
-              <li>Your points level</li>
-              <li>Your engagement with the program</li>
-              <li>Other applicable terms and conditions</li>
-            </ul>
-            <p className="text-gray-300 mt-6 font-medium text-lg">
-              The more involved you are, the greater your rewards can be!
-            </p>
-          </div>
+
 
           <div className="mb-16">
             <div className="bg-[#01162f] p-8 rounded-xl shadow-lg flex flex-col md:flex-row items-center text-white border border-[#043375]">
