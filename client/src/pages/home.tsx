@@ -13,6 +13,7 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Package prices in ZAR
 const PACKAGE_PRICES = {
@@ -205,6 +206,7 @@ export default function HomePage() {
               <a href="#" className="text-white hover:text-[#43EB3E] transition-colors">FAQ</a>
             </nav>
             <div className="flex items-center space-x-4">
+              <ThemeToggle />
               <Button 
                 variant="outline" 
                 className="bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-[#01162f] transition-all duration-300"
