@@ -448,12 +448,12 @@ export default function HomePage() {
               </div>
               
               {/* Right side - Content points - exactly 50% width */}
-              <div className="w-full md:w-1/2 space-y-16 p-4 md:order-1 flex flex-col justify-center items-center">
-                <div className="flex items-start max-w-md">
+              <div className="w-full md:w-1/2 space-y-16 p-4 md:order-1 flex flex-col justify-center">
+                <div className="flex items-start w-full">
                   <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
                     <ShoppingCart className="h-5 w-5 text-[#43EB3E]" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h4 className="font-bold text-white text-lg mb-2">Shop Your Way</h4>
                     <p className="text-gray-300 text-base">
                       Use your Opian Rewards Card for everyday purchases—from groceries to online shopping—and watch the points pile up!
@@ -461,11 +461,11 @@ export default function HomePage() {
                   </div>
                 </div>
                 
-                <div className="flex items-start max-w-md">
+                <div className="flex items-start w-full">
                   <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
                     <Receipt className="h-5 w-5 text-[#43EB3E]" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h4 className="font-bold text-white text-lg mb-2">Pay Your Accounts</h4>
                     <p className="text-gray-300 text-base">
                       Simplify your bill payments and earn rewards at the same time. Every time you pay a bill with your Opian Rewards Card, you strengthen your point balance.
@@ -473,11 +473,11 @@ export default function HomePage() {
                   </div>
                 </div>
                 
-                <div className="flex items-start max-w-md">
+                <div className="flex items-start w-full">
                   <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
                     <BarChart2 className="h-5 w-5 text-[#43EB3E]" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h4 className="font-bold text-white text-lg mb-2">Plan for Success</h4>
                     <p className="text-gray-300 text-base">
                       Engage in smart financial planning and decision-making—whether it's budgeting, saving, or investing. We believe in rewarding your financial savvy!
