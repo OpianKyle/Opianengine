@@ -580,7 +580,7 @@ export default function HomePage() {
             {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
               <Card 
                 key={packageName} 
-                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group`}
+                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group flex flex-col h-full`}
               >
                 {/* Particle-like green shade overlay */}
                 <div className="absolute inset-0 bg-[#43EB3E] opacity-5 dark:opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
@@ -649,14 +649,14 @@ export default function HomePage() {
                 <div className="absolute top-[92%] left-[82%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-40
                     group-hover:translate-x-1 group-hover:translate-y-1 transition-all duration-[900ms]"></div>
                 
-                <CardHeader className="pb-4 relative z-10">
+                <CardHeader className="pb-2 relative z-10">
                   <Badge variant="outline" className={`mb-2 font-semibold border-[#43EB3E] text-[#43EB3E]`}>
                     {packageName}
                   </Badge>
                   <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
                   <CardDescription className="text-gray-300 font-medium">per month</CardDescription>
                 </CardHeader>
-                <CardContent className="pb-4 relative z-10">
+                <CardContent className="pb-2 relative z-10 flex-grow">
                   <ul className="space-y-2">
                     {features.map((feature, index) => (
                       <li key={index} className="flex items-start">
@@ -666,7 +666,7 @@ export default function HomePage() {
                     ))}
                   </ul>
                 </CardContent>
-                <CardFooter className="relative z-10">
+                <CardFooter className="relative z-10 mt-auto">
                   <Button 
                     className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
                     onClick={() => navigate(`/register?package=${packageName}`)}
