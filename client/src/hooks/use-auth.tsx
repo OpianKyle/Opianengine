@@ -265,20 +265,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAgent: normalizedUser.is_agent 
       });
       
-      // Use a defer pattern to avoid React state update during render
-      setTimeout(() => {
-        // Use React router for a smooth transition (no page reload)
-        if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
-          console.log('Redirecting to admin dashboard');
-          setLocation('/admin');
-        } else if (normalizedUser.is_agent) {
-          console.log('Redirecting to agent dashboard');
-          setLocation('/agent'); 
-        } else {
-          console.log('Redirecting to customer dashboard');
-          setLocation('/dashboard');
-        }
-      }, 0);
+      // Immediate navigation without setTimeout to prevent timeouts
+      // Use React router for a smooth transition (no page reload)
+      if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+        console.log('Redirecting to admin dashboard');
+        setLocation('/admin');
+      } else if (normalizedUser.is_agent) {
+        console.log('Redirecting to agent dashboard');
+        setLocation('/agent'); 
+      } else {
+        console.log('Redirecting to customer dashboard');
+        setLocation('/dashboard');
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -335,11 +333,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSettled: () => {
       setIsTransitioning(false);
-      // Use setTimeout to avoid React state update during render
-      setTimeout(() => {
-        // Navigate to home without a page reload
-        setLocation('/');
-      }, 0);
+      // Immediate navigation without setTimeout
+      setLocation('/');
     }
   });
 
@@ -399,10 +394,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Your account has been created",
       });
 
-      // Redirect to the appropriate dashboard
-      setTimeout(() => {
-        setLocation('/');
-      }, 0);
+      // Immediate navigation without setTimeout
+      setLocation('/');
     },
     onError: (error: Error) => {
       toast({

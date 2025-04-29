@@ -42,8 +42,8 @@ export default function ReferralPage() {
             description: 'The referral code is invalid or expired.',
             variant: 'destructive'
           });
-          // Redirect to home after a delay
-          setTimeout(() => navigate('/'), 3000);
+          // Immediate redirect without delay
+          navigate('/');
         }
       } catch (error) {
         console.error('Error validating referral code:', error);
@@ -52,8 +52,8 @@ export default function ReferralPage() {
           description: 'Failed to validate referral code. Please try again later.',
           variant: 'destructive'
         });
-        // Redirect to home after a delay
-        setTimeout(() => navigate('/'), 3000);
+        // Immediate redirect without delay
+        navigate('/');
       }
     }
     
@@ -97,8 +97,8 @@ export default function ReferralPage() {
           referralCode: code
         });
         
-        // Redirect to home after a delay
-        setTimeout(() => navigate('/'), 5000);
+        // Immediate redirect without delay
+        navigate('/');
       } else {
         toast({
           title: 'Submission Failed',
