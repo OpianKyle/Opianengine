@@ -428,34 +428,37 @@ export default function HomePage() {
             {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
               <Card 
                 key={packageName} 
-                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-white text-black`}
+                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative`}
               >
-                <CardHeader className="pb-4">
-                  <Badge variant="outline" className={`mb-2 font-semibold ${packageName === 'PROSPER' || packageName === 'PINNACLE' ? 'border-[#43EB3E] text-[#43EB3E]' : 'border-[#01162f] text-[#01162f]'}`}>
+                {/* Particle-like green shade overlay */}
+                <div className="absolute inset-0 bg-[#43EB3E] opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full bg-[#43EB3E] opacity-15 mix-blend-overlay"></div>
+                <div className="absolute bottom-0 left-0 w-16 h-16 rounded-tr-full bg-[#43EB3E] opacity-15 mix-blend-overlay"></div>
+                {/* Small particle dots */}
+                <div className="absolute top-1/4 right-1/4 w-2 h-2 rounded-full bg-[#43EB3E] opacity-20"></div>
+                <div className="absolute top-3/4 left-1/3 w-1 h-1 rounded-full bg-[#43EB3E] opacity-30"></div>
+                <div className="absolute bottom-1/4 right-1/3 w-1.5 h-1.5 rounded-full bg-[#43EB3E] opacity-25"></div>
+                
+                <CardHeader className="pb-4 relative z-10">
+                  <Badge variant="outline" className={`mb-2 font-semibold border-[#43EB3E] text-[#43EB3E]`}>
                     {packageName}
                   </Badge>
-                  <CardTitle className="text-2xl font-bold text-[#01162f]">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
-                  <CardDescription className="text-gray-600 font-medium">per month</CardDescription>
+                  <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
+                  <CardDescription className="text-gray-300 font-medium">per month</CardDescription>
                 </CardHeader>
-                <CardContent className="pb-4">
+                <CardContent className="pb-4 relative z-10">
                   <ul className="space-y-2">
                     {features.map((feature, index) => (
                       <li key={index} className="flex items-start">
-                        <CheckCircle className={`h-5 w-5 mr-2 flex-shrink-0 mt-0.5 ${packageName === 'PROSPER' || packageName === 'PINNACLE' ? 'text-[#43EB3E]' : 'text-[#01162f]'}`} />
-                        <span className="text-sm font-medium text-gray-800">{feature}</span>
+                        <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
+                        <span className="text-sm font-medium text-gray-200">{feature}</span>
                       </li>
                     ))}
                   </ul>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="relative z-10">
                   <Button 
-                    className={`w-full ${
-                      packageName === 'PROSPER' || packageName === 'PINNACLE' 
-                        ? 'bg-[#01162f] hover:bg-[#011d3d] text-white' 
-                        : packageName === 'OPPORTUNITY' || packageName === 'MOMENTUM' || packageName === 'PRESTIGE'
-                          ? 'bg-[#43EB3E] hover:bg-[#3ad036] text-black' 
-                          : ''
-                    }`}
+                    className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
                     onClick={() => navigate(`/register?package=${packageName}`)}
                   >
                     Get Started
