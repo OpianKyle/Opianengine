@@ -434,10 +434,40 @@ export default function HomePage() {
                 <div className="absolute inset-0 bg-[#43EB3E] opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
                 <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full bg-[#43EB3E] opacity-15 mix-blend-overlay"></div>
                 <div className="absolute bottom-0 left-0 w-16 h-16 rounded-tr-full bg-[#43EB3E] opacity-15 mix-blend-overlay"></div>
-                {/* Small particle dots */}
-                <div className="absolute top-1/4 right-1/4 w-2 h-2 rounded-full bg-[#43EB3E] opacity-20"></div>
-                <div className="absolute top-3/4 left-1/3 w-1 h-1 rounded-full bg-[#43EB3E] opacity-30"></div>
-                <div className="absolute bottom-1/4 right-1/3 w-1.5 h-1.5 rounded-full bg-[#43EB3E] opacity-25"></div>
+                
+                {/* Small particle dots - first layer */}
+                <div className="absolute top-[10%] right-[15%] w-2 h-2 rounded-full bg-[#43EB3E] opacity-20"></div>
+                <div className="absolute top-[75%] left-[18%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-30"></div>
+                <div className="absolute bottom-[30%] right-[22%] w-1.5 h-1.5 rounded-full bg-[#43EB3E] opacity-25"></div>
+                
+                {/* More small particles - scattered throughout */}
+                <div className="absolute top-[5%] left-[10%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-40"></div>
+                <div className="absolute top-[15%] left-[25%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-30"></div>
+                <div className="absolute top-[25%] left-[40%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-35"></div>
+                <div className="absolute top-[30%] left-[65%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-40"></div>
+                <div className="absolute top-[40%] left-[80%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-25"></div>
+                <div className="absolute top-[50%] left-[20%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-40"></div>
+                <div className="absolute top-[55%] left-[50%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-35"></div>
+                <div className="absolute top-[65%] left-[35%] w-1.5 h-1.5 rounded-full bg-[#43EB3E] opacity-20"></div>
+                <div className="absolute top-[70%] left-[70%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-40"></div>
+                <div className="absolute top-[80%] left-[85%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-30"></div>
+                <div className="absolute top-[85%] left-[55%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-35"></div>
+                <div className="absolute top-[90%] left-[75%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-40"></div>
+                
+                {/* Tiny particle specks */}
+                <div className="absolute top-[8%] left-[45%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-30"></div>
+                <div className="absolute top-[12%] left-[58%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-25"></div>
+                <div className="absolute top-[18%] left-[72%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-35"></div>
+                <div className="absolute top-[22%] left-[32%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-30"></div>
+                <div className="absolute top-[33%] left-[17%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-40"></div>
+                <div className="absolute top-[37%] left-[88%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-25"></div>
+                <div className="absolute top-[45%] left-[42%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-35"></div>
+                <div className="absolute top-[58%] left-[23%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-30"></div>
+                <div className="absolute top-[62%] left-[63%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-40"></div>
+                <div className="absolute top-[72%] left-[52%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-25"></div>
+                <div className="absolute top-[78%] left-[28%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-35"></div>
+                <div className="absolute top-[88%] left-[48%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-30"></div>
+                <div className="absolute top-[92%] left-[82%] w-0.5 h-0.5 rounded-full bg-[#43EB3E] opacity-40"></div>
                 
                 <CardHeader className="pb-4 relative z-10">
                   <Badge variant="outline" className={`mb-2 font-semibold border-[#43EB3E] text-[#43EB3E]`}>
