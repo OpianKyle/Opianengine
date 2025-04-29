@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { prefetchAdminData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Helper function for section determination
 const getSectionFromHref = (href: string): 'dashboard' | 'users' | 'agents' | 'products' | 'rewards' | 'quotes' | 'redemptions' | 'logs' | 'all' => {
@@ -101,14 +102,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed top-4 right-6 z-50 lg:hidden h-10 w-10 bg-background shadow-md"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
+      {/* Theme Toggle and Mobile Menu */}
+      <div className="fixed top-4 right-6 z-50 flex items-center gap-2">
+        <ThemeToggle />
+        <Button
+          variant="outline"
+          size="icon"
+          className="lg:hidden h-10 w-10 bg-background shadow-md"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </Button>
+      </div>
 
       {sidebarOpen && (
         <div

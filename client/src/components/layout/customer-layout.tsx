@@ -7,6 +7,7 @@ import NotificationBell from "@/components/NotificationBell";
 import { prefetchCustomerData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 // Helper function for section determination
 const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' | 'referral' | 'all' => {
@@ -76,8 +77,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen w-full">
-      {/* Header with Notification Bell */}
+      {/* Header with Theme Toggle, Notification Bell, and Menu */}
       <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-2">
+        <ThemeToggle />
         <NotificationBell />
         <Button
           variant="outline"
