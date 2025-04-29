@@ -359,14 +359,18 @@ export default function HomePage() {
                   <div className="embla__container flex">
                     {STEPS.map((step, index) => (
                       <div key={index} className="embla__slide flex-[0_0_100%] min-w-0 relative">
-                        {/* Background with fallback */}
-                        <div 
-                          className="absolute inset-0 bg-cover bg-center rounded-xl z-0" 
-                          style={{
-                            backgroundColor: step.fallbackColor,
-                            backgroundImage: `url(${step.backgroundImage})`,
+                        {/* Background image using img tag */}
+                        <img 
+                          src={step.backgroundImage} 
+                          alt={step.title}
+                          className="absolute inset-0 w-full h-full object-cover rounded-xl z-0"
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement;
+                            img.onerror = null;
+                            img.style.backgroundColor = step.fallbackColor;
                           }}
                         />
+                        
                         {/* Gradient overlay for better text readability */}
                         <div className="absolute inset-0 bg-gradient-to-r from-[#01162f] to-transparent opacity-90 rounded-xl z-10"></div>
                         
