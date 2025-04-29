@@ -443,8 +443,8 @@ export default function HomePage() {
                     <div className="absolute inset-0 bg-gradient-to-b from-[#01162f]/80 via-[#01162f]/40 to-[#01162f]/70 rounded-xl"></div>
                     
                     {/* Content positioned over the image */}
-                    <div className="relative z-10 p-6 flex flex-col h-full">
-                      <h3 className="text-3xl font-bold mb-6 text-white border-l-4 border-[#43EB3E] pl-4">Earn Points Effortlessly</h3>
+                    <div className="relative z-10 p-6 pt-10 flex flex-col h-full">
+                      <h3 className="text-3xl font-bold mb-6 text-white border-l-4 border-[#43EB3E] pl-4 mt-8">Earn Points Effortlessly</h3>
                       <p className="text-gray-100 mb-8 text-lg">
                         Opian Rewards is designed to make your financial life more rewarding:
                       </p>
@@ -454,7 +454,7 @@ export default function HomePage() {
               </div>
               
               {/* Right side - Content points - exactly 50% width */}
-              <div className="w-full md:w-1/2 space-y-16 p-4 md:order-1 flex flex-col justify-center">
+              <div className="w-full md:w-1/2 space-y-16 p-4 pl-8 md:order-1 flex flex-col justify-center">
                 <div className="flex items-start w-full">
                   <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
                     <ShoppingCart className="h-5 w-5 text-[#43EB3E]" />
