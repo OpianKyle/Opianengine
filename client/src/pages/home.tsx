@@ -420,46 +420,55 @@ export default function HomePage() {
             </div>
           </div>
           
-          {/* Additional Info Sections */}
+          {/* Additional Info Sections - Clean layout without cards */}
           <div className="mt-20">
             <div className="bg-[#022b5c] p-8 rounded-xl shadow-lg border-l-4 border-[#43EB3E]">
               <h3 className="text-2xl font-bold mb-6 text-white">Earn Points Effortlessly</h3>
-              <p className="text-gray-300 mb-6">
+              <p className="text-gray-300 mb-8">
                 Opian Rewards is designed to make your financial life more rewarding:
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-5 border border-[#01162f] rounded-lg bg-[#01162f] shadow-sm hover:shadow-md transition-shadow duration-300">
-                  <div className="w-10 h-10 bg-[#043375] rounded-full flex items-center justify-center mb-4 shadow-sm">
-                    <ShoppingCart className="h-5 w-5 text-[#43EB3E]" />
+              
+              <div className="space-y-8">
+                <div className="flex items-start">
+                  <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-sm">
+                    <ShoppingCart className="h-6 w-6 text-[#43EB3E]" />
                   </div>
-                  <h4 className="font-bold text-white mb-2">Shop Your Way</h4>
-                  <p className="text-gray-300">
-                    Use your Opian Rewards Card for everyday purchases—from groceries to online shopping—and watch the points pile up!
-                  </p>
+                  <div>
+                    <h4 className="font-bold text-white text-lg mb-2">Shop Your Way</h4>
+                    <p className="text-gray-300">
+                      Use your Opian Rewards Card for everyday purchases—from groceries to online shopping—and watch the points pile up!
+                    </p>
+                  </div>
                 </div>
-                <div className="p-5 border border-[#01162f] rounded-lg bg-[#01162f] shadow-sm hover:shadow-md transition-shadow duration-300">
-                  <div className="w-10 h-10 bg-[#043375] rounded-full flex items-center justify-center mb-4 shadow-sm">
-                    <Receipt className="h-5 w-5 text-[#43EB3E]" />
+                
+                <div className="flex items-start">
+                  <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-sm">
+                    <Receipt className="h-6 w-6 text-[#43EB3E]" />
                   </div>
-                  <h4 className="font-bold text-white mb-2">Pay Your Accounts</h4>
-                  <p className="text-gray-300">
-                    Simplify your bill payments and earn rewards at the same time. Every time you pay a bill with your Opian Rewards Card, you strengthen your point balance.
-                  </p>
+                  <div>
+                    <h4 className="font-bold text-white text-lg mb-2">Pay Your Accounts</h4>
+                    <p className="text-gray-300">
+                      Simplify your bill payments and earn rewards at the same time. Every time you pay a bill with your Opian Rewards Card, you strengthen your point balance.
+                    </p>
+                  </div>
                 </div>
-                <div className="p-5 border border-[#01162f] rounded-lg bg-[#01162f] shadow-sm hover:shadow-md transition-shadow duration-300">
-                  <div className="w-10 h-10 bg-[#043375] rounded-full flex items-center justify-center mb-4 shadow-sm">
-                    <BarChart2 className="h-5 w-5 text-[#43EB3E]" />
+                
+                <div className="flex items-start">
+                  <div className="w-12 h-12 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-sm">
+                    <BarChart2 className="h-6 w-6 text-[#43EB3E]" />
                   </div>
-                  <h4 className="font-bold text-white mb-2">Plan for Success</h4>
-                  <p className="text-gray-300">
-                    Engage in smart financial planning and decision-making—whether it's budgeting, saving, or investing. We believe in rewarding your financial savvy!
-                  </p>
+                  <div>
+                    <h4 className="font-bold text-white text-lg mb-2">Plan for Success</h4>
+                    <p className="text-gray-300">
+                      Engage in smart financial planning and decision-making—whether it's budgeting, saving, or investing. We believe in rewarding your financial savvy!
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mb-16">
+          <div className="mb-16 mt-10">
             <div className="bg-[#022b5c] p-8 rounded-xl shadow-lg border-l-4 border-[#43EB3E]">
               <h3 className="text-2xl font-bold mb-6 text-white">Stack Your Rewards</h3>
               <p className="text-gray-300 mb-6">
