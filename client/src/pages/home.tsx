@@ -421,10 +421,10 @@ export default function HomePage() {
           </div>
           
           {/* Earn Points section with heading+image on right, content on left */}
-          <div className="mt-20 mb-16 max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row gap-8">
-              {/* Left side - Content points */}
-              <div className="w-full md:w-1/2 space-y-12 md:order-1 lg:order-0">
+          <div className="mt-20 mb-16 mx-auto container">
+            <div className="flex flex-col md:flex-row">
+              {/* Left side - Content points - exactly 50% width */}
+              <div className="w-full md:w-1/2 space-y-12 md:order-1 lg:order-0 p-4">
                 <div className="flex items-start">
                   <div className="w-14 h-14 flex-shrink-0 bg-[#043375] rounded-full flex items-center justify-center mr-5 shadow-md">
                     <ShoppingCart className="h-7 w-7 text-[#43EB3E]" />
@@ -462,7 +462,7 @@ export default function HomePage() {
                 </div>
               </div>
               
-              {/* Right side - Image with heading overlay */}
+              {/* Right side - Image with heading overlay - exactly 50% width */}
               <div className="w-full md:w-1/2 md:order-0 lg:order-1">
                 <div className="relative h-full">
                   {/* Background image covering the entire right section */}
