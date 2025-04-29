@@ -4,9 +4,20 @@ import { generateReferralCode } from '../utils/referral';
 import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification, generateRandomPassword } from '../utils/emailService';
 import { queryCache } from '../utils/query-cache';
 import { checkAgent } from '../auth';
-import bcrypt from 'bcrypt';
+import { scrypt, randomBytes } from 'crypto';
+import { promisify } from 'util';
 
 const router = Router();
+
+// Create local scrypt promisification
+const scryptAsync = promisify(scrypt);
+
+// Local implementation of hashPassword that matches auth.ts implementation
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString('hex');
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 // Apply checkAgent middleware to all routes in this router
 router.use(checkAgent);
@@ -147,8 +158,9 @@ router.post('/customers/create', async (req: any, res) => {
 
     // Generate a random password
     const plainPassword = generateRandomPassword(12);
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(plainPassword, salt);
+    
+    // Use our local implementation of hashPassword
+    const hashedPassword = await hashPassword(plainPassword);
 
     // Calculate initial points based on package
     let initialPoints = 0;
