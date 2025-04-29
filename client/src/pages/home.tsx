@@ -491,25 +491,49 @@ export default function HomePage() {
 
 
           <div className="mb-16">
-            <div className="bg-[#01162f] p-8 rounded-xl shadow-lg flex flex-col md:flex-row items-center text-white border border-[#043375]">
-              <div className="md:w-2/3 md:pr-8">
-                <h3 className="text-2xl font-bold mb-6 text-white">Personalized Support at Your Fingertips</h3>
-                <p className="text-gray-300 mb-4">
+            <div className="relative max-w-4xl mx-auto py-12 px-8 rounded-xl text-center text-white overflow-hidden group">
+              {/* Background with particle effects */}
+              <div className="absolute inset-0 bg-[#01162f] z-0 border border-[#043375] rounded-xl shadow-lg"></div>
+              <div className="absolute inset-0 bg-[#43EB3E] opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
+              
+              {/* Particle effects */}
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-full bg-[#43EB3E] opacity-15 mix-blend-overlay group-hover:opacity-25 transition-all duration-700"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 rounded-tr-full bg-[#43EB3E] opacity-15 mix-blend-overlay group-hover:opacity-25 transition-all duration-700"></div>
+              
+              {/* Small particle dots with hover animations */}
+              <div className="absolute top-[10%] right-[15%] w-2 h-2 rounded-full bg-[#43EB3E] opacity-20 
+                  group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:opacity-30 transition-all duration-1000"></div>
+              <div className="absolute top-[75%] left-[18%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-30
+                  group-hover:translate-x-2 group-hover:translate-y-1 group-hover:opacity-40 transition-all duration-700"></div>
+              <div className="absolute bottom-[30%] right-[22%] w-1.5 h-1.5 rounded-full bg-[#43EB3E] opacity-25
+                  group-hover:-translate-x-1 group-hover:translate-y-2 group-hover:opacity-35 transition-all duration-900"></div>
+              
+              {/* More small particles */}
+              <div className="absolute top-[15%] left-[25%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-30
+                  group-hover:-translate-x-2 group-hover:translate-y-1 transition-all duration-[1200ms]"></div>
+              <div className="absolute top-[40%] left-[80%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-25
+                  group-hover:-translate-x-3 group-hover:translate-y-1 transition-all duration-[1100ms]"></div>
+              <div className="absolute top-[65%] left-[35%] w-1.5 h-1.5 rounded-full bg-[#43EB3E] opacity-20
+                  group-hover:translate-x-2 group-hover:-translate-y-2 transition-all duration-[1300ms]"></div>
+              
+              {/* Content */}
+              <div className="relative z-10">
+                <h3 className="text-3xl font-bold mb-6 text-white">Personalized Support at Your Fingertips</h3>
+                <p className="text-gray-300 mb-4 max-w-2xl mx-auto">
                   Ready to make the most out of your Opian Rewards Card? Complete our quick contact form, and an Opian Rewards agent will reach out to explain all the incredible benefits you can unlock.
                 </p>
-                <p className="text-gray-300">
+                <p className="text-gray-300 mb-8 max-w-2xl mx-auto">
                   Our team is dedicated to guiding you through every step of the way, providing insights and support through a series of calls and emails on how to maximize your rewards.
                 </p>
-              </div>
-              <div className="md:w-1/3 flex justify-center mt-6 md:mt-0">
-                <div className="bg-[#43EB3E] px-6 py-8 rounded-lg shadow-lg text-center transform transition-transform hover:scale-105 duration-300">
-                  <h4 className="text-xl font-bold text-[#01162f] mb-4">Join Opian Rewards Today!</h4>
-                  <p className="text-[#01162f] mb-4">
+                
+                <div className="mt-8">
+                  <h4 className="text-2xl font-bold text-[#43EB3E] mb-4">Join Opian Rewards Today!</h4>
+                  <p className="text-white mb-6 max-w-xl mx-auto">
                     Don't miss out on making your everyday spending a source of cash rewards!
                   </p>
                   <Button
                     onClick={() => navigate("/register")}
-                    className="bg-[#01162f] hover:bg-[#022b5c] text-white w-full"
+                    className="bg-[#43EB3E] hover:bg-[#3ad036] text-[#01162f] font-bold px-8 py-3 text-lg transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   >
                     Get Started Now
                   </Button>
