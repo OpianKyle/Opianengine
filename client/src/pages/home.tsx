@@ -671,11 +671,11 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
               <Card 
                 key={packageName} 
-                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group flex flex-col h-full`}
+                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group flex flex-col h-[800px]`}
               >
                 {/* Particle-like green shade overlay */}
                 <div className="absolute inset-0 bg-[#43EB3E] opacity-5 dark:opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
@@ -751,19 +751,19 @@ export default function HomePage() {
                   <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
                   <CardDescription className="text-gray-300 font-medium">per month</CardDescription>
                 </CardHeader>
-                <CardContent className="pb-2 relative z-10 flex-grow">
-                  <ul className="space-y-2">
+                <CardContent className="pb-2 relative z-10 flex-grow overflow-y-auto max-h-[550px]">
+                  <ul className="space-y-1.5">
                     {ALL_FEATURES.map((feature, index) => {
                       const value = feature.values[packageName as keyof typeof feature.values];
                       const isAvailable = value !== false;
                       return (
                         <li key={index} className="flex items-start">
                           {isAvailable ? (
-                            <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
+                            <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
                           ) : (
-                            <X className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 text-red-500" />
+                            <X className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-red-500" />
                           )}
-                          <span className={`text-sm font-medium ${isAvailable ? 'text-gray-200' : 'text-gray-500'}`}>
+                          <span className={`text-xs font-medium ${isAvailable ? 'text-gray-200' : 'text-gray-500'}`}>
                             {typeof value === 'string' ? `${feature.name}: ${value}` : feature.name}
                           </span>
                         </li>
