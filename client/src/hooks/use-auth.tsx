@@ -26,14 +26,14 @@ export interface User {
   points: number;
   referral_code: string | null;
   referred_by: string | null;
-  // Subscription-related fields
-  selectedPackage?: string;
-  subscription_status?: string;
-  subscription_start_date?: string;
-  subscription_end_date?: string;
-  paystack_customer_code?: string;
-  paystack_subscription_code?: string;
-  paystack_email_token?: string;
+  // Subscription-related fields - no longer in use but kept for backward compatibility
+  // selectedPackage?: string;
+  // subscription_status?: string;
+  // subscription_start_date?: string;
+  // subscription_end_date?: string;
+  // paystack_customer_code?: string;
+  // paystack_subscription_code?: string;
+  // paystack_email_token?: string;
 }
 
 // Login credentials type
@@ -55,7 +55,7 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
   mobileNumber: string;
-  selectedPackage?: string;
+  // selectedPackage?: string; // No longer used but kept for compatibility
   referralCode?: string;
   signature?: string;
   isSouthAfrican?: boolean;

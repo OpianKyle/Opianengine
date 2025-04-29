@@ -48,8 +48,8 @@ export const CUSTOMER_API_ENDPOINTS = {
     '/api/products',
     '/api/transactions',
     '/api/statistics',
-    '/api/referral',
-    '/api/subscription'
+    '/api/referral'
+    // '/api/subscription' - removed as requested
   ],
   dashboard: [
     '/api/profile',
@@ -64,11 +64,8 @@ export const CUSTOMER_API_ENDPOINTS = {
   ],
   referral: [
     '/api/referral'
-  ],
-  subscription: [
-    '/api/subscription',
-    '/api/profile'
   ]
+  // subscription section removed as requested
 };
 
 export const ADMIN_API_ENDPOINTS = {
@@ -127,10 +124,14 @@ export const prefetchAgentData = async (token?: string, section?: 'dashboard' | 
  * @param token JWT token for authenticated requests
  * @param section Optional section name to prefetch only specific endpoints
  */
-export const prefetchCustomerData = async (token?: string, section?: 'dashboard' | 'products' | 'rewards' | 'referral' | 'subscription' | 'all') => {
+export const prefetchCustomerData = async (token?: string, section?: 'dashboard' | 'products' | 'rewards' | 'referral' | 'all') => {
   // If section is specified, prefetch only that section's endpoints
-  const endpointKey = section || 'all';
-  const endpoints = CUSTOMER_API_ENDPOINTS[endpointKey];
+  // Handle any possible string value for backward compatibility
+  const validSections = ['dashboard', 'products', 'rewards', 'referral', 'all'] as const;
+  const endpointKey = (section && validSections.includes(section as any)) 
+    ? section
+    : 'all';
+  const endpoints = CUSTOMER_API_ENDPOINTS[endpointKey as keyof typeof CUSTOMER_API_ENDPOINTS];
   
   await prefetchData(endpoints, token, `customer${section && section !== 'all' ? `-${section}` : ''}`);
 };

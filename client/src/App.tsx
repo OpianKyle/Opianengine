@@ -232,17 +232,7 @@ function Router() {
         </CustomerLayout>
       </Route>
       
-      <Route path="/subscription">
-        <CustomerLayout>
-          <ProtectedRoute component={SubscriptionPage} />
-        </CustomerLayout>
-      </Route>
-      
-      <Route path="/dashboard/subscription">
-        <CustomerLayout>
-          <ProtectedRoute component={SubscriptionPage} />
-        </CustomerLayout>
-      </Route>
+      {/* Subscription routes removed as requested */}
 
       <Route component={NotFound} />
     </Switch>
