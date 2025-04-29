@@ -162,7 +162,7 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <section className="bg-[#01162f] text-white py-16 relative overflow-hidden">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 relative z-10">
           <div className="flex flex-col lg:flex-row items-center">
             <div className="lg:w-1/2 z-10">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
@@ -210,8 +210,11 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        {/* Background decoration */}
+        {/* Background decorations with blue base and green overlay */}
+        <div className="absolute top-0 left-0 w-full h-full bg-[#01162f] z-0"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-15 z-0"></div>
         <div className="absolute top-0 right-0 w-2/3 h-full bg-[#022b5c] transform skew-x-12 translate-x-1/3 z-0 opacity-50"></div>
+        <div className="absolute top-0 right-0 w-2/3 h-full bg-[#43EB3E] transform skew-x-12 translate-x-1/3 mix-blend-overlay z-0 opacity-20"></div>
       </section>
 
       {/* Value Proposition Section */}
@@ -454,8 +457,8 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-[#011d3d] text-white">
-        <div className="container mx-auto px-4 text-center">
+      <section className="py-16 text-white relative overflow-hidden">
+        <div className="container mx-auto px-4 text-center relative z-10">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Join Opian Rewards Today!</h2>
           <p className="text-xl mb-8 max-w-3xl mx-auto">
             Don't miss out on making your everyday spending a source of cash rewards! Join the Opian Rewards 
@@ -484,6 +487,14 @@ export default function HomePage() {
             </Button>
           </div>
         </div>
+
+        {/* Background decorations with blue base and green overlay */}
+        <div className="absolute top-0 left-0 w-full h-full bg-[#01162f] z-0"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[#43EB3E] mix-blend-overlay opacity-15 z-0"></div>
+        
+        {/* Additional decorative elements */}
+        <div className="absolute bottom-0 left-0 w-1/3 h-2/3 bg-[#022b5c] transform -skew-x-12 -translate-x-1/4 rounded-tr-3xl z-0 opacity-50"></div>
+        <div className="absolute bottom-0 left-0 w-1/3 h-2/3 bg-[#43EB3E] transform -skew-x-12 -translate-x-1/4 rounded-tr-3xl mix-blend-overlay z-0 opacity-20"></div>
       </section>
 
       {/* Footer */}
