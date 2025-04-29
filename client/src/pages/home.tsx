@@ -462,20 +462,26 @@ export default function HomePage() {
                 </div>
               </div>
               
-              {/* Right side - Heading and image */}
+              {/* Right side - Image with heading overlay */}
               <div className="w-full md:w-1/2 md:order-0 lg:order-1">
-                <div className="flex flex-col h-full justify-start">
-                  <h3 className="text-3xl font-bold mb-6 text-white border-l-4 border-[#43EB3E] pl-4">Earn Points Effortlessly</h3>
-                  <p className="text-gray-300 mb-8 text-lg">
-                    Opian Rewards is designed to make your financial life more rewarding:
-                  </p>
-                  <div className="relative mt-2">
+                <div className="relative h-full">
+                  {/* Background image covering the entire right section */}
+                  <div className="relative h-full min-h-[500px]">
                     <img 
                       src="/Opian-Earn-Points-Effortlessly.jpg" 
                       alt="Woman earning points with Opian Rewards Card" 
-                      className="rounded-xl w-full h-auto shadow-lg object-cover"
+                      className="rounded-xl w-full h-full object-cover absolute inset-0"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#01162f]/50 to-transparent rounded-xl"></div>
+                    {/* Gradient overlay to ensure text readability */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#01162f]/80 via-[#01162f]/40 to-[#01162f]/70 rounded-xl"></div>
+                    
+                    {/* Content positioned over the image */}
+                    <div className="relative z-10 p-6 flex flex-col h-full">
+                      <h3 className="text-3xl font-bold mb-6 text-white border-l-4 border-[#43EB3E] pl-4">Earn Points Effortlessly</h3>
+                      <p className="text-gray-100 mb-8 text-lg">
+                        Opian Rewards is designed to make your financial life more rewarding:
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
