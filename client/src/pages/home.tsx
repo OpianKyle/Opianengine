@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useUser } from "@/hooks/use-user";
 import { useLocation } from "wouter";
-import { Loader2, CheckCircle, ArrowRight, CreditCard, Users, Gift, ArrowUpRight, ShoppingCart, Receipt, BarChart2 } from "lucide-react";
+import { Loader2, CheckCircle, ArrowRight, CreditCard, Users, Gift, ArrowUpRight, ShoppingCart, Receipt, BarChart2, ChevronLeft, ChevronRight } from "lucide-react";
+import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -102,9 +103,62 @@ const PACKAGE_COLORS = {
   PINNACLE: 'bg-[#3ad036]'
 };
 
+// Steps and their background images
+const STEPS = [
+  {
+    title: "Submit Your Details",
+    description: "Submit your details and one of our friendly Opian agents will reach out to guide you through the sign-up process.",
+    backgroundImage: "/step1-bg.jpg",
+    fallbackColor: "#022b5c"
+  },
+  {
+    title: "Choose Your Product",
+    description: "Pick the rewards product that best suits your needs and lifestyle—each one comes with increasing value and earning potential.",
+    backgroundImage: "/step2-bg.jpg",
+    fallbackColor: "#01162f"
+  },
+  {
+    title: "Receive Your Card & Load Funds",
+    description: "You'll get your personalised Opian Card, ready to be activated. Simply load funds to activate it and unlock your rewards journey.",
+    backgroundImage: "/step3-bg.jpg",
+    fallbackColor: "#022b5c"
+  },
+  {
+    title: "Start Earning Rewards",
+    description: "Watch your rewards build up every time you use your card for purchases or to pay bills. The more you use it, the more you earn.",
+    backgroundImage: "/step4-bg.jpg",
+    fallbackColor: "#01162f"
+  }
+];
+
 export default function HomePage() {
   const { user, isLoading } = useUser();
   const [, navigate] = useLocation();
+  
+  // Carousel logic for How It Works section
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
+  const [currentStep, setCurrentStep] = useState(0);
+  
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
+  
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+  
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.on('select', () => {
+        setCurrentStep(emblaApi.selectedScrollSnap());
+      });
+      
+      // Return cleanup function
+      return () => {
+        emblaApi.off('select', () => {});
+      };
+    }
+  }, [emblaApi]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -267,62 +321,103 @@ export default function HomePage() {
       {/* How It Works Section */}
       <section id="how-it-works" className="py-20 relative overflow-hidden text-white">
         <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">Simple Steps. Serious Rewards.</h2>
-            <p className="text-lg text-gray-300 max-w-3xl mx-auto">
-              Getting started with Opian Rewards is simple and empowering. Every step is designed to help you 
-              earn more and unlock greater benefits—just by doing what you already do.
-            </p>
+          <div className="flex flex-col lg:flex-row gap-12">
+            {/* Left side - Text content */}
+            <div className="w-full lg:w-1/2">
+              <h2 className="text-3xl md:text-4xl font-bold mb-8 text-white">
+                Simple Steps.<br/>Serious Rewards.
+              </h2>
+              <div className="text-lg text-gray-300 space-y-6">
+                <p>
+                  Getting started with Opian Rewards is simple and empowering. Every step is designed to help you 
+                  earn more and unlock greater benefits—just by doing what you already do.
+                </p>
+                <p>
+                  Our process is straightforward and user-friendly, allowing you to quickly begin earning rewards 
+                  on your everyday purchases and bill payments.
+                </p>
+                <p>
+                  Start your journey today and discover how Opian Rewards can transform your financial life with 
+                  just a few simple steps.
+                </p>
+                
+                <Button 
+                  onClick={() => navigate("/register")}
+                  className="bg-[#43EB3E] hover:bg-[#3ad036] text-black mt-8"
+                  size="lg"
+                >
+                  Begin Your Journey
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Right side - Carousel */}
+            <div className="w-full lg:w-1/2 relative mt-10 lg:mt-0">
+              <div className="embla relative overflow-hidden rounded-xl shadow-xl">
+                <div className="embla__viewport" ref={emblaRef}>
+                  <div className="embla__container flex">
+                    {STEPS.map((step, index) => (
+                      <div key={index} className="embla__slide flex-[0_0_100%] min-w-0 relative">
+                        {/* Background with fallback */}
+                        <div 
+                          className="absolute inset-0 bg-cover bg-center rounded-xl z-0" 
+                          style={{
+                            backgroundColor: step.fallbackColor,
+                            backgroundImage: `url(${step.backgroundImage})`,
+                          }}
+                        />
+                        {/* Gradient overlay for better text readability */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#01162f] to-transparent opacity-90 rounded-xl z-10"></div>
+                        
+                        {/* Content */}
+                        <div className="relative h-[500px] flex flex-col justify-center p-10 z-20">
+                          <div className="w-16 h-16 bg-[#01162f] text-white rounded-full flex items-center justify-center font-bold text-2xl mb-6 shadow-lg border-2 border-[#43EB3E]">
+                            {index + 1}
+                          </div>
+                          <h3 className="text-2xl font-bold mb-4 text-white">{step.title}</h3>
+                          <p className="text-gray-300 text-lg max-w-md">
+                            {step.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Navigation buttons */}
+                <button 
+                  className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-[#01162f]/60 hover:bg-[#01162f] text-white rounded-full p-2 z-30 transition-all duration-200"
+                  onClick={scrollPrev}
+                >
+                  <ChevronLeft className="h-8 w-8" />
+                </button>
+                <button 
+                  className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-[#01162f]/60 hover:bg-[#01162f] text-white rounded-full p-2 z-30 transition-all duration-200"
+                  onClick={scrollNext}
+                >
+                  <ChevronRight className="h-8 w-8" />
+                </button>
+                
+                {/* Indicators */}
+                <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-30">
+                  {STEPS.map((_, index) => (
+                    <button
+                      key={index}
+                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                        currentStep === index ? 'bg-[#43EB3E] w-6' : 'bg-white/50 hover:bg-white/80'
+                      }`}
+                      onClick={() => emblaApi?.scrollTo(index)}
+                      aria-label={`Go to slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-            <div className="bg-[#022b5c] p-8 rounded-xl shadow-md relative border-t-4 border-[#43EB3E]">
-              <div className="absolute -top-5 -left-5 w-12 h-12 bg-[#01162f] text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg border-2 border-[#43EB3E]">
-                1
-              </div>
-              <h3 className="text-xl font-bold mb-4 text-white pt-6">Submit Your Details</h3>
-              <p className="text-gray-300">
-                Submit your details and one of our friendly Opian agents will reach out to guide you 
-                through the sign-up process.
-              </p>
-            </div>
-
-            <div className="bg-[#022b5c] p-8 rounded-xl shadow-md relative border-t-4 border-[#43EB3E]">
-              <div className="absolute -top-5 -left-5 w-12 h-12 bg-[#01162f] text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg border-2 border-[#43EB3E]">
-                2
-              </div>
-              <h3 className="text-xl font-bold mb-4 text-white pt-6">Choose Your Product</h3>
-              <p className="text-gray-300">
-                Pick the rewards product that best suits your needs and lifestyle—each one comes with 
-                increasing value and earning potential.
-              </p>
-            </div>
-
-            <div className="bg-[#022b5c] p-8 rounded-xl shadow-md relative border-t-4 border-[#43EB3E]">
-              <div className="absolute -top-5 -left-5 w-12 h-12 bg-[#01162f] text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg border-2 border-[#43EB3E]">
-                3
-              </div>
-              <h3 className="text-xl font-bold mb-4 text-white pt-6">Receive Your Card & Load Funds</h3>
-              <p className="text-gray-300">
-                You'll get your personalised Opian Card, ready to be activated. Simply load funds to 
-                activate it and unlock your rewards journey.
-              </p>
-            </div>
-
-            <div className="bg-[#022b5c] p-8 rounded-xl shadow-md relative border-t-4 border-[#43EB3E]">
-              <div className="absolute -top-5 -left-5 w-12 h-12 bg-[#01162f] text-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg border-2 border-[#43EB3E]">
-                4
-              </div>
-              <h3 className="text-xl font-bold mb-4 text-white pt-6">Swipe and Start Earning</h3>
-              <p className="text-gray-300">
-                Use your card for everyday purchases. Each swipe earns you points and brings you 
-                closer to powerful benefits.
-              </p>
-            </div>
-          </div>
-
+          
           {/* Additional Info Sections */}
-          <div className="mb-16">
+          <div className="mt-20">
             <div className="bg-[#022b5c] p-8 rounded-xl shadow-lg border-l-4 border-[#43EB3E]">
               <h3 className="text-2xl font-bold mb-6 text-white">Earn Points Effortlessly</h3>
               <p className="text-gray-300 mb-6">
