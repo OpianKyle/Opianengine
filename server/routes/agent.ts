@@ -309,8 +309,9 @@ router.post('/customers/create', async (req: any, res) => {
             idNumber,
             occupation,
             industry,
-            addressLine1,
-            suburb,
+            // Map the address fields correctly
+            address: addressLine1,
+            city: suburb,
             postalCode,
             selectedPackage: normalizedPackage,
             bankName,
@@ -321,9 +322,15 @@ router.post('/customers/create', async (req: any, res) => {
             isSouthAfrican,
             hasCreditCard,
             createdAt: new Date().toISOString(),
-            mandateAccepted: true,
+            mandate_accepted: true,  // Use the correct field name (mandate_accepted instead of mandateAccepted)
             agentId: req.user.id
           };
+          
+          console.log('Sending admin notification with data:', JSON.stringify({
+            address: customerData.address,
+            city: customerData.city,
+            mandate_accepted: customerData.mandate_accepted
+          }));
           
           await sendAdminRegistrationNotification(customerData);
         } catch (adminEmailError) {
