@@ -9,7 +9,8 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+// Changed to default export
+const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   // Initialize with user's preferred color scheme or saved preference
   const [theme, setTheme] = useState<Theme>(() => {
     // Check local storage first
@@ -58,3 +59,5 @@ export function useTheme() {
   }
   return context;
 }
+
+export default ThemeProvider;

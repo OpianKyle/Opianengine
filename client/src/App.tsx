@@ -14,7 +14,7 @@ import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ResponsiveProvider } from "@/hooks/use-mobile";
-import { ThemeProvider } from "@/providers/theme-provider";
+import ThemeProvider from "@/providers/theme-provider";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
