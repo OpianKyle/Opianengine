@@ -407,16 +407,47 @@ function getSignatureHTML(): string {
   `;
 }
 
+/**
+ * Generates a random password with mixed characters
+ * @param length Length of the password to generate (default: 10)
+ * @returns A random password string
+ */
+export function generateRandomPassword(length: number = 10): string {
+  const lowerChars = 'abcdefghijklmnopqrstuvwxyz';
+  const upperChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const numbers = '0123456789';
+  const specialChars = '!@#$%^&*()-_=+';
+  
+  const allChars = lowerChars + upperChars + numbers + specialChars;
+  
+  let password = '';
+  
+  // Ensure at least one character from each category
+  password += lowerChars.charAt(Math.floor(Math.random() * lowerChars.length));
+  password += upperChars.charAt(Math.floor(Math.random() * upperChars.length));
+  password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  password += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
+  
+  // Fill the rest with random characters
+  for (let i = 4; i < length; i++) {
+    password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+  }
+  
+  // Shuffle the password characters
+  return password.split('').sort(() => 0.5 - Math.random()).join('');
+}
+
 export function formatRegistrationEmail(
   firstName: string,
-  email: string
+  email: string,
+  password?: string
 ): { text: string; html: string } {
   // Use Replit domain for images (they actually work)
   const signatureImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png";
   const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
   
-  // Default temporary password
-  const tempPassword = "12345678";
+  // Use provided password or default to "12345678" for backward compatibility
+  const tempPassword = password || "12345678";
   
   const text = `
     Dear ${firstName},

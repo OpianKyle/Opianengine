@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { createConnection } from '../db';
 import { generateReferralCode } from '../utils/referral';
-import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from '../utils/emailService';
+import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification, generateRandomPassword } from '../utils/emailService';
 import { queryCache } from '../utils/query-cache';
 import { checkAgent } from '../auth';
+import bcrypt from 'bcrypt';
 
 const router = Router();
 
@@ -144,8 +145,10 @@ router.post('/customers/create', async (req: any, res) => {
     // Generate a unique referral code
     const referralCode = await generateUniqueReferralCode(connection);
 
-    // Generate a temporary password
-    const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
+    // Generate a random password
+    const plainPassword = generateRandomPassword(12);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(plainPassword, salt);
 
     // Calculate initial points based on package
     let initialPoints = 0;
@@ -192,7 +195,7 @@ router.post('/customers/create', async (req: any, res) => {
 
       const insertParams = [
         email,
-        defaultPassword,
+        hashedPassword,
         firstName,
         lastName,
         mobileNumber,
@@ -289,7 +292,7 @@ router.post('/customers/create', async (req: any, res) => {
 
       // Send welcome email
       try {
-        const { text, html } = formatRegistrationEmail(firstName, email);
+        const { text, html } = formatRegistrationEmail(firstName, email, plainPassword);
         await sendEmail({
           to: email,
           subject: "Welcome to OPIAN Rewards!",
@@ -348,7 +351,7 @@ router.post('/customers/create', async (req: any, res) => {
         points: initialPoints,
         selectedPackage: normalizedPackage,
         packagePrice,
-        temporaryPassword: '123456',
+        temporaryPassword: plainPassword,
         agentId: req.user.id,
         isEnabled: true,
         mandateAccepted: true,
