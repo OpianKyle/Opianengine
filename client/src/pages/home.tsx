@@ -772,27 +772,10 @@ export default function HomePage() {
           {/* Desktop Grid View */}
           {/* Mobile Carousel View */}
           <div className="md:hidden">
-            <div className="relative overflow-hidden">
-              <div className="overflow-hidden relative" ref={productEmblaRef}>
-                <Button
-                  onClick={scrollProductPrev}
-                  variant="ghost"
-                  size="sm"
-                  className="text-[#43EB3E] absolute left-1 top-1/2 -translate-y-1/2 z-20 h-10 w-10 p-0 rounded-full bg-black/50 hover:bg-black/70 shadow-lg"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </Button>
-                
-                <Button
-                  onClick={scrollProductNext}
-                  variant="ghost"
-                  size="sm"
-                  className="text-[#43EB3E] absolute right-1 top-1/2 -translate-y-1/2 z-20 h-10 w-10 p-0 rounded-full bg-black/50 hover:bg-black/70 shadow-lg"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </Button>
-                
+            <div className="relative">
+              <div className="overflow-hidden" ref={productEmblaRef}>
                 <div className="flex">
+                
                   {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
                     <div key={`mobile-${packageName}`} className="flex-[0_0_90%] min-w-0 pl-4 first:pl-8 pr-4">
                       <Card 
@@ -853,16 +836,34 @@ export default function HomePage() {
                 </div>
               </div>
               
-              {/* Package carousel indicators */}
-              <div className="flex justify-center mt-4 space-x-2">
-                {Object.keys(PACKAGE_FEATURES).map((_, index) => (
-                  <div 
-                    key={`indicator-${index}`}
-                    className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-                      currentProduct === index ? 'bg-[#43EB3E]' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                  />
-                ))}
+              {/* Navigation buttons and indicators */}
+              <div className="flex justify-center items-center mt-6 space-x-4">
+                <Button 
+                  onClick={scrollProductPrev} 
+                  variant="ghost" 
+                  className="rounded-full bg-black/60 text-[#43EB3E] hover:bg-black/80 h-10 w-10 p-0"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                
+                <div className="flex space-x-2">
+                  {Object.keys(PACKAGE_FEATURES).map((_, index) => (
+                    <div 
+                      key={`indicator-${index}`}
+                      className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                        currentProduct === index ? 'bg-[#43EB3E]' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    />
+                  ))}
+                </div>
+                
+                <Button 
+                  onClick={scrollProductNext} 
+                  variant="ghost" 
+                  className="rounded-full bg-black/60 text-[#43EB3E] hover:bg-black/80 h-10 w-10 p-0"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
               </div>
 
             </div>
