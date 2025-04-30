@@ -245,6 +245,7 @@ export default function HomePage() {
     containScroll: 'trimSnaps'
   });
   const [currentProduct, setCurrentProduct] = useState(0);
+  const [showSwipeIndicator, setShowSwipeIndicator] = useState(true);
   
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -255,11 +256,17 @@ export default function HomePage() {
   }, [emblaApi]);
   
   const scrollProductPrev = useCallback(() => {
-    if (productEmblaApi) productEmblaApi.scrollPrev();
+    if (productEmblaApi) {
+      productEmblaApi.scrollPrev();
+      setShowSwipeIndicator(false);
+    }
   }, [productEmblaApi]);
   
   const scrollProductNext = useCallback(() => {
-    if (productEmblaApi) productEmblaApi.scrollNext();
+    if (productEmblaApi) {
+      productEmblaApi.scrollNext();
+      setShowSwipeIndicator(false);
+    }
   }, [productEmblaApi]);
   
   useEffect(() => {
@@ -277,13 +284,30 @@ export default function HomePage() {
   
   useEffect(() => {
     if (productEmblaApi) {
-      productEmblaApi.on('select', () => {
+      // Track current product index
+      const handleSelect = () => {
         setCurrentProduct(productEmblaApi.selectedScrollSnap());
-      });
+      };
+      
+      // Hide swipe indicator on user interaction
+      const handlePointerDown = () => {
+        setShowSwipeIndicator(false);
+      };
+      
+      // Hide swipe indicator when user scrolls
+      const handleScroll = () => {
+        setShowSwipeIndicator(false);
+      };
+      
+      productEmblaApi.on('select', handleSelect);
+      productEmblaApi.on('pointerDown', handlePointerDown);
+      productEmblaApi.on('scroll', handleScroll);
       
       // Return cleanup function
       return () => {
-        productEmblaApi.off('select', () => {});
+        productEmblaApi.off('select', handleSelect);
+        productEmblaApi.off('pointerDown', handlePointerDown);
+        productEmblaApi.off('scroll', handleScroll);
       };
     }
   }, [productEmblaApi]);
@@ -774,6 +798,17 @@ export default function HomePage() {
           <div className="md:hidden">
             <div className="relative">
               <div className="overflow-hidden" ref={productEmblaRef}>
+                {/* Swipe indicator with animation - only shown until user interacts */}
+                {showSwipeIndicator && (
+                  <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-center items-center pointer-events-none z-20">
+                    <div className="w-auto bg-black/70 text-white/90 px-3 py-1.5 rounded-full text-sm flex items-center animate-pulse">
+                      <ChevronLeft className="h-4 w-4 mr-1 text-[#43EB3E] animate-bounce-x-reverse" />
+                      <span>Swipe</span>
+                      <ChevronRight className="h-4 w-4 ml-1 text-[#43EB3E] animate-bounce-x" />
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex">
                 
                   {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (

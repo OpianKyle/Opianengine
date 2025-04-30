@@ -4,6 +4,39 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Custom animations for horizontal bounce effect */
+  .animate-bounce-x {
+    animation: bounce-right 1s infinite;
+  }
+  
+  .animate-bounce-x-reverse {
+    animation: bounce-left 1s infinite;
+  }
+  
+  @keyframes bounce-right {
+    0%, 100% {
+      transform: translateX(0);
+      animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% {
+      transform: translateX(25%);
+      animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+  
+  @keyframes bounce-left {
+    0%, 100% {
+      transform: translateX(0);
+      animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% {
+      transform: translateX(-25%);
+      animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+}
+
 @layer base {
   :root {
     /* Light theme colors */
