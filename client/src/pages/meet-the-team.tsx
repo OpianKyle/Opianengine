@@ -453,19 +453,7 @@ export default function TeamPage() {
                                 </Button>
                               </div>
                               
-                              <p className="text-gray-200 mb-4">{member.description}</p>
-                              
-                              <div className="border-t border-[#022b5c] pt-4 mt-4">
-                                <h4 className="font-medium mb-2 text-white">Connect with {member.name.split(' ')[0]}</h4>
-                                <div className="flex space-x-3">
-                                  <Button variant="outline" size="sm" className="text-white border-white hover:bg-white/20 hover:text-[#43EB3E] transition-colors">
-                                    LinkedIn
-                                  </Button>
-                                  <Button variant="outline" size="sm" className="text-white border-white hover:bg-white/20 hover:text-[#43EB3E] transition-colors">
-                                    Email
-                                  </Button>
-                                </div>
-                              </div>
+                              <p className="text-gray-200">{member.description}</p>
                             </div>
                           )}
                         </div>
