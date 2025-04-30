@@ -52,14 +52,14 @@ export default function TeamPage() {
       name: "Andre Visser",
       title: "Head of Marketing",
       description: "Andre crafts innovative strategies to promote our reward programs, helping our members maximize their benefits. His background in digital marketing and consumer psychology gives him unique insights into creating campaigns that truly resonate with our audience. Andre believes in data-driven approaches combined with creative storytelling to showcase the value of our rewards platform.",
-      image: "/Andre.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 3,
       name: "Wessel Krige",
       title: "Social Media Manager",
       description: "Wessel focuses on building strong relationships with our members via all social media channels, ensuring they understand and utilize their rewards. He has pioneered our community engagement approach, creating spaces where members can share experiences and tips with each other. Wessel's content strategy emphasizes educational content that helps members get the most value from their membership.",
-      image: "/Wessel.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 4,
@@ -80,21 +80,21 @@ export default function TeamPage() {
       name: "Shannon Heugh",
       title: "Client Services Specialist",
       description: "Shannon is responsible for data management and ensuring communications that result in an amazing customer service journey. Her meticulous approach to member data ensures that rewards are accurately tracked and delivered. Shannon works closely with our systems team to continuously improve the member experience through data-driven insights.",
-      image: "/Shannon.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 7,
       name: "Jodi Rensburg",
       title: "Client Services Specialist",
       description: "Jodi is responsible for data management and ensuring communications that result in an amazing customer service journey. Her expertise in customer communications has helped develop our personalized notification system that keeps members informed about their rewards opportunities. Jodi believes that timely, relevant communication is key to member satisfaction.",
-      image: "/Jodie.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 8,
       name: "Cheslin Matinka",
       title: "Client Consultant",
       description: "Cheslin is responsible for sales and client interactions that ensured our clients have an amazing customer service journey. His consultative approach helps match prospective members with the perfect package for their needs. Cheslin's deep knowledge of our rewards ecosystem allows him to demonstrate exactly how each member can maximize their benefits.",
-      image: "/Cheslin.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 9,
