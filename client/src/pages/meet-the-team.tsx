@@ -346,12 +346,15 @@ export default function TeamPage() {
                 <div 
                   className="absolute w-full flex transition-transform duration-500 ease-in-out"
                   style={{ 
-                    transform: `translateX(${-activeIndex * 100}%)`,
+                    transform: `translateX(calc(-${activeIndex * 33.33}% + ${activeIndex === 0 ? 0 : '16.67%'}))`,
                   }}
                 >
                   {teamMembers.map((member, index) => {
                     // Calculate the position relative to active index
-                    const isActive = index === activeIndex;
+                    const isActive = Math.floor(activeIndex/3) * 3 <= index && index < Math.floor(activeIndex/3) * 3 + 3;
+                    const isCenterActive = index === activeIndex;
+                    
+                    // Calculate distance for fading effect
                     const distanceFromActive = Math.min(
                       Math.abs(index - activeIndex),
                       Math.abs(index - activeIndex - teamMembers.length),
@@ -364,27 +367,27 @@ export default function TeamPage() {
                     return (
                       <div 
                         key={member.id}
-                        className={`w-full flex-shrink-0 flex flex-col items-center transition-all duration-500 ease-in-out ${isExpanded ? 'justify-start' : 'justify-center'}`}
+                        className={`w-1/3 flex-shrink-0 flex flex-col items-center transition-all duration-500 ease-in-out px-2 ${isExpanded ? 'justify-start' : 'justify-center'}`}
                         style={{ 
-                          opacity: 1 - (distanceFromActive * 0.2),
-                          transform: `scale(${isActive ? 1 : 0.8 - (distanceFromActive * 0.1)})`,
-                          zIndex: teamMembers.length - distanceFromActive,
-                          pointerEvents: distanceFromActive <= 2 ? 'auto' : 'none',
+                          opacity: isCenterActive ? 1 : isActive ? 0.7 : 0.3,
+                          transform: `scale(${isCenterActive ? 1 : isActive ? 0.9 : 0.7})`,
+                          zIndex: isCenterActive ? 10 : isActive ? 5 : 1,
+                          pointerEvents: isActive ? 'auto' : 'none',
                         }}
                       >
                         {/* Member Card */}
                         <div 
                           className={`relative overflow-hidden rounded-lg shadow-lg transition-all duration-500 ${
-                            isExpanded ? 'w-4/5 mx-auto bg-white dark:bg-[#01162f]' : 'w-64 sm:w-72 md:w-80 cursor-pointer bg-white dark:bg-[#01162f]'
+                            isExpanded ? 'w-[300%] absolute left-[-100%] z-20 mx-auto bg-white dark:bg-[#01162f]' : 'w-full cursor-pointer bg-white dark:bg-[#01162f]'
                           }`}
-                          onClick={() => !isExpanded && isActive && toggleMemberExpand(member.id)}
+                          onClick={() => !isExpanded && isCenterActive && toggleMemberExpand(member.id)}
                         >
                           {/* Image Container */}
                           <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-64'}`}>
                             <img 
                               src={member.image} 
                               alt={member.name}
-                              className={`w-full h-full object-cover transition-transform duration-500 ${isActive && !isExpanded ? 'hover:scale-105' : ''}`}
+                              className={`w-full h-full object-cover transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement;
                                 img.onerror = null;
@@ -456,7 +459,7 @@ export default function TeamPage() {
                         </div>
                         
                         {/* Indicator for active member */}
-                        {isActive && !isExpanded && (
+                        {isCenterActive && !isExpanded && (
                           <div className="mt-4 flex items-center justify-center space-x-1">
                             <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]"></div>
                             <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]/50"></div>
@@ -471,14 +474,14 @@ export default function TeamPage() {
               
               {/* Carousel Indicators */}
               <div className="flex justify-center mt-6 space-x-2">
-                {teamMembers.map((_, index) => (
+                {Array.from({ length: Math.ceil(teamMembers.length / 3) }).map((_, groupIndex) => (
                   <button
-                    key={index}
+                    key={groupIndex}
                     className={`h-2 rounded-full transition-all ${
-                      index === activeIndex ? 'w-6 bg-[#43EB3E]' : 'w-2 bg-[#43EB3E]/30'
+                      Math.floor(activeIndex / 3) === groupIndex ? 'w-6 bg-[#43EB3E]' : 'w-2 bg-[#43EB3E]/30'
                     }`}
                     onClick={() => {
-                      setActiveIndex(index);
+                      setActiveIndex(groupIndex * 3);
                       setExpandedMember(null);
                     }}
                   />
