@@ -395,7 +395,7 @@ export default function TeamPage() {
                           }}
                         >
                           {/* Image Container */}
-                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-72 md:h-96'}`}>
+                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0 z-10' : 'h-72 md:h-96'}`}>
                             <img 
                               src={member.image} 
                               alt={member.name}
@@ -420,7 +420,7 @@ export default function TeamPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="absolute top-2 right-2 md:hidden bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm shadow-md"
+                                className="absolute top-2 right-2 md:hidden bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm shadow-md z-20"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleMemberExpand(member.id);
@@ -433,7 +433,7 @@ export default function TeamPage() {
                           
                           {/* Member Details - Only shown when expanded */}
                           {isExpanded && (
-                            <div className={`p-6 backdrop-blur-md bg-[#01162f]/70 h-full md:min-h-[24rem] ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
+                            <div className={`p-6 backdrop-blur-md bg-[#01162f]/70 h-full md:min-h-[24rem] relative z-0 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
                               <div className="md:flex md:justify-between md:items-start">
                                 <div>
                                   <h3 className="text-2xl font-bold text-white mb-1">{member.name}</h3>
@@ -443,7 +443,7 @@ export default function TeamPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="hidden md:flex bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm"
+                                  className="hidden md:flex bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm z-20"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     toggleMemberExpand(member.id);
