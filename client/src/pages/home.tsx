@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { useUser } from "@/hooks/use-user";
 import { useLocation } from "wouter";
-import { Loader2, CheckCircle, ArrowRight, CreditCard, Users, Gift, ArrowUpRight, ShoppingCart, Receipt, BarChart2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Loader2, CheckCircle, ArrowRight, CreditCard, Users, Gift, ArrowUpRight, ShoppingCart, Receipt, BarChart2, ChevronLeft, ChevronRight, X, Menu } from "lucide-react";
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -232,10 +232,19 @@ export default function HomePage() {
   const { user, isLoading } = useUser();
   const { theme } = useTheme();
   const [, navigate] = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Carousel logic for How It Works section
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [currentStep, setCurrentStep] = useState(0);
+  
+  // Carousel logic for Products section on mobile
+  const [productEmblaRef, productEmblaApi] = useEmblaCarousel({ 
+    loop: true,
+    align: 'center',
+    containScroll: 'trimSnaps'
+  });
+  const [currentProduct, setCurrentProduct] = useState(0);
   
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -244,6 +253,14 @@ export default function HomePage() {
   const scrollNext = useCallback(() => {
     if (emblaApi) emblaApi.scrollNext();
   }, [emblaApi]);
+  
+  const scrollProductPrev = useCallback(() => {
+    if (productEmblaApi) productEmblaApi.scrollPrev();
+  }, [productEmblaApi]);
+  
+  const scrollProductNext = useCallback(() => {
+    if (productEmblaApi) productEmblaApi.scrollNext();
+  }, [productEmblaApi]);
   
   useEffect(() => {
     if (emblaApi) {
@@ -257,6 +274,19 @@ export default function HomePage() {
       };
     }
   }, [emblaApi]);
+  
+  useEffect(() => {
+    if (productEmblaApi) {
+      productEmblaApi.on('select', () => {
+        setCurrentProduct(productEmblaApi.selectedScrollSnap());
+      });
+      
+      // Return cleanup function
+      return () => {
+        productEmblaApi.off('select', () => {});
+      };
+    }
+  }, [productEmblaApi]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -282,14 +312,14 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <header className="bg-white dark:bg-[#01162f] text-foreground dark:text-white">
+      <header className="bg-white dark:bg-[#01162f] text-foreground dark:text-white sticky top-0 z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center">
               <img
                 src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
                 alt="OPIAN Rewards"
-                className="h-10 w-auto"
+                className="h-8 sm:h-10 w-auto"
                 onError={(e) => {
                   const img = e.target as HTMLImageElement;
                   img.onerror = null;
@@ -297,12 +327,16 @@ export default function HomePage() {
                 }}
               />
             </div>
+            
+            {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-8">
               <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Home</a>
               <a href="#how-it-works" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
               <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">FAQ</a>
             </nav>
-            <div className="flex items-center space-x-4">
+            
+            {/* Desktop buttons */}
+            <div className="hidden md:flex items-center space-x-4">
               <ThemeToggle />
               <Button 
                 variant="outline" 
@@ -318,7 +352,71 @@ export default function HomePage() {
                 Sign Up
               </Button>
             </div>
+            
+            {/* Mobile buttons */}
+            <div className="flex md:hidden items-center space-x-3">
+              <ThemeToggle />
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="ml-auto text-[#43EB3E] p-1"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </Button>
+            </div>
           </div>
+          
+          {/* Mobile Navigation - Dropdown */}
+          {mobileMenuOpen && (
+            <div className="md:hidden py-4 px-2 space-y-3 bg-white dark:bg-[#01162f] border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top">
+              <nav className="flex flex-col space-y-3">
+                <a 
+                  href="#" 
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Home
+                </a>
+                <a 
+                  href="#how-it-works" 
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  How It Works
+                </a>
+                <a 
+                  href="#" 
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  FAQ
+                </a>
+              </nav>
+              
+              <div className="flex space-x-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/login");
+                  }}
+                >
+                  Login
+                </Button>
+                <Button 
+                  className="flex-1 bg-[#43EB3E] hover:bg-[#3ad036] text-black font-medium"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/register");
+                  }}
+                >
+                  Sign Up
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -671,7 +769,108 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          {/* Desktop Grid View */}
+          {/* Mobile Carousel View */}
+          <div className="md:hidden">
+            <div className="relative overflow-hidden">
+              <div className="flex justify-between items-center mb-4">
+                <Button
+                  onClick={scrollProductPrev}
+                  variant="ghost"
+                  size="sm"
+                  className="text-[#43EB3E] absolute left-0 z-10 hover:bg-black/10 dark:hover:bg-white/10"
+                >
+                  <ChevronLeft className="h-8 w-8" />
+                </Button>
+                
+                <Button
+                  onClick={scrollProductNext}
+                  variant="ghost"
+                  size="sm"
+                  className="text-[#43EB3E] absolute right-0 z-10 hover:bg-black/10 dark:hover:bg-white/10"
+                >
+                  <ChevronRight className="h-8 w-8" />
+                </Button>
+              </div>
+              
+              <div className="overflow-hidden" ref={productEmblaRef}>
+                <div className="flex">
+                  {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
+                    <div key={`mobile-${packageName}`} className="flex-[0_0_90%] min-w-0 pl-4 first:pl-8 pr-4">
+                      <Card 
+                        className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group flex flex-col h-[800px]`}
+                      >
+                        {/* Particle-like green shade overlay */}
+                        <div className="absolute inset-0 bg-[#43EB3E] opacity-5 dark:opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
+                        <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full bg-[#43EB3E] opacity-10 dark:opacity-15 mix-blend-overlay group-hover:opacity-20 dark:group-hover:opacity-25 transition-all duration-700"></div>
+                        <div className="absolute bottom-0 left-0 w-16 h-16 rounded-tr-full bg-[#43EB3E] opacity-10 dark:opacity-15 mix-blend-overlay group-hover:opacity-20 dark:group-hover:opacity-25 transition-all duration-700"></div>
+                        
+                        {/* Small particles for animation */}
+                        <div className="absolute top-[10%] right-[15%] w-2 h-2 rounded-full bg-[#43EB3E] opacity-20 
+                            group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:opacity-30 transition-all duration-1000"></div>
+                        <div className="absolute top-[75%] left-[18%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-30
+                            group-hover:translate-x-2 group-hover:translate-y-1 group-hover:opacity-40 transition-all duration-700"></div>
+                        <div className="absolute bottom-[30%] right-[22%] w-1.5 h-1.5 rounded-full bg-[#43EB3E] opacity-25
+                            group-hover:-translate-x-1 group-hover:translate-y-2 group-hover:opacity-35 transition-all duration-900"></div>
+                        
+                        <CardHeader className="pb-2 relative z-10">
+                          <Badge variant="outline" className={`mb-2 font-semibold border-[#43EB3E] text-[#43EB3E]`}>
+                            {packageName}
+                          </Badge>
+                          <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
+                          <CardDescription className="text-gray-300 font-medium">per month</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pb-2 relative z-10 flex-grow overflow-y-auto max-h-[550px]">
+                          <ul className="space-y-1.5">
+                            {ALL_FEATURES.map((feature, index) => {
+                              const value = feature.values[packageName as keyof typeof feature.values];
+                              const isAvailable = value !== false;
+                              return (
+                                <li key={index} className="flex items-start">
+                                  {isAvailable ? (
+                                    <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
+                                  ) : (
+                                    <X className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-red-500" />
+                                  )}
+                                  <span className={`text-xs font-medium ${isAvailable ? 'text-gray-200' : 'text-gray-500'}`}>
+                                    {typeof value === 'string' ? `${feature.name}: ${value}` : feature.name}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </CardContent>
+                        <CardFooter className="relative z-10 mt-auto">
+                          <Button 
+                            className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
+                            onClick={() => navigate(`/register?package=${packageName}`)}
+                          >
+                            Get Started
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Package carousel indicators */}
+              <div className="flex justify-center mt-4 space-x-2">
+                {Object.keys(PACKAGE_FEATURES).map((_, index) => (
+                  <div 
+                    key={`indicator-${index}`}
+                    className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                      currentProduct === index ? 'bg-[#43EB3E]' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          {/* Desktop Grid View */}
+          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
               <Card 
                 key={packageName} 
