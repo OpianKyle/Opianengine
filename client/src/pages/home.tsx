@@ -1070,16 +1070,18 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-gray-100 dark:bg-[#01162f] text-gray-600 dark:text-gray-300 py-12">
         <div className="container mx-auto px-4">
-          <img 
-            src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
-            alt="OPIAN Rewards" 
-            className="h-10 w-auto mb-8 mx-auto"
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.onerror = null;
-              img.src = '/logo-fallback.png';
-            }}
-          />
+          <div className="flex justify-start mb-8">
+            <img 
+              src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
+              alt="OPIAN Rewards" 
+              className="h-10 w-auto"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.onerror = null;
+                img.src = '/logo-fallback.png';
+              }}
+            />
+          </div>
           
           <div className="flex flex-col lg:flex-row justify-between mb-8">
             {/* Left column - Contact Information */}
