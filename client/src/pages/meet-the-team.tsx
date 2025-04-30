@@ -395,7 +395,7 @@ export default function TeamPage() {
                           }}
                         >
                           {/* Image Container */}
-                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-72'}`}>
+                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-72 md:h-96'}`}>
                             <img 
                               src={member.image} 
                               alt={member.name}
