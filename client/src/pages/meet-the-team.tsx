@@ -353,7 +353,8 @@ export default function TeamPage() {
                     // Calculate the position relative to active index and group
                     const currentGroup = Math.floor(activeIndex/3);
                     const isInCurrentGroup = currentGroup * 3 <= index && index < currentGroup * 3 + 3;
-                    const isActive = isInCurrentGroup;
+                    // Consider all members as active for click purposes
+                    const isActive = true;
                     const isCenterActive = index === activeIndex;
                     
                     // Calculate distance for fading effect
@@ -371,10 +372,10 @@ export default function TeamPage() {
                         key={member.id}
                         className={`w-1/3 flex-shrink-0 flex flex-col items-center transition-all duration-500 ease-in-out px-2 ${isExpanded ? 'justify-start' : 'justify-center'}`}
                         style={{ 
-                          opacity: isCenterActive ? 1 : isActive ? 0.7 : 0.3,
-                          transform: `scale(${isCenterActive ? 1 : isActive ? 0.9 : 0.7})`,
-                          zIndex: isCenterActive ? 10 : isActive ? 5 : 1,
-                          pointerEvents: isActive ? 'auto' : 'none',
+                          opacity: isCenterActive ? 1 : isInCurrentGroup ? 0.7 : 0.3,
+                          transform: `scale(${isCenterActive ? 1 : isInCurrentGroup ? 0.9 : 0.7})`,
+                          zIndex: isCenterActive ? 10 : isInCurrentGroup ? 5 : 1,
+                          pointerEvents: 'auto', // Allow clicks on all members
                         }}
                       >
                         {/* Member Card */}
