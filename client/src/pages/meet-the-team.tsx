@@ -46,63 +46,63 @@ export default function TeamPage() {
       name: "Lance Heynes",
       title: "Director of Operations",
       description: "Lance ensures the seamless integration of our services to enhance member satisfaction and engagement.",
-      image: "/team-member-image.png", // Using the provided image as placeholder
+      image: "/kyle-mcbryne-300x300.png"
     },
     {
       id: 2,
       name: "Andre Visser",
       title: "Head of Marketing",
       description: "Andre crafts innovative strategies to promote our reward programs, helping our members maximize their benefits.",
-      image: "/team-member-image.png", // Using the provided image as placeholder
+      image: "/kyle-mcbryne-300x300.png"
     },
     {
       id: 3,
       name: "Wessel Krige",
       title: "Social Media Manager",
       description: "Wessel focuses on building strong relationships with our members via all social media channels, ensuring they understand and utilize their rewards.",
-      image: "/team-member-image.png", // Using the provided image as placeholder
+      image: "/kyle-mcbryne-300x300.png"
     },
     {
       id: 4,
       name: "Mic-Shane Brown",
       title: "Head of Admin",
       description: "Mic-Shane focuses on managing internal systems and the team that ensures an unparalleled and rewarding customer experience.",
-      image: "/team-member-image.png", // Using the provided image as placeholder
+      image: "/kyle-mcbryne-300x300.png"
     },
     {
       id: 5,
       name: "Lionel Lottering",
       title: "Head of Investor Matters",
       description: "Lionel looks after our investors and ensures the establishment of win-win relationships between investors and the company.",
-      image: "/team-member-image.png", // Using the provided image as placeholder
+      image: "/kyle-mcbryne-300x300.png"
     },
     {
       id: 6,
       name: "Shannon Heugh",
       title: "Client Services Specialist",
       description: "Shannon is responsible for data management and ensuring communications that result in an amazing customer service journey.",
-      image: "/team-member-image.png", // Using the provided image as placeholder
+      image: "/kyle-mcbryne-300x300.png"
     },
     {
       id: 7,
       name: "Jodi Rensburg",
       title: "Client Services Specialist",
       description: "Jodi is responsible for data management and ensuring communications that result in an amazing customer service journey.",
-      image: "/team-member-image.png", // Using the provided image as placeholder
+      image: "/kyle-mcbryne-300x300.png"
     },
     {
       id: 8,
       name: "Cheslin Matinka",
       title: "Client Consultant",
       description: "Cheslin is responsible for sales and client interactions that ensured our clients have an amazing customer service journey.",
-      image: "/team-member-image.png", // Using the provided image as placeholder
+      image: "/kyle-mcbryne-300x300.png"
     },
     {
       id: 9,
       name: "Kyle McBryne",
-      title: "Systems Developer",
+      title: "Systems Developer", 
       description: "Kyle is responsible for our programs and systems and ensures the smooth workflows that empower our clients with the correct data.",
-      image: "/team-member-image.png", // Using the provided image as placeholder
+      image: "/kyle-mcbryne-300x300.png"
     },
   ];
 
@@ -114,7 +114,7 @@ export default function TeamPage() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/">
-              <a className="flex items-center">
+              <div className="flex items-center">
                 <img 
                   src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
                   alt="OPIAN Rewards" 
@@ -125,26 +125,26 @@ export default function TeamPage() {
                     img.src = '/logo-fallback.png';
                   }}
                 />
-              </a>
+              </div>
             </Link>
           </div>
           
           {/* Desktop navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <Link href="/">
-              <a className="text-[rgb(8,42,90)] dark:text-white hover:text-[#43EB3E] transition-colors">
+              <div className="text-[rgb(8,42,90)] dark:text-white hover:text-[#43EB3E] transition-colors">
                 Home
-              </a>
+              </div>
             </Link>
             <Link href="/how-it-works">
-              <a className="text-[rgb(8,42,90)] dark:text-white hover:text-[#43EB3E] transition-colors">
+              <div className="text-[rgb(8,42,90)] dark:text-white hover:text-[#43EB3E] transition-colors">
                 How It Works
-              </a>
+              </div>
             </Link>
             <Link href="/meet-the-team">
-              <a className="text-[#43EB3E] font-medium">
+              <div className="text-[#43EB3E] font-medium">
                 Meet The Team
-              </a>
+              </div>
             </Link>
             <div className="flex space-x-2">
               <ThemeToggle />
@@ -315,7 +315,7 @@ export default function TeamPage() {
                       onError={(e) => {
                         const img = e.target as HTMLImageElement;
                         img.onerror = null;
-                        img.src = '/image_1746004409981.png'; // Fallback to provided image
+                        img.src = '/kyle-mcbryne-300x300.png'; // Fallback to Kyle's image
                       }}
                     />
                     
@@ -399,7 +399,7 @@ export default function TeamPage() {
                   onError={(e) => {
                     const img = e.target as HTMLImageElement;
                     img.onerror = null;
-                    img.src = '/image_1746004409981.png'; // Fallback to provided image
+                    img.src = '/kyle-mcbryne-300x300.png'; // Fallback to Kyle's image
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#01162f] to-transparent opacity-70"></div>
