@@ -346,12 +346,14 @@ export default function TeamPage() {
                 <div 
                   className="absolute w-full flex transition-transform duration-500 ease-in-out"
                   style={{ 
-                    transform: `translateX(calc(-${activeIndex * 33.33}% + ${activeIndex === 0 ? 0 : '16.67%'}))`,
+                    transform: `translateX(calc(-${activeIndex * 33.33}% + 33.33%))`,
                   }}
                 >
                   {teamMembers.map((member, index) => {
-                    // Calculate the position relative to active index
-                    const isActive = Math.floor(activeIndex/3) * 3 <= index && index < Math.floor(activeIndex/3) * 3 + 3;
+                    // Calculate the position relative to active index and group
+                    const currentGroup = Math.floor(activeIndex/3);
+                    const isInCurrentGroup = currentGroup * 3 <= index && index < currentGroup * 3 + 3;
+                    const isActive = isInCurrentGroup;
                     const isCenterActive = index === activeIndex;
                     
                     // Calculate distance for fading effect
