@@ -294,21 +294,22 @@ export default function TeamPage() {
         </section>
         
         {/* Team Members Carousel Section */}
-        <section className="py-16 relative overflow-hidden">
-          {/* Gradient background for section - dark purple to blue */}
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-900 via-blue-900 to-purple-900"></div>
-          
+        <section className="py-16 bg-gray-50 dark:bg-[#022b5c] relative overflow-hidden">
           {/* Background decorative elements */}
           <div className="absolute inset-0 pointer-events-none">
-            {/* Light streaks and effects */}
-            <div className="absolute -right-20 top-1/4 w-40 h-40 rounded-full bg-blue-400/10 blur-xl"></div>
-            <div className="absolute left-10 bottom-10 w-60 h-60 rounded-full bg-purple-400/10 blur-xl"></div>
-            <div className="absolute right-1/4 top-1/3 w-20 h-20 rounded-full bg-[#43EB3E]/10 blur-md"></div>
+            {/* Light mode decorations */}
+            <div className="absolute -right-20 top-1/4 w-40 h-40 rounded-full bg-[#43EB3E]/5 dark:opacity-0"></div>
+            <div className="absolute left-10 bottom-10 w-20 h-20 rounded-full bg-[#43EB3E]/5 dark:opacity-0"></div>
             
-            {/* Additional glow effects */}
-            <div className="absolute top-20 right-20 w-4 h-4 rounded-full bg-white/10"></div>
-            <div className="absolute bottom-40 right-1/4 w-12 h-1 rounded bg-white/10"></div>
-            <div className="absolute top-1/2 left-1/4 w-1 h-12 rounded bg-white/10"></div>
+            {/* Dark mode decorations */}
+            <div className="absolute -left-10 top-10 w-40 h-40 rounded-full bg-[#043375]/20 opacity-0 dark:opacity-100"></div>
+            
+            {/* Scattered small elements */}
+            <div className="opacity-0 dark:opacity-100">
+              <div className="absolute top-20 right-20 w-4 h-4 rounded-full bg-[#43EB3E]/10"></div>
+              <div className="absolute bottom-40 right-1/4 w-6 h-1 rounded bg-[#43EB3E]/10"></div>
+              <div className="absolute top-1/2 left-1/4 w-1 h-6 rounded bg-[#43EB3E]/10"></div>
+            </div>
           </div>
           
           {/* Team Member Carousel Container */}
@@ -378,38 +379,29 @@ export default function TeamPage() {
                       >
                         {/* Member Card */}
                         <div 
-                          className={`relative overflow-hidden transition-all duration-500 ${
-                            isExpanded ? 'w-[300%] absolute left-[-100%] z-20 mx-auto bg-transparent dark:bg-transparent' : 'w-full cursor-pointer bg-transparent dark:bg-transparent'
+                          className={`relative overflow-hidden rounded-lg shadow-lg transition-all duration-500 ${
+                            isExpanded ? 'w-[300%] absolute left-[-100%] z-20 mx-auto bg-white dark:bg-[#01162f]' : 'w-full cursor-pointer bg-white dark:bg-[#01162f]'
                           }`}
                           onClick={() => !isExpanded && isCenterActive && toggleMemberExpand(member.id)}
                         >
                           {/* Image Container */}
                           <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-64'}`}>
-                            {/* Hexagon Shape Clip Path for Images */}
-                            <div className="relative">
-                              {/* Hexagon border */}
-                              <div className={`absolute inset-0 hexagon-shape border border-white/50 ${isCenterActive ? 'opacity-100' : 'opacity-50'}`}></div>
-                              
-                              {/* Image with hexagon clip */}
-                              <div className="hexagon-shape overflow-hidden">
-                                <img 
-                                  src={member.image} 
-                                  alt={member.name}
-                                  className={`w-full h-full object-cover transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
-                                  onError={(e) => {
-                                    const img = e.target as HTMLImageElement;
-                                    img.onerror = null;
-                                    img.src = '/Kyle-McBryne.png';
-                                  }}
-                                />
-                              </div>
-                            </div>
+                            <img 
+                              src={member.image} 
+                              alt={member.name}
+                              className={`w-full h-full object-cover transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
+                              onError={(e) => {
+                                const img = e.target as HTMLImageElement;
+                                img.onerror = null;
+                                img.src = '/Kyle-McBryne.png';
+                              }}
+                            />
                             
-                            {/* Name and Title Below Image */}
+                            {/* Name and Title Overlay */}
                             {!isExpanded && (
-                              <div className="mt-4 text-center">
-                                <h3 className="text-xl font-bold text-white mb-1 uppercase">{member.name}</h3>
-                                <p className="text-[#43EB3E] uppercase text-sm">{member.title}</p>
+                              <div className="absolute inset-0 bg-gradient-to-t from-[#01162f] via-[#01162f]/40 to-transparent flex flex-col justify-end p-6">
+                                <h3 className="text-xl font-bold text-white mb-1">{member.name}</h3>
+                                <p className="text-[#43EB3E]">{member.title}</p>
                               </div>
                             )}
                             
