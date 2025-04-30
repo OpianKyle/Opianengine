@@ -138,7 +138,7 @@ export default function HowItWorksPage() {
       <section className="bg-white dark:bg-[#01162f] text-foreground dark:text-white py-16 px-4">
         <div className="container mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-8">How It Works</h1>
-          <p className="text-xl max-w-3xl mx-auto mb-12">
+          <p className="text-xl max-w-3xl mx-auto mb-12 text-[#01162f] dark:text-white">
             Getting started with Opian Rewards is simple. Follow these steps to start earning rewards on your everyday purchases.
           </p>
         </div>
@@ -159,7 +159,7 @@ export default function HowItWorksPage() {
                 <div className="text-center">
                   {step.icon}
                   <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">{step.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-300">{step.description}</p>
+                  <p className="text-[#01162f] dark:text-gray-300">{step.description}</p>
                 </div>
               </div>
             ))}
@@ -173,7 +173,7 @@ export default function HowItWorksPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground dark:text-white">
             Join Opian Rewards for Exclusive Benefits and Savings!
           </h2>
-          <p className="text-xl mb-8 max-w-3xl mx-auto text-foreground dark:text-white">
+          <p className="text-xl mb-8 max-w-3xl mx-auto text-[#01162f] dark:text-white">
             Are you ready to experience rewards like never before?
           </p>
           <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
