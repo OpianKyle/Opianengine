@@ -773,27 +773,25 @@ export default function HomePage() {
           {/* Mobile Carousel View */}
           <div className="md:hidden">
             <div className="relative overflow-hidden">
-              <div className="flex justify-between items-center mb-4">
+              <div className="overflow-hidden relative" ref={productEmblaRef}>
                 <Button
                   onClick={scrollProductPrev}
                   variant="ghost"
                   size="sm"
-                  className="text-[#43EB3E] absolute left-0 z-10 hover:bg-black/10 dark:hover:bg-white/10"
+                  className="text-[#43EB3E] absolute left-1 top-1/2 -translate-y-1/2 z-20 h-10 w-10 p-0 rounded-full bg-black/50 hover:bg-black/70 shadow-lg"
                 >
-                  <ChevronLeft className="h-8 w-8" />
+                  <ChevronLeft className="h-6 w-6" />
                 </Button>
                 
                 <Button
                   onClick={scrollProductNext}
                   variant="ghost"
                   size="sm"
-                  className="text-[#43EB3E] absolute right-0 z-10 hover:bg-black/10 dark:hover:bg-white/10"
+                  className="text-[#43EB3E] absolute right-1 top-1/2 -translate-y-1/2 z-20 h-10 w-10 p-0 rounded-full bg-black/50 hover:bg-black/70 shadow-lg"
                 >
-                  <ChevronRight className="h-8 w-8" />
+                  <ChevronRight className="h-6 w-6" />
                 </Button>
-              </div>
-              
-              <div className="overflow-hidden" ref={productEmblaRef}>
+                
                 <div className="flex">
                   {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
                     <div key={`mobile-${packageName}`} className="flex-[0_0_90%] min-w-0 pl-4 first:pl-8 pr-4">
@@ -866,24 +864,7 @@ export default function HomePage() {
                   />
                 ))}
               </div>
-              
-              {/* Navigation buttons below carousel */}
-              <div className="flex justify-center space-x-4 mt-6">
-                <Button
-                  onClick={scrollProductPrev}
-                  variant="outline"
-                  className="border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
-                >
-                  <ChevronLeft className="h-5 w-5 mr-1" /> Previous
-                </Button>
-                <Button
-                  onClick={scrollProductNext}
-                  variant="outline"
-                  className="border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
-                >
-                  Next <ChevronRight className="h-5 w-5 ml-1" />
-                </Button>
-              </div>
+
             </div>
           </div>
           
