@@ -1070,71 +1070,69 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-gray-100 dark:bg-[#01162f] text-gray-600 dark:text-gray-300 py-12">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between">
-            <div className="mb-8 md:mb-0">
+          <div className="flex flex-col justify-between">
+            <div>
               <img 
                 src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
                 alt="OPIAN Rewards" 
-                className="h-10 w-auto mb-4"
+                className="h-10 w-auto mb-8 mx-auto"
                 onError={(e) => {
                   const img = e.target as HTMLImageElement;
                   img.onerror = null;
                   img.src = '/logo-fallback.png';
                 }}
               />
-              <p className="text-gray-500 dark:text-gray-400 max-w-xs">
-                OPIAN Rewards makes your money work harder. Earn rewards on every transaction, referral, and financial decision.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Packages</h3>
-                <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Momentum</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prosper</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prestige</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Resources</h3>
-                <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Help Center</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">FAQs</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Blog</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Contact</a></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Legal</h3>
-                <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Privacy Policy</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Cookie Policy</a></li>
-                </ul>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-4">Packages</h3>
+                  <ul className="space-y-2">
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Momentum</a></li>
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prosper</a></li>
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prestige</a></li>
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
+                  </ul>
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-4">Resources</h3>
+                  <ul className="space-y-2">
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Help Center</a></li>
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">FAQs</a></li>
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Blog</a></li>
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Contact</a></li>
+                  </ul>
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-4">Legal</h3>
+                  <ul className="space-y-2">
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Privacy Policy</a></li>
+                    <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Cookie Policy</a></li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-200 dark:border-gray-800 mt-12 pt-8 text-gray-500 dark:text-gray-400">
+          <div className="border-t border-gray-200 dark:border-gray-800 mt-8 pt-8 text-gray-500 dark:text-gray-400">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <h3 className="font-semibold mb-2">Contact Information</h3>
-                <p className="flex items-center mb-1">
+                <h3 className="font-semibold mb-2 text-center md:text-left">Contact Information</h3>
+                <p className="flex items-center mb-1 justify-center md:justify-start">
                   <Phone className="h-4 w-4 mr-2" />
                   <a href="tel:+27861263346" className="hover:text-[#43EB3E] transition-colors">+27 86 126 3346</a>
                 </p>
-                <p className="flex items-center mb-1">
+                <p className="flex items-center mb-1 justify-center md:justify-start">
                   <Mail className="h-4 w-4 mr-2" />
                   <a href="mailto:info@opianrewards.com" className="hover:text-[#43EB3E] transition-colors">info@opianrewards.com</a>
                 </p>
-                <p className="flex items-start">
+                <p className="flex items-start justify-center md:justify-start">
                   <MapPin className="h-4 w-4 mr-2 mt-1 flex-shrink-0" />
                   <span>260 Uys Krige Dr, Loevenstein, Cape Town, 7530, South Africa</span>
                 </p>
               </div>
               <div>
-                <h3 className="font-semibold mb-2">Legal Information</h3>
+                <h3 className="font-semibold mb-2 text-center md:text-left">Legal Information</h3>
                 <p className="mb-1">Opian Rewards (Pty) Ltd is a Juristic Representative of Opian Financial Services (Pty) Ltd</p>
                 <p className="mb-1">Company Registration Number: 2021/411623/07</p>
                 <p className="mb-1">Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider</p>
