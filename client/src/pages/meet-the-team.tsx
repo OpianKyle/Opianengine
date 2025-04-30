@@ -379,13 +379,13 @@ export default function TeamPage() {
                       >
                         {/* Member Card */}
                         <div 
-                          className={`relative overflow-hidden rounded-lg shadow-lg transition-all duration-500 ${
-                            isExpanded ? 'w-[300%] absolute left-[-100%] z-20 mx-auto bg-white dark:bg-[#01162f]' : 'w-full cursor-pointer bg-white dark:bg-[#01162f]'
+                          className={`relative overflow-hidden transition-all duration-500 ${
+                            isExpanded ? 'w-[300%] absolute left-[-100%] z-20 mx-auto' : 'w-full cursor-pointer'
                           }`}
                           onClick={() => !isExpanded && isCenterActive && toggleMemberExpand(member.id)}
                         >
                           {/* Image Container */}
-                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-64'}`}>
+                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-72'}`}>
                             <img 
                               src={member.image} 
                               alt={member.name}
@@ -399,9 +399,9 @@ export default function TeamPage() {
                             
                             {/* Name and Title Overlay */}
                             {!isExpanded && (
-                              <div className="absolute inset-0 bg-gradient-to-t from-[#01162f] via-[#01162f]/40 to-transparent flex flex-col justify-end p-6">
-                                <h3 className="text-xl font-bold text-white mb-1">{member.name}</h3>
-                                <p className="text-[#43EB3E]">{member.title}</p>
+                              <div className="absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[#01162f] via-[#01162f]/70 to-transparent flex flex-col justify-end p-4">
+                                <h3 className="text-xl font-bold text-white mb-1 text-right">{member.name}</h3>
+                                <p className="text-[#43EB3E] text-right">{member.title}</p>
                               </div>
                             )}
                             
@@ -410,7 +410,7 @@ export default function TeamPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="absolute top-2 right-2 md:hidden bg-white/80 dark:bg-[#01162f]/80 text-[#01162f] dark:text-white hover:bg-white/90 dark:hover:bg-[#01162f]/90 rounded-full"
+                                className="absolute top-2 right-2 md:hidden bg-[#01162f]/70 text-white hover:bg-[#01162f]/90 rounded-full"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleMemberExpand(member.id);
@@ -423,17 +423,17 @@ export default function TeamPage() {
                           
                           {/* Member Details - Only shown when expanded */}
                           {isExpanded && (
-                            <div className={`p-6 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
+                            <div className={`p-6 bg-[#01162f]/95 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
                               <div className="md:flex md:justify-between md:items-start">
                                 <div>
-                                  <h3 className="text-2xl font-bold text-[rgb(8,42,90)] dark:text-white mb-1">{member.name}</h3>
+                                  <h3 className="text-2xl font-bold text-white mb-1">{member.name}</h3>
                                   <p className="text-[#43EB3E] text-lg mb-4">{member.title}</p>
                                 </div>
                                 
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="hidden md:flex bg-white/80 dark:bg-[#01162f]/80 text-[#01162f] dark:text-white hover:bg-white/90 dark:hover:bg-[#01162f]/90 rounded-full"
+                                  className="hidden md:flex bg-[#01162f]/50 text-white hover:bg-[#01162f]/70 rounded-full"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     toggleMemberExpand(member.id);
@@ -443,15 +443,15 @@ export default function TeamPage() {
                                 </Button>
                               </div>
                               
-                              <p className="text-[rgb(8,42,90)] dark:text-gray-200 mb-4">{member.description}</p>
+                              <p className="text-gray-200 mb-4">{member.description}</p>
                               
-                              <div className="border-t border-gray-200 dark:border-[#022b5c] pt-4 mt-4">
-                                <h4 className="font-medium mb-2 text-[rgb(8,42,90)] dark:text-white">Connect with {member.name.split(' ')[0]}</h4>
+                              <div className="border-t border-[#022b5c] pt-4 mt-4">
+                                <h4 className="font-medium mb-2 text-white">Connect with {member.name.split(' ')[0]}</h4>
                                 <div className="flex space-x-3">
-                                  <Button variant="outline" size="sm" className="text-[rgb(8,42,90)] dark:text-white border-[rgb(8,42,90)] dark:border-white">
+                                  <Button variant="outline" size="sm" className="text-white border-white hover:bg-[#01162f]/50">
                                     LinkedIn
                                   </Button>
-                                  <Button variant="outline" size="sm" className="text-[rgb(8,42,90)] dark:text-white border-[rgb(8,42,90)] dark:border-white">
+                                  <Button variant="outline" size="sm" className="text-white border-white hover:bg-[#01162f]/50">
                                     Email
                                   </Button>
                                 </div>
