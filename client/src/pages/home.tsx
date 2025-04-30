@@ -866,6 +866,24 @@ export default function HomePage() {
                   />
                 ))}
               </div>
+              
+              {/* Navigation buttons below carousel */}
+              <div className="flex justify-center space-x-4 mt-6">
+                <Button
+                  onClick={scrollProductPrev}
+                  variant="outline"
+                  className="border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
+                >
+                  <ChevronLeft className="h-5 w-5 mr-1" /> Previous
+                </Button>
+                <Button
+                  onClick={scrollProductNext}
+                  variant="outline"
+                  className="border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
+                >
+                  Next <ChevronRight className="h-5 w-5 ml-1" />
+                </Button>
+              </div>
             </div>
           </div>
           
