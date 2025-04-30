@@ -45,63 +45,63 @@ export default function TeamPage() {
       name: "Lance Heynes",
       title: "Director of Operations",
       description: "Lance ensures the seamless integration of our services to enhance member satisfaction and engagement. With over 10 years of experience in operations management, Lance has developed efficient systems that prioritize both member benefits and company growth. His expertise in customer experience design has been instrumental in shaping the rewarding journey that our members enjoy.",
-      image: "/kyle-mcbryne-300x300.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 2,
       name: "Andre Visser",
       title: "Head of Marketing",
       description: "Andre crafts innovative strategies to promote our reward programs, helping our members maximize their benefits. His background in digital marketing and consumer psychology gives him unique insights into creating campaigns that truly resonate with our audience. Andre believes in data-driven approaches combined with creative storytelling to showcase the value of our rewards platform.",
-      image: "/kyle-mcbryne-300x300.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 3,
       name: "Wessel Krige",
       title: "Social Media Manager",
       description: "Wessel focuses on building strong relationships with our members via all social media channels, ensuring they understand and utilize their rewards. He has pioneered our community engagement approach, creating spaces where members can share experiences and tips with each other. Wessel's content strategy emphasizes educational content that helps members get the most value from their membership.",
-      image: "/kyle-mcbryne-300x300.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 4,
       name: "Mic-Shane Brown",
       title: "Head of Admin",
       description: "Mic-Shane focuses on managing internal systems and the team that ensures an unparalleled and rewarding customer experience. His attention to detail and process optimization skills have created a seamless administrative backbone for our operations. Mic-Shane leads a dedicated team that handles everything from member inquiries to complex reward tracking scenarios.",
-      image: "/kyle-mcbryne-300x300.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 5,
       name: "Lionel Lottering",
       title: "Head of Investor Matters",
       description: "Lionel looks after our investors and ensures the establishment of win-win relationships between investors and the company. With a background in finance and business development, he maintains transparency and alignment between company growth and investor expectations. Lionel has been instrumental in securing the funding that powers our rewards innovation.",
-      image: "/kyle-mcbryne-300x300.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 6,
       name: "Shannon Heugh",
       title: "Client Services Specialist",
       description: "Shannon is responsible for data management and ensuring communications that result in an amazing customer service journey. Her meticulous approach to member data ensures that rewards are accurately tracked and delivered. Shannon works closely with our systems team to continuously improve the member experience through data-driven insights.",
-      image: "/kyle-mcbryne-300x300.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 7,
       name: "Jodi Rensburg",
       title: "Client Services Specialist",
       description: "Jodi is responsible for data management and ensuring communications that result in an amazing customer service journey. Her expertise in customer communications has helped develop our personalized notification system that keeps members informed about their rewards opportunities. Jodi believes that timely, relevant communication is key to member satisfaction.",
-      image: "/kyle-mcbryne-300x300.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 8,
       name: "Cheslin Matinka",
       title: "Client Consultant",
       description: "Cheslin is responsible for sales and client interactions that ensured our clients have an amazing customer service journey. His consultative approach helps match prospective members with the perfect package for their needs. Cheslin's deep knowledge of our rewards ecosystem allows him to demonstrate exactly how each member can maximize their benefits.",
-      image: "/kyle-mcbryne-300x300.png"
+      image: "/Kyle-McBryne.png"
     },
     {
       id: 9,
       name: "Kyle McBryne",
       title: "Systems Developer", 
       description: "Kyle is responsible for our programs and systems and ensures the smooth workflows that empower our clients with the correct data. His technical expertise has created the robust platform that powers our rewards tracking and delivery. Kyle continuously innovates to add new features that enhance the member experience and streamline internal operations.",
-      image: "/kyle-mcbryne-300x300.png"
+      image: "/Kyle-McBryne.png"
     },
   ];
 
@@ -393,7 +393,7 @@ export default function TeamPage() {
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement;
                                 img.onerror = null;
-                                img.src = '/kyle-mcbryne-300x300.png';
+                                img.src = '/Kyle-McBryne.png';
                               }}
                             />
                             
