@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { useUser } from "@/hooks/use-user";
 import { useLocation } from "wouter";
-import { Loader2, CheckCircle, ArrowRight, CreditCard, Users, Gift, ArrowUpRight, ShoppingCart, Receipt, BarChart2, ChevronLeft, ChevronRight, X, Menu } from "lucide-react";
+import { Loader2, CheckCircle, ArrowRight, CreditCard, Users, Gift, ArrowUpRight, ShoppingCart, Receipt, BarChart2, ChevronLeft, ChevronRight, X, Menu, Phone, Mail, MapPin } from "lucide-react";
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -1116,8 +1116,33 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-200 dark:border-gray-800 mt-12 pt-8 text-center text-gray-500 dark:text-gray-400">
-            <p>&copy; {new Date().getFullYear()} OPIAN Rewards. All rights reserved.</p>
+          <div className="border-t border-gray-200 dark:border-gray-800 mt-12 pt-8 text-gray-500 dark:text-gray-400">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <h3 className="font-semibold mb-2">Contact Information</h3>
+                <p className="flex items-center mb-1">
+                  <Phone className="h-4 w-4 mr-2" />
+                  <a href="tel:+27861263346" className="hover:text-[#43EB3E] transition-colors">+27 86 126 3346</a>
+                </p>
+                <p className="flex items-center mb-1">
+                  <Mail className="h-4 w-4 mr-2" />
+                  <a href="mailto:info@opianrewards.com" className="hover:text-[#43EB3E] transition-colors">info@opianrewards.com</a>
+                </p>
+                <p className="flex items-start">
+                  <MapPin className="h-4 w-4 mr-2 mt-1 flex-shrink-0" />
+                  <span>260 Uys Krige Dr, Loevenstein, Cape Town, 7530, South Africa</span>
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2">Legal Information</h3>
+                <p className="mb-1">Opian Rewards (Pty) Ltd is a Juristic Representative of Opian Financial Services (Pty) Ltd</p>
+                <p className="mb-1">Company Registration Number: 2021/411623/07</p>
+                <p className="mb-1">Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider</p>
+                <p className="mb-1">Company Registration Number: 2018/584168/07</p>
+                <p>FSP No: 50974</p>
+              </div>
+            </div>
+            <p className="text-center">&copy; {new Date().getFullYear()} OPIAN Rewards. All rights reserved.</p>
           </div>
         </div>
       </footer>
