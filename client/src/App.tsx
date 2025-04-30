@@ -9,6 +9,7 @@ import Register from "@/pages/register";
 import ResetPassword from "@/pages/reset-password";
 import ReferralPage from "@/pages/referral"; // Import the referral form page
 import HowItWorks from "@/pages/how-it-works"; // Import the how it works page
+import MeetTheTeam from "@/pages/meet-the-team"; // Import the meet the team page
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 // Session timeout functionality has been removed
 // import { useSessionTimeout } from "@/hooks/use-session-timeout";
@@ -134,6 +135,9 @@ function Router() {
       </Route>
       <Route path="/how-it-works">
         <HowItWorks />
+      </Route>
+      <Route path="/meet-the-team">
+        <MeetTheTeam />
       </Route>
 
       {/* Admin Routes */}

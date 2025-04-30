@@ -356,6 +356,7 @@ export default function HomePage() {
             <nav className="hidden md:flex space-x-8">
               <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Home</a>
               <a href="/how-it-works" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
+              <a href="/meet-the-team" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Meet The Team</a>
               <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">FAQ</a>
             </nav>
             
@@ -408,6 +409,13 @@ export default function HomePage() {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   How It Works
+                </a>
+                <a 
+                  href="/meet-the-team" 
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Meet The Team
                 </a>
                 <a 
                   href="#" 
