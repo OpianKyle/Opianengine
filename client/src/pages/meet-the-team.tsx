@@ -382,7 +382,16 @@ export default function TeamPage() {
                           className={`relative overflow-hidden transition-all duration-500 ${
                             isExpanded ? 'w-[300%] absolute left-[-100%] z-20 mx-auto' : 'w-full cursor-pointer'
                           }`}
-                          onClick={() => !isExpanded && isCenterActive && toggleMemberExpand(member.id)}
+                          onClick={() => {
+                            if (isExpanded) return;
+                            if (isCenterActive) {
+                              toggleMemberExpand(member.id);
+                            } else {
+                              // Go directly to this member when not the active one
+                              setActiveIndex(index);
+                              setExpandedMember(null);
+                            }
+                          }}
                         >
                           {/* Image Container */}
                           <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-72'}`}>
