@@ -395,11 +395,11 @@ export default function TeamPage() {
                           }}
                         >
                           {/* Image Container */}
-                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-72'}`}>
+                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-72'}`} style={{height: '280px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#011d3d'}}>
                             <img 
                               src={member.image} 
                               alt={member.name}
-                              className={`w-full h-full object-cover transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
+                              className={`max-w-full max-h-full object-contain transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement;
                                 img.onerror = null;
@@ -433,7 +433,7 @@ export default function TeamPage() {
                           
                           {/* Member Details - Only shown when expanded */}
                           {isExpanded && (
-                            <div className={`p-6 bg-[#01162f]/95 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
+                            <div className={`p-6 bg-[#01162f]/95 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`} style={{minHeight: '320px', height: '100%'}}>
                               <div className="md:flex md:justify-between md:items-start">
                                 <div>
                                   <h3 className="text-2xl font-bold text-white mb-1">{member.name}</h3>
