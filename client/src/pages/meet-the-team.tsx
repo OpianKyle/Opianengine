@@ -381,7 +381,7 @@ export default function TeamPage() {
                         {/* Member Card */}
                         <div 
                           className={`relative overflow-hidden transition-all duration-500 ${
-                            isExpanded ? 'w-[300%] absolute left-[-100%] z-20 mx-auto' : 'w-full cursor-pointer'
+                            isExpanded ? 'w-[200%] md:w-[180%] z-20 mx-auto clearfix' : 'w-full cursor-pointer'
                           }`}
                           onClick={() => {
                             if (isExpanded) return;
@@ -395,7 +395,7 @@ export default function TeamPage() {
                           }}
                         >
                           {/* Image Container */}
-                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0' : 'h-72 md:h-96'}`}>
+                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-[30%] md:h-auto md:float-left' : 'h-72 md:h-96'}`}>
                             <img 
                               src={member.image} 
                               alt={member.name}
@@ -433,7 +433,7 @@ export default function TeamPage() {
                           
                           {/* Member Details - Only shown when expanded */}
                           {isExpanded && (
-                            <div className={`p-6 bg-[#01162f]/95 h-full md:min-h-[24rem] ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
+                            <div className={`p-6 bg-[#01162f]/95 h-full md:min-h-[24rem] ${isExpanded ? 'md:w-[70%] md:float-right md:pl-4' : ''}`}>
                               <div className="md:flex md:justify-between md:items-start">
                                 <div>
                                   <h3 className="text-2xl font-bold text-white mb-1">{member.name}</h3>
