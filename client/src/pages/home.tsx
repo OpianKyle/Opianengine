@@ -355,7 +355,7 @@ export default function HomePage() {
             {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-8">
               <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Home</a>
-              <a href="#how-it-works" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
+              <a href="/how-it-works" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
               <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">FAQ</a>
             </nav>
             
@@ -403,7 +403,7 @@ export default function HomePage() {
                   Home
                 </a>
                 <a 
-                  href="#how-it-works" 
+                  href="/how-it-works" 
                   className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -574,14 +574,25 @@ export default function HomePage() {
                   just a few simple steps.
                 </p>
                 
-                <Button 
-                  onClick={() => navigate("/register")}
-                  className="bg-[#43EB3E] hover:bg-[#3ad036] text-black mt-8"
-                  size="lg"
-                >
-                  Begin Your Journey
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-4 mt-8">
+                  <Button 
+                    onClick={() => navigate("/register")}
+                    className="bg-[#43EB3E] hover:bg-[#3ad036] text-black"
+                    size="lg"
+                  >
+                    Begin Your Journey
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                  <Button 
+                    onClick={() => navigate("/how-it-works")}
+                    variant="outline"
+                    className="border-foreground dark:border-white text-foreground dark:text-white hover:bg-foreground/10 dark:hover:bg-white/10"
+                    size="lg"
+                  >
+                    Learn More
+                    <ArrowUpRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
               </div>
             </div>
             
