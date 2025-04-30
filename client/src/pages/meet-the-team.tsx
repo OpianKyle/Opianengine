@@ -46,63 +46,63 @@ export default function TeamPage() {
       name: "Lance Heynes",
       title: "Director of Operations",
       description: "Lance ensures the seamless integration of our services to enhance member satisfaction and engagement.",
-      image: "/image_1746004409981.png", // Using the provided image as placeholder
+      image: "/team-member-image.png", // Using the provided image as placeholder
     },
     {
       id: 2,
       name: "Andre Visser",
       title: "Head of Marketing",
       description: "Andre crafts innovative strategies to promote our reward programs, helping our members maximize their benefits.",
-      image: "/image_1746004409981.png", // Using the provided image as placeholder
+      image: "/team-member-image.png", // Using the provided image as placeholder
     },
     {
       id: 3,
       name: "Wessel Krige",
       title: "Social Media Manager",
       description: "Wessel focuses on building strong relationships with our members via all social media channels, ensuring they understand and utilize their rewards.",
-      image: "/image_1746004409981.png", // Using the provided image as placeholder
+      image: "/team-member-image.png", // Using the provided image as placeholder
     },
     {
       id: 4,
       name: "Mic-Shane Brown",
       title: "Head of Admin",
       description: "Mic-Shane focuses on managing internal systems and the team that ensures an unparalleled and rewarding customer experience.",
-      image: "/image_1746004409981.png", // Using the provided image as placeholder
+      image: "/team-member-image.png", // Using the provided image as placeholder
     },
     {
       id: 5,
       name: "Lionel Lottering",
       title: "Head of Investor Matters",
       description: "Lionel looks after our investors and ensures the establishment of win-win relationships between investors and the company.",
-      image: "/image_1746004409981.png", // Using the provided image as placeholder
+      image: "/team-member-image.png", // Using the provided image as placeholder
     },
     {
       id: 6,
       name: "Shannon Heugh",
       title: "Client Services Specialist",
       description: "Shannon is responsible for data management and ensuring communications that result in an amazing customer service journey.",
-      image: "/image_1746004409981.png", // Using the provided image as placeholder
+      image: "/team-member-image.png", // Using the provided image as placeholder
     },
     {
       id: 7,
       name: "Jodi Rensburg",
       title: "Client Services Specialist",
       description: "Jodi is responsible for data management and ensuring communications that result in an amazing customer service journey.",
-      image: "/image_1746004409981.png", // Using the provided image as placeholder
+      image: "/team-member-image.png", // Using the provided image as placeholder
     },
     {
       id: 8,
       name: "Cheslin Matinka",
       title: "Client Consultant",
       description: "Cheslin is responsible for sales and client interactions that ensured our clients have an amazing customer service journey.",
-      image: "/image_1746004409981.png", // Using the provided image as placeholder
+      image: "/team-member-image.png", // Using the provided image as placeholder
     },
     {
       id: 9,
       name: "Kyle McBryne",
       title: "Systems Developer",
       description: "Kyle is responsible for our programs and systems and ensures the smooth workflows that empower our clients with the correct data.",
-      image: "/image_1746004409981.png", // Using the provided image as placeholder
+      image: "/team-member-image.png", // Using the provided image as placeholder
     },
   ];
 
