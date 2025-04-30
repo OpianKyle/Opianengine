@@ -339,7 +339,7 @@ export default function TeamPage() {
                 ref={carouselRef}
                 className="relative overflow-hidden"
                 style={{ 
-                  height: expandedMember !== null ? "600px" : "400px",
+                  height: expandedMember !== null ? "750px" : "550px",
                   transition: "height 0.5s ease-in-out"
                 }}
               >
@@ -395,7 +395,7 @@ export default function TeamPage() {
                           }}
                         >
                           {/* Image Container */}
-                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0 z-10' : 'h-72 md:h-96'}`}>
+                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0 z-10' : 'h-96 md:h-[28rem]'}`}>
                             <img 
                               src={member.image} 
                               alt={member.name}
