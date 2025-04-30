@@ -294,7 +294,7 @@ export default function TeamPage() {
         </section>
         
         {/* Team Members Carousel Section */}
-        <section className="py-16 bg-white dark:bg-[#01162f] relative overflow-hidden">
+        <section className="py-16 bg-gray-50 dark:bg-[#022b5c] relative overflow-hidden">
           {/* Background decorative elements */}
           <div className="absolute inset-0 pointer-events-none">
             {/* Light mode decorations */}
@@ -379,8 +379,8 @@ export default function TeamPage() {
                       >
                         {/* Member Card */}
                         <div 
-                          className={`relative overflow-hidden transition-all duration-500 ${
-                            isExpanded ? 'w-[300%] absolute left-[-100%] z-20 mx-auto' : 'w-full cursor-pointer'
+                          className={`relative overflow-hidden rounded-lg shadow-lg transition-all duration-500 ${
+                            isExpanded ? 'w-[300%] absolute left-[-100%] z-20 mx-auto bg-white dark:bg-[#01162f]' : 'w-full cursor-pointer bg-white dark:bg-[#01162f]'
                           }`}
                           onClick={() => !isExpanded && isCenterActive && toggleMemberExpand(member.id)}
                         >
@@ -423,7 +423,7 @@ export default function TeamPage() {
                           
                           {/* Member Details - Only shown when expanded */}
                           {isExpanded && (
-                            <div className={`p-6 bg-white dark:bg-[#01162f] ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
+                            <div className={`p-6 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
                               <div className="md:flex md:justify-between md:items-start">
                                 <div>
                                   <h3 className="text-2xl font-bold text-[rgb(8,42,90)] dark:text-white mb-1">{member.name}</h3>
