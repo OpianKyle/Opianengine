@@ -420,7 +420,7 @@ export default function TeamPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="absolute top-2 right-2 md:hidden bg-[#01162f]/70 text-white hover:bg-[#01162f]/90 rounded-full"
+                                className="absolute top-2 right-2 md:hidden bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm shadow-md"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleMemberExpand(member.id);
@@ -433,7 +433,7 @@ export default function TeamPage() {
                           
                           {/* Member Details - Only shown when expanded */}
                           {isExpanded && (
-                            <div className={`p-6 bg-[#01162f]/95 h-full md:min-h-[24rem] ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
+                            <div className={`p-6 backdrop-blur-md bg-[#01162f]/70 h-full md:min-h-[24rem] ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
                               <div className="md:flex md:justify-between md:items-start">
                                 <div>
                                   <h3 className="text-2xl font-bold text-white mb-1">{member.name}</h3>
@@ -443,7 +443,7 @@ export default function TeamPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="hidden md:flex bg-[#01162f]/50 text-white hover:bg-[#01162f]/70 rounded-full"
+                                  className="hidden md:flex bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     toggleMemberExpand(member.id);
@@ -458,10 +458,10 @@ export default function TeamPage() {
                               <div className="border-t border-[#022b5c] pt-4 mt-4">
                                 <h4 className="font-medium mb-2 text-white">Connect with {member.name.split(' ')[0]}</h4>
                                 <div className="flex space-x-3">
-                                  <Button variant="outline" size="sm" className="text-white border-white hover:bg-[#01162f]/50">
+                                  <Button variant="outline" size="sm" className="text-white border-white hover:bg-white/20 hover:text-[#43EB3E] transition-colors">
                                     LinkedIn
                                   </Button>
-                                  <Button variant="outline" size="sm" className="text-white border-white hover:bg-[#01162f]/50">
+                                  <Button variant="outline" size="sm" className="text-white border-white hover:bg-white/20 hover:text-[#43EB3E] transition-colors">
                                     Email
                                   </Button>
                                 </div>
