@@ -445,7 +445,7 @@ export default function TeamPage() {
                         {/* Member Card */}
                         <div 
                           className={`relative overflow-hidden transition-all duration-500 ${
-                            isExpanded ? 'w-full z-20 mx-auto' : 'w-full cursor-pointer'
+                            isExpanded ? 'w-[150%] absolute left-[-25%] z-20 mx-auto' : 'w-full cursor-pointer'
                           }`}
                           onClick={() => {
                             if (isExpanded) return;
@@ -458,102 +458,85 @@ export default function TeamPage() {
                             }
                           }}
                         >
-                          {/* Collapsed View */}
-                          {!isExpanded && (
-                            <div className="relative h-80 md:h-[22rem]">
-                              <img 
-                                src={member.image} 
-                                alt={member.name}
-                                className={`w-full h-full object-contain transition-transform duration-500 ${isCenterActive ? 'hover:scale-105' : ''}`}
-                                onError={(e) => {
-                                  const img = e.target as HTMLImageElement;
-                                  img.onerror = null;
-                                  img.src = '/Kyle-McBryne.png';
-                                }}
-                              />
-                              
-                              {/* Name and Title Overlay */}
-                              <div className="absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[rgb(8,42,90)] via-[rgb(8,42,90)]/70 to-transparent dark:from-[#01162f] dark:via-[#01162f]/70 flex flex-col justify-end p-4 transition-opacity duration-300">
-                                <h3 className="text-xl font-bold text-white mb-1 text-right flex items-center justify-end">
-                                  {member.name}
-                                  {isCenterActive && (
-                                    <span className="ml-2 bg-[#43EB3E]/20 p-1 rounded-full inline-flex items-center justify-center">
-                                      <span className="text-[#43EB3E] text-xs">+</span>
-                                    </span>
-                                  )}
-                                </h3>
-                                <p className="text-[#43EB3E] text-right">{member.title}</p>
-                              </div>
+                          {/* Image Container */}
+                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0 z-10' : 'h-80 md:h-[22rem]'}`}>
+                            <img 
+                              src={member.image} 
+                              alt={member.name}
+                              className={`w-full h-full object-contain transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
+                              onError={(e) => {
+                                const img = e.target as HTMLImageElement;
+                                img.onerror = null;
+                                img.src = '/Kyle-McBryne.png';
+                              }}
+                            />
+                            
+                            {/* Name and Title Overlay */}
+                            <div className={`absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[rgb(8,42,90)] via-[rgb(8,42,90)]/70 to-transparent dark:from-[#01162f] dark:via-[#01162f]/70 flex flex-col justify-end p-4 transition-opacity duration-300 ${isExpanded ? 'opacity-0' : 'opacity-100'}`}>
+                              <h3 className="text-xl font-bold text-white mb-1 text-right flex items-center justify-end">
+                                {member.name}
+                                {isCenterActive && (
+                                  <span className="ml-2 bg-[#43EB3E]/20 p-1 rounded-full inline-flex items-center justify-center">
+                                    <span className="text-[#43EB3E] text-xs">+</span>
+                                  </span>
+                                )}
+                              </h3>
+                              <p className="text-[#43EB3E] text-right">{member.title}</p>
                             </div>
-                          )}
+                            
+                            {/* Expanded View Close Button */}
+                            {isExpanded && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-2 right-2 md:hidden bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm shadow-md z-20"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleMemberExpand(member.id);
+                                }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                           
-                          {/* Expanded View */}
-                          {isExpanded && (
-                            <div className="flex flex-col md:flex-row w-[80%] mx-auto overflow-hidden bg-[rgb(8,42,90)] dark:bg-[#01162f] rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
-                              {/* Image Container - Hidden on mobile, larger on desktop */}
-                              <div className="hidden md:block md:h-auto md:w-2/5 flex-shrink-0">
-                                <img 
-                                  src={member.image} 
-                                  alt={member.name}
-                                  className="w-full h-full object-contain py-4"
-                                  onError={(e) => {
-                                    const img = e.target as HTMLImageElement;
-                                    img.onerror = null;
-                                    img.src = '/Kyle-McBryne.png';
-                                  }}
-                                />
-                              </div>
-                              
-                              {/* Details Container - Full width on mobile, right side on desktop */}
-                              <div className="flex-1 p-6 relative overflow-y-auto max-h-[80vh] md:max-h-none">
-                                <div className="flex justify-between items-start">
-                                  <div className="transition-all duration-300">
-                                    {/* Small image only on mobile */}
-                                    <div className="md:hidden flex items-center mb-4">
-                                      <div className="w-16 h-16 rounded-full overflow-hidden mr-4 border-2 border-[#43EB3E]/50">
-                                        <img 
-                                          src={member.image} 
-                                          alt={member.name}
-                                          className="w-full h-full object-cover object-center"
-                                          onError={(e) => {
-                                            const img = e.target as HTMLImageElement;
-                                            img.onerror = null;
-                                            img.src = '/Kyle-McBryne.png';
-                                          }}
-                                        />
-                                      </div>
-                                      <div>
-                                        <h3 className="text-xl font-bold text-white mb-1">{member.name}</h3>
-                                        <p className="text-[#43EB3E] text-base mb-1">{member.title}</p>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Desktop heading - hidden on mobile */}
-                                    <div className="hidden md:block">
-                                      <h3 className="text-2xl font-bold text-white mb-1">{member.name}</h3>
-                                      <p className="text-[#43EB3E] text-lg mb-3">{member.title}</p>
-                                    </div>
-                                  </div>
-                                  
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm z-20"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleMemberExpand(member.id);
-                                    }}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
+                          {/* Member Details - Always rendered but conditionally shown */}
+                          <div 
+                            className={`absolute inset-0 backdrop-blur-md bg-[rgb(8,42,90)] dark:bg-[#01162f] overflow-hidden transition-all duration-500 ease-in-out h-full md:min-h-[24rem] ${
+                              isExpanded 
+                                ? 'opacity-100 md:ml-1/3 visible' 
+                                : 'opacity-0 pointer-events-none translate-y-10 invisible'
+                            }`}
+                          >
+                            <div 
+                              className={`p-6 h-full transition-all duration-500 ${
+                                isExpanded ? 'md:pl-[calc(33%+1rem)] opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                              }`}
+                            >
+                              <div className="md:flex md:justify-between md:items-start">
+                                <div className="transition-all duration-300 delay-100">
+                                  <h3 className="text-xl md:text-2xl font-bold text-white mb-1">{member.name}</h3>
+                                  <p className="text-[#43EB3E] text-base md:text-lg mb-3">{member.title}</p>
                                 </div>
                                 
-                                <p className="text-sm md:text-base text-gray-200 transition-all duration-300">
-                                  {member.description}
-                                </p>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="hidden md:flex bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm z-20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleMemberExpand(member.id);
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
                               </div>
+                              
+                              <p className="text-sm md:text-base text-gray-200 transition-all duration-300 delay-200">
+                                {member.description}
+                              </p>
                             </div>
-                          )}
+                          </div>
                         </div>
                         
                         {/* Indicator for active member */}
