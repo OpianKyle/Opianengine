@@ -445,7 +445,7 @@ export default function TeamPage() {
                         {/* Member Card */}
                         <div 
                           className={`relative overflow-hidden transition-all duration-500 ${
-                            isExpanded ? 'w-full z-20 mx-auto max-w-2xl' : 'w-full cursor-pointer'
+                            isExpanded ? 'w-[80%] z-20 mx-auto' : 'w-full cursor-pointer'
                           }`}
                           onClick={() => {
                             if (isExpanded) return;
