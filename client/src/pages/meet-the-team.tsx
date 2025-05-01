@@ -472,19 +472,17 @@ export default function TeamPage() {
                             />
                             
                             {/* Name and Title Overlay */}
-                            {!isExpanded && (
-                              <div className="absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[rgb(8,42,90)] via-[rgb(8,42,90)]/70 to-transparent dark:from-[#01162f] dark:via-[#01162f]/70 flex flex-col justify-end p-4">
-                                <h3 className="text-xl font-bold text-white mb-1 text-right flex items-center justify-end">
-                                  {member.name}
-                                  {isCenterActive && (
-                                    <span className="ml-2 bg-[#43EB3E]/20 p-1 rounded-full inline-flex items-center justify-center">
-                                      <span className="text-[#43EB3E] text-xs">+</span>
-                                    </span>
-                                  )}
-                                </h3>
-                                <p className="text-[#43EB3E] text-right">{member.title}</p>
-                              </div>
-                            )}
+                            <div className={`absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[rgb(8,42,90)] via-[rgb(8,42,90)]/70 to-transparent dark:from-[#01162f] dark:via-[#01162f]/70 flex flex-col justify-end p-4 transition-opacity duration-300 ${isExpanded ? 'opacity-0' : 'opacity-100'}`}>
+                              <h3 className="text-xl font-bold text-white mb-1 text-right flex items-center justify-end">
+                                {member.name}
+                                {isCenterActive && (
+                                  <span className="ml-2 bg-[#43EB3E]/20 p-1 rounded-full inline-flex items-center justify-center">
+                                    <span className="text-[#43EB3E] text-xs">+</span>
+                                  </span>
+                                )}
+                              </h3>
+                              <p className="text-[#43EB3E] text-right">{member.title}</p>
+                            </div>
                             
                             {/* Expanded View Close Button */}
                             {isExpanded && (
@@ -502,12 +500,12 @@ export default function TeamPage() {
                             )}
                           </div>
                           
-                          {/* Member Details - Using AnimatePresence for smooth transitions */}
+                          {/* Member Details - Always rendered but conditionally shown */}
                           <div 
                             className={`absolute inset-0 backdrop-blur-md bg-[rgb(8,42,90)] dark:bg-[#01162f] overflow-hidden transition-all duration-500 ease-in-out h-full md:min-h-[24rem] ${
                               isExpanded 
-                                ? 'opacity-100 md:ml-1/3' 
-                                : 'opacity-0 pointer-events-none translate-y-10'
+                                ? 'opacity-100 md:ml-1/3 visible' 
+                                : 'opacity-0 pointer-events-none translate-y-10 invisible'
                             }`}
                           >
                             <div 
