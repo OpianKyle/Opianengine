@@ -343,17 +343,20 @@ export default function TeamPage() {
         </section>
         
         {/* Team Members Carousel Section */}
-        <section className="py-8 bg-[#01162f] text-white relative overflow-hidden">
+        <section className="py-8 bg-[#f5f7fa] dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white relative overflow-hidden transition-colors duration-300">
           {/* Background decorative elements */}
           <div className="absolute inset-0 pointer-events-none">
             {/* Light mode decorations */}
             <div className="absolute -right-20 top-1/4 w-40 h-40 rounded-full bg-[#43EB3E]/5 dark:opacity-0"></div>
             <div className="absolute left-10 bottom-10 w-20 h-20 rounded-full bg-[#43EB3E]/5 dark:opacity-0"></div>
+            <div className="absolute top-20 right-20 w-4 h-4 rounded-full bg-[#43EB3E]/10 dark:opacity-0"></div>
+            <div className="absolute bottom-40 right-1/4 w-6 h-1 rounded bg-[#43EB3E]/10 dark:opacity-0"></div>
+            <div className="absolute top-1/2 left-1/4 w-1 h-6 rounded bg-[#43EB3E]/10 dark:opacity-0"></div>
             
             {/* Dark mode decorations */}
             <div className="absolute -left-10 top-10 w-40 h-40 rounded-full bg-[#043375]/20 opacity-0 dark:opacity-100"></div>
             
-            {/* Scattered small elements */}
+            {/* Scattered small elements - dark mode only */}
             <div className="opacity-0 dark:opacity-100">
               <div className="absolute top-20 right-20 w-4 h-4 rounded-full bg-[#43EB3E]/10"></div>
               <div className="absolute bottom-40 right-1/4 w-6 h-1 rounded bg-[#43EB3E]/10"></div>
@@ -365,7 +368,7 @@ export default function TeamPage() {
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-10">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Meet Our Leadership Team</h2>
-              <p className="text-xl max-w-3xl mx-auto text-gray-300">
+              <p className="text-xl max-w-3xl mx-auto text-gray-600 dark:text-gray-300">
                 The passionate professionals who drive Opian's vision and ensure excellence in all our services.
               </p>
               <div className="flex items-center justify-center gap-2 mt-4">
@@ -380,7 +383,7 @@ export default function TeamPage() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-[#022b5c]/80 text-white hover:bg-[#022b5c] rounded-full shadow-lg"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-[rgb(8,42,90)]/10 dark:bg-[#022b5c]/80 text-[rgb(8,42,90)] dark:text-white hover:bg-[rgb(8,42,90)]/20 dark:hover:bg-[#022b5c] rounded-full shadow-lg"
                 onClick={goToPrev}
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -389,7 +392,7 @@ export default function TeamPage() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-[#022b5c]/80 text-white hover:bg-[#022b5c] rounded-full shadow-lg"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-[rgb(8,42,90)]/10 dark:bg-[#022b5c]/80 text-[rgb(8,42,90)] dark:text-white hover:bg-[rgb(8,42,90)]/20 dark:hover:bg-[#022b5c] rounded-full shadow-lg"
                 onClick={goToNext}
               >
                 <ChevronRight className="h-6 w-6" />
@@ -470,7 +473,7 @@ export default function TeamPage() {
                             
                             {/* Name and Title Overlay */}
                             {!isExpanded && (
-                              <div className="absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[#01162f] via-[#01162f]/70 to-transparent flex flex-col justify-end p-4">
+                              <div className="absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[rgb(8,42,90)] via-[rgb(8,42,90)]/70 to-transparent dark:from-[#01162f] dark:via-[#01162f]/70 flex flex-col justify-end p-4">
                                 <h3 className="text-xl font-bold text-white mb-1 text-right flex items-center justify-end">
                                   {member.name}
                                   {isCenterActive && (
@@ -501,7 +504,7 @@ export default function TeamPage() {
                           
                           {/* Member Details - Only shown when expanded */}
                           {isExpanded && (
-                            <div className={`p-6 backdrop-blur-md bg-[#01162f] h-full md:min-h-[24rem] relative z-0 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
+                            <div className={`p-6 backdrop-blur-md bg-[rgb(8,42,90)] dark:bg-[#01162f] h-full md:min-h-[24rem] relative z-0 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
                               <div className="md:flex md:justify-between md:items-start">
                                 <div>
                                   <h3 className="text-2xl font-bold text-white mb-1">{member.name}</h3>
