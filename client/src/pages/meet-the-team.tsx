@@ -490,12 +490,12 @@ export default function TeamPage() {
                           {/* Expanded View */}
                           {isExpanded && (
                             <div className="flex flex-col md:flex-row w-full overflow-hidden bg-[rgb(8,42,90)] dark:bg-[#01162f] rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
-                              {/* Image Container - Mobile (top) and Desktop (left) */}
-                              <div className="h-64 md:h-auto md:w-1/3 flex-shrink-0">
+                              {/* Image Container - Hidden on mobile, larger on desktop */}
+                              <div className="hidden md:block md:h-auto md:w-2/5 flex-shrink-0">
                                 <img 
                                   src={member.image} 
                                   alt={member.name}
-                                  className="w-full h-full object-contain"
+                                  className="w-full h-full object-contain py-4"
                                   onError={(e) => {
                                     const img = e.target as HTMLImageElement;
                                     img.onerror = null;
@@ -504,12 +504,35 @@ export default function TeamPage() {
                                 />
                               </div>
                               
-                              {/* Details Container - Mobile (bottom) and Desktop (right) */}
-                              <div className="flex-1 p-6 relative">
+                              {/* Details Container - Full width on mobile, right side on desktop */}
+                              <div className="flex-1 p-6 relative overflow-y-auto max-h-[80vh] md:max-h-none">
                                 <div className="flex justify-between items-start">
                                   <div className="transition-all duration-300">
-                                    <h3 className="text-xl md:text-2xl font-bold text-white mb-1">{member.name}</h3>
-                                    <p className="text-[#43EB3E] text-base md:text-lg mb-3">{member.title}</p>
+                                    {/* Small image only on mobile */}
+                                    <div className="md:hidden flex items-center mb-4">
+                                      <div className="w-16 h-16 rounded-full overflow-hidden mr-4 border-2 border-[#43EB3E]/50">
+                                        <img 
+                                          src={member.image} 
+                                          alt={member.name}
+                                          className="w-full h-full object-cover object-center"
+                                          onError={(e) => {
+                                            const img = e.target as HTMLImageElement;
+                                            img.onerror = null;
+                                            img.src = '/Kyle-McBryne.png';
+                                          }}
+                                        />
+                                      </div>
+                                      <div>
+                                        <h3 className="text-xl font-bold text-white mb-1">{member.name}</h3>
+                                        <p className="text-[#43EB3E] text-base mb-1">{member.title}</p>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Desktop heading - hidden on mobile */}
+                                    <div className="hidden md:block">
+                                      <h3 className="text-2xl font-bold text-white mb-1">{member.name}</h3>
+                                      <p className="text-[#43EB3E] text-lg mb-3">{member.title}</p>
+                                    </div>
                                   </div>
                                   
                                   <Button
