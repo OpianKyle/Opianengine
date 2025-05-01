@@ -502,8 +502,8 @@ export default function TeamPage() {
                           </div>
                         </div>
                         
-                        <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden">
-                          {/* Remove the default close button */}
+                        <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden" hideCloseButton>
+                          {/* Custom close button */}
                           <div className="absolute right-4 top-4 z-10">
                             <DialogClose asChild>
                               <Button 
