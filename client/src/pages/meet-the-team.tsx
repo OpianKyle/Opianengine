@@ -11,7 +11,8 @@ import {
   Users,
   Compass,
   Shield,
-  Award
+  Award,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -367,6 +368,12 @@ export default function TeamPage() {
               <p className="text-xl max-w-3xl mx-auto text-gray-300">
                 The passionate professionals who drive Opian's vision and ensure excellence in all our services.
               </p>
+              <div className="flex items-center justify-center gap-2 mt-4">
+                <span className="inline-flex items-center text-[#43EB3E]">
+                  <Users className="h-4 w-4 mr-1" />
+                  Click on any team member to learn more
+                </span>
+              </div>
             </div>
             <div className="relative">
               {/* Carousel Navigation Buttons */}
@@ -464,7 +471,14 @@ export default function TeamPage() {
                             {/* Name and Title Overlay */}
                             {!isExpanded && (
                               <div className="absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[#01162f] via-[#01162f]/70 to-transparent flex flex-col justify-end p-4">
-                                <h3 className="text-xl font-bold text-white mb-1 text-right">{member.name}</h3>
+                                <h3 className="text-xl font-bold text-white mb-1 text-right flex items-center justify-end">
+                                  {member.name}
+                                  {isCenterActive && (
+                                    <span className="ml-2 bg-[#43EB3E]/20 p-1 rounded-full inline-flex items-center justify-center">
+                                      <span className="text-[#43EB3E] text-xs">+</span>
+                                    </span>
+                                  )}
+                                </h3>
                                 <p className="text-[#43EB3E] text-right">{member.title}</p>
                               </div>
                             )}
