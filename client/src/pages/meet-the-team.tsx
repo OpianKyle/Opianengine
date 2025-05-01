@@ -239,7 +239,7 @@ export default function TeamPage() {
       {/* Main content */}
       <main className="flex-1">
         {/* Hero section */}
-        <section className="relative py-16 bg-white dark:bg-[#01162f] overflow-hidden">
+        <section className="relative py-8 bg-white dark:bg-[#01162f] overflow-hidden">
           {/* Decorative elements - light mode */}
           <div className="absolute inset-0 overflow-hidden dark:opacity-0">
             {/* Top left circle */}
@@ -294,7 +294,7 @@ export default function TeamPage() {
         </section>
         
         {/* Team Members Carousel Section */}
-        <section className="py-16 bg-gray-50 dark:bg-[#022b5c] relative overflow-hidden">
+        <section className="py-8 bg-gray-50 dark:bg-[#022b5c] relative overflow-hidden">
           {/* Background decorative elements */}
           <div className="absolute inset-0 pointer-events-none">
             {/* Light mode decorations */}
@@ -492,7 +492,7 @@ export default function TeamPage() {
         </section>
         
         {/* Mission, Vision, Values Section */}
-        <section className="py-16 bg-white dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white">
+        <section className="py-8 bg-white dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Our Mission, Vision and Values</h2>
             
@@ -541,7 +541,7 @@ export default function TeamPage() {
       </main>
       
       {/* Footer */}
-      <footer className="bg-white dark:bg-[#011d3d] text-[rgb(8,42,90)] dark:text-white py-16">
+      <footer className="bg-white dark:bg-[#011d3d] text-[rgb(8,42,90)] dark:text-white py-8">
         <div className="container mx-auto px-6">
           <div className="flex justify-start mb-8">
             <img 
