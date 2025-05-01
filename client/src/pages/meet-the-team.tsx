@@ -293,6 +293,54 @@ export default function TeamPage() {
           </div>
         </section>
         
+        {/* Mission, Vision, Values Section */}
+        <section className="py-8 bg-white dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Our Mission, Vision and Values</h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="bg-gray-50 dark:bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
+                <div className="relative z-10">
+                  <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
+                    <Compass className="h-8 w-8 text-[#43EB3E]" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4">Our Mission</h3>
+                  <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                    To enhance the lives of our members through innovative and accessible financial product offerings, building a community of empowered individuals.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 dark:bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
+                <div className="relative z-10">
+                  <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
+                    <Award className="h-8 w-8 text-[#43EB3E]" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4">Our Vision</h3>
+                  <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                    To establish a premier rewards loyalty program that effectively integrates essential financial products for our members, fostering economic wellbeing and growth.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 dark:bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
+                <div className="relative z-10">
+                  <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
+                    <Shield className="h-8 w-8 text-[#43EB3E]" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4">Our Values</h3>
+                  <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                    Commitment, Trust, and Empowerment. We focus on creating transparent, mutually beneficial relationships that prioritize our members' financial success.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
         {/* Team Members Carousel Section */}
         <section className="py-8 bg-gray-50 dark:bg-[#022b5c] relative overflow-hidden">
           {/* Background decorative elements */}
@@ -486,54 +534,6 @@ export default function TeamPage() {
                     }}
                   />
                 ))}
-              </div>
-            </div>
-          </div>
-        </section>
-        
-        {/* Mission, Vision, Values Section */}
-        <section className="py-8 bg-white dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Our Mission, Vision and Values</h2>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="bg-gray-50 dark:bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
-                <div className="relative z-10">
-                  <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
-                    <Compass className="h-8 w-8 text-[#43EB3E]" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-4">Our Mission</h3>
-                  <p className="text-[rgb(8,42,90)] dark:text-gray-300">
-                    To enhance the lives of our members through innovative and accessible financial product offerings, building a community of empowered individuals.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 dark:bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
-                <div className="relative z-10">
-                  <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
-                    <Award className="h-8 w-8 text-[#43EB3E]" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-4">Our Vision</h3>
-                  <p className="text-[rgb(8,42,90)] dark:text-gray-300">
-                    To establish a premier rewards loyalty program that effectively integrates essential financial products for our members, fostering economic wellbeing and growth.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 dark:bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
-                <div className="relative z-10">
-                  <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
-                    <Shield className="h-8 w-8 text-[#43EB3E]" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-4">Our Values</h3>
-                  <p className="text-[rgb(8,42,90)] dark:text-gray-300">
-                    Commitment, Trust, and Empowerment. We focus on creating transparent, mutually beneficial relationships that prioritize our members' financial success.
-                  </p>
-                </div>
               </div>
             </div>
           </div>
