@@ -399,7 +399,7 @@ export default function TeamPage() {
                             <img 
                               src={member.image} 
                               alt={member.name}
-                              className={`w-full h-full object-cover transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
+                              className={`w-full h-full object-cover object-top transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement;
                                 img.onerror = null;
