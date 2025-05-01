@@ -445,7 +445,7 @@ export default function TeamPage() {
                         {/* Member Card */}
                         <div 
                           className={`relative overflow-hidden transition-all duration-500 ${
-                            isExpanded ? 'w-[80%] z-20 mx-auto' : 'w-full cursor-pointer'
+                            isExpanded ? 'w-full z-20 mx-auto' : 'w-full cursor-pointer'
                           }`}
                           onClick={() => {
                             if (isExpanded) return;
@@ -489,7 +489,7 @@ export default function TeamPage() {
                           
                           {/* Expanded View */}
                           {isExpanded && (
-                            <div className="flex flex-col md:flex-row w-full overflow-hidden bg-[rgb(8,42,90)] dark:bg-[#01162f] rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            <div className="flex flex-col md:flex-row w-[80%] mx-auto overflow-hidden bg-[rgb(8,42,90)] dark:bg-[#01162f] rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
                               {/* Image Container - Hidden on mobile, larger on desktop */}
                               <div className="hidden md:block md:h-auto md:w-2/5 flex-shrink-0">
                                 <img 
