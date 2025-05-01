@@ -430,56 +430,77 @@ export default function TeamPage() {
                     
                     return (
                       <Dialog key={member.id}>
-                        <DialogTrigger asChild>
-                          <div 
-                            className="w-1/3 flex-shrink-0 flex flex-col items-center transition-all duration-500 ease-in-out px-2 justify-center"
-                            style={{ 
-                              opacity: isCenterActive ? 1 : isInCurrentGroup ? 0.7 : 0.3,
-                              transform: `scale(${isCenterActive ? 1 : isInCurrentGroup ? 0.9 : 0.7})`,
-                              zIndex: isCenterActive ? 10 : isInCurrentGroup ? 5 : 1,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {/* Member Card */}
-                            <div className="relative overflow-hidden w-full">
-                              {/* Image Container */}
-                              <div className="relative h-80 md:h-[22rem]">
+                        {/* Use a wrapper div instead of DialogTrigger directly */}
+                        <div 
+                          className="w-1/3 flex-shrink-0 flex flex-col items-center transition-all duration-500 ease-in-out px-2 justify-center"
+                          style={{ 
+                            opacity: isCenterActive ? 1 : isInCurrentGroup ? 0.7 : 0.3,
+                            transform: `scale(${isCenterActive ? 1 : isInCurrentGroup ? 0.9 : 0.7})`,
+                            zIndex: isCenterActive ? 10 : isInCurrentGroup ? 5 : 1,
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => {
+                            if (!isCenterActive) {
+                              // If not the center member, navigate to this member
+                              setActiveIndex(index);
+                            }
+                          }}
+                        >
+                          {/* Member Card */}
+                          <div className="relative overflow-hidden w-full">
+                            {/* Image Container */}
+                            <div className="relative h-80 md:h-[22rem]">
+                              {/* Only the center active member will have a DialogTrigger */}
+                              {isCenterActive ? (
+                                <DialogTrigger asChild>
+                                  <img 
+                                    src={member.image} 
+                                    alt={member.name}
+                                    className="w-full h-full object-contain transition-transform duration-500 hover:scale-105 cursor-pointer"
+                                    onError={(e) => {
+                                      const img = e.target as HTMLImageElement;
+                                      img.onerror = null;
+                                      img.src = '/Kyle-McBryne.png';
+                                    }}
+                                  />
+                                </DialogTrigger>
+                              ) : (
                                 <img 
                                   src={member.image} 
                                   alt={member.name}
-                                  className={`w-full h-full object-contain transition-transform duration-500 ${isCenterActive ? 'hover:scale-105' : ''}`}
+                                  className="w-full h-full object-contain transition-transform duration-500"
                                   onError={(e) => {
                                     const img = e.target as HTMLImageElement;
                                     img.onerror = null;
                                     img.src = '/Kyle-McBryne.png';
                                   }}
                                 />
-                                
-                                {/* Name and Title Overlay */}
-                                <div className="absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[rgb(8,42,90)] via-[rgb(8,42,90)]/70 to-transparent dark:from-[#01162f] dark:via-[#01162f]/70 flex flex-col justify-end p-4 transition-opacity duration-300">
-                                  <h3 className="text-xl font-bold text-white mb-1 text-right flex items-center justify-end">
-                                    {member.name}
-                                    {isCenterActive && (
-                                      <span className="ml-2 bg-[#43EB3E]/20 p-1 rounded-full inline-flex items-center justify-center">
-                                        <span className="text-[#43EB3E] text-xs">+</span>
-                                      </span>
-                                    )}
-                                  </h3>
-                                  <p className="text-[#43EB3E] text-right">{member.title}</p>
-                                </div>
-                              </div>
-                              
-                              {/* Indicator for active member */}
-                              {isCenterActive && (
-                                <div className="mt-4 flex items-center justify-center space-x-1">
-                                  <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]"></div>
-                                  <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]/50"></div>
-                                  <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]/25"></div>
-                                </div>
                               )}
+                              
+                              {/* Name and Title Overlay */}
+                              <div className="absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[rgb(8,42,90)] via-[rgb(8,42,90)]/70 to-transparent dark:from-[#01162f] dark:via-[#01162f]/70 flex flex-col justify-end p-4 transition-opacity duration-300">
+                                <h3 className="text-xl font-bold text-white mb-1 text-right flex items-center justify-end">
+                                  {member.name}
+                                  {isCenterActive && (
+                                    <span className="ml-2 bg-[#43EB3E]/20 p-1 rounded-full inline-flex items-center justify-center">
+                                      <span className="text-[#43EB3E] text-xs">+</span>
+                                    </span>
+                                  )}
+                                </h3>
+                                <p className="text-[#43EB3E] text-right">{member.title}</p>
+                              </div>
                             </div>
+                            
+                            {/* Indicator for active member */}
+                            {isCenterActive && (
+                              <div className="mt-4 flex items-center justify-center space-x-1">
+                                <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]"></div>
+                                <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]/50"></div>
+                                <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]/25"></div>
+                              </div>
+                            )}
                           </div>
-                        </DialogTrigger>
+                        </div>
                         
                         <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden">
                           <div className="md:flex">
