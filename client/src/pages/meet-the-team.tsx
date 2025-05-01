@@ -445,7 +445,7 @@ export default function TeamPage() {
                         {/* Member Card */}
                         <div 
                           className={`relative overflow-hidden transition-all duration-500 ${
-                            isExpanded ? 'w-[95%] md:w-[90%] lg:w-[80%] max-w-4xl z-20 mx-auto fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2' : 'w-full cursor-pointer'
+                            isExpanded ? 'w-full z-20 mx-auto max-w-2xl' : 'w-full cursor-pointer'
                           }`}
                           onClick={() => {
                             if (isExpanded) return;
@@ -487,26 +487,15 @@ export default function TeamPage() {
                             </div>
                           )}
                           
-                          {/* Modal Background Overlay */}
-                          {isExpanded && (
-                            <div 
-                              className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleMemberExpand(member.id);
-                              }}
-                            />
-                          )}
-                          
                           {/* Expanded View */}
                           {isExpanded && (
-                            <div className="flex flex-col md:flex-row w-full overflow-hidden bg-[rgb(8,42,90)] dark:bg-[#01162f] rounded-lg shadow-2xl border border-[#43EB3E]/20 animate-in fade-in duration-300 z-50">
+                            <div className="flex flex-col md:flex-row w-full overflow-hidden bg-[rgb(8,42,90)] dark:bg-[#01162f] rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
                               {/* Image Container - Mobile (top) and Desktop (left) */}
-                              <div className="h-80 md:h-auto md:w-1/3 flex-shrink-0 bg-gradient-to-br from-[#01162f] to-[rgb(8,42,90)] flex items-center justify-center p-4">
+                              <div className="h-64 md:h-auto md:w-1/3 flex-shrink-0">
                                 <img 
                                   src={member.image} 
                                   alt={member.name}
-                                  className="w-full h-full object-contain max-h-[300px]"
+                                  className="w-full h-full object-contain"
                                   onError={(e) => {
                                     const img = e.target as HTMLImageElement;
                                     img.onerror = null;
@@ -516,17 +505,17 @@ export default function TeamPage() {
                               </div>
                               
                               {/* Details Container - Mobile (bottom) and Desktop (right) */}
-                              <div className="flex-1 p-6 md:p-8 relative">
+                              <div className="flex-1 p-6 relative">
                                 <div className="flex justify-between items-start">
                                   <div className="transition-all duration-300">
                                     <h3 className="text-xl md:text-2xl font-bold text-white mb-1">{member.name}</h3>
-                                    <p className="text-[#43EB3E] text-base md:text-lg mb-4">{member.title}</p>
+                                    <p className="text-[#43EB3E] text-base md:text-lg mb-3">{member.title}</p>
                                   </div>
                                   
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm shadow-md"
+                                    className="bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm z-20"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       toggleMemberExpand(member.id);
@@ -536,7 +525,7 @@ export default function TeamPage() {
                                   </Button>
                                 </div>
                                 
-                                <p className="text-sm md:text-base text-gray-200 transition-all duration-300 leading-relaxed">
+                                <p className="text-sm md:text-base text-gray-200 transition-all duration-300">
                                   {member.description}
                                 </p>
                               </div>
