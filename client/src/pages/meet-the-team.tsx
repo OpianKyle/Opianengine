@@ -1,21 +1,14 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { useTheme } from "@/providers/theme-provider";
 import { useLocation, Link } from "wouter";
 import { 
-  X, 
-  ChevronLeft, 
-  ChevronRight, 
   Menu, 
-  Sun, 
-  Moon, 
   Users,
   Compass,
   Shield,
   Award,
-  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -40,12 +33,7 @@ interface TeamMember {
 export default function TeamPage() {
   const { theme } = useTheme();
   const [location, navigate] = useLocation();
-  const { toast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // Carousel state
-  const [activeIndex, setActiveIndex] = useState(0);
-  const carouselRef = useRef<HTMLDivElement>(null);
   
   // Team member data
   const teamMembers: TeamMember[] = [
@@ -113,15 +101,6 @@ export default function TeamPage() {
       image: "/Kyle-McBryne.png"
     },
   ];
-
-  // Functions to navigate carousel
-  const goToNext = () => {
-    setActiveIndex((prevIndex) => (prevIndex + 1) % teamMembers.length);
-  };
-
-  const goToPrev = () => {
-    setActiveIndex((prevIndex) => (prevIndex - 1 + teamMembers.length) % teamMembers.length);
-  };
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#01162f] flex flex-col">
@@ -319,11 +298,11 @@ export default function TeamPage() {
                 <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
                 <div className="relative z-10">
                   <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
-                    <Award className="h-8 w-8 text-[#43EB3E]" />
+                    <Shield className="h-8 w-8 text-[#43EB3E]" />
                   </div>
                   <h3 className="text-xl font-bold mb-4 text-white">Our Vision</h3>
                   <p className="text-gray-300">
-                    To establish a premier rewards loyalty program that effectively integrates essential financial products for our members, fostering economic wellbeing and growth.
+                    To be the leading rewards platform that transforms ordinary financial interactions into extraordinary opportunities for growth and prosperity.
                   </p>
                 </div>
               </div>
@@ -332,11 +311,11 @@ export default function TeamPage() {
                 <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
                 <div className="relative z-10">
                   <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
-                    <Shield className="h-8 w-8 text-[#43EB3E]" />
+                    <Award className="h-8 w-8 text-[#43EB3E]" />
                   </div>
                   <h3 className="text-xl font-bold mb-4 text-white">Our Values</h3>
                   <p className="text-gray-300">
-                    Commitment, Trust, and Empowerment. We focus on creating transparent, mutually beneficial relationships that prioritize our members' financial success.
+                    Integrity, innovation, inclusivity, and excellence guide everything we do. We believe in creating meaningful value for every member through transparency and commitment.
                   </p>
                 </div>
               </div>
@@ -344,7 +323,7 @@ export default function TeamPage() {
           </div>
         </section>
         
-        {/* Team Members Carousel Section */}
+        {/* Team Members Grid Section */}
         <section className="py-12 bg-[#f5f7fa] dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white relative overflow-hidden transition-colors duration-300">
           {/* Background decorative elements */}
           <div className="absolute inset-0 pointer-events-none">
@@ -366,7 +345,7 @@ export default function TeamPage() {
             </div>
           </div>
           
-          {/* Team Member Carousel Container */}
+          {/* Team Member Grid Container */}
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-10">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Meet Our Leadership Team</h2>
@@ -381,192 +360,95 @@ export default function TeamPage() {
               </div>
             </div>
             
-            {/* Carousel Navigation Buttons */}
-            <div className="relative">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-[rgb(8,42,90)]/10 dark:bg-[#022b5c]/80 text-[rgb(8,42,90)] dark:text-white hover:bg-[rgb(8,42,90)]/20 dark:hover:bg-[#022b5c] rounded-full shadow-lg"
-                onClick={goToPrev}
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
-              
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-[rgb(8,42,90)]/10 dark:bg-[#022b5c]/80 text-[rgb(8,42,90)] dark:text-white hover:bg-[rgb(8,42,90)]/20 dark:hover:bg-[#022b5c] rounded-full shadow-lg"
-                onClick={goToNext}
-              >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
-              
-              {/* Carousel Track */}
-              <div 
-                ref={carouselRef}
-                className="relative overflow-hidden"
-                style={{ height: "450px" }}
-              >
-                <div 
-                  className="absolute w-full flex transition-transform duration-500 ease-in-out"
-                  style={{ 
-                    transform: `translateX(calc(-${activeIndex * 33.33}% + 33.33%))`,
-                  }}
-                >
-                  {teamMembers.map((member, index) => {
-                    // Calculate if this member is in the currently visible group
-                    const currentGroup = Math.floor(activeIndex/3);
-                    const isInCurrentGroup = currentGroup * 3 <= index && index < currentGroup * 3 + 3;
-                    
-                    // Calculate if this member is the center active one
-                    const isCenterActive = index === activeIndex;
-                    
-                    // Calculate distance for fading effect
-                    const distanceFromActive = Math.min(
-                      Math.abs(index - activeIndex),
-                      Math.abs(index - activeIndex - teamMembers.length),
-                      Math.abs(index - activeIndex + teamMembers.length)
-                    );
-                    
-                    return (
-                      <Dialog key={member.id}>
-                        {/* Use a wrapper div instead of DialogTrigger directly */}
-                        <div 
-                          className="w-1/3 flex-shrink-0 flex flex-col items-center transition-all duration-500 ease-in-out px-2 justify-center"
-                          style={{ 
-                            opacity: isCenterActive ? 1 : isInCurrentGroup ? 0.7 : 0.3,
-                            transform: `scale(${isCenterActive ? 1 : isInCurrentGroup ? 0.9 : 0.7})`,
-                            zIndex: isCenterActive ? 10 : isInCurrentGroup ? 5 : 1,
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => {
-                            if (!isCenterActive) {
-                              // If not the center member, navigate to this member
-                              setActiveIndex(index);
-                            }
-                          }}
-                        >
-                          {/* Member Card */}
-                          <div className="relative overflow-hidden w-full">
-                            {/* Image Container */}
-                            <div className="relative h-80 md:h-[22rem]">
-                              {/* Only the center active member will have a DialogTrigger */}
-                              {isCenterActive ? (
-                                <DialogTrigger asChild>
-                                  <img 
-                                    src={member.image} 
-                                    alt={member.name}
-                                    className="w-full h-full object-contain transition-transform duration-500 hover:scale-105 cursor-pointer"
-                                    onError={(e) => {
-                                      const img = e.target as HTMLImageElement;
-                                      img.onerror = null;
-                                      img.src = '/Kyle-McBryne.png';
-                                    }}
-                                  />
-                                </DialogTrigger>
-                              ) : (
-                                <img 
-                                  src={member.image} 
-                                  alt={member.name}
-                                  className="w-full h-full object-contain transition-transform duration-500"
-                                  onError={(e) => {
-                                    const img = e.target as HTMLImageElement;
-                                    img.onerror = null;
-                                    img.src = '/Kyle-McBryne.png';
-                                  }}
-                                />
-                              )}
-                              
-                              {/* Name and Title Overlay */}
-                              <div className="absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[rgb(8,42,90)] via-[rgb(8,42,90)]/70 to-transparent dark:from-[#01162f] dark:via-[#01162f]/70 flex flex-col justify-end p-4 transition-opacity duration-300">
-                                <h3 className="text-xl font-bold text-white mb-1 text-right">
-                                  {member.name}
-                                </h3>
-                                <p className="text-[#43EB3E] text-right">{member.title}</p>
-                              </div>
-                            </div>
-                            
-                            {/* Indicator for active member */}
-                            {isCenterActive && (
-                              <div className="mt-4 flex items-center justify-center space-x-1">
-                                <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]"></div>
-                                <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]/50"></div>
-                                <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]/25"></div>
-                              </div>
-                            )}
-                          </div>
+            {/* Team Members Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {teamMembers.map((member) => (
+                <Dialog key={member.id}>
+                  <DialogTrigger asChild>
+                    <div 
+                      className="bg-[#011d3d] rounded-lg overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-105 hover:shadow-xl"
+                    >
+                      <div className="flex flex-col items-center py-8 px-4">
+                        {/* Circular image */}
+                        <div className="w-32 h-32 rounded-full overflow-hidden mb-4 border-2 border-[#43EB3E]/20">
+                          <img 
+                            src={member.image} 
+                            alt={member.name} 
+                            className="w-full h-full object-cover object-center"
+                            onError={(e) => {
+                              const img = e.target as HTMLImageElement;
+                              img.onerror = null;
+                              img.src = '/Kyle-McBryne.png';
+                            }}
+                          />
                         </div>
                         
-                        <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden [&>button]:hidden">
-                          
-                          <div className="md:flex">
-                            <div className="hidden md:block md:w-2/5">
-                              <div className="h-64 md:h-full">
-                                <img 
-                                  src={member.image} 
-                                  alt={member.name} 
-                                  className="w-full h-full object-cover object-center"
-                                  onError={(e) => {
-                                    const img = e.target as HTMLImageElement;
-                                    img.onerror = null;
-                                    img.src = '/Kyle-McBryne.png';
-                                  }}
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="p-6 sm:p-8 w-full md:w-3/5">
-                              <DialogHeader className="mb-4">
-                                <div>
-                                  <DialogTitle className="text-2xl font-bold mb-1 text-white">
-                                    {member.name}
-                                  </DialogTitle>
-                                  <DialogDescription className="text-[#43EB3E] font-medium text-base">
-                                    {member.title}
-                                  </DialogDescription>
-                                </div>
-                              </DialogHeader>
-                              
-                              <div className="text-gray-200">
-                                <p>{member.description}</p>
-                              </div>
-                              
-                              {/* Close buttons - different styles for mobile and desktop */}
-                              <div className="mt-8 flex justify-end">
-                                <DialogClose asChild>
-                                  <button className="md:hidden inline-flex px-4 py-2.5 bg-white/10 text-white rounded-md hover:bg-white/20 transition-colors">
-                                    Close
-                                  </button>
-                                </DialogClose>
-                                <DialogClose asChild>
-                                  <button className="hidden md:inline-flex px-4 py-2.5 bg-[#43EB3E]/20 text-[#43EB3E] rounded-md hover:bg-[#43EB3E]/30 transition-colors">
-                                    Close
-                                  </button>
-                                </DialogClose>
-                              </div>
-                            </div>
+                        {/* Name and title */}
+                        <h3 className="text-white text-xl font-semibold text-center mb-1">{member.name}</h3>
+                        <p className="text-[#43EB3E] text-sm text-center mb-4">{member.title}</p>
+                        
+                        {/* Short description */}
+                        <p className="text-gray-300 text-sm text-center">
+                          {member.description.length > 120 
+                            ? `${member.description.substring(0, 120)}...` 
+                            : member.description
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </DialogTrigger>
+                  
+                  <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden [&>button]:hidden">
+                    <div className="md:flex">
+                      <div className="hidden md:block md:w-2/5">
+                        <div className="h-64 md:h-full">
+                          <img 
+                            src={member.image} 
+                            alt={member.name} 
+                            className="w-full h-full object-cover object-center"
+                            onError={(e) => {
+                              const img = e.target as HTMLImageElement;
+                              img.onerror = null;
+                              img.src = '/Kyle-McBryne.png';
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="p-6 sm:p-8 w-full md:w-3/5">
+                        <DialogHeader className="mb-4">
+                          <div>
+                            <DialogTitle className="text-2xl font-bold mb-1 text-white">
+                              {member.name}
+                            </DialogTitle>
+                            <DialogDescription className="text-[#43EB3E] font-medium text-base">
+                              {member.title}
+                            </DialogDescription>
                           </div>
-                        </DialogContent>
-                      </Dialog>
-                    );
-                  })}
-                </div>
-              </div>
-              
-              {/* Carousel Indicators */}
-              <div className="flex justify-center mt-6 space-x-2">
-                {Array.from({ length: Math.ceil(teamMembers.length / 3) }).map((_, groupIndex) => (
-                  <button
-                    key={groupIndex}
-                    className={`h-2 rounded-full transition-all ${
-                      Math.floor(activeIndex / 3) === groupIndex ? 'w-6 bg-[#43EB3E]' : 'w-2 bg-[#43EB3E]/30'
-                    }`}
-                    onClick={() => {
-                      setActiveIndex(groupIndex * 3);
-                    }}
-                  />
-                ))}
-              </div>
+                        </DialogHeader>
+                        
+                        <div className="text-gray-200">
+                          <p>{member.description}</p>
+                        </div>
+                        
+                        {/* Close buttons - different styles for mobile and desktop */}
+                        <div className="mt-8 flex justify-end">
+                          <DialogClose asChild>
+                            <button className="md:hidden inline-flex px-4 py-2.5 bg-white/10 text-white rounded-md hover:bg-white/20 transition-colors">
+                              Close
+                            </button>
+                          </DialogClose>
+                          <DialogClose asChild>
+                            <button className="hidden md:inline-flex px-4 py-2.5 bg-[#43EB3E]/20 text-[#43EB3E] rounded-md hover:bg-[#43EB3E]/30 transition-colors">
+                              Close
+                            </button>
+                          </DialogClose>
+                        </div>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ))}
             </div>
           </div>
         </section>
