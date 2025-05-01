@@ -18,6 +18,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 // Define the type for team members
 interface TeamMember {
@@ -34,11 +43,6 @@ export default function TeamPage() {
   const { toast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  // Carousel state
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [expandedMember, setExpandedMember] = useState<number | null>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
-
   // Team member data
   const teamMembers: TeamMember[] = [
     {
@@ -106,20 +110,7 @@ export default function TeamPage() {
     },
   ];
 
-  // Functions to navigate carousel
-  const goToNext = () => {
-    setActiveIndex((prevIndex) => (prevIndex + 1) % teamMembers.length);
-    setExpandedMember(null);
-  };
 
-  const goToPrev = () => {
-    setActiveIndex((prevIndex) => (prevIndex - 1 + teamMembers.length) % teamMembers.length);
-    setExpandedMember(null);
-  };
-
-  const toggleMemberExpand = (memberId: number) => {
-    setExpandedMember(expandedMember === memberId ? null : memberId);
-  };
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#01162f] flex flex-col">
@@ -342,8 +333,8 @@ export default function TeamPage() {
           </div>
         </section>
         
-        {/* Team Members Carousel Section */}
-        <section className="py-8 bg-[#f5f7fa] dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white relative overflow-hidden transition-colors duration-300">
+        {/* Team Members Grid Section */}
+        <section className="py-12 bg-[#f5f7fa] dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white relative overflow-hidden transition-colors duration-300">
           {/* Background decorative elements */}
           <div className="absolute inset-0 pointer-events-none">
             {/* Light mode decorations */}
@@ -364,7 +355,7 @@ export default function TeamPage() {
             </div>
           </div>
           
-          {/* Team Member Carousel Container */}
+          {/* Team Member Grid Container */}
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-10">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Meet Our Leadership Team</h2>
@@ -378,190 +369,89 @@ export default function TeamPage() {
                 </span>
               </div>
             </div>
-            <div className="relative">
-              {/* Carousel Navigation Buttons */}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-[rgb(8,42,90)]/10 dark:bg-[#022b5c]/80 text-[rgb(8,42,90)] dark:text-white hover:bg-[rgb(8,42,90)]/20 dark:hover:bg-[#022b5c] rounded-full shadow-lg"
-                onClick={goToPrev}
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
-              
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-[rgb(8,42,90)]/10 dark:bg-[#022b5c]/80 text-[rgb(8,42,90)] dark:text-white hover:bg-[rgb(8,42,90)]/20 dark:hover:bg-[#022b5c] rounded-full shadow-lg"
-                onClick={goToNext}
-              >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
-              
-              {/* Carousel Track */}
-              <div 
-                ref={carouselRef}
-                className="relative overflow-hidden"
-                style={{ 
-                  height: expandedMember !== null ? "650px" : "450px",
-                  transition: "height 0.5s ease-in-out"
-                }}
-              >
-                <div 
-                  className="absolute w-full flex transition-transform duration-500 ease-in-out"
-                  style={{ 
-                    transform: `translateX(calc(-${activeIndex * 33.33}% + 33.33%))`,
-                  }}
-                >
-                  {teamMembers.map((member, index) => {
-                    // Calculate the position relative to active index and group
-                    const currentGroup = Math.floor(activeIndex/3);
-                    const isInCurrentGroup = currentGroup * 3 <= index && index < currentGroup * 3 + 3;
-                    // Consider all members as active for click purposes
-                    const isActive = true;
-                    const isCenterActive = index === activeIndex;
-                    
-                    // Calculate distance for fading effect
-                    const distanceFromActive = Math.min(
-                      Math.abs(index - activeIndex),
-                      Math.abs(index - activeIndex - teamMembers.length),
-                      Math.abs(index - activeIndex + teamMembers.length)
-                    );
-                    
-                    // Determine if this member is expanded
-                    const isExpanded = expandedMember === member.id;
-                    
-                    return (
-                      <div 
-                        key={member.id}
-                        className={`w-1/3 flex-shrink-0 flex flex-col items-center transition-all duration-500 ease-in-out px-2 ${isExpanded ? 'justify-start' : 'justify-center'}`}
-                        style={{ 
-                          opacity: isCenterActive ? 1 : isInCurrentGroup ? 0.7 : 0.3,
-                          transform: `scale(${isCenterActive ? 1 : isInCurrentGroup ? 0.9 : 0.7})`,
-                          zIndex: isCenterActive ? 10 : isInCurrentGroup ? 5 : 1,
-                          pointerEvents: isExpanded && !isCenterActive ? 'none' : 'auto', // Only allow clicks when not expanded or on the active member
-                        }}
-                      >
-                        {/* Member Card */}
-                        <div 
-                          className={`relative overflow-hidden transition-all duration-500 ${
-                            isExpanded ? 'w-[150%] absolute left-[-25%] z-20 mx-auto' : 'w-full cursor-pointer'
-                          }`}
-                          onClick={() => {
-                            if (isExpanded) return;
-                            if (isCenterActive) {
-                              toggleMemberExpand(member.id);
-                            } else {
-                              // Go directly to this member when not the active one
-                              setActiveIndex(index);
-                              setExpandedMember(null);
-                            }
+            
+            {/* Team Members Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {teamMembers.map((member) => (
+                <Dialog key={member.id}>
+                  <DialogTrigger asChild>
+                    <div className="relative bg-white dark:bg-[#022b5c] rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group h-full">
+                      <div className="h-64 overflow-hidden">
+                        <img 
+                          src={member.image} 
+                          alt={member.name}
+                          className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement;
+                            img.onerror = null;
+                            img.src = '/Kyle-McBryne.png';
                           }}
-                        >
-                          {/* Image Container */}
-                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0 z-10' : 'h-80 md:h-[22rem]'}`}>
-                            <img 
-                              src={member.image} 
-                              alt={member.name}
-                              className={`w-full h-full object-contain transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
-                              onError={(e) => {
-                                const img = e.target as HTMLImageElement;
-                                img.onerror = null;
-                                img.src = '/Kyle-McBryne.png';
-                              }}
-                            />
-                            
-                            {/* Name and Title Overlay */}
-                            <div className={`absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[rgb(8,42,90)] via-[rgb(8,42,90)]/70 to-transparent dark:from-[#01162f] dark:via-[#01162f]/70 flex flex-col justify-end p-4 transition-opacity duration-300 ${isExpanded ? 'opacity-0' : 'opacity-100'}`}>
-                              <h3 className="text-xl font-bold text-white mb-1 text-right flex items-center justify-end">
+                        />
+                      </div>
+                      
+                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-[#01162f] to-transparent p-4">
+                        <h3 className="text-lg font-semibold text-white mb-1">{member.name}</h3>
+                        <p className="text-[#43EB3E] text-sm">{member.title}</p>
+                        
+                        <div className="mt-2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="text-xs text-white/80 flex items-center">
+                            View Profile
+                            <Plus className="h-3 w-3 ml-1" />
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </DialogTrigger>
+                  
+                  <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden">
+                    <div className="md:flex">
+                      <div className="md:w-2/5">
+                        <div className="h-64 md:h-full">
+                          <img 
+                            src={member.image} 
+                            alt={member.name} 
+                            className="w-full h-full object-cover object-center"
+                            onError={(e) => {
+                              const img = e.target as HTMLImageElement;
+                              img.onerror = null;
+                              img.src = '/Kyle-McBryne.png';
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="p-6 md:w-3/5">
+                        <DialogHeader className="mb-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <DialogTitle className="text-2xl font-bold mb-1 text-white">
                                 {member.name}
-                                {isCenterActive && (
-                                  <span className="ml-2 bg-[#43EB3E]/20 p-1 rounded-full inline-flex items-center justify-center">
-                                    <span className="text-[#43EB3E] text-xs">+</span>
-                                  </span>
-                                )}
-                              </h3>
-                              <p className="text-[#43EB3E] text-right">{member.title}</p>
+                              </DialogTitle>
+                              <DialogDescription className="text-[#43EB3E] font-medium text-base">
+                                {member.title}
+                              </DialogDescription>
                             </div>
                             
-                            {/* Expanded View Close Button */}
-                            {isExpanded && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute top-2 right-2 md:hidden bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm shadow-md z-20"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleMemberExpand(member.id);
-                                }}
+                            <DialogClose asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-full h-8 w-8 bg-white/10 hover:bg-white/20 text-white hover:text-[#43EB3E]"
                               >
                                 <X className="h-4 w-4" />
                               </Button>
-                            )}
+                            </DialogClose>
                           </div>
-                          
-                          {/* Member Details Card - Always rendered but conditionally shown */}
-                          {isExpanded && (
-                            <div 
-                              className="absolute inset-0 backdrop-blur-md bg-[rgb(8,42,90)] dark:bg-[#01162f] overflow-hidden transition-all duration-500 ease-in-out h-full md:min-h-[24rem] opacity-100 md:ml-1/3"
-                            >
-                              <div className="p-6 h-full transition-all duration-500 md:pl-[calc(33%+1rem)]">
-                                <div className="md:flex md:justify-between md:items-start">
-                                  <div className="transition-all duration-300">
-                                    <h3 className="text-xl md:text-2xl font-bold text-white mb-1">{member.name}</h3>
-                                    <p className="text-[#43EB3E] text-base md:text-lg mb-3">{member.title}</p>
-                                  </div>
-                                  
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="hidden md:flex bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm z-20"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleMemberExpand(member.id);
-                                    }}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                
-                                <p className="text-sm md:text-base text-gray-200 mt-4">
-                                  {member.description}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        </DialogHeader>
                         
-                        {/* Indicator for active member */}
-                        {isCenterActive && !isExpanded && (
-                          <div className="mt-4 flex items-center justify-center space-x-1">
-                            <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]"></div>
-                            <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]/50"></div>
-                            <div className="h-1.5 w-1.5 rounded-full bg-[#43EB3E]/25"></div>
-                          </div>
-                        )}
+                        <div className="text-gray-200">
+                          <p>{member.description}</p>
+                        </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-              
-              {/* Carousel Indicators */}
-              <div className="flex justify-center mt-6 space-x-2">
-                {Array.from({ length: Math.ceil(teamMembers.length / 3) }).map((_, groupIndex) => (
-                  <button
-                    key={groupIndex}
-                    className={`h-2 rounded-full transition-all ${
-                      Math.floor(activeIndex / 3) === groupIndex ? 'w-6 bg-[#43EB3E]' : 'w-2 bg-[#43EB3E]/30'
-                    }`}
-                    onClick={() => {
-                      setActiveIndex(groupIndex * 3);
-                      setExpandedMember(null);
-                    }}
-                  />
-                ))}
-              </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ))}
             </div>
           </div>
         </section>
