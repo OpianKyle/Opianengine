@@ -497,19 +497,7 @@ export default function TeamPage() {
                           </div>
                         </div>
                         
-                        <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden" closeButton={false}>
-                          {/* Custom close button */}
-                          <div className="absolute right-4 top-4 z-10">
-                            <DialogClose asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="rounded-full h-8 w-8 bg-white/10 hover:bg-white/20 text-white hover:text-[#43EB3E]"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </DialogClose>
-                          </div>
+                        <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden [&>button]:hidden">
                           
                           <div className="md:flex">
                             <div className="md:w-2/5">
@@ -541,6 +529,15 @@ export default function TeamPage() {
                               
                               <div className="text-gray-200">
                                 <p>{member.description}</p>
+                              </div>
+                              
+                              {/* Hidden close button at the bottom */}
+                              <div className="mt-6 flex justify-end">
+                                <DialogClose asChild>
+                                  <button className="hidden md:inline-flex px-4 py-2 bg-[#43EB3E]/20 text-[#43EB3E] rounded-md hover:bg-[#43EB3E]/30 transition-colors">
+                                    Close
+                                  </button>
+                                </DialogClose>
                               </div>
                             </div>
                           </div>
