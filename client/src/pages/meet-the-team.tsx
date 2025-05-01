@@ -503,6 +503,19 @@ export default function TeamPage() {
                         </div>
                         
                         <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden">
+                          {/* Remove the default close button */}
+                          <div className="absolute right-4 top-4 z-10">
+                            <DialogClose asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-full h-8 w-8 bg-white/10 hover:bg-white/20 text-white hover:text-[#43EB3E]"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </DialogClose>
+                          </div>
+                          
                           <div className="md:flex">
                             <div className="md:w-2/5">
                               <div className="h-64 md:h-full">
@@ -521,25 +534,13 @@ export default function TeamPage() {
                             
                             <div className="p-6 md:w-3/5">
                               <DialogHeader className="mb-4">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <DialogTitle className="text-2xl font-bold mb-1 text-white">
-                                      {member.name}
-                                    </DialogTitle>
-                                    <DialogDescription className="text-[#43EB3E] font-medium text-base">
-                                      {member.title}
-                                    </DialogDescription>
-                                  </div>
-                                  
-                                  <DialogClose asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="rounded-full h-8 w-8 bg-white/10 hover:bg-white/20 text-white hover:text-[#43EB3E]"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </DialogClose>
+                                <div>
+                                  <DialogTitle className="text-2xl font-bold mb-1 text-white">
+                                    {member.name}
+                                  </DialogTitle>
+                                  <DialogDescription className="text-[#43EB3E] font-medium text-base">
+                                    {member.title}
+                                  </DialogDescription>
                                 </div>
                               </DialogHeader>
                               
