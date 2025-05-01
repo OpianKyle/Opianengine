@@ -342,7 +342,7 @@ export default function TeamPage() {
         </section>
         
         {/* Team Members Carousel Section */}
-        <section className="py-8 bg-gray-50 dark:bg-[#022b5c] relative overflow-hidden">
+        <section className="py-8 bg-[#01162f] text-white relative overflow-hidden">
           {/* Background decorative elements */}
           <div className="absolute inset-0 pointer-events-none">
             {/* Light mode decorations */}
@@ -367,7 +367,7 @@ export default function TeamPage() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 dark:bg-[#01162f]/80 text-[rgb(8,42,90)] dark:text-white hover:bg-white dark:hover:bg-[#01162f] rounded-full shadow-lg"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-[#022b5c]/80 text-white hover:bg-[#022b5c] rounded-full shadow-lg"
                 onClick={goToPrev}
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -376,7 +376,7 @@ export default function TeamPage() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/80 dark:bg-[#01162f]/80 text-[rgb(8,42,90)] dark:text-white hover:bg-white dark:hover:bg-[#01162f] rounded-full shadow-lg"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-[#022b5c]/80 text-white hover:bg-[#022b5c] rounded-full shadow-lg"
                 onClick={goToNext}
               >
                 <ChevronRight className="h-6 w-6" />
@@ -481,7 +481,7 @@ export default function TeamPage() {
                           
                           {/* Member Details - Only shown when expanded */}
                           {isExpanded && (
-                            <div className={`p-6 backdrop-blur-md bg-[#01162f]/70 h-full md:min-h-[24rem] relative z-0 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
+                            <div className={`p-6 backdrop-blur-md bg-[#01162f] h-full md:min-h-[24rem] relative z-0 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
                               <div className="md:flex md:justify-between md:items-start">
                                 <div>
                                   <h3 className="text-2xl font-bold text-white mb-1">{member.name}</h3>
