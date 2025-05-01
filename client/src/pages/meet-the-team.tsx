@@ -500,7 +500,7 @@ export default function TeamPage() {
                         <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden [&>button]:hidden">
                           
                           <div className="md:flex">
-                            <div className="md:w-2/5">
+                            <div className="hidden md:block md:w-2/5">
                               <div className="h-64 md:h-full">
                                 <img 
                                   src={member.image} 
@@ -515,7 +515,7 @@ export default function TeamPage() {
                               </div>
                             </div>
                             
-                            <div className="p-6 md:w-3/5">
+                            <div className="p-6 sm:p-8 w-full md:w-3/5">
                               <DialogHeader className="mb-4">
                                 <div>
                                   <DialogTitle className="text-2xl font-bold mb-1 text-white">
@@ -531,10 +531,15 @@ export default function TeamPage() {
                                 <p>{member.description}</p>
                               </div>
                               
-                              {/* Hidden close button at the bottom */}
-                              <div className="mt-6 flex justify-end">
+                              {/* Close buttons - different styles for mobile and desktop */}
+                              <div className="mt-8 flex justify-end">
                                 <DialogClose asChild>
-                                  <button className="hidden md:inline-flex px-4 py-2 bg-[#43EB3E]/20 text-[#43EB3E] rounded-md hover:bg-[#43EB3E]/30 transition-colors">
+                                  <button className="md:hidden inline-flex px-4 py-2.5 bg-white/10 text-white rounded-md hover:bg-white/20 transition-colors">
+                                    Close
+                                  </button>
+                                </DialogClose>
+                                <DialogClose asChild>
+                                  <button className="hidden md:inline-flex px-4 py-2.5 bg-[#43EB3E]/20 text-[#43EB3E] rounded-md hover:bg-[#43EB3E]/30 transition-colors">
                                     Close
                                   </button>
                                 </DialogClose>
