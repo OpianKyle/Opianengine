@@ -502,11 +502,21 @@ export default function TeamPage() {
                             )}
                           </div>
                           
-                          {/* Member Details - Only shown when expanded */}
-                          {isExpanded && (
-                            <div className={`p-6 backdrop-blur-md bg-[rgb(8,42,90)] dark:bg-[#01162f] h-full md:min-h-[24rem] relative z-0 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1rem)]' : ''}`}>
+                          {/* Member Details - Using AnimatePresence for smooth transitions */}
+                          <div 
+                            className={`absolute inset-0 backdrop-blur-md bg-[rgb(8,42,90)] dark:bg-[#01162f] overflow-hidden transition-all duration-500 ease-in-out h-full md:min-h-[24rem] ${
+                              isExpanded 
+                                ? 'opacity-100 md:ml-1/3' 
+                                : 'opacity-0 pointer-events-none translate-y-10'
+                            }`}
+                          >
+                            <div 
+                              className={`p-6 h-full transition-all duration-500 ${
+                                isExpanded ? 'md:pl-[calc(33%+1rem)] opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                              }`}
+                            >
                               <div className="md:flex md:justify-between md:items-start">
-                                <div>
+                                <div className="transition-all duration-300 delay-100">
                                   <h3 className="text-xl md:text-2xl font-bold text-white mb-1">{member.name}</h3>
                                   <p className="text-[#43EB3E] text-base md:text-lg mb-3">{member.title}</p>
                                 </div>
@@ -524,9 +534,11 @@ export default function TeamPage() {
                                 </Button>
                               </div>
                               
-                              <p className="text-sm md:text-base text-gray-200">{member.description}</p>
+                              <p className="text-sm md:text-base text-gray-200 transition-all duration-300 delay-200">
+                                {member.description}
+                              </p>
                             </div>
-                          )}
+                          </div>
                         </div>
                         
                         {/* Indicator for active member */}
