@@ -300,40 +300,40 @@ export default function TeamPage() {
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Our Mission, Vision and Values</h2>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="bg-gray-50 dark:bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
                 <div className="relative z-10">
                   <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
                     <Compass className="h-8 w-8 text-[#43EB3E]" />
                   </div>
-                  <h3 className="text-xl font-bold mb-4">Our Mission</h3>
-                  <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                  <h3 className="text-xl font-bold mb-4 text-white">Our Mission</h3>
+                  <p className="text-gray-300">
                     To enhance the lives of our members through innovative and accessible financial product offerings, building a community of empowered individuals.
                   </p>
                 </div>
               </div>
               
-              <div className="bg-gray-50 dark:bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
                 <div className="relative z-10">
                   <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
                     <Award className="h-8 w-8 text-[#43EB3E]" />
                   </div>
-                  <h3 className="text-xl font-bold mb-4">Our Vision</h3>
-                  <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                  <h3 className="text-xl font-bold mb-4 text-white">Our Vision</h3>
+                  <p className="text-gray-300">
                     To establish a premier rewards loyalty program that effectively integrates essential financial products for our members, fostering economic wellbeing and growth.
                   </p>
                 </div>
               </div>
               
-              <div className="bg-gray-50 dark:bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
                 <div className="relative z-10">
                   <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
                     <Shield className="h-8 w-8 text-[#43EB3E]" />
                   </div>
-                  <h3 className="text-xl font-bold mb-4">Our Values</h3>
-                  <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                  <h3 className="text-xl font-bold mb-4 text-white">Our Values</h3>
+                  <p className="text-gray-300">
                     Commitment, Trust, and Empowerment. We focus on creating transparent, mutually beneficial relationships that prioritize our members' financial success.
                   </p>
                 </div>
@@ -564,7 +564,7 @@ export default function TeamPage() {
       </main>
       
       {/* Footer */}
-      <footer className="bg-white dark:bg-[#011d3d] text-[rgb(8,42,90)] dark:text-white py-8">
+      <footer className="bg-[#011d3d] text-white py-8">
         <div className="container mx-auto px-6">
           <div className="flex justify-start mb-8">
             <img 
@@ -602,28 +602,28 @@ export default function TeamPage() {
               <div className="text-center">
                 <h3 className="text-lg font-semibold mb-4">Packages</h3>
                 <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Momentum</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prosper</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prestige</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Momentum</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Prosper</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Prestige</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
                 </ul>
               </div>
               <div className="text-center">
                 <h3 className="text-lg font-semibold mb-4">Resources</h3>
                 <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Help Center</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">FAQs</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Blog</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Contact</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Help Center</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">FAQs</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Blog</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Contact</a></li>
                 </ul>
               </div>
               <div className="text-center">
                 <h3 className="text-lg font-semibold mb-4">Legal</h3>
                 <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Privacy Policy</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Disclaimer</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Privacy Policy</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
+                  <li><a href="#" className="text-gray-300 hover:text-[#43EB3E] transition-colors">Disclaimer</a></li>
                 </ul>
               </div>
             </div>
@@ -653,7 +653,7 @@ export default function TeamPage() {
                   </svg>
                 </a>
               </div>
-              <div className="mt-8 text-left lg:text-right text-sm text-gray-500 dark:text-gray-400">
+              <div className="mt-8 text-left lg:text-right text-sm text-gray-300">
                 <p>© 2025 Opian Rewards. All rights reserved.</p>
               </div>
             </div>
