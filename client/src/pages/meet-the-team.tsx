@@ -339,7 +339,7 @@ export default function TeamPage() {
                 ref={carouselRef}
                 className="relative overflow-hidden"
                 style={{ 
-                  height: expandedMember !== null ? "750px" : "550px",
+                  height: expandedMember !== null ? "650px" : "450px",
                   transition: "height 0.5s ease-in-out"
                 }}
               >
@@ -395,11 +395,11 @@ export default function TeamPage() {
                           }}
                         >
                           {/* Image Container */}
-                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0 z-10' : 'h-96 md:h-[28rem]'}`}>
+                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0 z-10' : 'h-80 md:h-[22rem]'}`}>
                             <img 
                               src={member.image} 
                               alt={member.name}
-                              className={`w-full h-full object-cover object-top transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
+                              className={`w-full h-full object-contain transition-transform duration-500 ${isCenterActive && !isExpanded ? 'hover:scale-105' : ''}`}
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement;
                                 img.onerror = null;
