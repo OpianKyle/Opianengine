@@ -445,7 +445,7 @@ export default function TeamPage() {
                         {/* Member Card */}
                         <div 
                           className={`relative overflow-hidden transition-all duration-500 ${
-                            isExpanded ? 'w-full z-20 mx-auto max-w-3xl fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2' : 'w-full cursor-pointer'
+                            isExpanded ? 'w-[95%] md:w-[90%] lg:w-[80%] max-w-4xl z-20 mx-auto fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2' : 'w-full cursor-pointer'
                           }`}
                           onClick={() => {
                             if (isExpanded) return;
@@ -502,11 +502,11 @@ export default function TeamPage() {
                           {isExpanded && (
                             <div className="flex flex-col md:flex-row w-full overflow-hidden bg-[rgb(8,42,90)] dark:bg-[#01162f] rounded-lg shadow-2xl border border-[#43EB3E]/20 animate-in fade-in duration-300 z-50">
                               {/* Image Container - Mobile (top) and Desktop (left) */}
-                              <div className="h-64 md:h-auto md:w-1/4 flex-shrink-0 p-2 bg-gradient-to-br from-[#01162f] to-[rgb(8,42,90)]">
+                              <div className="h-80 md:h-auto md:w-1/3 flex-shrink-0 bg-gradient-to-br from-[#01162f] to-[rgb(8,42,90)] flex items-center justify-center p-4">
                                 <img 
                                   src={member.image} 
                                   alt={member.name}
-                                  className="w-full h-full object-contain"
+                                  className="w-full h-full object-contain max-h-[300px]"
                                   onError={(e) => {
                                     const img = e.target as HTMLImageElement;
                                     img.onerror = null;
