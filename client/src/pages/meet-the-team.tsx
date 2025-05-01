@@ -368,9 +368,9 @@ export default function TeamPage() {
                     <div 
                       className="bg-[#011d3d] rounded-lg overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-105 hover:shadow-xl"
                     >
-                      <div className="flex flex-col items-center py-8 px-4">
+                      <div className="flex flex-col items-center py-8 px-6">
                         {/* Circular image */}
-                        <div className="w-32 h-32 rounded-full overflow-hidden mb-4 border-2 border-[#43EB3E]/20">
+                        <div className="w-36 h-36 rounded-full overflow-hidden mb-4 border-2 border-[#43EB3E]/20">
                           <img 
                             src={member.image} 
                             alt={member.name} 
