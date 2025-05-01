@@ -374,7 +374,7 @@ export default function TeamPage() {
                           <img 
                             src={member.image} 
                             alt={member.name} 
-                            className="w-full h-full object-cover object-center"
+                            className="w-full h-full object-cover object-top"
                             onError={(e) => {
                               const img = e.target as HTMLImageElement;
                               img.onerror = null;
@@ -405,7 +405,7 @@ export default function TeamPage() {
                           <img 
                             src={member.image} 
                             alt={member.name} 
-                            className="w-full h-full object-cover object-center"
+                            className="w-full h-full object-cover object-top"
                             onError={(e) => {
                               const img = e.target as HTMLImageElement;
                               img.onerror = null;
