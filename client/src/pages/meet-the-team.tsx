@@ -42,7 +42,7 @@ export default function TeamPage() {
       name: "Lance Heynes",
       title: "Director of Operations",
       description: "Lance ensures the seamless integration of our services to enhance member satisfaction and engagement. With over 10 years of experience in operations management, Lance has developed efficient systems that prioritize both member benefits and company growth. His expertise in customer experience design has been instrumental in shaping the rewarding journey that our members enjoy.",
-      image: "/Kyle-McBryne.png"
+      image: "/Lance.jpg"
     },
     {
       id: 2,
@@ -63,14 +63,14 @@ export default function TeamPage() {
       name: "Mic-Shane Brown",
       title: "Head of Admin",
       description: "Mic-Shane focuses on managing internal systems and the team that ensures an unparalleled and rewarding customer experience. His attention to detail and process optimization skills have created a seamless administrative backbone for our operations. Mic-Shane leads a dedicated team that handles everything from member inquiries to complex reward tracking scenarios.",
-      image: "/Kyle-McBryne.png"
+      image: "/Mic-Shane.jpg"
     },
     {
       id: 5,
       name: "Lionel Lottering",
       title: "Head of Investor Matters",
       description: "Lionel looks after our investors and ensures the establishment of win-win relationships between investors and the company. With a background in finance and business development, he maintains transparency and alignment between company growth and investor expectations. Lionel has been instrumental in securing the funding that powers our rewards innovation.",
-      image: "/Kyle-McBryne.png"
+      image: "/Lionel.jpg"
     },
     {
       id: 6,
