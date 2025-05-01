@@ -403,7 +403,7 @@ export default function TeamPage() {
                 ref={carouselRef}
                 className="relative overflow-hidden"
                 style={{ 
-                  height: expandedMember !== null ? "450px" : "250px",
+                  height: expandedMember !== null ? "650px" : "450px",
                   transition: "height 0.5s ease-in-out"
                 }}
               >
@@ -459,7 +459,7 @@ export default function TeamPage() {
                           }}
                         >
                           {/* Image Container */}
-                          <div className={`relative ${isExpanded ? 'h-32 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0 z-10' : 'h-40 md:h-[11rem]'}`}>
+                          <div className={`relative ${isExpanded ? 'h-64 w-full md:w-1/3 md:h-auto md:absolute md:left-0 md:top-0 md:bottom-0 z-10' : 'h-80 md:h-[22rem]'}`}>
                             <img 
                               src={member.image} 
                               alt={member.name}
@@ -491,7 +491,7 @@ export default function TeamPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="absolute top-2 right-2 md:hidden bg-gray-200/70 text-[rgb(8,42,90)] dark:bg-white/20 dark:text-white hover:bg-gray-300/80 dark:hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm shadow-md z-20"
+                                className="absolute top-2 right-2 md:hidden bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm shadow-md z-20"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleMemberExpand(member.id);
@@ -504,17 +504,17 @@ export default function TeamPage() {
                           
                           {/* Member Details - Only shown when expanded */}
                           {isExpanded && (
-                            <div className={`p-6 backdrop-blur-md bg-[rgb(235,242,249)] text-[rgb(8,42,90)] dark:text-white dark:bg-[#01162f] h-full md:min-h-[12rem] relative z-0 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
+                            <div className={`p-6 backdrop-blur-md bg-[rgb(8,42,90)] dark:bg-[#01162f] h-full md:min-h-[24rem] relative z-0 ${isExpanded ? 'md:ml-1/3 md:pl-[calc(33%+1.5rem)]' : ''}`}>
                               <div className="md:flex md:justify-between md:items-start">
                                 <div>
-                                  <h3 className="text-2xl font-bold text-[rgb(8,42,90)] dark:text-white mb-1">{member.name}</h3>
+                                  <h3 className="text-2xl font-bold text-white mb-1">{member.name}</h3>
                                   <p className="text-[#43EB3E] text-lg mb-4">{member.title}</p>
                                 </div>
                                 
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="hidden md:flex bg-gray-200/70 text-[rgb(8,42,90)] dark:bg-white/20 dark:text-white hover:bg-gray-300/80 dark:hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm z-20"
+                                  className="hidden md:flex bg-white/20 text-white hover:bg-white/30 hover:text-[#43EB3E] rounded-full backdrop-blur-sm z-20"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     toggleMemberExpand(member.id);
@@ -524,7 +524,7 @@ export default function TeamPage() {
                                 </Button>
                               </div>
                               
-                              <p className="text-gray-600 dark:text-gray-200">{member.description}</p>
+                              <p className="text-gray-200">{member.description}</p>
                             </div>
                           )}
                         </div>
