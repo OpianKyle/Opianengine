@@ -479,13 +479,8 @@ export default function TeamPage() {
                               
                               {/* Name and Title Overlay */}
                               <div className="absolute bottom-0 right-0 w-3/4 bg-gradient-to-tl from-[rgb(8,42,90)] via-[rgb(8,42,90)]/70 to-transparent dark:from-[#01162f] dark:via-[#01162f]/70 flex flex-col justify-end p-4 transition-opacity duration-300">
-                                <h3 className="text-xl font-bold text-white mb-1 text-right flex items-center justify-end">
+                                <h3 className="text-xl font-bold text-white mb-1 text-right">
                                   {member.name}
-                                  {isCenterActive && (
-                                    <span className="ml-2 bg-[#43EB3E]/20 p-1 rounded-full inline-flex items-center justify-center">
-                                      <span className="text-[#43EB3E] text-xs">+</span>
-                                    </span>
-                                  )}
                                 </h3>
                                 <p className="text-[#43EB3E] text-right">{member.title}</p>
                               </div>
@@ -502,7 +497,7 @@ export default function TeamPage() {
                           </div>
                         </div>
                         
-                        <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden" hideCloseButton>
+                        <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden" closeButton={false}>
                           {/* Custom close button */}
                           <div className="absolute right-4 top-4 z-10">
                             <DialogClose asChild>
