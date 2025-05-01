@@ -87,6 +87,7 @@ export default function HowItWorksPage() {
             <nav className="hidden md:flex space-x-8">
               <a href="/" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Home</a>
               <a href="/how-it-works" className="text-[#43EB3E] font-medium">How It Works</a>
+              <a href="/meet-the-team" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Meet the Team</a>
             </nav>
             
             {/* Desktop buttons */}
