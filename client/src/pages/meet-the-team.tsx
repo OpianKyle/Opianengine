@@ -445,7 +445,7 @@ export default function TeamPage() {
                         {/* Member Card */}
                         <div 
                           className={`relative overflow-hidden transition-all duration-500 ${
-                            isExpanded ? 'w-full z-20 mx-auto max-w-2xl' : 'w-full cursor-pointer'
+                            isExpanded ? 'w-full z-20 mx-auto max-w-3xl fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2' : 'w-full cursor-pointer'
                           }`}
                           onClick={() => {
                             if (isExpanded) return;
@@ -487,11 +487,22 @@ export default function TeamPage() {
                             </div>
                           )}
                           
+                          {/* Modal Background Overlay */}
+                          {isExpanded && (
+                            <div 
+                              className="fixed inset-0 bg-black/70 z-10 backdrop-blur-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleMemberExpand(member.id);
+                              }}
+                            />
+                          )}
+                          
                           {/* Expanded View */}
                           {isExpanded && (
-                            <div className="flex flex-col md:flex-row w-full overflow-hidden bg-[rgb(8,42,90)] dark:bg-[#01162f] rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            <div className="flex flex-col md:flex-row w-full overflow-hidden bg-[rgb(8,42,90)] dark:bg-[#01162f] rounded-lg shadow-lg animate-in fade-in duration-300 z-30">
                               {/* Image Container - Mobile (top) and Desktop (left) */}
-                              <div className="h-64 md:h-auto md:w-1/3 flex-shrink-0">
+                              <div className="h-64 md:h-auto md:w-1/4 flex-shrink-0">
                                 <img 
                                   src={member.image} 
                                   alt={member.name}
