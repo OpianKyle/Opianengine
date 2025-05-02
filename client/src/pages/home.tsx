@@ -584,7 +584,7 @@ export default function HomePage() {
                 
                 <div className="flex flex-col sm:flex-row gap-4 mt-8">
                   <Button 
-                    onClick={() => navigate("/auth?tab=register")}
+                    onClick={() => navigate("/contact-us")}
                     className="bg-[#43EB3E] hover:bg-[#3ad036] text-black"
                     size="lg"
                   >
@@ -783,7 +783,7 @@ export default function HomePage() {
                     Don't miss out on making your everyday spending a source of cash rewards!
                   </p>
                   <Button
-                    onClick={() => navigate("/auth?tab=register")}
+                    onClick={() => navigate("/contact-us")}
                     className="bg-[#43EB3E] hover:bg-[#3ad036] text-[#01162f] font-bold px-10 py-4 text-lg transform transition-all duration-300 hover:scale-105 hover:shadow-lg relative z-10 w-full md:w-auto"
                   >
                     Get Started Now
@@ -878,7 +878,7 @@ export default function HomePage() {
                         <CardFooter className="relative z-10 mt-auto">
                           <Button 
                             className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
-                            onClick={() => navigate(`/auth?tab=register&package=${packageName}`)}
+                            onClick={() => navigate(`/contact-us?package=${packageName}`)}
                           >
                             Get Started
                             <ArrowRight className="ml-2 h-4 w-4" />
@@ -1027,7 +1027,7 @@ export default function HomePage() {
                 <CardFooter className="relative z-10 mt-auto">
                   <Button 
                     className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
-                    onClick={() => navigate(`/auth?tab=register&package=${packageName}`)}
+                    onClick={() => navigate(`/contact-us?package=${packageName}`)}
                   >
                     Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -1059,7 +1059,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
             <Button 
-              onClick={() => navigate("/auth?tab=register")}
+              onClick={() => navigate("/contact-us")}
               className="bg-[#43EB3E] hover:bg-[#3ad036] text-black text-lg py-6 px-8 rounded-md"
               size="lg"
             >
@@ -1067,7 +1067,7 @@ export default function HomePage() {
               <ArrowUpRight className="ml-2 h-5 w-5" />
             </Button>
             <Button 
-              onClick={() => navigate("/auth")}
+              onClick={() => navigate("/login")}
               variant="outline" 
               className="border-foreground dark:border-white text-foreground dark:text-white hover:bg-foreground/10 dark:hover:bg-white/10 text-lg py-6 px-8 rounded-md"
               size="lg"
