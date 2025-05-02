@@ -123,13 +123,14 @@ export default function AdminLeads() {
     isLoading: isLoadingAgents,
     error: agentsError,
   } = useQuery({
-    queryKey: ['/api/admin/agents'],
+    queryKey: ['/api/admin/agents/list'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/agents', {
+      const response = await fetch('/api/admin/agents/list', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -168,6 +169,7 @@ export default function AdminLeads() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -188,6 +190,7 @@ export default function AdminLeads() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(updatedData),
       });
 

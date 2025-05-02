@@ -1110,7 +1110,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
   
   app.use('/api/agent', agentRouter);
-  app.use('/api/users/agents', agentsRouter);
+  app.use('/api/admin/agents', agentsRouter);
   app.use('/api/migration', migrationRouter);
   app.use('/api/manual-migration', manualMigrationRouter);
   app.use('/api/package-types', packageTypesRouter);
