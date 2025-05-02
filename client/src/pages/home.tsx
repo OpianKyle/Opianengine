@@ -471,7 +471,7 @@ export default function HomePage() {
                 className="bg-[#43EB3E] hover:bg-[#3ad036] text-black text-lg py-6 px-8 rounded-md"
                 size="lg"
               >
-                Start Earning
+                More Information
               </Button>
             </div>
             <div className="lg:w-1/2 mt-10 lg:mt-0 flex justify-center lg:justify-end relative z-10">
@@ -588,7 +588,7 @@ export default function HomePage() {
                     className="bg-[#43EB3E] hover:bg-[#3ad036] text-black"
                     size="lg"
                   >
-                    Begin Your Journey
+                    More Information
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                   <Button 
@@ -786,7 +786,7 @@ export default function HomePage() {
                     onClick={() => navigate("/contact-us")}
                     className="bg-[#43EB3E] hover:bg-[#3ad036] text-[#01162f] font-bold px-10 py-4 text-lg transform transition-all duration-300 hover:scale-105 hover:shadow-lg relative z-10 w-full md:w-auto"
                   >
-                    Get Started Now
+                    More Information
                   </Button>
                 </div>
               </div>
@@ -880,7 +880,7 @@ export default function HomePage() {
                             className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
                             onClick={() => navigate(`/contact-us?package=${packageName}`)}
                           >
-                            Get Started
+                            More Information
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </Button>
                         </CardFooter>
@@ -1029,7 +1029,7 @@ export default function HomePage() {
                     className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
                     onClick={() => navigate(`/contact-us?package=${packageName}`)}
                   >
-                    Get Started
+                    More Information
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </CardFooter>

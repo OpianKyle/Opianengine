@@ -362,7 +362,7 @@ export default function HowItWorksPage() {
               className="bg-[#43EB3E] hover:bg-[#3ad036] text-black text-lg py-6 px-8 rounded-md relative z-10"
               size="lg"
             >
-              Sign Up Now
+              More Information
               <ArrowUpRight className="ml-2 h-5 w-5" />
             </Button>
             <Button 
@@ -380,7 +380,7 @@ export default function HowItWorksPage() {
             <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-40 h-0.5 bg-gradient-to-r from-transparent via-[#43EB3E]/20 to-transparent"></div>
             
             <a href="/contact-us" className="text-[#43EB3E] hover:underline text-lg font-medium relative inline-block">
-              More Information
+              Contact Us
             </a>
           </div>
         </div>
