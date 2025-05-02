@@ -1,6 +1,6 @@
 import express from "express";
 import { z } from "zod";
-import { and, desc, eq, like, or } from "drizzle-orm";
+import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { db } from "../../db";
 import { insertLeadSchema, leads } from "../../db/leads";
 import { ResponseError } from "../utils/errors";
@@ -46,9 +46,11 @@ router.get("/", async (req, res, next) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
     
-    // For PostgreSQL we need to access the count result differently
-    const totalCountResult = await db.select({ count: db.fn.count() }).from(leads);
-    const totalCount = totalCountResult[0]?.count || 0;
+    // For MySQL we need to use count() properly
+    const [countResult] = await db.select({
+      count: sql`COUNT(*) as count`
+    }).from(leads);
+    const totalCount = countResult?.count || 0;
     
     const items = await query.limit(limit).offset(offset);
 
@@ -91,11 +93,12 @@ router.post("/", async (req, res, next) => {
       throw new ResponseError(validationError.message, 400);
     }
     
-    // Insert the lead
-    const insertResult = await db.insert(leads).values(result.data).returning();
-    const lead = insertResult[0];
+    // Insert the lead using MySQL method
+    const insertResult = await db.insert(leads).values(result.data);
     
-    // PostgreSQL returns the inserted record directly when using returning()
+    // Get the inserted ID and fetch the complete lead record
+    const leadId = Number(insertResult.insertId);
+    const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
     
     // Log the submission in admin logs if the user is logged in
     if (req.isAuthenticated() && req.user?.id) {
@@ -165,16 +168,16 @@ router.put("/:id", async (req, res, next) => {
     }
 
     const updateData = result.data;
-    const updatedLeads = await db
+    await db
       .update(leads)
       .set({
         ...updateData,
         updatedAt: new Date(),
       })
-      .where(eq(leads.id, id))
-      .returning();
+      .where(eq(leads.id, id));
     
-    const updatedLead = updatedLeads[0];
+    // Fetch the updated lead
+    const [updatedLead] = await db.select().from(leads).where(eq(leads.id, id));
 
     await adminLog({
       user_id: req.user.id,
