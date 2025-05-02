@@ -3,6 +3,7 @@ import { useTheme } from "@/providers/theme-provider";
 import { useLocation, Link } from "wouter";
 import { 
   Menu, 
+  X,
   Users,
   Compass,
   Shield,
@@ -23,6 +24,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import { useUser } from "@/hooks/use-user";
 
 // Define the type for team members
 interface TeamMember {
@@ -34,6 +36,7 @@ interface TeamMember {
 }
 
 export default function TeamPage() {
+  const { user, isLoading } = useUser();
   const { theme } = useTheme();
   const [location, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -128,96 +131,113 @@ export default function TeamPage() {
             </Link>
           </div>
           
-          {/* Desktop navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/">
-              <div className="text-[rgb(8,42,90)] dark:text-white hover:text-[#43EB3E] transition-colors">
-                Home
-              </div>
-            </Link>
-            <Link href="/how-it-works">
-              <div className="text-[rgb(8,42,90)] dark:text-white hover:text-[#43EB3E] transition-colors">
-                How It Works
-              </div>
-            </Link>
-            <Link href="/meet-the-team">
-              <div className="text-[#43EB3E] font-medium">
-                Meet The Team
-              </div>
-            </Link>
-            <div className="flex space-x-2">
-              <ThemeToggle />
-              <Button 
-                onClick={() => navigate("/login")}
-                variant="outline" 
-                className="text-[rgb(8,42,90)] dark:text-white border-[rgb(8,42,90)] dark:border-white hover:bg-[rgb(8,42,90)]/10 dark:hover:bg-white/10"
-              >
-                Sign In
-              </Button>
-              <Button 
-                onClick={() => navigate("/register")}
-                className="bg-[#43EB3E] hover:bg-[#3ad036] text-black"
-              >
-                Sign Up
-              </Button>
-            </div>
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex space-x-8">
+            <a href="/" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Home</a>
+            <a href="/how-it-works" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
+            <a href="/meet-the-team" className="text-[#43EB3E] font-medium">Meet The Team</a>
+            <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">FAQ</a>
           </nav>
           
-          {/* Mobile menu button */}
-          <div className="flex items-center md:hidden space-x-4">
+          {/* Desktop buttons */}
+          <div className="hidden md:flex items-center space-x-4">
             <ThemeToggle />
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-[rgb(8,42,90)] dark:text-white">
-                  <Menu className="h-6 w-6" />
+            {user ? (
+              <Button 
+                onClick={() => navigate(user.is_admin ? "/admin" : "/dashboard")}
+                className="bg-[#43EB3E] hover:bg-[#3ad036] text-black font-medium"
+              >
+                Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  className="bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
+                  onClick={() => navigate("/login")}
+                >
+                  Login
                 </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="bg-white dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white border-l border-gray-200 dark:border-[#022b5c]">
-                <div className="flex flex-col h-full">
-                  <div className="flex-1 py-6">
-                    <div className="px-2 space-y-6">
-                      <Link href="/">
-                        <a className="block py-2 hover:text-[#43EB3E] transition-colors" onClick={() => setMobileMenuOpen(false)}>
-                          Home
-                        </a>
-                      </Link>
-                      <Link href="/how-it-works">
-                        <a className="block py-2 hover:text-[#43EB3E] transition-colors" onClick={() => setMobileMenuOpen(false)}>
-                          How It Works
-                        </a>
-                      </Link>
-                      <Link href="/meet-the-team">
-                        <a className="block py-2 text-[#43EB3E] font-medium" onClick={() => setMobileMenuOpen(false)}>
-                          Meet The Team
-                        </a>
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="px-2 py-6 border-t border-gray-200 dark:border-[#022b5c] space-y-4">
-                    <Button 
-                      onClick={() => {
-                        navigate("/login");
-                        setMobileMenuOpen(false);
-                      }}
-                      variant="outline" 
-                      className="w-full text-[rgb(8,42,90)] dark:text-white border-[rgb(8,42,90)] dark:border-white"
-                    >
-                      Sign In
-                    </Button>
-                    <Button 
-                      onClick={() => {
-                        navigate("/register");
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black"
-                    >
-                      Sign Up
-                    </Button>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
+                <Button 
+                  onClick={() => navigate("/contact-us")}
+                  className="bg-[#43EB3E] hover:bg-[#3ad036] text-black font-medium"
+                >
+                  Get Information
+                </Button>
+              </>
+            )}
           </div>
+          
+          {/* Mobile buttons */}
+          <div className="flex md:hidden items-center space-x-3">
+            <ThemeToggle />
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="ml-auto text-[#43EB3E] p-1"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+          </div>
+          
+          {/* Mobile Navigation - Dropdown */}
+          {mobileMenuOpen && (
+            <div className="md:hidden py-4 px-2 space-y-3 bg-white dark:bg-[#01162f] border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top">
+              <nav className="flex flex-col space-y-3">
+                <a 
+                  href="/" 
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Home
+                </a>
+                <a 
+                  href="/how-it-works" 
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  How It Works
+                </a>
+                <a 
+                  href="/meet-the-team" 
+                  className="text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Meet The Team
+                </a>
+                <a 
+                  href="#" 
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  FAQ
+                </a>
+              </nav>
+              
+              <div className="flex space-x-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/login");
+                  }}
+                >
+                  Login
+                </Button>
+                <Button 
+                  className="flex-1 bg-[#43EB3E] hover:bg-[#3ad036] text-black font-medium"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/contact-us");
+                  }}
+                >
+                  Get Information
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </header>
       
