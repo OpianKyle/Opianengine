@@ -37,12 +37,12 @@ export default function LoginPage() {
   const loginForm = useForm({
     resolver: zodResolver(
       z.object({
-        username: z.string().min(1, "Username is required"),
+        email: z.string().email("Please enter a valid email address"),
         password: z.string().min(1, "Password is required"),
       })
     ),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -62,7 +62,7 @@ export default function LoginPage() {
   }, [user, navigate]);
 
   // Handle login form submission
-  const onLoginSubmit = async (data: { username: string; password: string }) => {
+  const onLoginSubmit = async (data: { email: string; password: string }) => {
     setSubmitting(true);
     try {
       const response = await fetch("/api/login", {
@@ -202,16 +202,17 @@ export default function LoginPage() {
                   >
                     <FormField
                       control={loginForm.control}
-                      name="username"
+                      name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-700 dark:text-gray-200">Username</FormLabel>
+                          <FormLabel className="text-gray-700 dark:text-gray-200">Email</FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="Enter your username"
+                              type="email"
+                              placeholder="Enter your email address"
                               className="bg-gray-50 dark:bg-[#01162f] border-gray-200 dark:border-[#011d3f] focus:border-[#43EB3E] dark:focus:border-[#43EB3E] focus:ring-[#43EB3E]/20 dark:focus:ring-[#43EB3E]/20 transition-colors duration-300"
                               {...field}
-                              autoComplete="username"
+                              autoComplete="email"
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
