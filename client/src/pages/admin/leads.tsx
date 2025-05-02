@@ -66,6 +66,14 @@ interface Lead {
   updatedAt: string;
 }
 
+// Agent type definition
+interface Agent {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 // Pagination type definition
 interface PaginationData {
   page: number;
@@ -105,6 +113,29 @@ export default function AdminLeads() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const pageSize = 10;
+
+  // Fetch list of agents
+  const {
+    data: agentsData,
+    isLoading: isLoadingAgents,
+  } = useQuery({
+    queryKey: ['/api/users/agents/list'],
+    queryFn: async () => {
+      const response = await fetch('/api/users/agents/list', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch agents');
+      }
+
+      return response.json();
+    },
+    enabled: !!token,
+  });
 
   // Fetch leads data with filtering and pagination
   const {
@@ -184,22 +215,32 @@ export default function AdminLeads() {
 
     // Create CSV content
     const headers = ["ID", "First Name", "Last Name", "Email", "Mobile Number", 
-                     "Package", "Referral Code", "Status", "Created At", "Notes"];
+                     "Package", "Referral Code", "Status", "Assigned Agent", "Created At", "Notes"];
     
     const csvRows = [
       headers.join(','),
-      ...data.items.map(lead => [
-        lead.id,
-        `"${lead.firstName}"`,
-        `"${lead.lastName}"`,
-        `"${lead.email}"`,
-        `"${lead.mobileNumber}"`,
-        `"${lead.selectedPackage || ''}"`,
-        `"${lead.referralCode || ''}"`,
-        `"${lead.status}"`,
-        `"${new Date(lead.createdAt).toLocaleString()}"`,
-        `"${lead.notes?.replace(/"/g, '""') || ''}"`
-      ].join(','))
+      ...data.items.map(lead => {
+        // Find assigned agent name
+        const assignedAgentName = lead.assignedAgentId && agentsData 
+          ? agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId)
+              ? `${agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId)?.firstName} ${agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId)?.lastName}`
+              : 'Unknown Agent'
+          : 'Unassigned';
+          
+        return [
+          lead.id,
+          `"${lead.firstName}"`,
+          `"${lead.lastName}"`,
+          `"${lead.email}"`,
+          `"${lead.mobileNumber}"`,
+          `"${lead.selectedPackage || ''}"`,
+          `"${lead.referralCode || ''}"`,
+          `"${lead.status}"`,
+          `"${assignedAgentName}"`,
+          `"${new Date(lead.createdAt).toLocaleString()}"`,
+          `"${lead.notes?.replace(/"/g, '""') || ''}"`
+        ].join(',');
+      })
     ];
     
     const csvContent = csvRows.join('\n');
@@ -369,6 +410,7 @@ export default function AdminLeads() {
                       <TableHead>Contact Info</TableHead>
                       <TableHead>Package</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Assigned To</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -398,6 +440,18 @@ export default function AdminLeads() {
                           <Badge className={getStatusBadgeClass(lead.status)}>
                             {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {lead.assignedAgentId ? (
+                            <div className="flex items-center">
+                              {agentsData?.find((agent: Agent) => agent.id === lead.assignedAgentId)
+                                ? `${agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId)?.firstName} ${agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId)?.lastName}`
+                                : 'Unknown Agent'
+                              }
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Unassigned</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <span title={new Date(lead.createdAt).toLocaleString()}>
@@ -575,6 +629,29 @@ export default function AdminLeads() {
                       {STATUS_OPTIONS.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Assign to Agent</h3>
+                  <Select
+                    defaultValue={selectedLead.assignedAgentId?.toString() || ""}
+                    onValueChange={(value) => {
+                      const assignedAgentId = value === "" ? null : parseInt(value, 10);
+                      handleLeadUpdate(selectedLead.id, { assignedAgentId });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an agent" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Unassigned</SelectItem>
+                      {agentsData?.map((agent: Agent) => (
+                        <SelectItem key={agent.id} value={agent.id.toString()}>
+                          {agent.firstName} {agent.lastName}
                         </SelectItem>
                       ))}
                     </SelectContent>

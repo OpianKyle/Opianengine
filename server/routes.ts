@@ -13,6 +13,7 @@ import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
 import agentRouter from './routes/agent';
+import agentsRouter from './routes/agents';
 import migrationRouter from './routes/migration';
 import manualMigrationRouter from './routes/manual-migration';
 import packageTypesRouter from './routes/package-types';
@@ -1109,6 +1110,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
   
   app.use('/api/agent', agentRouter);
+  app.use('/api/users/agents', agentsRouter);
   app.use('/api/migration', migrationRouter);
   app.use('/api/manual-migration', manualMigrationRouter);
   app.use('/api/package-types', packageTypesRouter);
