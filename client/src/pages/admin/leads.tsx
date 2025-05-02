@@ -221,11 +221,15 @@ export default function AdminLeads() {
       headers.join(','),
       ...data.items.map(lead => {
         // Find assigned agent name
-        const assignedAgentName = lead.assignedAgentId && agentsData 
-          ? agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId)
-              ? `${agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId)?.firstName} ${agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId)?.lastName}`
-              : 'Unknown Agent'
-          : 'Unassigned';
+        let assignedAgentName = 'Unassigned';
+        if (lead.assignedAgentId && agentsData) {
+          const agent = agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId);
+          if (agent) {
+            assignedAgentName = `${agent.firstName} ${agent.lastName}`;
+          } else {
+            assignedAgentName = 'Unknown Agent';
+          }
+        }
           
         return [
           lead.id,
@@ -444,10 +448,10 @@ export default function AdminLeads() {
                         <TableCell>
                           {lead.assignedAgentId ? (
                             <div className="flex items-center">
-                              {agentsData?.find((agent: Agent) => agent.id === lead.assignedAgentId)
-                                ? `${agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId)?.firstName} ${agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId)?.lastName}`
-                                : 'Unknown Agent'
-                              }
+                              {(() => {
+                                const agent = agentsData?.find((agent: Agent) => agent.id === lead.assignedAgentId);
+                                return agent ? `${agent.firstName} ${agent.lastName}` : 'Unknown Agent';
+                              })()}
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-sm">Unassigned</span>
@@ -638,9 +642,9 @@ export default function AdminLeads() {
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-1">Assign to Agent</h3>
                   <Select
-                    defaultValue={selectedLead.assignedAgentId?.toString() || ""}
+                    defaultValue={selectedLead.assignedAgentId?.toString() || "unassigned"}
                     onValueChange={(value) => {
-                      const assignedAgentId = value === "" ? null : parseInt(value, 10);
+                      const assignedAgentId = value === "unassigned" ? null : parseInt(value, 10);
                       handleLeadUpdate(selectedLead.id, { assignedAgentId });
                     }}
                   >
@@ -648,9 +652,9 @@ export default function AdminLeads() {
                       <SelectValue placeholder="Select an agent" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem key="unassigned" value="">Unassigned</SelectItem>
+                      <SelectItem key="unassigned" value="unassigned">Unassigned</SelectItem>
                       {agentsData?.map((agent: Agent) => (
-                        <SelectItem key={agent.id} value={agent.id.toString() || "0"}>
+                        <SelectItem key={agent.id} value={agent.id.toString()}>
                           {agent.firstName} {agent.lastName}
                         </SelectItem>
                       ))}
