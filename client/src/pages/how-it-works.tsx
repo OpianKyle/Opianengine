@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useUser } from "@/hooks/use-user";
 import { useLocation } from "wouter";
-import { Loader2, CheckCircle2, Users, CreditCard, Upload, ShoppingCart, BarChart2, ArrowUpRight } from "lucide-react";
+import { Loader2, CheckCircle2, Users, CreditCard, Upload, ShoppingCart, BarChart2, ArrowUpRight, Phone, Mail, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/providers/theme-provider";
@@ -347,15 +347,15 @@ export default function HowItWorksPage() {
             <div className="lg:w-1/4 mb-8 lg:mb-0">
               <h3 className="font-semibold mb-4">Contact Information</h3>
               <p className="flex items-center mb-2">
-                <span className="h-4 w-4 mr-2 flex-shrink-0">📞</span>
+                <Phone className="h-4 w-4 mr-2 flex-shrink-0" />
                 <a href="tel:+27861263346" className="hover:text-[#43EB3E] transition-colors">+27 86 126 3346</a>
               </p>
               <p className="flex items-center mb-2">
-                <span className="h-4 w-4 mr-2 flex-shrink-0">✉️</span>
+                <Mail className="h-4 w-4 mr-2 flex-shrink-0" />
                 <a href="mailto:info@opianrewards.com" className="hover:text-[#43EB3E] transition-colors">info@opianrewards.com</a>
               </p>
               <p className="flex items-start">
-                <span className="h-4 w-4 mr-2 mt-1 flex-shrink-0">📍</span>
+                <MapPin className="h-4 w-4 mr-2 mt-1 flex-shrink-0" />
                 <span>260 Uys Krige Dr, Loevenstein, Cape Town, 7530, South Africa</span>
               </p>
             </div>
