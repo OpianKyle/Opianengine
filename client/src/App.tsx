@@ -32,6 +32,7 @@ import AdminQuoteRequests from "@/pages/admin/quote-requests";
 import AdminAgents from "@/pages/admin/agents";
 import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
 import Migrations from "@/pages/admin/migrations"; // Added import for Migrations
+import AdminLeads from "@/pages/admin/leads"; // Added import for Leads management
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -198,6 +199,11 @@ function Router() {
       <Route path="/admin/migrations">
         <AdminLayout>
           <ProtectedRoute component={Migrations} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/leads">
+        <AdminLayout>
+          <ProtectedRoute component={AdminLeads} admin />
         </AdminLayout>
       </Route>
 

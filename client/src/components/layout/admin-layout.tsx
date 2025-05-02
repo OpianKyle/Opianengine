@@ -24,11 +24,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 // Helper function for section determination
-const getSectionFromHref = (href: string): 'dashboard' | 'users' | 'agents' | 'products' | 'rewards' | 'quotes' | 'redemptions' | 'logs' | 'all' => {
+const getSectionFromHref = (href: string): 'dashboard' | 'users' | 'agents' | 'products' | 'rewards' | 'quotes' | 'redemptions' | 'logs' | 'leads' | 'all' => {
   if (href === '/admin') return 'dashboard';
   if (href === '/admin/manage-users') return 'users';
   if (href === '/admin/agents') return 'agents';
   if (href === '/admin/customers') return 'users';
+  if (href === '/admin/leads') return 'leads';
   if (href === '/admin/products') return 'products';
   if (href === '/admin/quote-requests') return 'quotes';
   if (href === '/admin/rewards') return 'rewards';
@@ -72,6 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "User Management", href: "/admin/manage-users", icon: <UserPlus className="h-4 w-4 mr-2" /> },
     { label: "Agents", href: "/admin/agents", icon: <UserCheck className="h-4 w-4 mr-2" /> },
     { label: "Customers", href: "/admin/customers", icon: <Users className="h-4 w-4 mr-2" /> },
+    { label: "Leads", href: "/admin/leads", icon: <Users className="h-4 w-4 mr-2" /> },
     { label: "Products", href: "/admin/products", icon: <Package className="h-4 w-4 mr-2" /> },
     { label: "Quote Requests", href: "/admin/quote-requests", icon: <FileText className="h-4 w-4 mr-2" /> },
     { label: "Rewards", href: "/admin/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
