@@ -648,9 +648,9 @@ export default function AdminLeads() {
                       <SelectValue placeholder="Select an agent" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem key="unassigned" value="">Unassigned</SelectItem>
                       {agentsData?.map((agent: Agent) => (
-                        <SelectItem key={agent.id} value={agent.id.toString()}>
+                        <SelectItem key={agent.id} value={agent.id.toString() || "0"}>
                           {agent.firstName} {agent.lastName}
                         </SelectItem>
                       ))}
