@@ -102,7 +102,7 @@ export default function AuthPage() {
         {/* Logo based on theme */}
         <div className="mb-6 text-center">
           <img 
-            src={theme === 'light' ? "/opians-rewards-logo(R).png" : "/opian-logo-white.png"} 
+            src={theme === 'light' ? "/opian-rewards-logo(R).png" : "/opian-logo-white.png"} 
             alt="OPIAN Rewards" 
             className="h-12 w-auto mx-auto"
             onError={(e) => {
