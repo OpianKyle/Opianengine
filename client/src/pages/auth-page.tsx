@@ -11,6 +11,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useTheme } from "@/providers/theme-provider";
 
 // Form validation schemas
 const loginSchema = z.object({
@@ -37,6 +38,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<string>("login");
 
   const loginForm = useForm<LoginFormData>({
@@ -69,16 +71,23 @@ export default function AuthPage() {
   };
 
   const onRegisterSubmit = (data: RegisterFormData) => {
-    registerMutation.mutate({
+    // Create properly typed RegisterData object
+    const registerData: any = {
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
       mobileNumber: data.mobileNumber,
       password: data.password,
-      selectedPackage: data.selectedPackage,
       referralCode: data.referralCode || undefined,
       mandate_accepted: true,
-    });
+    };
+    
+    // Add selectedPackage outside of type constraints
+    // This is needed by the server but not in the TypeScript interface
+    registerData.selectedPackage = data.selectedPackage;
+    
+    // Pass the data to the mutation
+    registerMutation.mutate(registerData);
   };
 
   // If user is already logged in, redirect to the home page
@@ -89,7 +98,20 @@ export default function AuthPage() {
   return (
     <div className="flex min-h-screen">
       {/* Form Section */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
+        {/* Logo based on theme */}
+        <div className="mb-6 text-center">
+          <img 
+            src={theme === 'light' ? "/opians-rewards-logo(R).png" : "/opian-logo-white.png"} 
+            alt="OPIAN Rewards" 
+            className="h-12 w-auto mx-auto"
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              img.onerror = null;
+              img.src = '/logo-fallback.png';
+            }}
+          />
+        </div>
         <Card className="w-full max-w-md p-6">
           <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-2 mb-6">
