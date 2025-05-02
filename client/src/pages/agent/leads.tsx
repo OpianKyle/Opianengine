@@ -1,932 +1,602 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  X,
+  UserCheck,
+  Download,
+  Mail,
+  Phone,
+  MessageSquare
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Select, 
-  SelectTrigger, 
-  SelectContent, 
-  SelectItem, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+} from '@/components/ui/pagination';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Loader2, ClipboardCopy, UserPlus, Phone, Mail, Edit, CheckCircle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Loader2 } from 'lucide-react';
 
-// Lead type definition
+// Status options for leads
+const STATUS_OPTIONS = [
+  { value: 'new', label: 'New', color: 'bg-blue-100 text-blue-800' },
+  { value: 'contacted', label: 'Contacted', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'converted', label: 'Converted', color: 'bg-green-100 text-green-800' },
+  { value: 'not_interested', label: 'Not Interested', color: 'bg-red-100 text-red-800' },
+];
+
+// Package options for filtering
+const PACKAGE_OPTIONS = [
+  { value: 'ALL', label: 'All Packages' },
+  { value: 'OPPORTUNITY', label: 'Opportunity' },
+  { value: 'MOMENTUM', label: 'Momentum' },
+  { value: 'PROSPER', label: 'Prosper' },
+  { value: 'PRESTIGE', label: 'Prestige' },
+  { value: 'PINNACLE', label: 'Pinnacle' },
+];
+
+// Define lead interface
 interface Lead {
   id: number;
   firstName: string;
   lastName: string;
   email: string;
-  phoneNumber: string;
-  notes: string;
-  status: 'NEW' | 'CONTACTED' | 'SIGNED_UP' | 'NOT_INTERESTED';
+  mobileNumber: string;
+  selectedPackage: string | null;
+  referralCode: string | null;
+  notes: string | null;
+  status: "new" | "contacted" | "converted" | "not_interested";
+  assignedAgentId: number | null;
   createdAt: string;
   updatedAt: string;
-  referralCode: string;
-  agentId: number | null;
-  referredBy: number | null;
 }
 
-// Status text mapping
-const statusText = {
-  NEW: 'New Lead',
-  CONTACTED: 'Contacted',
-  SIGNED_UP: 'Signed Up',
-  NOT_INTERESTED: 'Not Interested'
-};
+interface PaginationData {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+}
 
-// Status color mapping to match the status values
-const statusColors = {
-  NEW: 'bg-blue-100 text-blue-800',
-  CONTACTED: 'bg-amber-100 text-amber-800',
-  SIGNED_UP: 'bg-green-100 text-green-800',
-  NOT_INTERESTED: 'bg-slate-100 text-slate-800'
-};
+interface LeadsResponse {
+  items: Lead[];
+  pagination: PaginationData;
+}
 
-export default function AgentLeadsPage() {
-  const [, navigate] = useLocation();
+export default function AgentLeads() {
   const { toast } = useToast();
-  const { token } = useAuth();
-  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPackage, setSelectedPackage] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
-  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
-  const [registerData, setRegisterData] = useState({
-    email: '',
-    firstName: '',
-    lastName: '',
-    isSouthAfrican: false,
-    idNumber: '',
-    dateOfBirth: '',
-    gender: 'male',
-    mobileNumber: '',
-    occupation: '',
-    industry: '',
-    addressLine1: '',
-    suburb: '',
-    postalCode: '',
-    hasCreditCard: false,
-    selectedPackage: 'OPPORTUNITY',
-    accountHolderName: '',
-    bankName: '',
-    branchCode: '',
-    accountNumber: '',
-    accountType: 'SAVINGS',
-    mandateAgreement: false,
-    // We'll still need these for customer registration via the API
-    password: '',
-    confirmPassword: '',
-    phoneNumber: '',
-  });
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  // Query to fetch the referral leads with optimizations
-  const { data: leadsData, isLoading: isLeadsLoading, error: leadsError } = useQuery({
-    queryKey: ['/api/referral/agent/leads', token],
+  // Fetch leads assigned to the current agent
+  const { data, isLoading, error, refetch } = useQuery<LeadsResponse>({
+    queryKey: ['/api/leads', currentPage, searchTerm, selectedPackage],
     queryFn: async () => {
-      // Create headers with authorization token
-      const headers: Record<string, string> = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      };
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', currentPage.toString());
+      queryParams.append('limit', '10');
       
-      // Add token to headers if available
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      if (searchTerm) {
+        queryParams.append('search', searchTerm);
       }
       
-      const response = await fetch('/api/referral/agent/leads', {
-        headers,
-        credentials: 'include'
-      });
+      if (selectedPackage !== 'ALL') {
+        queryParams.append('package', selectedPackage);
+      }
       
+      const response = await fetch(`/api/leads?${queryParams.toString()}`);
       if (!response.ok) {
-        // Handle potential auth errors specifically
-        if (response.status === 401) {
-          throw new Error('Authentication required - please log in again');
-        }
-        
-        if (response.status === 403) {
-          throw new Error('You do not have permission to access these leads');
-        }
-        
         throw new Error('Failed to fetch leads');
       }
-      
       return response.json();
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes before refetching (server cache is 2 minutes)
-    gcTime: 5 * 60 * 1000, // 5 minutes before removing from cache (cacheTime is renamed to gcTime in React Query v5)
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    enabled: !!token, // Only run the query if token exists
   });
 
-  // Mutation to update lead status
+  // Update lead mutation
   const updateLeadMutation = useMutation({
-    mutationFn: async ({ leadId, status }: { leadId: number; status: string }) => {
-      // Create headers with authorization token
-      const headers: Record<string, string> = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      };
-      
-      // Add token to headers if available
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const response = await fetch(`/api/referral/agent/leads/${leadId}`, {
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Lead> }) => {
+      const response = await fetch(`/api/leads/${id}`, {
         method: 'PUT',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({ status }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update lead status');
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/referral/agent/leads'] });
-      setIsUpdateDialogOpen(false);
-      toast({
-        title: 'Status Updated',
-        description: 'The lead status has been successfully updated.',
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.message || 'An error occurred while updating the lead.',
-      });
-    },
-  });
-
-  // Mutation to register a new customer from a lead
-  const registerCustomerMutation = useMutation({
-    mutationFn: async (data: typeof registerData) => {
-      // Create headers with authorization token
-      const headers: Record<string, string> = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      };
-      
-      // Add token to headers if available
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      // Generate a signature from the form data
-      // This is required for the server-side API but we're just passing the
-      // mandateAgreement value as the signature since we've removed the signature field
-      const payload = {
-        ...data,
-        leadId: selectedLead?.id,
-        // Remove password fields as they're not needed in this flow
-        password: undefined,
-        confirmPassword: undefined,
-        // Add mandateAccepted field which the server expects
-        mandateAccepted: data.mandateAgreement,
-        // Add a simple signature placeholder since we removed the UI element
-        signature: data.mandateAgreement ? 'User agreed via checkbox' : '',
-      };
-      
-      const response = await fetch('/api/referral/agent/register-customer', {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to register customer');
+        throw new Error(errorData.message || 'Failed to update lead');
       }
       
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/referral/agent/leads'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/referral/agent/commissions'] });
-      setIsRegisterDialogOpen(false);
-      
-      // Reset to default values that match all the fields in the form
-      setRegisterData({
-        email: '',
-        firstName: '',
-        lastName: '',
-        isSouthAfrican: false,
-        idNumber: '',
-        dateOfBirth: '',
-        gender: 'male',
-        mobileNumber: '',
-        occupation: '',
-        industry: '',
-        addressLine1: '',
-        suburb: '',
-        postalCode: '',
-        hasCreditCard: false,
-        selectedPackage: 'OPPORTUNITY',
-        accountHolderName: '',
-        bankName: '',
-        branchCode: '',
-        accountNumber: '',
-        accountType: 'SAVINGS',
-        mandateAgreement: false,
-        password: '',
-        confirmPassword: '',
-        phoneNumber: '',
-      });
-      
+      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
       toast({
-        title: 'Customer Registered',
-        description: 'The new customer has been successfully registered.',
+        title: 'Lead Updated',
+        description: 'Lead information has been updated successfully.',
       });
     },
     onError: (error: Error) => {
       toast({
+        title: 'Update Failed',
+        description: error.message,
         variant: 'destructive',
-        title: 'Registration Failed',
-        description: error.message || 'An error occurred while registering the customer.',
       });
     },
   });
 
-  const handleUpdateLead = (lead: Lead) => {
-    setSelectedLead(lead);
-    setIsUpdateDialogOpen(true);
+  // Handle lead update
+  const handleLeadUpdate = (id: number, data: Partial<Lead>) => {
+    updateLeadMutation.mutate({ id, data });
   };
 
-  const handleRegisterCustomer = (lead: Lead) => {
-    setSelectedLead(lead);
-    setRegisterData({
-      ...registerData, // Keep default values for other fields
-      firstName: lead.firstName,
-      lastName: lead.lastName,
-      email: lead.email,
-      phoneNumber: lead.phoneNumber,
-      mobileNumber: lead.phoneNumber, // Copy to mobileNumber too as some forms use that
-      password: '',
-      confirmPassword: '',
-      selectedPackage: 'OPPORTUNITY', // Set default package
-    });
-    setIsRegisterDialogOpen(true);
+  // Get status badge color
+  const getStatusBadgeClass = (status: string) => {
+    const statusOption = STATUS_OPTIONS.find(option => option.value === status);
+    return statusOption?.color || "bg-gray-100 text-gray-800";
   };
 
-  const handleSubmitStatus = (status: string) => {
-    if (!selectedLead) return;
-    updateLeadMutation.mutate({ leadId: selectedLead.id, status });
-  };
-
-  const handleRegisterDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setRegisterData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setRegisterData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmitRegistration = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Required fields validation
-    const requiredFields = [
-      { name: 'firstName', label: 'First Name' },
-      { name: 'lastName', label: 'Last Name' },
-      { name: 'email', label: 'Email' },
-      { name: 'phoneNumber', label: 'Phone Number' },
-      { name: 'idNumber', label: 'ID Number' },
-      { name: 'dateOfBirth', label: 'Date of Birth' },
-      { name: 'occupation', label: 'Occupation' },
-      { name: 'industry', label: 'Industry' },
-      { name: 'addressLine1', label: 'Address' },
-      { name: 'suburb', label: 'Suburb' },
-      { name: 'postalCode', label: 'Postal Code' },
-      { name: 'accountHolderName', label: 'Account Holder Name' },
-      { name: 'bankName', label: 'Bank Name' },
-      { name: 'branchCode', label: 'Branch Code' },
-      { name: 'accountNumber', label: 'Account Number' },
-    ];
-    
-    const missingFields = requiredFields.filter(field => 
-      !registerData[field.name as keyof typeof registerData]
-    );
-    
-    if (missingFields.length > 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing Information',
-        description: `Please fill in the following required fields: ${missingFields.map(f => f.label).join(', ')}`,
-      });
-      return;
-    }
-
-    if (!registerData.selectedPackage) {
-      toast({
-        variant: 'destructive',
-        title: 'Select a Package',
-        description: 'Please select a package for the customer.',
-      });
-      return;
-    }
-    
-    if (!registerData.mandateAgreement) {
-      toast({
-        variant: 'destructive',
-        title: 'Mandate Agreement Required',
-        description: 'Customer must agree to the mandate agreement to proceed.',
-      });
-      return;
-    }
-
-    registerCustomerMutation.mutate(registerData);
-  };
-
-  const copyToClipboard = async (text: string, message: string) => {
+  // Format relative time
+  const getRelativeTime = (dateString: string) => {
     try {
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: 'Copied',
-        description: message,
-      });
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to copy to clipboard',
-      });
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+    } catch (error) {
+      return "Unknown date";
     }
   };
 
-  const renderSkeletonLeads = () => {
-    return Array(3).fill(0).map((_, index) => (
-      <Card key={`skeleton-${index}`} className="border-l-4 border-l-primary">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row justify-between gap-4">
-            <div className="space-y-2 w-full">
-              <div className="flex items-center">
-                <div className="h-6 w-40 bg-muted rounded animate-pulse"></div>
-                <div className="ml-2 h-5 w-24 bg-blue-100 rounded animate-pulse"></div>
-              </div>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <div className="flex items-center">
-                  <Mail className="h-4 w-4 mr-2 text-muted" />
-                  <div className="h-4 w-48 bg-muted rounded animate-pulse"></div>
-                </div>
-                <div className="flex items-center">
-                  <Phone className="h-4 w-4 mr-2 text-muted" />
-                  <div className="h-4 w-32 bg-muted rounded animate-pulse"></div>
-                </div>
-                <div className="text-xs text-muted-foreground mt-2">
-                  <div className="h-3 w-36 bg-muted rounded animate-pulse"></div>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col md:flex-row gap-2 mt-2 md:mt-0 justify-end md:items-end">
-              <div className="h-9 w-24 bg-muted rounded animate-pulse"></div>
-              <div className="h-9 w-24 bg-muted rounded animate-pulse"></div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    ));
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Referral Leads</h1>
+  // If loading, show loader
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
 
+  // If error, show error message
+  if (error) {
+    return (
       <Card>
         <CardHeader>
-          <CardTitle>Your Referral Leads</CardTitle>
+          <CardTitle>Error Loading Leads</CardTitle>
           <CardDescription>
-            Manage leads who have signed up through your referral link.
+            There was a problem loading the leads data.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLeadsLoading ? (
-            <ScrollArea className="h-[600px]">
-              <div className="space-y-4">
-                {renderSkeletonLeads()}
-              </div>
-            </ScrollArea>
-          ) : !leadsData?.success || !leadsData?.leads || !Array.isArray(leadsData.leads) || leadsData.leads.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-lg text-muted-foreground mb-4">
-                No referral leads yet
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Share your referral link to get more leads. When customers sign up using your link,
-                they'll appear here.
-              </p>
+          <p className="text-red-500">
+            {error instanceof Error ? error.message : "An unknown error occurred"}
+          </p>
+          <Button 
+            variant="outline" 
+            className="mt-4" 
+            onClick={() => refetch()}
+          >
+            Try Again
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold">My Assigned Leads</h1>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email or phone"
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setCurrentPage(1);
+                    refetch();
+                  }
+                }}
+              />
+            </div>
+            <Select
+              value={selectedPackage}
+              onValueChange={(value) => {
+                setSelectedPackage(value);
+                setCurrentPage(1);
+                setTimeout(() => refetch(), 0);
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="All Packages" />
+              </SelectTrigger>
+              <SelectContent>
+                {PACKAGE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              variant="secondary"
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedPackage('ALL');
+                setCurrentPage(1);
+                setTimeout(() => refetch(), 0);
+              }}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Clear Filters
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Leads Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Leads
+            {data?.pagination && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                ({data.pagination.totalCount} {data.pagination.totalCount === 1 ? 'lead' : 'leads'})
+              </span>
+            )}
+          </CardTitle>
+          <CardDescription>
+            Manage your assigned leads submitted through the contact form.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!data?.items?.length ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No leads found. Try adjusting your filters or waiting for an admin to assign leads to you.
             </div>
           ) : (
-            <ScrollArea className="h-[600px]">
-              <div className="space-y-4">
-                {leadsData.leads.map((lead: Lead) => (
-                  <Card key={lead.id} className="border-l-4 border-l-primary">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col md:flex-row justify-between gap-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center">
-                            <h3 className="text-lg font-semibold">
-                              {lead.firstName} {lead.lastName}
-                            </h3>
-                            <Badge 
-                              className={`ml-2 ${statusColors[lead.status]}`}
-                            >
-                              {statusText[lead.status]}
+            <>
+              <div className="rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Contact Info</TableHead>
+                      <TableHead>Package</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.items.map((lead) => (
+                      <TableRow key={lead.id}>
+                        <TableCell className="font-medium">
+                          {lead.firstName} {lead.lastName}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="text-sm">{lead.email}</span>
+                            <span className="text-sm text-muted-foreground">{lead.mobileNumber}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {lead.selectedPackage ? (
+                            <Badge variant="outline" className="bg-primary/10">
+                              {lead.selectedPackage}
                             </Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground space-y-1">
-                            <div className="flex items-center">
-                              <Mail className="h-4 w-4 mr-2" />
-                              <span>{lead.email}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 ml-1"
-                                onClick={() => copyToClipboard(lead.email, 'Email copied to clipboard')}
-                              >
-                                <ClipboardCopy className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            <div className="flex items-center">
-                              <Phone className="h-4 w-4 mr-2" />
-                              <span>{lead.phoneNumber}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 ml-1"
-                                onClick={() => copyToClipboard(lead.phoneNumber, 'Phone number copied to clipboard')}
-                              >
-                                <ClipboardCopy className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            {lead.notes && (
-                              <div className="mt-2">
-                                <p className="font-medium">Notes:</p>
-                                <p className="mt-1 italic">{lead.notes}</p>
-                              </div>
-                            )}
-                            <div className="text-xs text-muted-foreground mt-2">
-                              Added on {new Date(lead.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col md:flex-row gap-2 md:items-center">
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Not specified</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusBadgeClass(lead.status)}>
+                            {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span title={new Date(lead.createdAt).toLocaleString()}>
+                            {getRelativeTime(lead.createdAt)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
                           <Button
-                            onClick={() => handleUpdateLead(lead)}
                             variant="outline"
                             size="sm"
-                            className="flex items-center"
+                            onClick={() => {
+                              setSelectedLead(lead);
+                              setIsEditDialogOpen(true);
+                            }}
                           >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Update Status
+                            View Details
                           </Button>
-                          
-                          {lead.status !== 'SIGNED_UP' && (
-                            <Button
-                              onClick={() => handleRegisterCustomer(lead)}
-                              variant="default"
-                              size="sm"
-                              className="flex items-center"
-                            >
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              Register as Customer
-                            </Button>
-                          )}
-                          
-                          {lead.status === 'SIGNED_UP' && (
-                            <Badge className="bg-green-100 text-green-800 flex items-center">
-                              <CheckCircle className="mr-1 h-3 w-3" />
-                              Signed Up
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            </ScrollArea>
+
+              {/* Pagination */}
+              {data.pagination && data.pagination.totalPages > 1 && (
+                <div className="mt-4 flex justify-center">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="hidden h-9 w-9 sm:flex"
+                          onClick={() => {
+                            if (currentPage > 1) {
+                              setCurrentPage(currentPage - 1);
+                              refetch();
+                            }
+                          }}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          <span className="sr-only">Previous page</span>
+                        </Button>
+                      </PaginationItem>
+                      
+                      {[...Array(data.pagination.totalPages)].map((_, i) => {
+                        const pageNumber = i + 1;
+                        // Show only immediate pages around current page and extremes
+                        if (
+                          pageNumber === 1 ||
+                          pageNumber === data.pagination.totalPages ||
+                          (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                        ) {
+                          return (
+                            <PaginationItem key={pageNumber}>
+                              <PaginationLink
+                                isActive={pageNumber === currentPage}
+                                onClick={() => {
+                                  setCurrentPage(pageNumber);
+                                  refetch();
+                                }}
+                              >
+                                {pageNumber}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        } else if (
+                          pageNumber === currentPage - 2 ||
+                          pageNumber === currentPage + 2
+                        ) {
+                          return (
+                            <PaginationItem key={pageNumber}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
+                      
+                      <PaginationItem>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="hidden h-9 w-9 sm:flex"
+                          onClick={() => {
+                            if (currentPage < data.pagination.totalPages) {
+                              setCurrentPage(currentPage + 1);
+                              refetch();
+                            }
+                          }}
+                          disabled={currentPage === data.pagination.totalPages}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                          <span className="sr-only">Next page</span>
+                        </Button>
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Update Status Dialog */}
-      <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-background border-border [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-[#43EB3E]">
-          <DialogHeader className="border-b pb-4">
-            <DialogTitle className="text-foreground font-semibold text-xl">Update Lead Status</DialogTitle>
-            <DialogDescription className="text-muted-foreground mt-1">
-              Update the status of {selectedLead?.firstName} {selectedLead?.lastName}'s lead.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="status" className="text-foreground font-medium">Current Status</Label>
-              <Select
-                defaultValue={selectedLead?.status}
-                onValueChange={(value) => handleSubmitStatus(value)}
-              >
-                <SelectTrigger className="w-full border-input bg-background">
-                  <SelectValue placeholder="Select a status" />
-                </SelectTrigger>
-                <SelectContent className="bg-background border-border">
-                  <SelectItem className="hover:bg-muted" value="NEW">New Lead</SelectItem>
-                  <SelectItem className="hover:bg-muted" value="CONTACTED">Contacted</SelectItem>
-                  <SelectItem className="hover:bg-muted" value="SIGNED_UP">Signed Up</SelectItem>
-                  <SelectItem className="hover:bg-muted" value="NOT_INTERESTED">Not Interested</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter className="border-t pt-4 gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsUpdateDialogOpen(false)}
-              className="border-border text-foreground hover:bg-muted"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-[#43EB3E] text-background hover:bg-[#38c634]"
-              disabled={updateLeadMutation.isPending}
-              onClick={() => setIsUpdateDialogOpen(false)}
-            >
-              {updateLeadMutation.isPending ? 'Updating...' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Register Customer Dialog */}
-      <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
-        <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto bg-background border-border [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-[#43EB3E]">
-          <DialogHeader className="border-b pb-4">
-            <DialogTitle className="text-foreground">Register as Customer</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Complete the registration process for {selectedLead?.firstName} {selectedLead?.lastName}. All fields with * are required.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmitRegistration}>
-            <div className="space-y-6 py-4">
-              {/* Personal Information */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Personal Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name *</Label>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      value={registerData.firstName}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name *</Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      value={registerData.lastName}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={registerData.email}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phoneNumber">Phone Number *</Label>
-                    <Input
-                      id="phoneNumber"
-                      name="phoneNumber"
-                      value={registerData.phoneNumber}
-                      onChange={handleRegisterDataChange}
-                    />
+      {/* Lead Details/Edit Dialog */}
+      {selectedLead && (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Lead Details</DialogTitle>
+              <DialogDescription>
+                View and update the lead's information and status.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Personal Information</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-muted-foreground">First Name</label>
+                      <div className="font-medium">{selectedLead.firstName}</div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Last Name</label>
+                      <div className="font-medium">{selectedLead.lastName}</div>
+                    </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="isSouthAfrican">Citizenship</Label>
-                    <div className="flex items-center space-x-2 pt-2">
-                      <input
-                        type="checkbox"
-                        id="isSouthAfrican"
-                        name="isSouthAfrican"
-                        checked={registerData.isSouthAfrican}
-                        onChange={(e) => setRegisterData({...registerData, isSouthAfrican: e.target.checked})}
-                        className="h-4 w-4"
-                      />
-                      <Label htmlFor="isSouthAfrican" className="font-normal">South African Citizen</Label>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="idNumber">ID Number *</Label>
-                    <Input
-                      id="idNumber"
-                      name="idNumber"
-                      value={registerData.idNumber}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                    <Input
-                      id="dateOfBirth"
-                      name="dateOfBirth"
-                      type="date"
-                      value={registerData.dateOfBirth}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gender">Gender *</Label>
-                    <Select
-                      value={registerData.gender}
-                      onValueChange={(value) => handleSelectChange('gender', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div>
+                  <label className="text-xs text-muted-foreground">Email</label>
+                  <div className="font-medium flex items-center gap-2">
+                    {selectedLead.email}
+                    <a href={`mailto:${selectedLead.email}`} target="_blank" rel="noopener noreferrer">
+                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                    </a>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="occupation">Occupation *</Label>
-                    <Input
-                      id="occupation"
-                      name="occupation"
-                      value={registerData.occupation}
-                      onChange={handleRegisterDataChange}
-                    />
+                <div>
+                  <label className="text-xs text-muted-foreground">Mobile Number</label>
+                  <div className="font-medium flex items-center gap-2">
+                    {selectedLead.mobileNumber}
+                    <a href={`tel:${selectedLead.mobileNumber}`}>
+                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <Phone className="h-4 w-4" />
+                      </Button>
+                    </a>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="industry">Industry *</Label>
-                    <Select
-                      value={registerData.industry}
-                      onValueChange={(value) => handleSelectChange('industry', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select industry" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Agriculture">Agriculture</SelectItem>
-                        <SelectItem value="Construction">Construction</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
-                        <SelectItem value="Finance">Finance</SelectItem>
-                        <SelectItem value="Healthcare">Healthcare</SelectItem>
-                        <SelectItem value="Information Technology">Information Technology</SelectItem>
-                        <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                        <SelectItem value="Mining">Mining</SelectItem>
-                        <SelectItem value="Retail">Retail</SelectItem>
-                        <SelectItem value="Services">Services</SelectItem>
-                        <SelectItem value="Transport">Transport</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-muted-foreground">Interested Package</label>
+                  <div className="font-medium">
+                    {selectedLead.selectedPackage || "Not specified"}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hasCreditCard">Credit Card</Label>
-                    <div className="flex items-center space-x-2 pt-2">
-                      <input
-                        type="checkbox"
-                        id="hasCreditCard"
-                        name="hasCreditCard"
-                        checked={registerData.hasCreditCard}
-                        onChange={(e) => setRegisterData({...registerData, hasCreditCard: e.target.checked})}
-                        className="h-4 w-4"
-                      />
-                      <Label htmlFor="hasCreditCard" className="font-normal">Has Credit Card</Label>
+                </div>
+                
+                {selectedLead.referralCode && (
+                  <div>
+                    <label className="text-xs text-muted-foreground">Referral Code</label>
+                    <div className="font-medium">{selectedLead.referralCode}</div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Lead Status</h3>
+                  <Select
+                    defaultValue={selectedLead.status}
+                    onValueChange={(value) => {
+                      handleLeadUpdate(selectedLead.id, { 
+                        status: value as "new" | "contacted" | "converted" | "not_interested" 
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Notes</label>
+                  <Textarea
+                    defaultValue={selectedLead.notes || ""}
+                    placeholder="Add notes about this lead..."
+                    className="min-h-[100px]"
+                    onBlur={(e) => {
+                      const newNotes = e.target.value;
+                      if (newNotes !== selectedLead.notes) {
+                        handleLeadUpdate(selectedLead.id, { notes: newNotes });
+                      }
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Timeline</h3>
+                  <div className="text-sm space-y-1">
+                    <div className="flex justify-between">
+                      <span>Created:</span>
+                      <span>{new Date(selectedLead.createdAt).toLocaleString()}</span>
                     </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Address */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Address Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="addressLine1">Address *</Label>
-                    <Input
-                      id="addressLine1"
-                      name="addressLine1"
-                      value={registerData.addressLine1}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="suburb">Suburb *</Label>
-                    <Input
-                      id="suburb"
-                      name="suburb"
-                      value={registerData.suburb}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="postalCode">Postal Code *</Label>
-                    <Input
-                      id="postalCode"
-                      name="postalCode"
-                      value={registerData.postalCode}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Banking */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Banking Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="accountHolderName">Account Holder Name *</Label>
-                    <Input
-                      id="accountHolderName"
-                      name="accountHolderName"
-                      value={registerData.accountHolderName}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bankName">Bank Name *</Label>
-                    <Input
-                      id="bankName"
-                      name="bankName"
-                      value={registerData.bankName}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="branchCode">Branch Code *</Label>
-                    <Input
-                      id="branchCode"
-                      name="branchCode"
-                      value={registerData.branchCode}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="accountNumber">Account Number *</Label>
-                    <Input
-                      id="accountNumber"
-                      name="accountNumber"
-                      value={registerData.accountNumber}
-                      onChange={handleRegisterDataChange}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="accountType">Account Type *</Label>
-                    <Select
-                      value={registerData.accountType}
-                      onValueChange={(value) => handleSelectChange('accountType', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select account type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="SAVINGS">Savings</SelectItem>
-                        <SelectItem value="CURRENT">Current</SelectItem>
-                        <SelectItem value="CHEQUE">Cheque</SelectItem>
-                        <SelectItem value="CREDIT">Credit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Package */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Package Selection</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="selectedPackage">Select Package *</Label>
-                    <Select
-                      value={registerData.selectedPackage}
-                      onValueChange={(value) => handleSelectChange('selectedPackage', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a package" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="OPPORTUNITY">Opportunity (R350)</SelectItem>
-                        <SelectItem value="MOMENTUM">Momentum (R450)</SelectItem>
-                        <SelectItem value="PROSPER">Prosper (R550)</SelectItem>
-                        <SelectItem value="PRESTIGE">Prestige (R695)</SelectItem>
-                        <SelectItem value="PINNACLE">Pinnacle (R825)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Mandate Agreement */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Mandate Agreement</h3>
-                <div className="border rounded-lg p-4 bg-muted space-y-3">
-                  <ScrollArea className="h-[200px] w-full rounded-md border p-6 bg-background [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-[#43EB3E]">
-                    <div className="whitespace-pre-wrap text-foreground text-base leading-relaxed">
-                      {`This signed Authority and Mandate refers to our contract dated ${new Date().toISOString().split('T')[0]} ("the Agreement").
-
-I / We hereby authorise you to issue and deliver payment instructions of R${registerData.selectedPackage === 'OPPORTUNITY' ? '350' 
-                          : registerData.selectedPackage === 'MOMENTUM' ? '450'
-                          : registerData.selectedPackage === 'PROSPER' ? '550'
-                          : registerData.selectedPackage === 'PRESTIGE' ? '695'
-                          : registerData.selectedPackage === 'PINNACLE' ? '825' : '0'} per month for the subscription fee to your Banker for collection against my / our abovementioned account at my / our above-mentioned Bank (or any other bank or branch to which I / we may transfer my / our account) on condition that the sum of such payment instructions will never exceed my / our obligations as as agreed to in the Agreement and commencing on 1st of each month and continuing until this Authority and Mandate is terminated by me / us by giving you notice in writing of not less than 60 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
-
-The individual payment instructions so authorised to be issued must be issued and delivered as follows: R${registerData.selectedPackage === 'OPPORTUNITY' ? '350' 
-                          : registerData.selectedPackage === 'MOMENTUM' ? '450'
-                          : registerData.selectedPackage === 'PROSPER' ? '550'
-                          : registerData.selectedPackage === 'PRESTIGE' ? '695'
-                          : registerData.selectedPackage === 'PINNACLE' ? '825' : '0'} monthly for 12 months. This is an annual agreement which is automatically renewable unless canceled in writing.
-
-In the event that the payment day falls on a Sunday, or recognised South African public holiday, the payment day will automatically be the preceding ordinary business day.
-
-Payment Instructions due in December may be debited against my account on a earlier date.
-
-I / We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement. A payment reference is added to this form before the issuing of any payment instruction.
-
-Mandate
-I /We acknowledge that all payment instructions issued by you shall be treated by my / our above-mentioned Bank as if the instructions have been issued by me/us personally.
-
-Cancellation
-I /We agree that although this Authority and Mandate may be cancelled by me/us, such cancellation will not cancel the Agreement. I/We shall not be entitled to any refund of amounts which you have withdrawn while this authority was in force, if such amounts were legally owing to you.
-
-Assignment
-I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty) Ltd as per your agreement with Netcash (Pty) Ltd, but in the absence of such assignment of the Agreement, this Authority and Mandate will be null and void.`}
+                    <div className="flex justify-between">
+                      <span>Last Updated:</span>
+                      <span>{new Date(selectedLead.updatedAt).toLocaleString()}</span>
                     </div>
-                  </ScrollArea>
-                  <div className="flex items-center space-x-2 pt-2">
-                    <input
-                      type="checkbox"
-                      id="mandateAgreement"
-                      name="mandateAgreement"
-                      checked={registerData.mandateAgreement}
-                      onChange={(e) => setRegisterData({...registerData, mandateAgreement: e.target.checked})}
-                      className="h-4 w-4"
-                    />
-                    <Label htmlFor="mandateAgreement" className="font-normal">
-                      * I confirm that the customer has agreed to the above mandate
-                    </Label>
                   </div>
                 </div>
               </div>
             </div>
-            <DialogFooter className="border-t pt-4">
-              <Button variant="outline" onClick={() => setIsRegisterDialogOpen(false)}>
-                Cancel
-              </Button>
+            
+            <DialogFooter className="sm:justify-between">
               <Button
-                type="submit"
-                disabled={registerCustomerMutation.isPending}
+                variant="outline"
+                onClick={() => {
+                  handleLeadUpdate(selectedLead.id, { status: "converted" });
+                  setIsEditDialogOpen(false);
+                }}
               >
-                {registerCustomerMutation.isPending ? 'Registering...' : 'Register Customer'}
+                <UserCheck className="h-4 w-4 mr-2" />
+                Mark as Converted
               </Button>
+              <DialogClose asChild>
+                <Button type="button">
+                  Close
+                </Button>
+              </DialogClose>
             </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

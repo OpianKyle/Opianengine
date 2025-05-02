@@ -40,6 +40,11 @@ router.get("/", async (req, res, next) => {
     if (packageFilter) {
       query = query.where(eq(leads.selectedPackage, packageFilter));
     }
+    
+    // If the user is an agent but not an admin, show only their assigned leads
+    if (req.user?.is_agent && !req.user?.is_admin) {
+      query = query.where(eq(leads.assignedAgentId, req.user.id));
+    }
 
     // Pagination
     const page = parseInt(req.query.page as string) || 1;
@@ -47,9 +52,36 @@ router.get("/", async (req, res, next) => {
     const offset = (page - 1) * limit;
     
     // For MySQL we need to use count() properly
-    const [countResult] = await db.select({
+    let countQuery = db.select({
       count: sql`COUNT(*) as count`
     }).from(leads);
+    
+    // Apply the same filters to the count query
+    if (search) {
+      countQuery = countQuery.where(
+        and(
+          or(
+            like(leads.firstName, `%${search}%`),
+            like(leads.lastName, `%${search}%`)
+          ),
+          or(
+            like(leads.email, `%${search}%`),
+            like(leads.mobileNumber, `%${search}%`)
+          )
+        )
+      );
+    }
+    
+    if (packageFilter) {
+      countQuery = countQuery.where(eq(leads.selectedPackage, packageFilter));
+    }
+    
+    // Apply agent filter to count query as well
+    if (req.user?.is_agent && !req.user?.is_admin) {
+      countQuery = countQuery.where(eq(leads.assignedAgentId, req.user.id));
+    }
+    
+    const [countResult] = await countQuery;
     const totalCount = countResult?.count || 0;
     
     const items = await query.limit(limit).offset(offset);
@@ -165,6 +197,11 @@ router.put("/:id", async (req, res, next) => {
     const [existingLead] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
     if (!existingLead) {
       return res.status(404).json({ message: "Lead not found" });
+    }
+    
+    // If user is an agent (not admin), ensure they can only update leads assigned to them
+    if (req.user?.is_agent && !req.user?.is_admin && existingLead.assignedAgentId !== req.user.id) {
+      return res.status(403).json({ message: "You can only update leads assigned to you" });
     }
 
     const updateData = result.data;

@@ -24,7 +24,7 @@ export const queryClient = new QueryClient({
 // Grouped by page to allow more targeted prefetching 
 export const AGENT_API_ENDPOINTS = {
   all: [
-    '/api/referral/agent/leads',
+    '/api/leads',
     '/api/agent/customers', 
     '/api/referral/agent/commissions',
     '/api/agent/statistics'
@@ -37,7 +37,7 @@ export const AGENT_API_ENDPOINTS = {
     '/api/agent/customers'
   ],
   leads: [
-    '/api/referral/agent/leads'
+    '/api/leads'
   ]
 };
 
