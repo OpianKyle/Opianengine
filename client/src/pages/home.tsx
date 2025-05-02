@@ -366,12 +366,12 @@ export default function HomePage() {
               <Button 
                 variant="outline" 
                 className="bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
-                onClick={() => navigate("/auth")}
+                onClick={() => navigate("/login")}
               >
                 Login
               </Button>
               <Button 
-                onClick={() => navigate("/auth?tab=register")}
+                onClick={() => navigate("/contact-us")}
                 className="bg-[#43EB3E] hover:bg-[#3ad036] text-black font-medium"
               >
                 Get Information
@@ -432,7 +432,7 @@ export default function HomePage() {
                   className="flex-1 bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    navigate("/auth");
+                    navigate("/login");
                   }}
                 >
                   Login
@@ -441,7 +441,7 @@ export default function HomePage() {
                   className="flex-1 bg-[#43EB3E] hover:bg-[#3ad036] text-black font-medium"
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    navigate("/auth?tab=register");
+                    navigate("/contact-us");
                   }}
                 >
                   Get Information
@@ -467,7 +467,7 @@ export default function HomePage() {
                 put more money in your pocket by doing every day things with Opian Rewards.
               </p>
               <Button 
-                onClick={() => navigate("/auth?tab=register")}
+                onClick={() => navigate("/contact-us")}
                 className="bg-[#43EB3E] hover:bg-[#3ad036] text-black text-lg py-6 px-8 rounded-md"
                 size="lg"
               >

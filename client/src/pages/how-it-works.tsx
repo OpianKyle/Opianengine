@@ -298,7 +298,7 @@ export default function HowItWorksPage() {
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-[#43EB3E]/5 rounded-full filter blur-xl opacity-70 dark:opacity-30"></div>
             
             <Button 
-              onClick={() => navigate("/register")}
+              onClick={() => navigate("/contact-us")}
               className="bg-[#43EB3E] hover:bg-[#3ad036] text-black text-lg py-6 px-8 rounded-md relative z-10"
               size="lg"
             >
