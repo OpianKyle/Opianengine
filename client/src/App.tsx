@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import AuthPage from "@/pages/auth-page"; // Import the new auth page
 import ResetPassword from "@/pages/reset-password";
 import ReferralPage from "@/pages/referral"; // Import the referral form page
 import HowItWorks from "@/pages/how-it-works"; // Import the how it works page
@@ -60,8 +61,8 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (!user) {
-    console.log('No user found, redirecting to login');
-    return <Redirect to="/login" />;
+    console.log('No user found, redirecting to auth page');
+    return <Redirect to="/auth" />;
   }
 
   console.log('ProtectedRoute checking user role:', { 
@@ -126,6 +127,9 @@ function Router() {
       </Route>
       <Route path="/register">
         <Register />
+      </Route>
+      <Route path="/auth">
+        <AuthPage />
       </Route>
       <Route path="/reset-password">
         <ResetPassword />

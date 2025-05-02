@@ -1,47 +1,46 @@
-import { mysqlTable, varchar, int, boolean, timestamp } from 'drizzle-orm/mysql-core';
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
-import { users } from './schema';
-import { relations } from 'drizzle-orm';
-import { z } from 'zod';
+import { mysqlTable, timestamp, varchar, int, text } from "drizzle-orm/mysql-core";
+import { relations } from "drizzle-orm";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import * as z from "zod";
 
-// Define the leads table schema
 export const leads = mysqlTable("leads", {
   id: int("id").primaryKey().autoincrement(),
+  firstName: varchar("first_name", { length: 255 }).notNull(),
+  lastName: varchar("last_name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull(),
-  firstName: varchar("first_name", { length: 100 }).notNull(),
-  lastName: varchar("last_name", { length: 100 }).notNull(),
   mobileNumber: varchar("mobile_number", { length: 20 }).notNull(),
-  selectedPackage: varchar("selected_package", { length: 20 }),
-  referralCode: varchar("referral_code", { length: 100 }),
-  contacted: boolean("contacted").default(false),
-  converted: boolean("converted").default(false),
-  convertedUserId: int("converted_user_id"),
+  selectedPackage: varchar("selected_package", { length: 50 }).$type<"OPPORTUNITY" | "MOMENTUM" | "PROSPER" | "PRESTIGE" | "PINNACLE">(),
+  referralCode: varchar("referral_code", { length: 50 }),
+  notes: text("notes"),
+  status: varchar("status", { length: 50 }).default("new").$type<"new" | "contacted" | "converted" | "not_interested">(),
+  assignedAgentId: int("assigned_agent_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
 
-// Define the relationship between leads and users (when a lead is converted to a customer)
+// Relations for the leads table
 export const leadsRelations = relations(leads, ({ one }) => ({
-  convertedUser: one(users, {
-    fields: [leads.convertedUserId],
-    references: [users.id],
+  assignedAgent: one("users", {
+    fields: [leads.assignedAgentId],
+    references: [int("id")], // This should be users.id in your schema
   }),
 }));
 
-// Define types for TypeScript
+// Drizzle ORM types
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = typeof leads.$inferInsert;
 
-// Create Zod schemas for validation
+// Validation schemas using Zod with Drizzle
 export const insertLeadSchema = createInsertSchema(leads);
+
 export const selectLeadSchema = createSelectSchema(leads);
 
-// Extended schema with proper validation for the frontend
+// Combined form schema for the frontend
 export const leadFormSchema = z.object({
+  fullName: z.string().min(3, "Full name is required"),
   email: z.string().email("Please enter a valid email address"),
-  firstName: z.string().min(2, "First name must be at least 2 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters"),
-  mobileNumber: z.string().min(10, "Mobile number must be at least 10 digits"),
+  phoneNumber: z.string().min(10, "Phone number must be at least 10 characters"),
   selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]).optional(),
   referralCode: z.string().optional(),
+  notes: z.string().optional(),
 });

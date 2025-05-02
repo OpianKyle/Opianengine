@@ -1,76 +1,42 @@
 /**
- * Migration to create the leads table
+ * Migration to create the leads table for lead generation
  * 
- * This migration creates a table to store lead generation data from users interested in the platform
- * but who haven't registered yet. Helps admins track potential customers.
+ * This migration adds a new table for storing lead information from
+ * potential customers who are interested in the rewards program.
  */
 
 export async function up(db) {
-  console.log('Running migration: 0014_create_leads_table (up)');
+  await db.schema
+    .createTable("leads")
+    .ifNotExists()
+    .addColumn("id", "int", (col) => col.primaryKey().autoIncrement())
+    .addColumn("first_name", "varchar(255)", (col) => col.notNull())
+    .addColumn("last_name", "varchar(255)", (col) => col.notNull())
+    .addColumn("email", "varchar(255)", (col) => col.notNull())
+    .addColumn("mobile_number", "varchar(20)", (col) => col.notNull())
+    .addColumn("selected_package", "varchar(50)")
+    .addColumn("referral_code", "varchar(50)")
+    .addColumn("notes", "text")
+    .addColumn("status", "varchar(50)", (col) => col.defaultTo("new"))
+    .addColumn("assigned_agent_id", "int")
+    .addColumn("created_at", "timestamp", (col) => col.defaultTo(db.raw("CURRENT_TIMESTAMP")))
+    .addColumn("updated_at", "timestamp", (col) => 
+      col.defaultTo(db.raw("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")))
+    .execute();
 
-  try {
-    // Check if the leads table already exists
-    const [tableCheck] = await db.execute(`
-      SELECT COUNT(*) as count 
-      FROM information_schema.tables 
-      WHERE table_schema = DATABASE() 
-      AND table_name = 'leads'
-    `);
+  // Add an index for email to make searching faster
+  await db.schema
+    .alterTable("leads")
+    .addIndex("idx_leads_email", ["email"])
+    .execute();
 
-    if (tableCheck[0].count > 0) {
-      console.log('Leads table already exists, skipping creation');
-      return;
-    }
-
-    // Create the leads table
-    await db.execute(`
-      CREATE TABLE leads (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        email VARCHAR(255) NOT NULL,
-        first_name VARCHAR(100) NOT NULL,
-        last_name VARCHAR(100) NOT NULL,
-        mobile_number VARCHAR(20) NOT NULL,
-        selected_package ENUM('OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'),
-        referral_code VARCHAR(100),
-        contacted BOOLEAN DEFAULT FALSE,
-        converted BOOLEAN DEFAULT FALSE,
-        converted_user_id INT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (converted_user_id) REFERENCES users(id) ON DELETE SET NULL
-      )
-    `);
-
-    console.log('Created leads table successfully');
-  } catch (error) {
-    console.error('Error creating leads table:', error);
-    throw error;
-  }
+  // Add an index for assigned agent to make joins faster
+  await db.schema
+    .alterTable("leads")
+    .addIndex("idx_leads_assigned_agent", ["assigned_agent_id"])
+    .execute();
 }
 
 export async function down(db) {
-  console.log('Running migration: 0014_create_leads_table (down)');
-
-  try {
-    // Check if the leads table exists
-    const [tableCheck] = await db.execute(`
-      SELECT COUNT(*) as count 
-      FROM information_schema.tables 
-      WHERE table_schema = DATABASE() 
-      AND table_name = 'leads'
-    `);
-
-    if (tableCheck[0].count === 0) {
-      console.log('Leads table does not exist, nothing to drop');
-      return;
-    }
-
-    // Drop the leads table
-    await db.execute(`DROP TABLE leads`);
-    
-    console.log('Dropped leads table successfully');
-  } catch (error) {
-    console.error('Error dropping leads table:', error);
-    throw error;
-  }
+  await db.schema.dropTable("leads").ifExists().execute();
 }

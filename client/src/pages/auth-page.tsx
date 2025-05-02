@@ -1,354 +1,590 @@
-import { useState } from "react";
-import { Redirect } from "wouter";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useEffect } from "react";
+import { useLocation, useRoute } from "wouter";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
-import { LoadingSpinner } from "@/components/ui/spinner";
-import { z } from "zod";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from '@tanstack/react-query';
+import { useUser } from "@/hooks/use-user";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useTheme } from "@/providers/theme-provider";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
+import * as z from "zod";
+import { leadFormSchema } from "../../../db/leads";
 
-// Form validation schemas
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
-});
-
-// Modified schema for lead generation form
-const leadSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  firstName: z.string().min(2, "First name must be at least 2 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters"),
-  mobileNumber: z.string().min(10, "Mobile number must be at least 10 digits"),
-  selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]).optional(),
-  referralCode: z.string().optional()
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
-type LeadFormData = z.infer<typeof leadSchema>;
+// Default package options
+const PACKAGE_OPTIONS = [
+  { value: "OPPORTUNITY", label: "Opportunity - R350" },
+  { value: "MOMENTUM", label: "Momentum - R450" },
+  { value: "PROSPER", label: "Prosper - R550" },
+  { value: "PRESTIGE", label: "Prestige - R695" },
+  { value: "PINNACLE", label: "Pinnacle - R825" },
+];
 
 export default function AuthPage() {
-  const { user, loginMutation } = useAuth();
-  const { theme } = useTheme();
+  const [location, navigate] = useLocation();
+  const { user, isLoading } = useUser();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<string>("login");
-
-  // Login form setup
-  const loginForm = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+  const [submitting, setSubmitting] = useState(false);
+  const queryClient = useQueryClient();
+  
+  // Determine which tab to show based on the URL query parameter
+  const [, params] = useRoute("/auth?:rest*");
+  const searchParams = new URLSearchParams(params?.["rest*"] || "");
+  const initialTab = searchParams.get("tab") || "login";
+  const initialPackage = searchParams.get("package") || "";
+  
+  // Set up the lead form
+  const leadForm = useForm<z.infer<typeof leadFormSchema>>({
+    resolver: zodResolver(leadFormSchema),
     defaultValues: {
+      fullName: "",
       email: "",
+      phoneNumber: "",
+      selectedPackage: initialPackage ? (initialPackage.toUpperCase() as any) : undefined,
+      referralCode: searchParams.get("ref") || "",
+    },
+  });
+
+  // Set the tab state
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // Set up the login form
+  const loginForm = useForm({
+    resolver: zodResolver(
+      z.object({
+        username: z.string().min(1, "Username is required"),
+        password: z.string().min(1, "Password is required"),
+      })
+    ),
+    defaultValues: {
+      username: "",
       password: "",
     },
   });
 
-  // Lead form setup 
-  const leadForm = useForm<LeadFormData>({
-    resolver: zodResolver(leadSchema),
-    defaultValues: {
-      email: "",
-      firstName: "",
-      lastName: "",
-      mobileNumber: "",
-      selectedPackage: "OPPORTUNITY",
-      referralCode: "",
-    },
-  });
+  // Check if the user is already logged in
+  useEffect(() => {
+    if (user) {
+      // User is already logged in, redirect to the appropriate dashboard
+      if (user.is_admin) {
+        navigate("/admin");
+      } else if (user.is_agent) {
+        navigate("/agent");
+      } else {
+        navigate("/dashboard");
+      }
+    }
+  }, [user, navigate]);
 
-  // Handle login form submission
-  const onLoginSubmit = (data: LoginFormData) => {
-    loginMutation.mutate({
-      email: data.email,
-      password: data.password,
-    });
-  };
-
-  // Lead submission mutation
-  const submitLeadMutation = useMutation({
-    mutationFn: async (leadData: LeadFormData) => {
-      const response = await fetch("/api/leads/submit", {
+  // Handle lead form submission
+  const onLeadSubmit = async (data: z.infer<typeof leadFormSchema>) => {
+    setSubmitting(true);
+    try {
+      // Split the full name into first and last name
+      const nameParts = data.fullName.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      // Transform the data to match our database schema
+      const transformedData = {
+        firstName,
+        lastName,
+        email: data.email,
+        mobileNumber: data.phoneNumber,
+        selectedPackage: data.selectedPackage,
+        referralCode: data.referralCode,
+      };
+      
+      const response = await fetch("/api/leads", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(leadData),
+        body: JSON.stringify(transformedData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to submit lead");
+        throw new Error(errorData.message || "Failed to submit lead information");
       }
 
-      return await response.json();
-    },
-    onSuccess: () => {
       toast({
-        title: "Thank you for your interest!",
-        description: "A representative will contact you shortly.",
-        variant: "default",
+        title: "Thank you!",
+        description: "Your information has been submitted. One of our agents will contact you soon.",
       });
-      
+
       // Reset the form
-      leadForm.reset({
-        email: "",
-        firstName: "",
-        lastName: "",
-        mobileNumber: "",
-        selectedPackage: "OPPORTUNITY",
-        referralCode: "",
-      });
-    },
-    onError: (error: Error) => {
+      leadForm.reset();
+      
+      // Redirect to home page or show a thank you message
+      setTimeout(() => {
+        navigate("/");
+      }, 2000);
+    } catch (error) {
+      console.error("Error submitting lead:", error);
       toast({
         title: "Submission failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
-    },
-  });
-
-  // Handle lead form submission
-  const onLeadSubmit = (data: LeadFormData) => {
-    submitLeadMutation.mutate(data);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // If user is already logged in, redirect to the home page
-  if (user) {
-    return <Redirect to="/" />;
+  // Handle login form submission
+  const onLoginSubmit = async (data: { username: string; password: string }) => {
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("Login failed. Please check your credentials.");
+      }
+
+      // Refresh the user data
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+
+      toast({
+        title: "Login successful",
+        description: "Redirecting to your dashboard...",
+      });
+
+      // User will be redirected by the useEffect above
+    } catch (error) {
+      console.error("Login error:", error);
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Form Section */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        {/* Logo based on theme */}
-        <div className="mb-6 text-center">
-          <img 
-            src={theme === 'light' ? "/opian-rewards-logo(R).png" : "/opian-logo-white.png"} 
-            alt="OPIAN Rewards" 
-            className="h-12 w-auto mx-auto"
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              img.onerror = null;
-              img.src = '/logo-fallback.png';
-            }}
-          />
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header with logo */}
+      <header className="py-6 border-b">
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <a href="/" className="flex items-center">
+            <img
+              src="/opian-rewards-logo(R).png"
+              alt="OPIAN Rewards"
+              className="h-8 w-auto hidden dark:block"
+            />
+            <img
+              src="/opian-logo-white.png"
+              alt="OPIAN Rewards"
+              className="h-8 w-auto block dark:hidden"
+            />
+          </a>
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/")}
+            className="text-foreground"
+          >
+            Back to Home
+          </Button>
         </div>
-        <Card className="w-full max-w-md p-6">
-          <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Get Information</TabsTrigger>
-            </TabsList>
+      </header>
 
-            {/* Login Form */}
-            <TabsContent value="login">
-              <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                  <FormField
-                    control={loginForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="you@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="********" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button 
-                    type="submit" 
-                    className="w-full mt-6" 
-                    disabled={loginMutation.isPending}
-                  >
-                    {loginMutation.isPending ? (
-                      <LoadingSpinner className="mr-2" />
-                    ) : null}
-                    Sign In
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-
-            {/* Lead Generation Form */}
-            <TabsContent value="register">
-              <Form {...leadForm}>
-                <form onSubmit={leadForm.handleSubmit(onLeadSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={leadForm.control}
-                      name="firstName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>First Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={leadForm.control}
-                      name="lastName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+      {/* Main content */}
+      <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
+        <div className="flex flex-col md:flex-row gap-8 items-start">
+          {/* Left side - Form */}
+          <div className="w-full md:w-1/2">
+            <Card className="border-[#43EB3E] border-t-4">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-2xl font-bold">OPIAN Rewards</CardTitle>
+                    <TabsList>
+                      <TabsTrigger value="login">Sign In</TabsTrigger>
+                      <TabsTrigger value="register">Request Information</TabsTrigger>
+                    </TabsList>
                   </div>
-                  <FormField
-                    control={leadForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="you@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={leadForm.control}
-                    name="mobileNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Mobile Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="+27123456789" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={leadForm.control}
-                    name="selectedPackage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Package</FormLabel>
-                        <FormControl>
-                          <select 
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            {...field}
+                  <CardDescription>
+                    {activeTab === "login"
+                      ? "Sign in to access your OPIAN Rewards account"
+                      : "Let us know you're interested and we'll get back to you"}
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent>
+                  <TabsContent value="login" className="mt-0">
+                    <Form {...loginForm}>
+                      <form
+                        onSubmit={loginForm.handleSubmit(onLoginSubmit)}
+                        className="space-y-4"
+                      >
+                        <FormField
+                          control={loginForm.control}
+                          name="username"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Username</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Enter your username"
+                                  {...field}
+                                  autoComplete="username"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={loginForm.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Password</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="password"
+                                  placeholder="Enter your password"
+                                  {...field}
+                                  autoComplete="current-password"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="text-sm">
+                          <a
+                            href="/reset-password"
+                            className="text-primary hover:underline"
                           >
-                            <option value="OPPORTUNITY">Opportunity (R350)</option>
-                            <option value="MOMENTUM">Momentum (R450)</option>
-                            <option value="PROSPER">Prosper (R550)</option>
-                            <option value="PRESTIGE">Prestige (R695)</option>
-                            <option value="PINNACLE">Pinnacle (R825)</option>
-                          </select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={leadForm.control}
-                    name="referralCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Referral Code (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="REF12345" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="mt-2 text-xs text-gray-500">
-                    By submitting this form, you agree to be contacted by our team about OPIAN Rewards. We'll reach out to discuss your selected package and answer any questions.
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full mt-6" 
-                    disabled={submitLeadMutation.isPending}
-                  >
-                    {submitLeadMutation.isPending ? (
-                      <LoadingSpinner className="mr-2" />
-                    ) : null}
-                    Get More Information
-                  </Button>
-                </form>
-              </Form>
-            </TabsContent>
-          </Tabs>
-        </Card>
-      </div>
+                            Forgot password?
+                          </a>
+                        </div>
 
-      {/* Hero section */}
-      <div className="hidden lg:flex flex-1 bg-primary text-primary-foreground">
-        <div className="flex flex-col justify-center p-12 max-w-md mx-auto">
-          <h1 className="text-3xl font-bold mb-4">Welcome to OPIAN Rewards</h1>
-          <p className="text-primary-foreground/80 mb-6">
-            Discover a world of rewards and benefits. Learn more about our packages,
-            and let us help you start your journey to financial growth and rewards.
-          </p>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <div className="h-10 w-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m12 14 4-4" /><path d="M3.34 19a10 10 0 1 1 17.32 0" />
-                </svg>
+                        <Button
+                          type="submit"
+                          className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
+                          disabled={submitting}
+                        >
+                          {submitting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Signing in...
+                            </>
+                          ) : (
+                            "Sign In"
+                          )}
+                        </Button>
+                      </form>
+                    </Form>
+                  </TabsContent>
+
+                  <TabsContent value="register" className="mt-0">
+                    <Form {...leadForm}>
+                      <form
+                        onSubmit={leadForm.handleSubmit(onLeadSubmit)}
+                        className="space-y-4"
+                      >
+                        <FormField
+                          control={leadForm.control}
+                          name="fullName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Full Name</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Enter your full name"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={leadForm.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="email"
+                                  placeholder="Enter your email address"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={leadForm.control}
+                          name="phoneNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone Number</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Enter your phone number"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={leadForm.control}
+                          name="selectedPackage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Package of Interest</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a package" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {PACKAGE_OPTIONS.map((option) => (
+                                    <SelectItem
+                                      key={option.value}
+                                      value={option.value}
+                                    >
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={leadForm.control}
+                          name="referralCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Referral Code (Optional)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Enter referral code if you have one"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <Button
+                          type="submit"
+                          className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
+                          disabled={submitting}
+                        >
+                          {submitting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Submitting...
+                            </>
+                          ) : (
+                            "Submit Information"
+                          )}
+                        </Button>
+                      </form>
+                    </Form>
+                  </TabsContent>
+                </CardContent>
+              </Tabs>
+
+              <CardFooter className="flex flex-col space-y-4 pt-0">
+                <div className="text-sm text-center w-full">
+                  {activeTab === "login" ? (
+                    <p>
+                      Don't have an account?{" "}
+                      <button
+                        onClick={() => setActiveTab("register")}
+                        className="text-primary hover:underline"
+                      >
+                        Request Information
+                      </button>
+                    </p>
+                  ) : (
+                    <p>
+                      Already have an account?{" "}
+                      <button
+                        onClick={() => setActiveTab("login")}
+                        className="text-primary hover:underline"
+                      >
+                        Sign in
+                      </button>
+                    </p>
+                  )}
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
+
+          {/* Right side - Hero/Information */}
+          <div className="w-full md:w-1/2 hidden md:block">
+            <Card className="bg-[#01162f] text-white border-none relative overflow-hidden h-full">
+              {/* Background particles */}
+              <div className="absolute top-0 left-0 w-full h-full">
+                <div className="absolute top-[10%] right-[15%] w-2 h-2 rounded-full bg-[#43EB3E] opacity-20 animate-pulse"></div>
+                <div className="absolute top-[75%] left-[18%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-30 animate-pulse delay-300"></div>
+                <div className="absolute bottom-[30%] right-[22%] w-1.5 h-1.5 rounded-full bg-[#43EB3E] opacity-25 animate-pulse delay-500"></div>
+                <div className="absolute top-[30%] left-[25%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-20 animate-pulse delay-700"></div>
+                <div className="absolute top-[45%] right-[35%] w-1 h-1 rounded-full bg-[#43EB3E] opacity-30 animate-pulse delay-150"></div>
+                <div className="absolute top-[60%] left-[15%] w-2 h-2 rounded-full bg-[#43EB3E] opacity-20 animate-pulse delay-200"></div>
               </div>
-              <div>
-                <h3 className="font-medium">Earn Points Effortlessly</h3>
-                <p className="text-sm text-primary-foreground/70">Earn points on everyday activities and redeem for exciting rewards</p>
+
+              <div className="relative z-10 p-8 flex flex-col justify-center h-full">
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold mb-6">
+                    {activeTab === "login"
+                      ? "Welcome Back!"
+                      : "Join Opian Rewards Today!"}
+                  </h2>
+                  <p className="text-gray-300 mb-6">
+                    {activeTab === "login"
+                      ? "Access your OPIAN Rewards account to track your points, manage your rewards, and make smart financial decisions."
+                      : "Discover the benefits of OPIAN Rewards. Submit your information and we'll get in touch to explain how you can earn rewards on your everyday spending."}
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <div className="bg-[#022b5c] rounded-full p-2 mr-4">
+                      <svg
+                        className="h-5 w-5 text-[#43EB3E]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-1">
+                        Earn Cash Back
+                      </h3>
+                      <p className="text-gray-300 text-sm">
+                        Get rewarded for your everyday spending and bill payments.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <div className="bg-[#022b5c] rounded-full p-2 mr-4">
+                      <svg
+                        className="h-5 w-5 text-[#43EB3E]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-1">
+                        Multiple Packages
+                      </h3>
+                      <p className="text-gray-300 text-sm">
+                        Choose from various packages that match your financial goals and lifestyle.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <div className="bg-[#022b5c] rounded-full p-2 mr-4">
+                      <svg
+                        className="h-5 w-5 text-[#43EB3E]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-1">
+                        Refer & Earn
+                      </h3>
+                      <p className="text-gray-300 text-sm">
+                        Invite friends and family to join OPIAN Rewards and earn additional benefits.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 text-center">
+                  <img
+                    src="/Join-Opian-Rewards-Today.jpg"
+                    alt="OPIAN Rewards Card"
+                    className="max-w-full rounded-lg mx-auto shadow-lg"
+                    style={{ maxHeight: "150px", objectFit: "cover" }}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="h-10 w-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" /><path d="m16 8-8 8" /><path d="m8 8 8 8" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-medium">Exclusive Packages</h3>
-                <p className="text-sm text-primary-foreground/70">Choose from packages designed to maximize your financial growth</p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="h-10 w-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 10v12" /><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-medium">Personalized Support</h3>
-                <p className="text-sm text-primary-foreground/70">Dedicated agents provide customized guidance for your financial journey</p>
-              </div>
-            </div>
+            </Card>
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="py-6 border-t">
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+          <p>&copy; {new Date().getFullYear()} OPIAN Rewards. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }

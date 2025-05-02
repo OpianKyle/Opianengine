@@ -1,6 +1,9 @@
 /**
  * Run the migration to create leads table
  */
+
+import { createConnection } from '@mysql/xdevapi';
+import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import { up, down } from './migrations/0014_create_leads_table.js';
@@ -8,55 +11,35 @@ import { up, down } from './migrations/0014_create_leads_table.js';
 dotenv.config();
 
 async function main() {
-  console.log('Running leads table migration script...');
+  const dbUrl = process.env.DATABASE_URL;
   
-  const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-  };
-  
-  console.log('Database configuration:', {
-    host: dbConfig.host,
-    user: dbConfig.user,
-    hasPassword: !!dbConfig.password,
-    database: dbConfig.database
+  if (!dbUrl) {
+    console.error('DATABASE_URL environment variable is not set');
+    process.exit(1);
+  }
+
+  const poolConnection = await mysql.createPool({
+    uri: dbUrl,
   });
-  
-  let connection;
-  
+
+  console.log('Connected to database');
+  console.log('Running leads table migration...');
+
   try {
-    console.log('Creating database connection...');
-    connection = await mysql.createConnection(dbConfig);
-    
-    console.log('Running migration up function...');
-    await up(connection);
-    
+    const db = drizzle(poolConnection);
+    await up(db);
     console.log('Migration completed successfully!');
   } catch (error) {
-    console.error('Migration failed:', error);
-    console.log('Attempting to rollback migration...');
-    
-    if (connection) {
-      try {
-        await down(connection);
-        console.log('Rollback completed successfully');
-      } catch (rollbackError) {
-        console.error('Rollback failed:', rollbackError);
-      }
-    }
-    
+    console.error('Migration failed:');
+    console.error(error);
     process.exit(1);
   } finally {
-    if (connection) {
-      await connection.end();
-      console.log('Database connection closed');
-    }
+    await poolConnection.end();
   }
 }
 
-main().catch(error => {
-  console.error('Unhandled error:', error);
+main().catch((err) => {
+  console.error('Unexpected error:');
+  console.error(err);
   process.exit(1);
 });

@@ -1,275 +1,225 @@
-import { Router, Request, Response } from 'express';
-import { db } from '@db';
-import { leads, insertLeadSchema } from '@db/leads';
-import { desc, eq, and } from 'drizzle-orm';
-import { users, adminLogs } from '@db/schema';
-import { fromZodError } from 'zod-validation-error';
+import express from "express";
+import { z } from "zod";
+import { and, desc, eq, like, or } from "drizzle-orm";
+import { db } from "../../db";
+import { insertLeadSchema, leads } from "../../db/leads";
+import { ResponseError } from "../utils/errors";
+import { fromZodError } from "zod-validation-error";
+import { adminLog } from "../utils/adminLog";
 
-export const leadsRouter = Router();
+const router = express.Router();
 
-/**
- * Submit a new lead
- * Public endpoint - does not require authentication
- */
-leadsRouter.post('/submit', async (req: Request, res: Response) => {
+// Get all leads - admin only
+router.get("/", async (req, res, next) => {
   try {
-    // Validate the request body
-    const result = insertLeadSchema.safeParse(req.body);
-    if (!result.success) {
-      const error = fromZodError(result.error);
-      return res.status(400).json({ error: error.message });
+    if (!req.isAuthenticated() || !(req.user?.is_admin || req.user?.is_agent)) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Format the data to match the database schema
-    const leadData = {
-      email: req.body.email,
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      mobileNumber: req.body.mobileNumber,
-      selectedPackage: req.body.selectedPackage,
-      referralCode: req.body.referralCode || null,
-      contacted: false,
-      converted: false,
-      convertedUserId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    let query = db.select().from(leads).orderBy(desc(leads.createdAt));
 
-    // Check if email already exists in leads table
-    const existingLead = await db.select()
-      .from(leads)
-      .where(eq(leads.email, leadData.email))
-      .limit(1);
-
-    if (existingLead.length > 0) {
-      return res.status(400).json({ 
-        error: 'A lead with this email already exists',
-        leadId: existingLead[0].id
-      });
+    // Filter by search term if provided
+    const search = req.query.search as string;
+    if (search) {
+      query = query.where(
+        and(
+          or(
+            like(leads.firstName, `%${search}%`),
+            like(leads.lastName, `%${search}%`)
+          ),
+          or(
+            like(leads.email, `%${search}%`),
+            like(leads.mobileNumber, `%${search}%`)
+          )
+        )
+      );
     }
 
-    // Check if email already exists in users table
-    const existingUser = await db.select()
-      .from(users)
-      .where(eq(users.email, leadData.email))
-      .limit(1);
-
-    if (existingUser.length > 0) {
-      return res.status(400).json({ 
-        error: 'This email is already registered with an account',
-        userId: existingUser[0].id
-      });
+    // Filter by package if provided
+    const packageFilter = req.query.package as string;
+    if (packageFilter) {
+      query = query.where(eq(leads.selectedPackage, packageFilter));
     }
 
-    // Insert the lead into the database
-    const insertResult = await db.insert(leads).values(leadData);
-    
-    // Return the lead ID
-    return res.status(201).json({ 
-      success: true, 
-      message: 'Lead submitted successfully',
-      leadId: insertResult[0].insertId
-    });
-  } catch (error) {
-    console.error('Error submitting lead:', error);
-    return res.status(500).json({ error: 'An error occurred while submitting the lead' });
-  }
-});
-
-/**
- * Get all leads
- * Admin only endpoint
- */
-leadsRouter.get('/', async (req: Request, res: Response) => {
-  try {
-    // Check if user is authenticated and is an admin
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const user = req.user;
-    if (!user.is_admin && !user.is_super_admin) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    // Get query parameters for filtering and pagination
+    // Pagination
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
-    const contacted = req.query.contacted === 'true' ? true : req.query.contacted === 'false' ? false : undefined;
-    const converted = req.query.converted === 'true' ? true : req.query.converted === 'false' ? false : undefined;
-
-    // Build the query
-    let query = db.select().from(leads);
-
-    // Apply filters if provided
-    if (contacted !== undefined) {
-      query = query.where(eq(leads.contacted, contacted));
-    }
     
-    if (converted !== undefined) {
-      query = query.where(eq(leads.converted, converted));
-    }
+    const [totalCount] = await db.select({ count: db.fn.count() }).from(leads);
+    const items = await query.limit(limit).offset(offset);
 
-    // Get total count for pagination
-    const totalResults = await query.execute();
-    const totalLeads = totalResults.length;
-
-    // Apply pagination and sorting
-    const leadsList = await query
-      .orderBy(desc(leads.createdAt))
-      .limit(limit)
-      .offset(offset)
-      .execute();
-
-    return res.status(200).json({
-      leads: leadsList,
+    res.json({
+      items,
       pagination: {
-        total: totalLeads,
         page,
         limit,
-        pages: Math.ceil(totalLeads / limit)
-      }
+        totalCount: Number(totalCount.count || 0),
+        totalPages: Math.ceil(Number(totalCount.count || 0) / limit),
+      },
     });
   } catch (error) {
-    console.error('Error fetching leads:', error);
-    return res.status(500).json({ error: 'An error occurred while fetching leads' });
+    next(error);
   }
 });
 
-/**
- * Mark lead as contacted
- * Admin only endpoint
- */
-leadsRouter.patch('/:id/contacted', async (req: Request, res: Response) => {
+// Create a new lead
+router.post("/", async (req, res, next) => {
   try {
-    // Check if user is authenticated and is an admin
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const user = req.user;
-    if (!user.is_admin && !user.is_super_admin) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    const leadId = parseInt(req.params.id);
+    console.log('Received lead submission:', req.body);
     
-    // Find the lead
-    const existingLead = await db.select()
-      .from(leads)
-      .where(eq(leads.id, leadId))
-      .limit(1);
-
-    if (!existingLead.length) {
-      return res.status(404).json({ error: 'Lead not found' });
-    }
-
-    // Update the lead
-    await db.update(leads)
-      .set({ contacted: true, updatedAt: new Date() })
-      .where(eq(leads.id, leadId));
-
-    // Log admin action
-    const adminLogData = {
-      userId: user.id,
-      action: 'MARK_LEAD_CONTACTED',
-      details: JSON.stringify({
-        leadId,
-        leadEmail: existingLead[0].email,
-        adminId: user.id,
-        timestamp: new Date()
-      }),
-      createdAt: new Date()
+    // Prepare data with correct schema format
+    const leadData = {
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.body.email,
+      mobileNumber: req.body.mobileNumber,
+      selectedPackage: req.body.selectedPackage,
+      referralCode: req.body.referralCode,
+      status: 'new',
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
+    
+    // Validate the data
+    const result = insertLeadSchema.safeParse(leadData);
+    if (!result.success) {
+      const validationError = fromZodError(result.error);
+      throw new ResponseError(validationError.message, 400);
+    }
+    
+    // Insert the lead
+    const [insertResult] = await db.insert(leads).values(result.data);
+    const leadId = insertResult.insertId;
+    
+    // Fetch the created lead
+    const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+    
+    // Log the submission in admin logs if the user is logged in
+    if (req.isAuthenticated() && req.user?.id) {
+      await adminLog({
+        user_id: req.user.id,
+        action: "lead_submitted",
+        details: `Lead submitted: ${leadData.firstName} ${leadData.lastName} (${leadData.email})`,
+      });
+    } else {
+      console.log('Lead submitted from public form');
+    }
 
-    await db.insert(adminLogs).values(adminLogData);
-
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Lead marked as contacted successfully'
+    res.status(201).json({
+      success: true,
+      lead,
+      message: "Lead information submitted successfully",
     });
   } catch (error) {
-    console.error('Error marking lead as contacted:', error);
-    return res.status(500).json({ error: 'An error occurred while updating the lead' });
+    next(error);
   }
 });
 
-/**
- * Mark lead as converted
- * Admin only endpoint
- */
-leadsRouter.patch('/:id/converted', async (req: Request, res: Response) => {
+// Get a single lead - admin only
+router.get("/:id", async (req, res, next) => {
   try {
-    // Check if user is authenticated and is an admin
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    if (!req.isAuthenticated() || !(req.user?.is_admin || req.user?.is_agent)) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const user = req.user;
-    if (!user.is_admin && !user.is_super_admin) {
-      return res.status(403).json({ error: 'Forbidden' });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid lead ID" });
     }
 
-    const leadId = parseInt(req.params.id);
-    const convertedUserId = req.body.userId;
-    
-    if (!convertedUserId) {
-      return res.status(400).json({ error: 'User ID is required' });
+    const lead = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+    if (!lead.length) {
+      return res.status(404).json({ message: "Lead not found" });
     }
 
-    // Find the lead
-    const existingLead = await db.select()
-      .from(leads)
-      .where(eq(leads.id, leadId))
-      .limit(1);
+    res.json(lead[0]);
+  } catch (error) {
+    next(error);
+  }
+});
 
-    if (!existingLead.length) {
-      return res.status(404).json({ error: 'Lead not found' });
+// Update a lead - admin only
+router.put("/:id", async (req, res, next) => {
+  try {
+    if (!req.isAuthenticated() || !(req.user?.is_admin || req.user?.is_agent)) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Find the user
-    const existingUser = await db.select()
-      .from(users)
-      .where(eq(users.id, convertedUserId))
-      .limit(1);
-
-    if (!existingUser.length) {
-      return res.status(404).json({ error: 'User not found' });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid lead ID" });
     }
 
-    // Update the lead
-    await db.update(leads)
-      .set({ 
-        converted: true, 
-        convertedUserId, 
-        contacted: true, 
-        updatedAt: new Date() 
+    const result = insertLeadSchema.partial().safeParse(req.body);
+    if (!result.success) {
+      const validationError = fromZodError(result.error);
+      throw new ResponseError(validationError.message, 400);
+    }
+
+    const [existingLead] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+    if (!existingLead) {
+      return res.status(404).json({ message: "Lead not found" });
+    }
+
+    const updateData = result.data;
+    const [updatedLead] = await db
+      .update(leads)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
       })
-      .where(eq(leads.id, leadId));
+      .where(eq(leads.id, id))
+      .returning();
 
-    // Log admin action
-    const adminLogData = {
-      userId: user.id,
-      action: 'MARK_LEAD_CONVERTED',
-      details: JSON.stringify({
-        leadId,
-        leadEmail: existingLead[0].email,
-        convertedUserId,
-        adminId: user.id,
-        timestamp: new Date()
-      }),
-      createdAt: new Date()
-    };
+    await adminLog({
+      user_id: req.user.id,
+      action: "lead_updated",
+      details: `Lead ${id} updated by ${req.user.username} (${req.user.email})`,
+    });
 
-    await db.insert(adminLogs).values(adminLogData);
-
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Lead marked as converted successfully'
+    res.json({
+      success: true,
+      lead: updatedLead,
+      message: "Lead information updated successfully",
     });
   } catch (error) {
-    console.error('Error marking lead as converted:', error);
-    return res.status(500).json({ error: 'An error occurred while updating the lead' });
+    next(error);
   }
 });
+
+// Delete a lead - admin only
+router.delete("/:id", async (req, res, next) => {
+  try {
+    if (!req.isAuthenticated() || !req.user?.is_admin) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid lead ID" });
+    }
+
+    const [existingLead] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+    if (!existingLead) {
+      return res.status(404).json({ message: "Lead not found" });
+    }
+
+    await db.delete(leads).where(eq(leads.id, id));
+
+    await adminLog({
+      user_id: req.user.id,
+      action: "lead_deleted",
+      details: `Lead ${id} (${existingLead.firstName} ${existingLead.lastName}) deleted by ${req.user.email || 'Admin'}`,
+    });
+
+    res.json({
+      success: true,
+      message: "Lead deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+export const leadsRouter = router;
