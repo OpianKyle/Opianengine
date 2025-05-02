@@ -69,9 +69,12 @@ interface Lead {
 // Agent type definition
 interface Agent {
   id: number;
-  firstName: string;
-  lastName: string;
+  first_name?: string;
+  firstName?: string;
+  last_name?: string;
+  lastName?: string;
   email: string;
+  username?: string;
 }
 
 // Pagination type definition
@@ -118,10 +121,11 @@ export default function AdminLeads() {
   const {
     data: agentsData,
     isLoading: isLoadingAgents,
+    error: agentsError,
   } = useQuery({
-    queryKey: ['/api/users/agents/list'],
+    queryKey: ['/api/admin/agents'],
     queryFn: async () => {
-      const response = await fetch('/api/users/agents/list', {
+      const response = await fetch('/api/admin/agents', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -132,7 +136,9 @@ export default function AdminLeads() {
         throw new Error('Failed to fetch agents');
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log('Agents fetched:', data);
+      return data;
     },
     enabled: !!token,
   });
@@ -225,7 +231,9 @@ export default function AdminLeads() {
         if (lead.assignedAgentId && agentsData) {
           const agent = agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId);
           if (agent) {
-            assignedAgentName = `${agent.firstName} ${agent.lastName}`;
+            const firstName = agent.firstName || agent.first_name || '';
+            const lastName = agent.lastName || agent.last_name || '';
+            assignedAgentName = `${firstName} ${lastName}`;
           } else {
             assignedAgentName = 'Unknown Agent';
           }
@@ -450,7 +458,12 @@ export default function AdminLeads() {
                             <div className="flex items-center">
                               {(() => {
                                 const agent = agentsData?.find((agent: Agent) => agent.id === lead.assignedAgentId);
-                                return agent ? `${agent.firstName} ${agent.lastName}` : 'Unknown Agent';
+                                if (agent) {
+                                  const firstName = agent.firstName || agent.first_name || '';
+                                  const lastName = agent.lastName || agent.last_name || '';
+                                  return `${firstName} ${lastName}`;
+                                }
+                                return 'Unknown Agent';
                               })()}
                             </div>
                           ) : (
@@ -655,7 +668,7 @@ export default function AdminLeads() {
                       <SelectItem key="unassigned" value="unassigned">Unassigned</SelectItem>
                       {agentsData?.map((agent: Agent) => (
                         <SelectItem key={agent.id} value={agent.id.toString()}>
-                          {agent.firstName} {agent.lastName}
+                          {agent.firstName || agent.first_name || ''} {agent.lastName || agent.last_name || ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
