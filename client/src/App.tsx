@@ -4,13 +4,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import Login from "@/pages/login";
+import LoginPage from "@/pages/login-page"; // Updated login page
 import Register from "@/pages/register";
-import AuthPage from "@/pages/auth-page"; // Import the new auth page
+import ContactUsPage from "@/pages/contact-us"; // New contact us page
 import ResetPassword from "@/pages/reset-password";
-import ReferralPage from "@/pages/referral"; // Import the referral form page
-import HowItWorks from "@/pages/how-it-works"; // Import the how it works page
-import MeetTheTeam from "@/pages/meet-the-team"; // Import the meet the team page
+import ReferralPage from "@/pages/referral"; 
+import HowItWorks from "@/pages/how-it-works";
+import MeetTheTeam from "@/pages/meet-the-team";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 // Session timeout functionality has been removed
 // import { useSessionTimeout } from "@/hooks/use-session-timeout";
@@ -61,8 +61,8 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (!user) {
-    console.log('No user found, redirecting to auth page');
-    return <Redirect to="/auth" />;
+    console.log('No user found, redirecting to login page');
+    return <Redirect to="/login" />;
   }
 
   console.log('ProtectedRoute checking user role:', { 
@@ -123,13 +123,13 @@ function Router() {
         <Home />
       </Route>
       <Route path="/login">
-        <Login />
+        <LoginPage />
       </Route>
       <Route path="/register">
         <Register />
       </Route>
-      <Route path="/auth">
-        <AuthPage />
+      <Route path="/contact-us">
+        <ContactUsPage />
       </Route>
       <Route path="/reset-password">
         <ResetPassword />
