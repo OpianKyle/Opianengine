@@ -81,7 +81,7 @@ interface LeadsResponse {
 }
 
 const PACKAGE_OPTIONS = [
-  { value: "", label: "All Packages" },
+  { value: "ALL", label: "All Packages" },
   { value: "OPPORTUNITY", label: "Opportunity - R350" },
   { value: "MOMENTUM", label: "Momentum - R450" },
   { value: "PROSPER", label: "Prosper - R550" },
@@ -100,7 +100,7 @@ export default function AdminLeads() {
   const { token } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPackage, setSelectedPackage] = useState("");
+  const [selectedPackage, setSelectedPackage] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -118,7 +118,10 @@ export default function AdminLeads() {
       // Build query parameters
       const queryParams = new URLSearchParams();
       if (searchTerm) queryParams.set('search', searchTerm);
-      if (selectedPackage) queryParams.set('package', selectedPackage);
+      // Only add package filter if it's not the "ALL" value
+      if (selectedPackage && selectedPackage !== "ALL") {
+        queryParams.set('package', selectedPackage);
+      }
       queryParams.set('page', currentPage.toString());
       queryParams.set('limit', pageSize.toString());
 
@@ -324,7 +327,7 @@ export default function AdminLeads() {
               variant="secondary"
               onClick={() => {
                 setSearchTerm('');
-                setSelectedPackage('');
+                setSelectedPackage('ALL');
                 setCurrentPage(1);
                 setTimeout(() => refetch(), 0);
               }}
