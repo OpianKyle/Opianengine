@@ -1,0 +1,179 @@
+leads.tsx:129 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/leads?package=OPPORTUNITY&page=1&limit=10 500 (Internal Server Error)
+queryFn @ leads.tsx:129
+fetchFn @ @tanstack_react-query.js?v=9cec4a7d:840
+run @ @tanstack_react-query.js?v=9cec4a7d:494
+start @ @tanstack_react-query.js?v=9cec4a7d:536
+fetch @ @tanstack_react-query.js?v=9cec4a7d:926
+executeFetch_fn @ @tanstack_react-query.js?v=9cec4a7d:2211
+fetch @ @tanstack_react-query.js?v=9cec4a7d:2011
+refetch @ @tanstack_react-query.js?v=9cec4a7d:2001
+(anonymous) @ leads.tsx:312
+setTimeout
+onValueChange @ leads.tsx:312
+(anonymous) @ chunk-T4GFO2ST.js?v=9cec4a7d:114
+(anonymous) @ chunk-45UT4W3J.js?v=9cec4a7d:28
+handleSelect @ @radix-ui_react-select.js?v=9cec4a7d:863
+(anonymous) @ @radix-ui_react-select.js?v=9cec4a7d:909
+handleEvent @ chunk-T4GFO2ST.js?v=9cec4a7d:16
+callCallback2 @ chunk-276SZO74.js?v=9cec4a7d:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=9cec4a7d:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=9cec4a7d:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=9cec4a7d:3736
+executeDispatch @ chunk-276SZO74.js?v=9cec4a7d:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=9cec4a7d:7034
+processDispatchQueue @ chunk-276SZO74.js?v=9cec4a7d:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=9cec4a7d:7051
+(anonymous) @ chunk-276SZO74.js?v=9cec4a7d:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=9cec4a7d:18913
+batchedUpdates @ chunk-276SZO74.js?v=9cec4a7d:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=9cec4a7d:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=9cec4a7d:5478
+dispatchEvent @ chunk-276SZO74.js?v=9cec4a7d:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=9cec4a7d:5449Understand this error
+leads.tsx:129 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/leads?package=OPPORTUNITY&page=1&limit=10 500 (Internal Server Error)
+queryFn @ leads.tsx:129
+fetchFn @ @tanstack_react-query.js?v=9cec4a7d:840
+run @ @tanstack_react-query.js?v=9cec4a7d:494
+(anonymous) @ @tanstack_react-query.js?v=9cec4a7d:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=9cec4a7d:515
+Promise.catch
+run @ @tanstack_react-query.js?v=9cec4a7d:498
+start @ @tanstack_react-query.js?v=9cec4a7d:536
+fetch @ @tanstack_react-query.js?v=9cec4a7d:926
+executeFetch_fn @ @tanstack_react-query.js?v=9cec4a7d:2211
+fetch @ @tanstack_react-query.js?v=9cec4a7d:2011
+refetch @ @tanstack_react-query.js?v=9cec4a7d:2001
+(anonymous) @ leads.tsx:312
+setTimeout
+onValueChange @ leads.tsx:312
+(anonymous) @ chunk-T4GFO2ST.js?v=9cec4a7d:114
+(anonymous) @ chunk-45UT4W3J.js?v=9cec4a7d:28
+handleSelect @ @radix-ui_react-select.js?v=9cec4a7d:863
+(anonymous) @ @radix-ui_react-select.js?v=9cec4a7d:909
+handleEvent @ chunk-T4GFO2ST.js?v=9cec4a7d:16
+callCallback2 @ chunk-276SZO74.js?v=9cec4a7d:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=9cec4a7d:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=9cec4a7d:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=9cec4a7d:3736
+executeDispatch @ chunk-276SZO74.js?v=9cec4a7d:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=9cec4a7d:7034
+processDispatchQueue @ chunk-276SZO74.js?v=9cec4a7d:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=9cec4a7d:7051
+(anonymous) @ chunk-276SZO74.js?v=9cec4a7d:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=9cec4a7d:18913
+batchedUpdates @ chunk-276SZO74.js?v=9cec4a7d:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=9cec4a7d:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=9cec4a7d:5478
+dispatchEvent @ chunk-276SZO74.js?v=9cec4a7d:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=9cec4a7d:5449Understand this error
+leads.tsx:129 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/leads?package=OPPORTUNITY&page=1&limit=10 500 (Internal Server Error)
+queryFn @ leads.tsx:129
+fetchFn @ @tanstack_react-query.js?v=9cec4a7d:840
+run @ @tanstack_react-query.js?v=9cec4a7d:494
+start @ @tanstack_react-query.js?v=9cec4a7d:536
+fetch @ @tanstack_react-query.js?v=9cec4a7d:926
+executeFetch_fn @ @tanstack_react-query.js?v=9cec4a7d:2211
+fetch @ @tanstack_react-query.js?v=9cec4a7d:2011
+refetch @ @tanstack_react-query.js?v=9cec4a7d:2001
+onClick @ leads.tsx:260
+callCallback2 @ chunk-276SZO74.js?v=9cec4a7d:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=9cec4a7d:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=9cec4a7d:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=9cec4a7d:3736
+executeDispatch @ chunk-276SZO74.js?v=9cec4a7d:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=9cec4a7d:7034
+processDispatchQueue @ chunk-276SZO74.js?v=9cec4a7d:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=9cec4a7d:7051
+(anonymous) @ chunk-276SZO74.js?v=9cec4a7d:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=9cec4a7d:18913
+batchedUpdates @ chunk-276SZO74.js?v=9cec4a7d:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=9cec4a7d:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=9cec4a7d:5478
+dispatchEvent @ chunk-276SZO74.js?v=9cec4a7d:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=9cec4a7d:5449Understand this error
+leads.tsx:129 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/leads?package=OPPORTUNITY&page=1&limit=10 500 (Internal Server Error)
+queryFn @ leads.tsx:129
+fetchFn @ @tanstack_react-query.js?v=9cec4a7d:840
+run @ @tanstack_react-query.js?v=9cec4a7d:494
+(anonymous) @ @tanstack_react-query.js?v=9cec4a7d:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=9cec4a7d:515
+Promise.catch
+run @ @tanstack_react-query.js?v=9cec4a7d:498
+start @ @tanstack_react-query.js?v=9cec4a7d:536
+fetch @ @tanstack_react-query.js?v=9cec4a7d:926
+executeFetch_fn @ @tanstack_react-query.js?v=9cec4a7d:2211
+fetch @ @tanstack_react-query.js?v=9cec4a7d:2011
+refetch @ @tanstack_react-query.js?v=9cec4a7d:2001
+onClick @ leads.tsx:260
+callCallback2 @ chunk-276SZO74.js?v=9cec4a7d:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=9cec4a7d:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=9cec4a7d:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=9cec4a7d:3736
+executeDispatch @ chunk-276SZO74.js?v=9cec4a7d:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=9cec4a7d:7034
+processDispatchQueue @ chunk-276SZO74.js?v=9cec4a7d:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=9cec4a7d:7051
+(anonymous) @ chunk-276SZO74.js?v=9cec4a7d:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=9cec4a7d:18913
+batchedUpdates @ chunk-276SZO74.js?v=9cec4a7d:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=9cec4a7d:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=9cec4a7d:5478
+dispatchEvent @ chunk-276SZO74.js?v=9cec4a7d:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=9cec4a7d:5449Understand this error
+App.tsx:69 ProtectedRoute checking user role: {isAdmin: true, isSuperAdmin: true, isAgent: false, requestingAdminRoute: true, requestingAgentRoute: false}
+App.tsx:69 ProtectedRoute checking user role: {isAdmin: true, isSuperAdmin: true, isAgent: false, requestingAdminRoute: true, requestingAgentRoute: false}
+App.tsx:69 ProtectedRoute checking user role: {isAdmin: true, isSuperAdmin: true, isAgent: false, requestingAdminRoute: true, requestingAgentRoute: false}
+App.tsx:69 ProtectedRoute checking user role: {isAdmin: true, isSuperAdmin: true, isAgent: false, requestingAdminRoute: true, requestingAgentRoute: false}
+leads.tsx:129 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/leads?package=MOMENTUM&page=1&limit=10 500 (Internal Server Error)
+queryFn @ leads.tsx:129
+fetchFn @ @tanstack_react-query.js?v=9cec4a7d:840
+run @ @tanstack_react-query.js?v=9cec4a7d:494
+start @ @tanstack_react-query.js?v=9cec4a7d:536
+fetch @ @tanstack_react-query.js?v=9cec4a7d:926
+executeFetch_fn @ @tanstack_react-query.js?v=9cec4a7d:2211
+fetch @ @tanstack_react-query.js?v=9cec4a7d:2011
+refetch @ @tanstack_react-query.js?v=9cec4a7d:2001
+(anonymous) @ leads.tsx:312
+setTimeout
+onValueChange @ leads.tsx:312
+(anonymous) @ chunk-T4GFO2ST.js?v=9cec4a7d:114
+(anonymous) @ chunk-45UT4W3J.js?v=9cec4a7d:28
+handleSelect @ @radix-ui_react-select.js?v=9cec4a7d:863
+(anonymous) @ @radix-ui_react-select.js?v=9cec4a7d:909
+handleEvent @ chunk-T4GFO2ST.js?v=9cec4a7d:16
+callCallback2 @ chunk-276SZO74.js?v=9cec4a7d:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=9cec4a7d:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=9cec4a7d:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=9cec4a7d:3736
+executeDispatch @ chunk-276SZO74.js?v=9cec4a7d:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=9cec4a7d:7034
+processDispatchQueue @ chunk-276SZO74.js?v=9cec4a7d:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=9cec4a7d:7051
+(anonymous) @ chunk-276SZO74.js?v=9cec4a7d:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=9cec4a7d:18913
+batchedUpdates @ chunk-276SZO74.js?v=9cec4a7d:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=9cec4a7d:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=9cec4a7d:5478
+dispatchEvent @ chunk-276SZO74.js?v=9cec4a7d:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=9cec4a7d:5449Understand this error
+leads.tsx:129 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/leads?package=MOMENTUM&page=1&limit=10 500 (Internal Server Error)

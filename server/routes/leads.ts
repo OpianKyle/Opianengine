@@ -46,7 +46,10 @@ router.get("/", async (req, res, next) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
     
-    const [totalCount] = await db.select({ count: db.fn.count() }).from(leads);
+    // For PostgreSQL we need to access the count result differently
+    const totalCountResult = await db.select({ count: db.fn.count() }).from(leads);
+    const totalCount = totalCountResult[0]?.count || 0;
+    
     const items = await query.limit(limit).offset(offset);
 
     res.json({
@@ -54,8 +57,8 @@ router.get("/", async (req, res, next) => {
       pagination: {
         page,
         limit,
-        totalCount: Number(totalCount.count || 0),
-        totalPages: Math.ceil(Number(totalCount.count || 0) / limit),
+        totalCount: Number(totalCount),
+        totalPages: Math.ceil(Number(totalCount) / limit),
       },
     });
   } catch (error) {
@@ -89,11 +92,10 @@ router.post("/", async (req, res, next) => {
     }
     
     // Insert the lead
-    const [insertResult] = await db.insert(leads).values(result.data);
-    const leadId = insertResult.insertId;
+    const insertResult = await db.insert(leads).values(result.data).returning();
+    const lead = insertResult[0];
     
-    // Fetch the created lead
-    const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+    // PostgreSQL returns the inserted record directly when using returning()
     
     // Log the submission in admin logs if the user is logged in
     if (req.isAuthenticated() && req.user?.id) {
@@ -163,7 +165,7 @@ router.put("/:id", async (req, res, next) => {
     }
 
     const updateData = result.data;
-    const [updatedLead] = await db
+    const updatedLeads = await db
       .update(leads)
       .set({
         ...updateData,
@@ -171,6 +173,8 @@ router.put("/:id", async (req, res, next) => {
       })
       .where(eq(leads.id, id))
       .returning();
+    
+    const updatedLead = updatedLeads[0];
 
     await adminLog({
       user_id: req.user.id,
