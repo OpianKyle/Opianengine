@@ -3,7 +3,6 @@ import { Redirect } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { LoadingSpinner } from "@/components/ui/spinner";
@@ -12,6 +11,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useTheme } from "@/providers/theme-provider";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
 
 // Form validation schemas
 const loginSchema = z.object({
@@ -19,28 +20,26 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-const registerSchema = z.object({
+// Modified schema for lead generation form
+const leadSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   firstName: z.string().min(2, "First name must be at least 2 characters"),
   lastName: z.string().min(2, "Last name must be at least 2 characters"),
   mobileNumber: z.string().min(10, "Mobile number must be at least 10 digits"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string().min(8, "Please confirm your password"),
-  selectedPackage: z.string().optional(),
+  selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]).optional(),
   referralCode: z.string().optional()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
-type RegisterFormData = z.infer<typeof registerSchema>;
+type LeadFormData = z.infer<typeof leadSchema>;
 
 export default function AuthPage() {
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, loginMutation } = useAuth();
   const { theme } = useTheme();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("login");
 
+  // Login form setup
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -49,20 +48,20 @@ export default function AuthPage() {
     },
   });
 
-  const registerForm = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
+  // Lead form setup 
+  const leadForm = useForm<LeadFormData>({
+    resolver: zodResolver(leadSchema),
     defaultValues: {
       email: "",
       firstName: "",
       lastName: "",
       mobileNumber: "",
-      password: "",
-      confirmPassword: "",
       selectedPackage: "OPPORTUNITY",
       referralCode: "",
     },
   });
 
+  // Handle login form submission
   const onLoginSubmit = (data: LoginFormData) => {
     loginMutation.mutate({
       email: data.email,
@@ -70,24 +69,53 @@ export default function AuthPage() {
     });
   };
 
-  const onRegisterSubmit = (data: RegisterFormData) => {
-    // Create properly typed RegisterData object
-    const registerData: any = {
-      email: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      mobileNumber: data.mobileNumber,
-      password: data.password,
-      referralCode: data.referralCode || undefined,
-      mandate_accepted: true,
-    };
-    
-    // Add selectedPackage outside of type constraints
-    // This is needed by the server but not in the TypeScript interface
-    registerData.selectedPackage = data.selectedPackage;
-    
-    // Pass the data to the mutation
-    registerMutation.mutate(registerData);
+  // Lead submission mutation
+  const submitLeadMutation = useMutation({
+    mutationFn: async (leadData: LeadFormData) => {
+      const response = await fetch("/api/leads/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(leadData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to submit lead");
+      }
+
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thank you for your interest!",
+        description: "A representative will contact you shortly.",
+        variant: "default",
+      });
+      
+      // Reset the form
+      leadForm.reset({
+        email: "",
+        firstName: "",
+        lastName: "",
+        mobileNumber: "",
+        selectedPackage: "OPPORTUNITY",
+        referralCode: "",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Submission failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle lead form submission
+  const onLeadSubmit = (data: LeadFormData) => {
+    submitLeadMutation.mutate(data);
   };
 
   // If user is already logged in, redirect to the home page
@@ -116,7 +144,7 @@ export default function AuthPage() {
           <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-2 mb-6">
               <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsTrigger value="register">Get Information</TabsTrigger>
             </TabsList>
 
             {/* Login Form */}
@@ -163,13 +191,13 @@ export default function AuthPage() {
               </Form>
             </TabsContent>
 
-            {/* Register Form */}
+            {/* Lead Generation Form */}
             <TabsContent value="register">
-              <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+              <Form {...leadForm}>
+                <form onSubmit={leadForm.handleSubmit(onLeadSubmit)} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
-                      control={registerForm.control}
+                      control={leadForm.control}
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
@@ -182,7 +210,7 @@ export default function AuthPage() {
                       )}
                     />
                     <FormField
-                      control={registerForm.control}
+                      control={leadForm.control}
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
@@ -196,7 +224,7 @@ export default function AuthPage() {
                     />
                   </div>
                   <FormField
-                    control={registerForm.control}
+                    control={leadForm.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
@@ -209,7 +237,7 @@ export default function AuthPage() {
                     )}
                   />
                   <FormField
-                    control={registerForm.control}
+                    control={leadForm.control}
                     name="mobileNumber"
                     render={({ field }) => (
                       <FormItem>
@@ -222,7 +250,7 @@ export default function AuthPage() {
                     )}
                   />
                   <FormField
-                    control={registerForm.control}
+                    control={leadForm.control}
                     name="selectedPackage"
                     render={({ field }) => (
                       <FormItem>
@@ -244,7 +272,7 @@ export default function AuthPage() {
                     )}
                   />
                   <FormField
-                    control={registerForm.control}
+                    control={leadForm.control}
                     name="referralCode"
                     render={({ field }) => (
                       <FormItem>
@@ -256,44 +284,18 @@ export default function AuthPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={registerForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="********" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={registerForm.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirm Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="********" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <div className="mt-2 text-xs text-gray-500">
-                    By creating an account, you agree to our terms and conditions and mandate agreement.
+                    By submitting this form, you agree to be contacted by our team about OPIAN Rewards. We'll reach out to discuss your selected package and answer any questions.
                   </div>
                   <Button 
                     type="submit" 
                     className="w-full mt-6" 
-                    disabled={registerMutation.isPending}
+                    disabled={submitLeadMutation.isPending}
                   >
-                    {registerMutation.isPending ? (
+                    {submitLeadMutation.isPending ? (
                       <LoadingSpinner className="mr-2" />
                     ) : null}
-                    Create Account
+                    Get More Information
                   </Button>
                 </form>
               </Form>
@@ -305,10 +307,10 @@ export default function AuthPage() {
       {/* Hero section */}
       <div className="hidden lg:flex flex-1 bg-primary text-primary-foreground">
         <div className="flex flex-col justify-center p-12 max-w-md mx-auto">
-          <h1 className="text-3xl font-bold mb-4">Welcome to our Application</h1>
+          <h1 className="text-3xl font-bold mb-4">Welcome to OPIAN Rewards</h1>
           <p className="text-primary-foreground/80 mb-6">
-            A secure platform for your reward point management. Sign in to track your rewards, 
-            manage your products, and enjoy a seamless experience.
+            Discover a world of rewards and benefits. Learn more about our packages,
+            and let us help you start your journey to financial growth and rewards.
           </p>
           <div className="space-y-4">
             <div className="flex items-start space-x-3">
@@ -318,8 +320,8 @@ export default function AuthPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-medium">Reward Points</h3>
-                <p className="text-sm text-primary-foreground/70">Track and redeem your points for exciting rewards</p>
+                <h3 className="font-medium">Earn Points Effortlessly</h3>
+                <p className="text-sm text-primary-foreground/70">Earn points on everyday activities and redeem for exciting rewards</p>
               </div>
             </div>
             <div className="flex items-start space-x-3">
@@ -329,8 +331,8 @@ export default function AuthPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-medium">Secure Platform</h3>
-                <p className="text-sm text-primary-foreground/70">Your data is protected with enterprise-level security</p>
+                <h3 className="font-medium">Exclusive Packages</h3>
+                <p className="text-sm text-primary-foreground/70">Choose from packages designed to maximize your financial growth</p>
               </div>
             </div>
             <div className="flex items-start space-x-3">
@@ -340,8 +342,8 @@ export default function AuthPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-medium">Customer Support</h3>
-                <p className="text-sm text-primary-foreground/70">24/7 support available for all your needs</p>
+                <h3 className="font-medium">Personalized Support</h3>
+                <p className="text-sm text-primary-foreground/70">Dedicated agents provide customized guidance for your financial journey</p>
               </div>
             </div>
           </div>
