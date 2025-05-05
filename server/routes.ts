@@ -5336,13 +5336,16 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
       console.log(`Found ${adminUsers[0].length} admin users and ${agentUsers[0].length} agent users`);
 
+      console.log('Admin users sample:', adminUsers[0][0] || {});
+      console.log('Agent users sample:', agentUsers[0][0] || {});
+
       // Transform admin users
       const transformedAdmins = adminUsers[0].map(admin => ({
         id: admin.id,
         email: admin.email,
-        firstName: admin.first_name,
-        lastName: admin.last_name,
-        phoneNumber: admin.phone_number,
+        firstName: admin.first_name || '',
+        lastName: admin.last_name || '',
+        phoneNumber: admin.phone_number || '',
         isEnabled: Boolean(admin.is_enabled),
         createdAt: admin.created_at,
         isAdmin: true,
@@ -5355,9 +5358,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       const transformedAgents = agentUsers[0].map(agent => ({
         id: agent.id,
         email: agent.email,
-        firstName: agent.first_name,
-        lastName: agent.last_name,
-        phoneNumber: agent.phone_number,
+        firstName: agent.first_name || '',
+        lastName: agent.last_name || '',
+        phoneNumber: agent.phone_number || '',
         isEnabled: Boolean(agent.is_enabled),
         createdAt: agent.created_at,
         isAdmin: false,
