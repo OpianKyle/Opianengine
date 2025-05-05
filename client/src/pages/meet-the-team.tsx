@@ -109,7 +109,7 @@ export default function TeamPage() {
     {
       id: 10,
       name: "Jamie Koen",
-      title: "Business Management Specialist", 
+      title: "Business Development Specialist", 
       description: "Jamie specializes in optimizing our business operations and implementing strategic initiatives that drive growth and efficiency. With a keen eye for process improvement and a talent for cross-departmental coordination, Jamie ensures that our business objectives align with our commitment to delivering exceptional value to our members.",
       image: "/Jamie.jpg"
     },
@@ -400,11 +400,17 @@ export default function TeamPage() {
                     >
                       <div className="flex flex-col items-center py-8 px-6">
                         {/* Circular image */}
-                        <div className="w-36 h-36 rounded-full overflow-hidden mb-4 border-2 border-[#43EB3E]/20">
+                        <div className="w-40 h-40 rounded-full overflow-hidden mb-4 border-2 border-[#43EB3E]/20">
                           <img 
                             src={member.image} 
                             alt={member.name} 
-                            className="w-full h-full object-cover object-top"
+                            className={`w-full h-full object-cover ${
+                              member.name === "Lance Heynes" || 
+                              member.name === "Mic-Shane Brown" || 
+                              member.name === "Lionel Lottering" 
+                                ? "object-top" 
+                                : "object-center"
+                            }`}
                             onError={(e) => {
                               const img = e.target as HTMLImageElement;
                               img.onerror = null;
@@ -435,7 +441,13 @@ export default function TeamPage() {
                           <img 
                             src={member.image} 
                             alt={member.name} 
-                            className="w-full h-full object-cover object-top"
+                            className={`w-full h-full object-cover ${
+                              member.name === "Lance Heynes" || 
+                              member.name === "Mic-Shane Brown" || 
+                              member.name === "Lionel Lottering" 
+                                ? "object-top" 
+                                : "object-center"
+                            }`}
                             onError={(e) => {
                               const img = e.target as HTMLImageElement;
                               img.onerror = null;
