@@ -24,8 +24,8 @@ const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
       return 'dark';
     }
     
-    // Default to dark mode as the site is designed with a dark theme
-    return 'dark';
+    // Default to light mode as per requirement
+    return 'light';
   });
 
   useEffect(() => {
