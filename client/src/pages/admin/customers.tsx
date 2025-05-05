@@ -8,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail } from "lucide-react";
+import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail, ChevronLeft, ChevronRight } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import cn from 'classnames';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -657,259 +658,259 @@ export default function AdminCustomers() {
               </Button>
             </div>
           ) : (
-          <div className="space-y-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Package</TableHead>
-                  <TableHead>Tier</TableHead>
-                  <TableHead>Points</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Assigned Products</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isCustomersLoading && !customers ? (
+            <div className="space-y-4">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
-                      <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground mt-2">Loading customer data...</p>
-                    </TableCell>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Package</TableHead>
+                    <TableHead>Tier</TableHead>
+                    <TableHead>Points</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Assigned Products</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ) : !customers?.length ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
-                      No customers found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  customers.map((customer: any) => {
-                    const tierInfo = getTierInfo(customer.points);
-                    return (
-                      <TableRow
-                        key={customer.id}
-                        className={cn(
-                          !customer.isEnabled && "opacity-60 bg-muted/50"
-                        )}
-                      >
-                      <TableCell>{customer.firstName} {customer.lastName}</TableCell>
-                      <TableCell>{customer.email}</TableCell>
-                      <TableCell>{customer.phoneNumber}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {customer.selectedPackage || 'No Package'}
-                        </Badge>
+                </TableHeader>
+                <TableBody>
+                  {isCustomersLoading && !customers.length ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-24 text-center">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground mt-2">Loading customer data...</p>
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Badge className={`${tierInfo.color}`}>
-                            {tierInfo.name}
-                          </Badge>
-                          {tierInfo.nextTier && (
-                            <p className="text-xs text-muted-foreground">
-                              {tierInfo.nextTier.pointsNeeded.toLocaleString()} points to {tierInfo.nextTier.name}
-                            </p>
+                    </TableRow>
+                  ) : !customers.length ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-24 text-center">
+                        No customers found.
+                      </TableCell>
+                    </TableRow>
+                  ) : 
+                    customers.map((customer: any) => {
+                      const tierInfo = getTierInfo(customer.points);
+                      return (
+                        <TableRow
+                          key={customer.id}
+                          className={cn(
+                            !customer.isEnabled && "opacity-60 bg-muted/50"
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {typeof customer.points === 'number'
-                          ? customer.points.toLocaleString()
-                          : Number(customer.points || 0).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          customer.isEnabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {customer.isEnabled ? 'Active' : 'Disabled'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <ScrollArea className="h-[100px]">
-                          <div className="space-x-1">
-                            {customer.assignedProducts?.length > 0 ? (
-                              customer.assignedProducts.map((product: any) => (
-                                <Badge
-                                  key={product.id}
-                                  variant="secondary"
-                                  className="cursor-pointer hover:bg-destructive/20"
-                                  onClick={() => {
-                                    if (confirm('Are you sure you want to unassign this product?')) {
-                                      unassignProductMutation.mutate({
-                                        productId: product.id,
-                                        userId: customer.id
-                                      });
-                                    }
-                                  }}
-                                >
-                                  {product.name} ×
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-sm text-muted-foreground">No products assigned</span>
-                            )}
-                          </div>
-                        </ScrollArea>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                            <DialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => {
-                                e.preventDefault();
-                                handleEditUser(customer);
-                              }}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit Details
-                              </DropdownMenuItem>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
-                              <DialogHeader>
-                                <DialogTitle className="text-[#43EB3E]">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
-                              </DialogHeader>
-                              <Form {...editDetailsForm}>
-                                <form onSubmit={editDetailsForm.handleSubmit((data) =>
-                                  updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
-                                )}>
-                                  <div className="grid grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-4 [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
-                                    <div className="col-span-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
-                                    </div>
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="selectedPackage"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Package</FormLabel>
-                                          <FormControl>
-                                            <select
-                                              {...field}
-                                              className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
-                                            >
-                                              <option value="OPPORTUNITY">OPPORTUNITY</option>
-                                              <option value="MOMENTUM">MOMENTUM</option>
-                                              <option value="PROSPER">PROSPER</option>
-                                              <option value="PRESTIGE">PRESTIGE</option>
-                                              <option value="PINNACLE">PINNACLE</option>
-                                            </select>
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="firstName"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">First Name</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="lastName"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Last Name</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="email"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Email</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="phoneNumber"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Phone Number</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="gender"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Gender</FormLabel>
-                                          <FormControl>
-                                            <select
-                                              {...field}
-                                              value={field.value || ""}
-                                              className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
-                                            >
-                                              <option value="">Select Gender</option>
-                                              {genderEnum.map((gender) => (
-                                                <option key={gender} value={gender}>
-                                                  {gender.charAt(0).toUpperCase() + gender.slice(1)}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="dateOfBirth"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Date of Birth</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} type="date" className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="idNumber"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">ID Number</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
+                        >
+                          <TableCell>{customer.firstName} {customer.lastName}</TableCell>
+                          <TableCell>{customer.email}</TableCell>
+                          <TableCell>{customer.phoneNumber}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {customer.selectedPackage || 'No Package'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Badge className={`${tierInfo.color}`}>
+                                {tierInfo.name}
+                              </Badge>
+                              {tierInfo.nextTier && (
+                                <p className="text-xs text-muted-foreground">
+                                  {tierInfo.nextTier.pointsNeeded.toLocaleString()} points to {tierInfo.nextTier.name}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {typeof customer.points === 'number'
+                              ? customer.points.toLocaleString()
+                              : Number(customer.points || 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              customer.isEnabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {customer.isEnabled ? 'Active' : 'Disabled'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <ScrollArea className="h-[100px]">
+                              <div className="space-x-1">
+                                {customer.assignedProducts?.length > 0 ? (
+                                  customer.assignedProducts.map((product: any) => (
+                                    <Badge
+                                      key={product.id}
+                                      variant="secondary"
+                                      className="cursor-pointer hover:bg-destructive/20"
+                                      onClick={() => {
+                                        if (confirm('Are you sure you want to unassign this product?')) {
+                                          unassignProductMutation.mutate({
+                                            productId: product.id,
+                                            userId: customer.id
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      {product.name} ×
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">No products assigned</span>
+                                )}
+                              </div>
+                            </ScrollArea>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                                  <DialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => {
+                                      e.preventDefault();
+                                      handleEditUser(customer);
+                                    }}>
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Edit Details
+                                    </DropdownMenuItem>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-[#43EB3E]">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
+                                    </DialogHeader>
+                                    <Form {...editDetailsForm}>
+                                      <form onSubmit={editDetailsForm.handleSubmit((data) =>
+                                        updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
+                                      )}>
+                                        <div className="grid grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-4 [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
+                                          <div className="col-span-4">
+                                            <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
+                                          </div>
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="selectedPackage"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">Package</FormLabel>
+                                                <FormControl>
+                                                  <select
+                                                    {...field}
+                                                    className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
+                                                  >
+                                                    <option value="OPPORTUNITY">OPPORTUNITY</option>
+                                                    <option value="MOMENTUM">MOMENTUM</option>
+                                                    <option value="PROSPER">PROSPER</option>
+                                                    <option value="PRESTIGE">PRESTIGE</option>
+                                                    <option value="PINNACLE">PINNACLE</option>
+                                                  </select>
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="firstName"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">First Name</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="lastName"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">Last Name</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="email"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">Email</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="phoneNumber"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">Phone Number</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="gender"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">Gender</FormLabel>
+                                                <FormControl>
+                                                  <select
+                                                    {...field}
+                                                    value={field.value || ""}
+                                                    className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
+                                                  >
+                                                    <option value="">Select Gender</option>
+                                                    {genderEnum.map((gender) => (
+                                                      <option key={gender} value={gender}>
+                                                        {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                                                      </option>
+                                                    ))}
+                                                  </select>
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="dateOfBirth"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">Date of Birth</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} type="date" className="bg-[#022b5c] border-[#043875] text-white" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="idNumber"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel className="text-white">ID Number</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
 
                                     <div className="col-span-4 mt-4">
                                       <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Address Information</h3>
@@ -1438,66 +1439,67 @@ export default function AdminCustomers() {
               })}
             </TableBody>
           </Table>
-          
-          {/* Pagination Controls */}
-          {totalCustomers > 0 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalCustomers)} of {totalCustomers} customers
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1 || isCustomersLoading}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span className="sr-only">Previous Page</span>
-                </Button>
-                <div className="flex items-center">
-                  <span className="text-sm font-medium mr-2">Page</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={Math.ceil(totalCustomers / limit)}
-                    value={page}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value);
-                      if (!isNaN(value) && value >= 1 && value <= Math.ceil(totalCustomers / limit)) {
-                        setPage(value);
-                      }
-                    }}
-                    className="w-12 h-8"
-                  />
-                  <span className="text-sm font-medium mx-2">of {Math.ceil(totalCustomers / limit)}</span>
+              
+              {/* Pagination Controls */}
+              {pagination.totalItems > 0 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {(page - 1) * limit + 1} to {Math.min(page * limit, pagination.totalItems)} of {pagination.totalItems} customers
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1 || isCustomersLoading}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="sr-only">Previous Page</span>
+                    </Button>
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium mr-2">Page</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={Math.ceil(pagination.totalItems / limit)}
+                        value={page}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value) && value >= 1 && value <= Math.ceil(pagination.totalItems / limit)) {
+                            setPage(value);
+                          }
+                        }}
+                        className="w-12 h-8"
+                      />
+                      <span className="text-sm font-medium mx-2">of {Math.ceil(pagination.totalItems / limit)}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(p => Math.min(Math.ceil(pagination.totalItems / limit), p + 1))}
+                      disabled={page === Math.ceil(pagination.totalItems / limit) || isCustomersLoading}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                      <span className="sr-only">Next Page</span>
+                    </Button>
+                    <Select value={limit.toString()} onValueChange={(value) => {
+                      setLimit(parseInt(value));
+                      setPage(1);
+                    }}>
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue placeholder="Per page" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10 per page</SelectItem>
+                        <SelectItem value="25">25 per page</SelectItem>
+                        <SelectItem value="50">50 per page</SelectItem>
+                        <SelectItem value="100">100 per page</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(p => Math.min(Math.ceil(totalCustomers / limit), p + 1))}
-                  disabled={page === Math.ceil(totalCustomers / limit) || isCustomersLoading}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                  <span className="sr-only">Next Page</span>
-                </Button>
-                <Select value={limit.toString()} onValueChange={(value) => {
-                  setLimit(parseInt(value));
-                  setPage(1);
-                }}>
-                  <SelectTrigger className="w-[100px]">
-                    <SelectValue placeholder="Per page" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10 per page</SelectItem>
-                    <SelectItem value="25">25 per page</SelectItem>
-                    <SelectItem value="50">50 per page</SelectItem>
-                    <SelectItem value="100">100 per page</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              )}
             </div>
-          )}
           )}
         </CardContent>
       </Card>
