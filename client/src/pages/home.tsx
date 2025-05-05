@@ -806,7 +806,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground dark:text-white">Unlock More, Earn More, Be More.</h2>
-            <p className="text-lg text-[rgb(8,42,90)] dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-lg text-white dark:text-gray-300 max-w-3xl mx-auto">
               Choose the package that matches your ambitions. Each tier opens new possibilities 
               for rewards and benefits.
             </p>
