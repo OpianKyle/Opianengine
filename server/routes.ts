@@ -5168,15 +5168,15 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           'SELECT COALESCE(SUM(points), 0) as total FROM users'
         ),
         
-        // Get active rewards count - use index hint
+        // Get active rewards count
         connection.execute(
-          'SELECT COUNT(*) as count FROM rewards USE INDEX (idx_rewards_available) WHERE available = 1'
+          'SELECT COUNT(*) as count FROM rewards WHERE available = 1'
         ),
         
-        // Get total redemptions - use index hint
+        // Get total redemptions
         connection.execute(
           `SELECT COUNT(*) as count 
-           FROM transactions USE INDEX (idx_transactions_type)
+           FROM transactions
            WHERE type = 'REDEEMED'`
         ),
         

@@ -9,34 +9,63 @@ import { adminLog } from "../utils/adminLog";
 
 const router = express.Router();
 
-// Get all leads - admin only
+// Simple cache implementation for leads data
+// Cache duration: 60 seconds for normal queries, 5 minutes for admin queries
+const CACHE_TTL = 60 * 1000; // 60 seconds in milliseconds
+const ADMIN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for admin queries
+const leadsCache = new Map();
+
+// Get all leads - admin only (optimized with caching)
 router.get("/", async (req, res, next) => {
   try {
     if (!req.isAuthenticated() || !(req.user?.is_admin || req.user?.is_agent)) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    // Create a cache key based on query parameters
+    const search = req.query.search as string;
+    const packageFilter = req.query.package as string;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const isAdmin = req.user?.is_admin;
+    const userId = req.user.id;
+    
+    const cacheKey = JSON.stringify({
+      search,
+      packageFilter,
+      page,
+      limit,
+      isAdmin,
+      userId: !isAdmin ? userId : 'admin', // Don't use user ID for admins to increase cache hit rate
+    });
+    
+    // Check if we have a valid cached response
+    const now = Date.now();
+    const cachedData = leadsCache.get(cacheKey);
+    const cacheTTL = isAdmin ? ADMIN_CACHE_TTL : CACHE_TTL;
+    
+    if (cachedData && (now - cachedData.timestamp < cacheTTL)) {
+      return res.json(cachedData.data);
+    }
+    
+    console.time('leadsQuery'); // Start timing the query
+    
+    // Execute the query if no cache hit
     let query = db.select().from(leads).orderBy(desc(leads.createdAt));
 
-    // Filter by search term if provided
-    const search = req.query.search as string;
+    // Filter by search term if provided - optimization: consolidate query conditions
     if (search) {
       query = query.where(
-        and(
-          or(
-            like(leads.firstName, `%${search}%`),
-            like(leads.lastName, `%${search}%`)
-          ),
-          or(
-            like(leads.email, `%${search}%`),
-            like(leads.mobileNumber, `%${search}%`)
-          )
+        or(
+          like(leads.firstName, `%${search}%`),
+          like(leads.lastName, `%${search}%`),
+          like(leads.email, `%${search}%`),
+          like(leads.mobileNumber, `%${search}%`)
         )
       );
     }
 
     // Filter by package if provided
-    const packageFilter = req.query.package as string;
     if (packageFilter) {
       query = query.where(eq(leads.selectedPackage, packageFilter));
     }
@@ -47,46 +76,44 @@ router.get("/", async (req, res, next) => {
     }
 
     // Pagination
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
     
-    // For MySQL we need to use count() properly
-    let countQuery = db.select({
-      count: sql`COUNT(*) as count`
-    }).from(leads);
-    
-    // Apply the same filters to the count query
-    if (search) {
-      countQuery = countQuery.where(
+    // Execute count query and data query in parallel
+    const [countResult, items] = await Promise.all([
+      // Count query
+      db.select({
+        count: sql`COUNT(*) as count`
+      })
+      .from(leads)
+      .where(
         and(
-          or(
-            like(leads.firstName, `%${search}%`),
-            like(leads.lastName, `%${search}%`)
-          ),
-          or(
-            like(leads.email, `%${search}%`),
-            like(leads.mobileNumber, `%${search}%`)
-          )
+          // Search condition
+          search 
+            ? or(
+                like(leads.firstName, `%${search}%`),
+                like(leads.lastName, `%${search}%`),
+                like(leads.email, `%${search}%`),
+                like(leads.mobileNumber, `%${search}%`)
+              )
+            : undefined,
+          // Package filter
+          packageFilter ? eq(leads.selectedPackage, packageFilter) : undefined,
+          // Agent filter
+          req.user?.is_agent && !req.user?.is_admin 
+            ? eq(leads.assignedAgentId, req.user.id) 
+            : undefined
         )
-      );
-    }
+      ),
+      
+      // Data query with limit and offset
+      query.limit(limit).offset(offset)
+    ]);
     
-    if (packageFilter) {
-      countQuery = countQuery.where(eq(leads.selectedPackage, packageFilter));
-    }
+    console.timeEnd('leadsQuery'); // End timing
     
-    // Apply agent filter to count query as well
-    if (req.user?.is_agent && !req.user?.is_admin) {
-      countQuery = countQuery.where(eq(leads.assignedAgentId, req.user.id));
-    }
+    const totalCount = countResult[0]?.count || 0;
     
-    const [countResult] = await countQuery;
-    const totalCount = countResult?.count || 0;
-    
-    const items = await query.limit(limit).offset(offset);
-
-    res.json({
+    const responseData = {
       items,
       pagination: {
         page,
@@ -94,7 +121,25 @@ router.get("/", async (req, res, next) => {
         totalCount: Number(totalCount),
         totalPages: Math.ceil(Number(totalCount) / limit),
       },
+    };
+    
+    // Store in cache
+    leadsCache.set(cacheKey, {
+      data: responseData,
+      timestamp: now
     });
+    
+    // Implement cache cleanup to prevent memory leaks
+    // Clean up entries older than 10 minutes
+    if (leadsCache.size > 100) { // Only clean if cache is getting large
+      for (const [key, value] of leadsCache.entries()) {
+        if (now - value.timestamp > 10 * 60 * 1000) {
+          leadsCache.delete(key);
+        }
+      }
+    }
+
+    res.json(responseData);
   } catch (error) {
     next(error);
   }
