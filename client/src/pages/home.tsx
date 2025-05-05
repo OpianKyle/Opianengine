@@ -855,8 +855,8 @@ export default function HomePage() {
                           <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
                           <CardDescription className="text-gray-300 font-medium">per month</CardDescription>
                         </CardHeader>
-                        <CardContent className="pb-2 relative z-10 flex-grow overflow-y-auto max-h-[550px]">
-                          <ul className="space-y-1.5">
+                        <CardContent className="pb-0 relative z-10 flex-grow overflow-y-auto max-h-[550px] mb-1">
+                          <ul className="space-y-1">
                             {/* Available features first (green checkmarks) */}
                             {ALL_FEATURES.map((feature, index) => {
                               const value = feature.values[packageName as keyof typeof feature.values];
@@ -873,11 +873,6 @@ export default function HomePage() {
                                 </li>
                               );
                             })}
-                            
-                            {/* Separator if there are unavailable features */}
-                            {ALL_FEATURES.some(feature => feature.values[packageName as keyof typeof feature.values] === false) && (
-                              <li className="border-t border-gray-700 my-2"></li>
-                            )}
                             
                             {/* Unavailable features last (red X's) */}
                             {ALL_FEATURES.map((feature, index) => {
@@ -1026,8 +1021,8 @@ export default function HomePage() {
                   <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
                   <CardDescription className="text-gray-300 font-medium">per month</CardDescription>
                 </CardHeader>
-                <CardContent className="pb-2 relative z-10 flex-grow overflow-y-auto max-h-[550px]">
-                  <ul className="space-y-1.5">
+                <CardContent className="pb-0 relative z-10 flex-grow overflow-y-auto max-h-[550px] mb-1">
+                  <ul className="space-y-1">
                     {/* Available features first (green checkmarks) */}
                     {ALL_FEATURES.map((feature, index) => {
                       const value = feature.values[packageName as keyof typeof feature.values];
@@ -1044,11 +1039,6 @@ export default function HomePage() {
                         </li>
                       );
                     })}
-                    
-                    {/* Separator if there are unavailable features */}
-                    {ALL_FEATURES.some(feature => feature.values[packageName as keyof typeof feature.values] === false) && (
-                      <li className="border-t border-gray-700 my-2"></li>
-                    )}
                     
                     {/* Unavailable features last (red X's) */}
                     {ALL_FEATURES.map((feature, index) => {
