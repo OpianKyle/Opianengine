@@ -1329,8 +1329,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Breaking this into two separate queries for better performance
-      // 1. First get the basic user information
+      // Breaking this into three separate queries for better performance
+      // 1. First get all users (including admins and agents, but separated by type)
       const [users] = await connection.execute(
         `SELECT 
           u.id,
@@ -1357,12 +1357,14 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           u.is_enabled,
           CAST(u.points as DECIMAL(10,2)) as points,
           u.created_at,
-          u.agent_id
+          u.agent_id,
+          u.is_agent,
+          CASE WHEN au.role_type IS NOT NULL THEN TRUE ELSE FALSE END as is_admin,
+          au.role_type as admin_role
          FROM users u
          LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE au.user_id IS NULL AND u.is_agent = 0
          ORDER BY u.created_at DESC
-         LIMIT 200`
+         LIMIT 300`
       );
       
       if (!users || users.length === 0) {
@@ -1473,6 +1475,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           points,
           createdAt: user.created_at,
           selectedPackage: user.selected_package,
+          isAgent: Boolean(user.is_agent),
+          isAdmin: Boolean(user.is_admin),
+          adminRole: user.admin_role,
           assignmentCount,
           assignedProducts,
           lastActivity: transaction ? {
