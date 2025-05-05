@@ -892,7 +892,7 @@ export default function HomePage() {
                             })}
                           </ul>
                         </CardContent>
-                        <CardFooter className="relative z-10 mt-auto pt-0 -mt-4">
+                        <CardFooter className="relative z-10 mt-auto pt-0 -mt-8">
                           <Button 
                             className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
                             onClick={() => navigate(`/contact-us?package=${packageName}`)}
@@ -1058,7 +1058,7 @@ export default function HomePage() {
                     })}
                   </ul>
                 </CardContent>
-                <CardFooter className="relative z-10 mt-auto pt-0 -mt-4">
+                <CardFooter className="relative z-10 mt-auto pt-0 -mt-8">
                   <Button 
                     className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
                     onClick={() => navigate(`/contact-us?package=${packageName}`)}
