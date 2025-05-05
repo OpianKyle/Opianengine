@@ -5282,9 +5282,26 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  // Cache for admin/agent users
+  const USERS_CACHE_TTL = 60 * 1000; // 1 minute
+  let usersCache = {
+    data: null,
+    timestamp: 0
+  };
+
   app.get("/api/admin/users", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    // Check if we have a valid cached response
+    const now = Date.now();
+    if (usersCache.data && (now - usersCache.timestamp < USERS_CACHE_TTL)) {
+      console.log('Returning cached users data:', {
+        count: usersCache.data.length,
+        cacheAge: Math.round((now - usersCache.timestamp) / 1000) + 's'
+      });
+      return res.json(usersCache.data);
     }
 
     const connection = await createConnection();
@@ -5299,18 +5316,28 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Fetch all admin users
-      const [admins] = await connection.execute(
-        `SELECT u.*, au.role_type
-         FROM users u 
-         INNER JOIN admin_users au ON u.id = au.user_id
-         ORDER BY u.created_at DESC`
-      );
+      // Run queries in parallel for better performance
+      const [adminUsers, agentUsers] = await Promise.all([
+        // Fetch all admin users with their roles
+        connection.execute(
+          `SELECT u.*, au.role_type
+           FROM users u 
+           INNER JOIN admin_users au ON u.id = au.user_id
+           ORDER BY u.created_at DESC`
+        ),
+        
+        // Fetch all agent users
+        connection.execute(
+          `SELECT * FROM users 
+           WHERE is_agent = 1
+           ORDER BY created_at DESC`
+        )
+      ]);
 
-      console.log(`Found ${admins.length} admin users`);
+      console.log(`Found ${adminUsers[0].length} admin users and ${agentUsers[0].length} agent users`);
 
-      // Transform boolean fields
-      const transformedAdmins = admins.map(admin => ({
+      // Transform admin users
+      const transformedAdmins = adminUsers[0].map(admin => ({
         id: admin.id,
         email: admin.email,
         firstName: admin.first_name,
@@ -5318,14 +5345,50 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         phoneNumber: admin.phone_number,
         isEnabled: Boolean(admin.is_enabled),
         createdAt: admin.created_at,
-        is_admin: true,
-        is_super_admin: admin.role_type === 'SUPER_ADMIN'
+        isAdmin: true,
+        isAgent: false,
+        isSuperAdmin: admin.role_type === 'SUPER_ADMIN',
+        adminRole: admin.role_type
       }));
 
-      res.json(transformedAdmins);
+      // Transform agent users
+      const transformedAgents = agentUsers[0].map(agent => ({
+        id: agent.id,
+        email: agent.email,
+        firstName: agent.first_name,
+        lastName: agent.last_name,
+        phoneNumber: agent.phone_number,
+        isEnabled: Boolean(agent.is_enabled),
+        createdAt: agent.created_at,
+        isAdmin: false,
+        isAgent: true,
+        isSuperAdmin: false,
+        adminRole: null
+      }));
+
+      // Combine both types of users
+      const allUsers = [...transformedAdmins, ...transformedAgents];
+      
+      // Sort by creation date (newest first)
+      allUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      // Update cache
+      usersCache = {
+        data: allUsers,
+        timestamp: now
+      };
+
+      res.json(allUsers);
     } catch (error) {
-      console.error('Error fetching admin users:', error);
-      res.status(500).json({ error: 'Failed to fetch admin users' });
+      console.error('Error fetching admin/agent users:', error);
+      
+      // If there's cached data, return it even if it's stale rather than showing an error
+      if (usersCache.data) {
+        console.log('Returning stale cache due to error');
+        return res.json(usersCache.data);
+      }
+      
+      res.status(500).json({ error: 'Failed to fetch admin/agent users' });
     } finally {
       await connection.end();
     }
