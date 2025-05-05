@@ -409,7 +409,7 @@ export default function TeamPage() {
                               member.name === "Mic-Shane Brown" || 
                               member.name === "Lionel Lottering" 
                                 ? "object-top" 
-                                : "object-center scale-125"
+                                : "object-center"
                             }`}
                             onError={(e) => {
                               const img = e.target as HTMLImageElement;
@@ -446,7 +446,7 @@ export default function TeamPage() {
                               member.name === "Mic-Shane Brown" || 
                               member.name === "Lionel Lottering" 
                                 ? "object-top" 
-                                : "object-center scale-125"
+                                : "object-center"
                             }`}
                             onError={(e) => {
                               const img = e.target as HTMLImageElement;
