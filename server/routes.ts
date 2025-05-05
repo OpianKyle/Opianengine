@@ -2921,85 +2921,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/admin/users", async (req, res) => {
-    console.log('Admin users request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? {
-        id: req.user.id,
-        email: req.user.email,
-        is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin
-      } : null
-    });
-
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    // Check if user is admin or super admin
-    if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
-      console.log('User lacks admin privileges:', {
-        id: req.user?.id,
-        email: req.user?.email,
-        is_admin: req.user?.is_admin,
-        is_super_admin: req.user?.is_super_admin
-      });
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
-    const connection = await createConnection();
-    try {
-      // Only select users who are either admins or agents
-      const [users] = await connection.execute(
-        `SELECT u.*, 
-         CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
-         FROM users u
-         LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE au.role_type IS NOT NULL OR u.is_agent = 1
-         ORDER BY u.created_at DESC`
-      );
-
-      console.log('Raw users from database:', users.map((u: any) => ({
-        id: u.id,
-        email: u.email,
-        is_admin: Boolean(u.is_admin),
-        is_super_admin: Boolean(u.is_super_admin),
-        is_agent: Boolean(u.is_agent)
-      })));
-
-      const transformedUsers = users.map((user: any) => {
-        const { password, ...safeUser } = user;
-        return {
-          ...safeUser,
-          id: user.id,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          phoneNumber: user.phone_number,
-          isAdmin: Boolean(user.is_admin),
-          isAgent: Boolean(user.is_agent),
-          isSuperAdmin: Boolean(user.is_super_admin),
-          isEnabled: Boolean(user.is_enabled),
-          createdAt: user.created_at
-        };
-      });
-
-      console.log('Fetched admin/agent users:', transformedUsers.map(u => ({
-        id: u.id,
-        email: u.email,
-        isAdmin: u.isAdmin,
-        isSuperAdmin: u.isSuperAdmin,
-        isAgent: u.isAgent
-      })));
-
-      res.json(transformedUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      res.status(500).json({ error: 'Failed to fetch users' });
-    } finally {
-      await connection.end();
-    }
-  });
+  // Removed duplicate /api/admin/users endpoint
 
   // This code belongs to another function, moved to the correct context
   app.put("/api/user-profile", async (req, res) => {
@@ -5290,8 +5212,29 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   };
 
   app.get("/api/admin/users", async (req, res) => {
+    console.log('Admin users request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email,
+        is_admin: req.user.is_admin,
+        is_super_admin: req.user.is_super_admin
+      } : null
+    });
+    
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    // Check if user is admin or super admin
+    if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
+      console.log('User lacks admin privileges:', {
+        id: req.user?.id,
+        email: req.user?.email,
+        is_admin: req.user?.is_admin,
+        is_super_admin: req.user?.is_super_admin
+      });
+      return res.status(403).json({ error: "Admin access required" });
     }
 
     // Check if we have a valid cached response
@@ -5306,15 +5249,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
     const connection = await createConnection();
     try {
-      // Check admin status
-      const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
-        [req.user.id]
-      );
-
-      if (!adminCheck || adminCheck.length === 0) {
-        return res.status(403).json({ error: "Admin access required" });
-      }
+      // Admin check is already done above, no need to check again
 
       // Run queries in parallel for better performance
       const [adminUsers, agentUsers] = await Promise.all([

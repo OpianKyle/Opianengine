@@ -58,8 +58,33 @@ type FilterState = {
 export default function AdminManagement() {
   const { data: admins, refetch, isLoading, error } = useQuery({
     queryKey: ["/api/admin/users"],
-    queryFn: getQueryFn(),
+    queryFn: async ({ queryKey }) => {
+      try {
+        const response = await fetch(queryKey[0] as string);
+        
+        // Check if response is OK
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+          throw new Error(`Server error ${response.status}: ${response.statusText}`);
+        }
+        
+        // Try to parse as JSON, handle HTML responses
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return response.json();
+        } else {
+          const text = await response.text();
+          console.error('Received non-JSON response:', text.substring(0, 200) + '...');
+          throw new Error('Server returned non-JSON response');
+        }
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        throw err;
+      }
+    },
     staleTime: 0,
+    retry: 1,
   });
 
   const [filters, setFilters] = useState<FilterState>({
