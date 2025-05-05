@@ -1292,31 +1292,46 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Admin customers endpoint - get only regular customers
+  // Cache for customers data
+  const CUSTOMERS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  let customersCache = {
+    data: null,
+    timestamp: 0
+  };
+
   app.get("/api/admin/customers", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    // Check if we have a valid cached response
+    const now = Date.now();
+    if (customersCache.data && (now - customersCache.timestamp < CUSTOMERS_CACHE_TTL)) {
+      console.log('Returning cached customers data:', {
+        count: customersCache.data.length,
+        cacheAge: Math.round((now - customersCache.timestamp) / 1000) + 's'
+      });
+      return res.json(customersCache.data);
+    }
+
+    console.time('customersQuery'); // Start timing the query
+    
     const connection = await createConnection();
     try {
       console.log('Fetching customers...');
-      // Check admin status using users table
+      // Check admin status using users table - optimized with index hint
       const [adminCheck] = await connection.execute(
-        'SELECT is_admin FROM users WHERE id = ?',
+        'SELECT is_admin FROM users USE INDEX (PRIMARY) WHERE id = ? LIMIT 1',
         [req.user.id]
       );
-
-      console.log('Admin check result:', {
-        userId: req.user.id,
-        adminCheck: adminCheck[0]
-      });
 
       if (!adminCheck || !adminCheck[0]?.is_admin) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get regular customers with transactions, assignments and product details
-      const [customers] = await connection.execute(
+      // Breaking this into two separate queries for better performance
+      // 1. First get the basic user information
+      const [users] = await connection.execute(
         `SELECT 
           u.id,
           u.email,
@@ -1342,128 +1357,151 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           u.is_enabled,
           CAST(u.points as DECIMAL(10,2)) as points,
           u.created_at,
-          u.agent_id,
-          COALESCE(
-            JSON_ARRAYAGG(
-              JSON_OBJECT(
-                'id', p.id,
-                'name', p.name,
-                'description', p.description,
-                'activities', (
-                  SELECT JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                      'id', pa.id,
-                      'type', pa.type,
-                      'pointsValue', pa.points_value
-                    )
-                  )
-                  FROM product_activities pa
-                  WHERE pa.product_id = p.id
-                )
-              )
-            ),
-            '[]'
-          ) as assigned_products,
-          COUNT(DISTINCT pa2.id) as assignment_count,
-          COALESCE(tr.last_transaction, NULL) as last_transaction,
-          COALESCE(tr.transaction_type, NULL) as transaction_type,
-          COALESCE(tr.transaction_points, NULL) as transaction_points
+          u.agent_id
          FROM users u
-         LEFT JOIN product_assignments pa2 ON u.id = pa2.user_id
-         LEFT JOIN products p ON pa2.product_id = p.id
-         LEFT JOIN (
-           SELECT 
-             user_id,
-             created_at as last_transaction,
-             type as transaction_type,
-             points as transaction_points
-           FROM transactions t1
-           WHERE created_at = (
-             SELECT MAX(created_at)
-             FROM transactions t2
-             WHERE t2.user_id = t1.user_id
-           )
-         ) tr ON u.id = tr.user_id
          LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE au.user_id IS NULL 
-         AND u.is_agent = 0
-         GROUP BY 
-           u.id, u.email, u.first_name, u.last_name, u.phone_number,
-           u.is_south_african, u.id_number, u.date_of_birth, u.gender,
-           u.occupation, u.industry, u.address, u.city, u.postal_code,
-           u.selected_package, u.bank_name, u.account_type, u.account_number,
-           u.account_holder_name, u.branch_code, u.has_credit_card,
-           u.is_enabled, u.points, u.created_at, u.agent_id,
-           tr.last_transaction, tr.transaction_type, tr.transaction_points
-         ORDER BY u.created_at DESC`
+         WHERE au.user_id IS NULL AND u.is_agent = 0
+         ORDER BY u.created_at DESC
+         LIMIT 200`
       );
-
-      console.log('Customers query result:', {
-        count: customers?.length || 0,
-        firstCustomer: customers?.[0] ? {
-          id: customers[0].id,
-          firstName: customers[0].first_name,
-          lastName: customers[0].last_name
-        } : null
+      
+      if (!users || users.length === 0) {
+        return res.json([]);
+      }
+      
+      // Extract user IDs for subsequent queries
+      const userIds = users.map(user => user.id);
+      const userIdsString = userIds.join(',');
+      
+      // 2. Get product assignments in a separate query
+      const [assignments] = await connection.execute(
+        `SELECT 
+          pa.user_id,
+          p.id as product_id,
+          p.name as product_name,
+          p.description as product_description
+         FROM product_assignments pa
+         JOIN products p ON pa.product_id = p.id
+         WHERE pa.user_id IN (${userIdsString})`
+      );
+      
+      // 3. Get latest transactions in a separate query
+      const [transactions] = await connection.execute(
+        `SELECT 
+          t1.user_id,
+          t1.created_at as last_transaction,
+          t1.type as transaction_type,
+          t1.points as transaction_points
+         FROM transactions t1
+         INNER JOIN (
+           SELECT user_id, MAX(created_at) as max_created_at
+           FROM transactions
+           WHERE user_id IN (${userIdsString})
+           GROUP BY user_id
+         ) t2 ON t1.user_id = t2.user_id AND t1.created_at = t2.max_created_at`
+      );
+      
+      // 4. Get product activities in a separate query
+      const [activities] = await connection.execute(
+        `SELECT 
+          pa.id,
+          pa.product_id,
+          pa.type,
+          pa.points_value
+         FROM product_activities pa
+         JOIN products p ON pa.product_id = p.id
+         JOIN product_assignments ps ON p.id = ps.product_id
+         WHERE ps.user_id IN (${userIdsString})
+         GROUP BY pa.id, pa.product_id, pa.type, pa.points_value`
+      );
+      
+      // Create lookup maps for faster association
+      const transactionsByUserId = {};
+      transactions.forEach(t => {
+        transactionsByUserId[t.user_id] = t;
       });
-
-      // Transform the data
-      const transformedCustomers = (customers || []).map(customer => {
-        let assignedProducts = [];
-        if (customer.assigned_products) {
-          try {
-            assignedProducts = JSON.parse(customer.assigned_products);
-            assignedProducts = assignedProducts.filter(p => p && p.id && p.name).map(p => ({
-              ...p,
-              activities: p.activities || []
-            }));
-          } catch (e) {
-            console.error('Error parsing assigned products for customer:', customer.id, e);
-          }
+      
+      // Group activities by product
+      const activitiesByProductId = {};
+      activities.forEach(a => {
+        if (!activitiesByProductId[a.product_id]) {
+          activitiesByProductId[a.product_id] = [];
         }
-
+        activitiesByProductId[a.product_id].push({
+          id: a.id,
+          type: a.type,
+          pointsValue: a.points_value
+        });
+      });
+      
+      // Group assignments by user
+      const assignmentsByUserId = {};
+      assignments.forEach(a => {
+        if (!assignmentsByUserId[a.user_id]) {
+          assignmentsByUserId[a.user_id] = [];
+        }
+        
+        assignmentsByUserId[a.user_id].push({
+          id: a.product_id,
+          name: a.product_name,
+          description: a.product_description,
+          activities: activitiesByProductId[a.product_id] || []
+        });
+      });
+      
+      // Transform the data
+      const transformedCustomers = users.map(user => {
+        // Get assignments count and products
+        const assignedProducts = assignmentsByUserId[user.id] || [];
+        const assignmentCount = assignedProducts.length;
+        
+        // Get latest transaction
+        const transaction = transactionsByUserId[user.id];
+        
         // Ensure points is properly converted to a number
-        const points = typeof customer.points === 'string' 
-          ? parseFloat(customer.points) 
-          : Number(customer.points || 0);
+        const points = typeof user.points === 'string' 
+          ? parseFloat(user.points) 
+          : Number(user.points || 0);
 
         return {
-          id: customer.id,
-          email: customer.email,
-          firstName: customer.first_name,
-          lastName: customer.last_name,
-          phoneNumber: customer.phone_number,
-          isEnabled: Boolean(customer.is_enabled),
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phoneNumber: user.phone_number,
+          isEnabled: Boolean(user.is_enabled),
           points,
-          createdAt: customer.created_at,
-          selectedPackage: customer.selected_package,
-          assignmentCount: customer.assignment_count,
-          assignedProducts: assignedProducts,
-          lastActivity: customer.last_transaction ? {
-            date: customer.last_transaction,
-            type: customer.transaction_type,
-            points: customer.transaction_points
+          createdAt: user.created_at,
+          selectedPackage: user.selected_package,
+          assignmentCount,
+          assignedProducts,
+          lastActivity: transaction ? {
+            date: transaction.last_transaction,
+            type: transaction.transaction_type,
+            points: transaction.transaction_points
           } : null,
-          idNumber: customer.id_number || '',
-          dateOfBirth: customer.date_of_birth || '',
-          gender: customer.gender || '',
-          occupation: customer.occupation || '',
-          industry: customer.industry || '',
-          address: customer.address || '',
-          city: customer.city || '',
-          postalCode: customer.postal_code || '',
-          bankName: customer.bank_name || '',
-          accountType: customer.account_type || '',
-          accountNumber: customer.account_number || '',
-          accountHolderName: customer.account_holder_name || '',
-          branchCode: customer.branch_code || '',
-          hasCreditCard: Boolean(customer.has_credit_card),
-          isSouthAfrican: Boolean(customer.is_south_african),
-          agentId: customer.agent_id || null
+          idNumber: user.id_number || '',
+          dateOfBirth: user.date_of_birth || '',
+          gender: user.gender || '',
+          occupation: user.occupation || '',
+          industry: user.industry || '',
+          address: user.address || '',
+          city: user.city || '',
+          postalCode: user.postal_code || '',
+          bankName: user.bank_name || '',
+          accountType: user.account_type || '',
+          accountNumber: user.account_number || '',
+          accountHolderName: user.account_holder_name || '',
+          branchCode: user.branch_code || '',
+          hasCreditCard: Boolean(user.has_credit_card),
+          isSouthAfrican: Boolean(user.is_south_african),
+          agentId: user.agent_id || null
         };
       });
-
-      console.log('Sending transformed customers:', {
+      
+      console.timeEnd('customersQuery'); // End timing
+      
+      console.log('Processed customers data:', {
         count: transformedCustomers.length,
         sample: transformedCustomers[0] ? {
           id: transformedCustomers[0].id,
@@ -1471,10 +1509,23 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           lastName: transformedCustomers[0].lastName
         } : null
       });
+      
+      // Update cache
+      customersCache = {
+        data: transformedCustomers,
+        timestamp: now
+      };
 
       res.json(transformedCustomers);
     } catch (error) {
       console.error('Error fetching customers:', error);
+      
+      // If there's cached data, return it even if it's stale rather than showing an error
+      if (customersCache.data) {
+        console.log('Returning stale cache due to error');
+        return res.json(customersCache.data);
+      }
+      
       res.status(500).json({ 
         error: 'Failed to fetch customers',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
