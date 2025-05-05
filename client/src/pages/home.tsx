@@ -457,10 +457,10 @@ export default function HomePage() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="flex flex-col lg:flex-row items-center">
             <div className="lg:w-1/2 z-10">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 text-foreground dark:text-white">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-foreground dark:text-white">
                 The Card that Works for You
               </h1>
-              <p className="text-xl mb-6 text-foreground dark:text-white">
+              <p className="text-xl mb-6 text-[rgb(8,42,90)] dark:text-white">
                 Make your money go further with Opian Rewards. Earn Rewards when you purchase 
                 and pay accounts with your Opian Rewards Card, and enhance your Rewards when 
                 you make smart financial planning decisions. Reward yourself and effortlessly 
@@ -522,7 +522,7 @@ export default function HomePage() {
                 <CreditCard className="h-8 w-8 text-[#43EB3E]" />
               </div>
               <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Cash Back on Everything</h3>
-              <p className="text-muted-foreground dark:text-gray-300">
+              <p className="text-[rgb(8,42,90)] dark:text-gray-300">
                 Shopping, dining, paying bills—earn cash every time you swipe.
               </p>
             </div>
@@ -532,7 +532,7 @@ export default function HomePage() {
                 <Gift className="h-8 w-8 text-[#43EB3E]" />
               </div>
               <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Build Your Own Reward Stack</h3>
-              <p className="text-muted-foreground dark:text-gray-300">
+              <p className="text-[rgb(8,42,90)] dark:text-gray-300">
                 Combine the power of our Rewards System with your current rewards cards to create Double Rewards in your pocket!
               </p>
             </div>
@@ -542,7 +542,7 @@ export default function HomePage() {
                 <Users className="h-8 w-8 text-[#43EB3E]" />
               </div>
               <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Make Your Money Work for You</h3>
-              <p className="text-muted-foreground dark:text-gray-300">
+              <p className="text-[rgb(8,42,90)] dark:text-gray-300">
                 With the help of our Financial Partners, make smarter financial planning decisions to Save and Earn extra money!
               </p>
             </div>
@@ -568,7 +568,7 @@ export default function HomePage() {
               <h2 className="text-3xl md:text-4xl font-bold mb-8 text-foreground dark:text-white">
                 Simple Steps.<br/>Serious Rewards.
               </h2>
-              <div className="text-lg text-muted-foreground dark:text-gray-300 space-y-6">
+              <div className="text-lg text-[rgb(8,42,90)] dark:text-gray-300 space-y-6">
                 <p>
                   Getting started with Opian Rewards is simple and empowering. Every step is designed to help you 
                   earn more and unlock greater benefits—just by doing what you already do.
@@ -704,7 +704,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex-1">
                     <h4 className="font-bold text-foreground dark:text-white text-lg mb-2">Shop Your Way</h4>
-                    <p className="text-muted-foreground dark:text-gray-300 text-base">
+                    <p className="text-[rgb(8,42,90)] dark:text-gray-300 text-base">
                       Use your Opian Rewards Card for everyday purchases—from groceries to online shopping—and watch the points pile up!
                     </p>
                   </div>
@@ -716,7 +716,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex-1">
                     <h4 className="font-bold text-foreground dark:text-white text-lg mb-2">Pay Your Accounts</h4>
-                    <p className="text-muted-foreground dark:text-gray-300 text-base">
+                    <p className="text-[rgb(8,42,90)] dark:text-gray-300 text-base">
                       Simplify your bill payments and earn rewards at the same time. Every time you pay a bill with your Opian Rewards Card, you strengthen your point balance.
                     </p>
                   </div>
@@ -728,7 +728,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex-1">
                     <h4 className="font-bold text-foreground dark:text-white text-lg mb-2">Plan for Success</h4>
-                    <p className="text-muted-foreground dark:text-gray-300 text-base">
+                    <p className="text-[rgb(8,42,90)] dark:text-gray-300 text-base">
                       Engage in smart financial planning and decision-making—whether it's budgeting, saving, or investing. We believe in rewarding your financial savvy!
                     </p>
                   </div>
@@ -759,10 +759,10 @@ export default function HomePage() {
               {/* Left side - Content */}
               <div className="w-full md:w-3/5 md:pr-12 text-left">
                 <h3 className="text-3xl font-bold mb-6 text-foreground dark:text-white">Personalized Support at Your Fingertips</h3>
-                <p className="text-muted-foreground dark:text-gray-300 mb-4 w-full">
+                <p className="text-[rgb(8,42,90)] dark:text-gray-300 mb-4 w-full">
                   Ready to make the most out of your Opian Rewards Card? Complete our quick contact form, and an Opian Rewards agent will reach out to explain all the incredible benefits you can unlock.
                 </p>
-                <p className="text-muted-foreground dark:text-gray-300 mb-8 w-full">
+                <p className="text-[rgb(8,42,90)] dark:text-gray-300 mb-8 w-full">
                   Our team is dedicated to guiding you through every step of the way, providing insights and support through a series of calls and emails on how to maximize your rewards.
                 </p>
               </div>
@@ -806,7 +806,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground dark:text-white">Unlock More, Earn More, Be More.</h2>
-            <p className="text-lg text-muted-foreground dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-lg text-[rgb(8,42,90)] dark:text-gray-300 max-w-3xl mx-auto">
               Choose the package that matches your ambitions. Each tier opens new possibilities 
               for rewards and benefits.
             </p>
