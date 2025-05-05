@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Card,
@@ -58,6 +58,7 @@ type FilterState = {
 export default function AdminManagement() {
   const { data: admins, refetch, isLoading, error } = useQuery({
     queryKey: ["/api/admin/users"],
+    queryFn: getQueryFn(),
     staleTime: 0,
   });
 
