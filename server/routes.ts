@@ -1292,26 +1292,38 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Admin customers endpoint - get only regular customers
-  // Cache for customers data
+  // Cache for customers data with segmented caching by page and limit
   const CUSTOMERS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-  let customersCache = {
-    data: null,
-    timestamp: 0
-  };
+  const CUSTOMERS_CACHE_STALE_TTL = 30 * 60 * 1000; // 30 minutes for stale data
+  // Use a map for caching different pagination states
+  const customersCache = new Map();
 
   app.get("/api/admin/customers", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    // Check if we have a valid cached response
+    // Get pagination parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = (page - 1) * limit;
+    
+    // Create a cache key based on pagination
+    const cacheKey = `customers_${page}_${limit}`;
     const now = Date.now();
-    if (customersCache.data && (now - customersCache.timestamp < CUSTOMERS_CACHE_TTL)) {
-      console.log('Returning cached customers data:', {
-        count: customersCache.data.length,
-        cacheAge: Math.round((now - customersCache.timestamp) / 1000) + 's'
-      });
-      return res.json(customersCache.data);
+    
+    // Check if we have a valid cached response for this pagination state
+    if (customersCache.has(cacheKey)) {
+      const cacheEntry = customersCache.get(cacheKey);
+      if (now - cacheEntry.timestamp < CUSTOMERS_CACHE_TTL) {
+        console.log('Returning cached customers data:', {
+          page,
+          limit,
+          count: cacheEntry.data.length,
+          cacheAge: Math.round((now - cacheEntry.timestamp) / 1000) + 's'
+        });
+        return res.json(cacheEntry.data);
+      }
     }
 
     console.time('customersQuery'); // Start timing the query
@@ -1331,6 +1343,19 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
       // Breaking this into three separate queries for better performance
       // 1. First get all users (including admins and agents, but separated by type)
+      // Count total users for pagination info
+      const [countResult] = await connection.execute(
+        `SELECT COUNT(*) as total 
+         FROM users u 
+         WHERE u.is_agent = 0 AND (
+           SELECT COUNT(*) FROM admin_users WHERE user_id = u.id
+         ) = 0`
+      );
+      
+      const totalCustomers = countResult[0]?.total || 0;
+      const totalPages = Math.ceil(totalCustomers / limit);
+      
+      // Get users with pagination
       const [users] = await connection.execute(
         `SELECT 
           u.id,
@@ -1363,8 +1388,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           au.role_type as admin_role
          FROM users u
          LEFT JOIN admin_users au ON u.id = au.user_id
+         WHERE u.is_agent = 0 AND (
+           SELECT COUNT(*) FROM admin_users WHERE user_id = u.id
+         ) = 0
          ORDER BY u.created_at DESC
-         LIMIT 300`
+         LIMIT ?, ?`,
+        [offset, limit]
       );
       
       if (!users || users.length === 0) {
@@ -1515,20 +1544,39 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         } : null
       });
       
-      // Update cache
-      customersCache = {
+      // Create response object with pagination metadata
+      const response = {
         data: transformedCustomers,
-        timestamp: now
+        pagination: {
+          page,
+          limit,
+          totalItems: totalCustomers,
+          totalPages
+        }
       };
+      
+      // Update cache with the new data
+      customersCache.set(cacheKey, {
+        data: response,
+        timestamp: now
+      });
 
-      res.json(transformedCustomers);
+      res.json(response);
     } catch (error) {
       console.error('Error fetching customers:', error);
       
-      // If there's cached data, return it even if it's stale rather than showing an error
-      if (customersCache.data) {
+      // If there's a stale cache for this page, return it rather than showing an error
+      if (customersCache.has(cacheKey)) {
         console.log('Returning stale cache due to error');
-        return res.json(customersCache.data);
+        return res.json(customersCache.get(cacheKey).data);
+      }
+      
+      // Try to find any cache entry that might be relevant
+      if (customersCache.size > 0) {
+        // Get the first available cache entry
+        const firstCacheKey = Array.from(customersCache.keys())[0];
+        console.log('Returning alternative cache due to error');
+        return res.json(customersCache.get(firstCacheKey).data);
       }
       
       res.status(500).json({ 
