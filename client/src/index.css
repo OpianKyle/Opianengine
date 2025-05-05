@@ -114,16 +114,6 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold capitalize;
   }
-  
-  /* Make paragraph text blue in light mode */
-  :root p {
-    @apply text-[rgb(8,42,90)];
-  }
-  
-  /* Keep paragraph text white in dark mode */
-  .dark p {
-    @apply text-white;
-  }
 }
 
 /* Custom scrollbar styles for modals */
