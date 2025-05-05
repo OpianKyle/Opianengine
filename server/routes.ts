@@ -3008,7 +3008,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.put("/api/admin/users/:id/toggle-status", async (req, res) => {
+  // Support both PUT and POST methods for toggle-status
+  app.use("/api/admin/users/:id/toggle-status", async (req, res) => {
+    // Only allow PUT and POST methods
+    if (req.method !== 'PUT' && req.method !== 'POST') {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
