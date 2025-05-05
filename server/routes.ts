@@ -5129,75 +5129,75 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  // Add new route for admin dashboard stats
+  // Add new route for admin dashboard stats - optimized for performance
   app.get("/api/admin/dashboard/stats", checkAdmin, async (req, res) => {
-    console.log('Admin dashboard stats request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? {
-        id: req.user.id,
-        email: req.user.email,
-        is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin
-      } : null
-    });
-
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
     const connection = await createConnection();
     try {
-      // Check admin status
+      // Check admin status - use index hint
       const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        'SELECT role_type FROM admin_users USE INDEX (PRIMARY) WHERE user_id = ? LIMIT 1',
         [req.user.id]
       );
 
       if (!adminCheck || adminCheck.length === 0) {
-        console.log('User not found in admin_users:', req.user.id);
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get total customers (non-admin users)
-      const [customerCount] = await connection.execute(
-        `SELECT COUNT(*) as count 
-         FROM users u 
-         LEFT JOIN admin_users au ON u.id = au.user_id 
-         WHERE au.user_id IS NULL`
-      );
-
-      // Get total points in circulation
-      const [pointsTotal] = await connection.execute(
-        'SELECT COALESCE(SUM(points), 0) as total FROM users'
-      );
-
-      // Get active rewards count
-      const [rewardsCount] = await connection.execute(
-        'SELECT COUNT(*) as count FROM rewards WHERE available = 1'
-      );
-
-      // Get total redemptions
-      const [redemptionsCount] = await connection.execute(
-        `SELECT COUNT(*) as count 
-         FROM transactions 
-         WHERE type = 'REDEEMED'`
-      );
-
-      // Get recent transactions for charts
-      const [transactions] = await connection.execute(
-        `SELECT 
-          t.*,
-          u.first_name,
-          u.last_name,
-          u.email
-         FROM transactions t
-         JOIN users u ON t.user_id = u.id
-         ORDER BY t.created_at DESC
-         LIMIT 50`
-      );
+      // Run all queries in parallel for better performance
+      const [
+        customerCountResult, 
+        pointsTotalResult, 
+        rewardsCountResult, 
+        redemptionsCountResult, 
+        transactions
+      ] = await Promise.all([
+        // Get total customers (non-admin users) - optimize with indexes
+        connection.execute(
+          `SELECT COUNT(*) as count 
+           FROM users u 
+           LEFT JOIN admin_users au ON u.id = au.user_id 
+           WHERE au.user_id IS NULL`
+        ),
+        
+        // Get total points in circulation - simplified query
+        connection.execute(
+          'SELECT COALESCE(SUM(points), 0) as total FROM users'
+        ),
+        
+        // Get active rewards count - use index hint
+        connection.execute(
+          'SELECT COUNT(*) as count FROM rewards USE INDEX (idx_rewards_available) WHERE available = 1'
+        ),
+        
+        // Get total redemptions - use index hint
+        connection.execute(
+          `SELECT COUNT(*) as count 
+           FROM transactions USE INDEX (idx_transactions_type)
+           WHERE type = 'REDEEMED'`
+        ),
+        
+        // Get recent transactions for charts - limit fields and optimize join
+        connection.execute(
+          `SELECT 
+            t.created_at,
+            t.points,
+            t.type,
+            u.first_name,
+            u.last_name,
+            u.email
+           FROM transactions t
+           JOIN users u USE INDEX (PRIMARY) ON t.user_id = u.id
+           ORDER BY t.created_at DESC
+           LIMIT 30`
+        )
+      ]);
 
       // Transform transaction data for frontend
-      const transformedTransactions = transactions.map((t: any) => ({
+      const transformedTransactions = transactions[0].map((t: any) => ({
         date: new Date(t.created_at).toLocaleDateString(),
         points: Math.abs(Number(t.points)),
         type: t.type,
@@ -5209,14 +5209,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }));
 
       const response = {
-        totalCustomers: Number(customerCount[0].count),
-        totalPoints: Number(pointsTotal[0].total),
-        activeRewards: Number(rewardsCount[0].count),
-        totalRedemptions: Number(redemptionsCount[0].count),
+        totalCustomers: Number(customerCountResult[0][0].count),
+        totalPoints: Number(pointsTotalResult[0][0].total),
+        activeRewards: Number(rewardsCountResult[0][0].count),
+        totalRedemptions: Number(redemptionsCountResult[0][0].count),
         recentTransactions: transformedTransactions
       };
 
-      console.log('Sending dashboard stats:', response);
       res.json(response);
 
     } catch (error) {
