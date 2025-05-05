@@ -41,29 +41,6 @@ export default function TeamPage() {
   const [location, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  // Helper function to get the correct object position for each team member's image
-  const getImagePosition = (name: string): string => {
-    if (name === "Lance Heynes" || name === "Mic-Shane Brown" || name === "Lionel Lottering") {
-      return "object-top";
-    } else if (name === "Andre Visser") {
-      return "object-[center_20%]";
-    } else if (name === "Wessel Krige") {
-      return "object-[center_25%]";
-    } else if (name === "Shannon Heugh") {
-      return "object-[center_15%]";
-    } else if (name === "Jodi Rensburg") {
-      return "object-[center_20%]";
-    } else if (name === "Cheslin Matinka") {
-      return "object-[center_18%]";
-    } else if (name === "Kyle McBryne") {
-      return "object-[center_25%]";
-    } else if (name === "Jamie Koen") {
-      return "object-[center_22%]";
-    } else {
-      return "object-center";
-    }
-  };
-  
   // Team member data
   const teamMembers: TeamMember[] = [
     {
@@ -323,17 +300,79 @@ export default function TeamPage() {
           <div className="container mx-auto text-center relative z-10">
             <h1 className="text-4xl md:text-5xl font-bold mb-6 text-[rgb(8,42,90)] dark:text-white">Meet Our Team</h1>
             <p className="text-xl max-w-3xl mx-auto mb-12 text-[rgb(8,42,90)] dark:text-white">
-              Get to know the passionate professionals behind OPIAN Rewards who are dedicated to enhancing your financial journey.
+              Get to know the passionate professionals behind Opian Rewards who are dedicated to enhancing your financial journey.
             </p>
           </div>
         </section>
         
-        {/* Team members section */}
-        <section className="py-16 bg-gray-50 dark:bg-[#011a36] relative">
-          {/* Background decoration */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-0 left-0 w-1/3 h-1/3 bg-gradient-to-br from-[#43EB3E]/5 to-transparent opacity-70 dark:opacity-30"></div>
-            <div className="absolute bottom-0 right-0 w-1/3 h-1/3 bg-gradient-to-tl from-[#43EB3E]/5 to-transparent opacity-70 dark:opacity-30"></div>
+        {/* Mission, Vision, Values Section */}
+        <section className="py-8 bg-white dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Our Mission, Vision and Values</h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
+                <div className="relative z-10">
+                  <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
+                    <Compass className="h-8 w-8 text-[#43EB3E]" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4 text-white">Our Mission</h3>
+                  <p className="text-gray-300">
+                    To enhance the lives of our members through innovative and accessible financial product offerings, building a community of empowered individuals.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
+                <div className="relative z-10">
+                  <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
+                    <Shield className="h-8 w-8 text-[#43EB3E]" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4 text-white">Our Vision</h3>
+                  <p className="text-gray-300">
+                    To be the leading rewards platform that transforms ordinary financial interactions into extraordinary opportunities for growth and prosperity.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
+                <div className="relative z-10">
+                  <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
+                    <Award className="h-8 w-8 text-[#43EB3E]" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-4 text-white">Our Values</h3>
+                  <p className="text-gray-300">
+                    Integrity, innovation, inclusivity, and excellence guide everything we do. We believe in creating meaningful value for every member through transparency and commitment.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        {/* Team Members Grid Section */}
+        <section className="py-12 bg-[#f5f7fa] dark:bg-[#01162f] text-[rgb(8,42,90)] dark:text-white relative overflow-hidden transition-colors duration-300">
+          {/* Background decorative elements */}
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Light mode decorations */}
+            <div className="absolute -right-20 top-1/4 w-40 h-40 rounded-full bg-[#43EB3E]/5 dark:opacity-0"></div>
+            <div className="absolute left-10 bottom-10 w-20 h-20 rounded-full bg-[#43EB3E]/5 dark:opacity-0"></div>
+            <div className="absolute top-20 right-20 w-4 h-4 rounded-full bg-[#43EB3E]/10 dark:opacity-0"></div>
+            <div className="absolute bottom-40 right-1/4 w-6 h-1 rounded bg-[#43EB3E]/10 dark:opacity-0"></div>
+            <div className="absolute top-1/2 left-1/4 w-1 h-6 rounded bg-[#43EB3E]/10 dark:opacity-0"></div>
+            
+            {/* Dark mode decorations */}
+            <div className="absolute -left-10 top-10 w-40 h-40 rounded-full bg-[#043375]/20 opacity-0 dark:opacity-100"></div>
+            
+            {/* Scattered small elements - dark mode only */}
+            <div className="opacity-0 dark:opacity-100">
+              <div className="absolute top-20 right-20 w-4 h-4 rounded-full bg-[#43EB3E]/10"></div>
+              <div className="absolute bottom-40 right-1/4 w-6 h-1 rounded bg-[#43EB3E]/10"></div>
+              <div className="absolute top-1/2 left-1/4 w-1 h-6 rounded bg-[#43EB3E]/10"></div>
+            </div>
           </div>
           
           {/* Team Member Grid Container */}
@@ -365,7 +404,13 @@ export default function TeamPage() {
                           <img 
                             src={member.image} 
                             alt={member.name} 
-                            className={`w-full h-full object-cover ${getImagePosition(member.name)}`}
+                            className={`w-full h-full object-cover ${
+                              member.name === "Lance Heynes" || 
+                              member.name === "Mic-Shane Brown" || 
+                              member.name === "Lionel Lottering" 
+                                ? "object-top" 
+                                : "object-center"
+                            }`}
                             onError={(e) => {
                               const img = e.target as HTMLImageElement;
                               img.onerror = null;
@@ -373,160 +418,161 @@ export default function TeamPage() {
                             }}
                           />
                         </div>
-                        <h3 className="text-xl font-semibold text-white mt-2">{member.name}</h3>
-                        <p className="text-[#43EB3E] text-sm mt-1">{member.title}</p>
+                        
+                        {/* Name and title */}
+                        <h3 className="text-white text-xl font-semibold text-center mb-1">{member.name}</h3>
+                        <p className="text-[#43EB3E] text-sm text-center mb-4">{member.title}</p>
+                        
+                        {/* Short description */}
+                        <p className="text-gray-300 text-sm text-center">
+                          {member.description.length > 120 
+                            ? `${member.description.substring(0, 120)}...` 
+                            : member.description
+                          }
+                        </p>
                       </div>
                     </div>
                   </DialogTrigger>
                   
-                  <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
-                    <DialogHeader>
-                      <DialogTitle className="text-2xl text-[#43EB3E]">{member.name}</DialogTitle>
-                      <DialogDescription className="text-gray-300">{member.title}</DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                      {/* Image in dialog - only visible on larger screens */}
-                      <div className="hidden md:block rounded-lg overflow-hidden border-2 border-[#43EB3E]/20 h-80">
-                        <img 
+                  <DialogContent className="max-w-3xl p-0 bg-[rgb(8,42,90)] dark:bg-[#01162f] border-[rgb(8,42,90)]/40 dark:border-[#022b5c] text-white overflow-hidden [&>button]:hidden">
+                    <div className="md:flex">
+                      <div className="hidden md:block md:w-2/5">
+                        <div className="h-64 md:h-full">
+                          <img 
                             src={member.image} 
                             alt={member.name} 
-                            className={`w-full h-full object-cover ${getImagePosition(member.name)}`}
+                            className={`w-full h-full object-cover ${
+                              member.name === "Lance Heynes" || 
+                              member.name === "Mic-Shane Brown" || 
+                              member.name === "Lionel Lottering" 
+                                ? "object-top" 
+                                : "object-center"
+                            }`}
                             onError={(e) => {
                               const img = e.target as HTMLImageElement;
                               img.onerror = null;
                               img.src = '/Kyle-McBryne.png';
                             }}
                           />
+                        </div>
                       </div>
                       
-                      {/* Description */}
-                      <div className="flex flex-col justify-center">
-                        <p className="text-gray-200 leading-relaxed">{member.description}</p>
+                      <div className="p-6 sm:p-8 w-full md:w-3/5">
+                        <DialogHeader className="mb-4">
+                          <div>
+                            <DialogTitle className="text-2xl font-bold mb-1 text-white">
+                              {member.name}
+                            </DialogTitle>
+                            <DialogDescription className="text-[#43EB3E] font-medium text-base">
+                              {member.title}
+                            </DialogDescription>
+                          </div>
+                        </DialogHeader>
                         
-                        {/* Contact links/info (optional) */}
-                        <div className="mt-6 flex flex-col space-y-3">
-                          <Button
-                            variant="outline"
-                            className="bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300 w-full"
-                            onClick={() => navigate("/contact-us")}
-                          >
-                            Contact Our Team
-                          </Button>
+                        <div className="text-gray-200">
+                          <p>{member.description}</p>
+                        </div>
+                        
+                        {/* Close buttons - different styles for mobile and desktop */}
+                        <div className="mt-8 flex justify-end">
+                          <DialogClose asChild>
+                            <button className="md:hidden inline-flex px-4 py-2.5 bg-white/10 text-white rounded-md hover:bg-white/20 transition-colors">
+                              Close
+                            </button>
+                          </DialogClose>
+                          <DialogClose asChild>
+                            <button className="hidden md:inline-flex px-4 py-2.5 bg-[#43EB3E]/20 text-[#43EB3E] rounded-md hover:bg-[#43EB3E]/30 transition-colors">
+                              Close
+                            </button>
+                          </DialogClose>
                         </div>
                       </div>
                     </div>
-                    
-                    <DialogClose asChild className="absolute right-4 top-4">
-                      <Button variant="ghost" className="text-gray-400 hover:text-white h-6 w-6 p-0">
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Close</span>
-                      </Button>
-                    </DialogClose>
                   </DialogContent>
                 </Dialog>
               ))}
             </div>
           </div>
         </section>
-        
-        {/* CTA section */}
-        <section className="py-16 bg-[#011d3d] text-white text-center">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Join Our Rewards Program Today</h2>
-            <p className="text-xl max-w-3xl mx-auto mb-8 text-gray-300">
-              Experience the benefits of working with our dedicated team and start earning rewards on your insurance products.
-            </p>
-            <Button
-              className="bg-[#43EB3E] hover:bg-[#3ad036] text-black font-medium px-8 py-6 text-lg"
-              onClick={() => navigate("/contact-us")}
-            >
-              Get More Information
-            </Button>
-          </div>
-        </section>
       </main>
       
       {/* Footer */}
-      <footer className="bg-[#01162f] text-white py-12">
+      <footer className="bg-gray-100 dark:bg-[#01162f] text-gray-600 dark:text-gray-300 py-12">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Company Info */}
-            <div className="col-span-1 md:col-span-1">
-              <img 
-                src="/opian-logo-white.png" 
-                alt="OPIAN Rewards" 
-                className="h-10 mb-4"
-                onError={(e) => {
-                  const img = e.target as HTMLImageElement;
-                  img.onerror = null;
-                  img.src = '/logo-fallback.png';
-                }} 
-              />
-              <p className="text-gray-400 mb-4">
-                OPIAN is a leading provider of innovative insurance reward programs, helping clients maximize their benefits with our unique point system.
+          <div className="flex justify-start mb-8">
+            <img 
+              src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
+              alt="OPIAN Rewards" 
+              className="h-10 w-auto"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                img.onerror = null;
+                img.src = '/logo-fallback.png';
+              }}
+            />
+          </div>
+          
+          <div className="flex flex-col lg:flex-row justify-between mb-8">
+            {/* Left column - Contact Information */}
+            <div className="lg:w-1/4 mb-8 lg:mb-0">
+              <h3 className="font-semibold mb-4">Contact Information</h3>
+              <p className="flex items-center mb-2">
+                <Phone className="h-4 w-4 mr-2 flex-shrink-0" />
+                <a href="tel:+27861263346" className="hover:text-[#43EB3E] transition-colors">+27 86 126 3346</a>
               </p>
-              <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-[#43EB3E]">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
-                  </svg>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-[#43EB3E]">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clipRule="evenodd" />
-                  </svg>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-[#43EB3E]">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
-                  </svg>
-                </a>
+              <p className="flex items-center mb-2">
+                <Mail className="h-4 w-4 mr-2 flex-shrink-0" />
+                <a href="mailto:info@opianrewards.com" className="hover:text-[#43EB3E] transition-colors">info@opianrewards.com</a>
+              </p>
+              <p className="flex items-start">
+                <MapPin className="h-4 w-4 mr-2 mt-1 flex-shrink-0" />
+                <span>260 Uys Krige Dr, Loevenstein, Cape Town, 7530, South Africa</span>
+              </p>
+            </div>
+            
+            {/* Middle columns - Package/Resources/Legal */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:w-2/4">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-4">Packages</h3>
+                <ul className="space-y-2">
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Momentum</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prosper</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prestige</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
+                </ul>
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-4">Resources</h3>
+                <ul className="space-y-2">
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Help Center</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">FAQs</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Blog</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Contact</a></li>
+                </ul>
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-4">Legal</h3>
+                <ul className="space-y-2">
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Privacy Policy</a></li>
+                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Cookie Policy</a></li>
+                </ul>
               </div>
             </div>
             
-            {/* Navigation */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Navigation</h3>
-              <ul className="space-y-2">
-                <li><a href="/" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Home</a></li>
-                <li><a href="/how-it-works" className="text-gray-400 hover:text-[#43EB3E] transition-colors">How It Works</a></li>
-                <li><a href="/meet-the-team" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Meet The Team</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">FAQ</a></li>
-              </ul>
-            </div>
-            
-            {/* Legal */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Legal</h3>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-[#43EB3E] transition-colors">Cookie Policy</a></li>
-              </ul>
-            </div>
-            
-            {/* Contact */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Contact Us</h3>
-              <ul className="space-y-2">
-                <li className="flex items-start">
-                  <MapPin className="h-5 w-5 text-[#43EB3E] mr-2 mt-0.5" />
-                  <span className="text-gray-400">121 Main Street, Cape Town, South Africa</span>
-                </li>
-                <li className="flex items-center">
-                  <Phone className="h-5 w-5 text-[#43EB3E] mr-2" />
-                  <a href="tel:+27211234567" className="text-gray-400 hover:text-[#43EB3E]">+27 21 123 4567</a>
-                </li>
-                <li className="flex items-center">
-                  <Mail className="h-5 w-5 text-[#43EB3E] mr-2" />
-                  <a href="mailto:info@opian.co.za" className="text-gray-400 hover:text-[#43EB3E]">info@opian.co.za</a>
-                </li>
-              </ul>
+            {/* Right column - Legal Information */}
+            <div className="lg:w-1/4">
+              <h3 className="font-semibold mb-4">Legal Information</h3>
+              <p className="mb-2 text-sm">Opian Rewards (Pty) Ltd is a Juristic Representative of Opian Financial Services (Pty) Ltd</p>
+              <p className="mb-2 text-sm">Company Registration Number: 2021/411623/07</p>
+              <p className="mb-2 text-sm">Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider</p>
+              <p className="mb-2 text-sm">Company Registration Number: 2018/584168/07</p>
+              <p className="text-sm">FSP No: 50974</p>
             </div>
           </div>
           
-          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+          <div className="border-t border-gray-200 dark:border-gray-800 pt-6 text-center text-gray-500 dark:text-gray-400">
             <p>&copy; {new Date().getFullYear()} OPIAN Rewards. All rights reserved.</p>
           </div>
         </div>
