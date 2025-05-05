@@ -849,7 +849,7 @@ export default function HomePage() {
                             group-hover:-translate-x-1 group-hover:translate-y-2 group-hover:opacity-35 transition-all duration-900"></div>
                         
                         <CardHeader className="pb-2 relative z-10">
-                          <Badge variant="outline" className={`mb-2 font-semibold border-[#43EB3E] text-[#43EB3E]`}>
+                          <Badge variant="outline" className={`mb-2 font-semibold border-[#43EB3E] text-[#43EB3E] text-lg px-3 py-1`}>
                             {packageName}
                           </Badge>
                           <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
@@ -857,18 +857,40 @@ export default function HomePage() {
                         </CardHeader>
                         <CardContent className="pb-2 relative z-10 flex-grow overflow-y-auto max-h-[550px]">
                           <ul className="space-y-1.5">
+                            {/* Available features first (green checkmarks) */}
                             {ALL_FEATURES.map((feature, index) => {
                               const value = feature.values[packageName as keyof typeof feature.values];
                               const isAvailable = value !== false;
+                              
+                              if (!isAvailable) return null; // Skip unavailable features for now
+                              
                               return (
-                                <li key={index} className="flex items-start">
-                                  {isAvailable ? (
-                                    <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
-                                  ) : (
-                                    <X className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-red-500" />
-                                  )}
-                                  <span className={`text-xs font-medium ${isAvailable ? 'text-gray-200' : 'text-gray-500'}`}>
+                                <li key={`available-${index}`} className="flex items-start">
+                                  <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
+                                  <span className="text-xs font-medium text-gray-200">
                                     {typeof value === 'string' ? `${feature.name}: ${value}` : feature.name}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                            
+                            {/* Separator if there are unavailable features */}
+                            {ALL_FEATURES.some(feature => feature.values[packageName as keyof typeof feature.values] === false) && (
+                              <li className="border-t border-gray-700 my-2"></li>
+                            )}
+                            
+                            {/* Unavailable features last (red X's) */}
+                            {ALL_FEATURES.map((feature, index) => {
+                              const value = feature.values[packageName as keyof typeof feature.values];
+                              const isAvailable = value !== false;
+                              
+                              if (isAvailable) return null; // Skip available features as they're already shown
+                              
+                              return (
+                                <li key={`unavailable-${index}`} className="flex items-start">
+                                  <X className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-red-500" />
+                                  <span className="text-xs font-medium text-gray-500">
+                                    {feature.name}
                                   </span>
                                 </li>
                               );
@@ -998,7 +1020,7 @@ export default function HomePage() {
                     group-hover:translate-x-1 group-hover:translate-y-1 transition-all duration-[900ms]"></div>
                 
                 <CardHeader className="pb-2 relative z-10">
-                  <Badge variant="outline" className={`mb-2 font-semibold border-[#43EB3E] text-[#43EB3E]`}>
+                  <Badge variant="outline" className={`mb-2 font-semibold border-[#43EB3E] text-[#43EB3E] text-lg px-3 py-1`}>
                     {packageName}
                   </Badge>
                   <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
@@ -1006,18 +1028,40 @@ export default function HomePage() {
                 </CardHeader>
                 <CardContent className="pb-2 relative z-10 flex-grow overflow-y-auto max-h-[550px]">
                   <ul className="space-y-1.5">
+                    {/* Available features first (green checkmarks) */}
                     {ALL_FEATURES.map((feature, index) => {
                       const value = feature.values[packageName as keyof typeof feature.values];
                       const isAvailable = value !== false;
+                      
+                      if (!isAvailable) return null; // Skip unavailable features for now
+                      
                       return (
-                        <li key={index} className="flex items-start">
-                          {isAvailable ? (
-                            <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
-                          ) : (
-                            <X className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-red-500" />
-                          )}
-                          <span className={`text-xs font-medium ${isAvailable ? 'text-gray-200' : 'text-gray-500'}`}>
+                        <li key={`available-${index}`} className="flex items-start">
+                          <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-[#43EB3E]" />
+                          <span className="text-xs font-medium text-gray-200">
                             {typeof value === 'string' ? `${feature.name}: ${value}` : feature.name}
+                          </span>
+                        </li>
+                      );
+                    })}
+                    
+                    {/* Separator if there are unavailable features */}
+                    {ALL_FEATURES.some(feature => feature.values[packageName as keyof typeof feature.values] === false) && (
+                      <li className="border-t border-gray-700 my-2"></li>
+                    )}
+                    
+                    {/* Unavailable features last (red X's) */}
+                    {ALL_FEATURES.map((feature, index) => {
+                      const value = feature.values[packageName as keyof typeof feature.values];
+                      const isAvailable = value !== false;
+                      
+                      if (isAvailable) return null; // Skip available features as they're already shown
+                      
+                      return (
+                        <li key={`unavailable-${index}`} className="flex items-start">
+                          <X className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 text-red-500" />
+                          <span className="text-xs font-medium text-gray-500">
+                            {feature.name}
                           </span>
                         </li>
                       );
