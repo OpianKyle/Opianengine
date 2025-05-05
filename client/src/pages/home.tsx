@@ -855,8 +855,8 @@ export default function HomePage() {
                           <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
                           <CardDescription className="text-gray-300 font-medium">per month</CardDescription>
                         </CardHeader>
-                        <CardContent className="pb-0 relative z-10 flex-grow overflow-y-auto max-h-[550px] mb-1">
-                          <ul className="space-y-1">
+                        <CardContent className="pb-0 relative z-10 flex-grow overflow-y-auto max-h-[550px] mb-0">
+                          <ul className="space-y-1 mb-0">
                             {/* Available features first (green checkmarks) */}
                             {ALL_FEATURES.map((feature, index) => {
                               const value = feature.values[packageName as keyof typeof feature.values];
@@ -892,7 +892,7 @@ export default function HomePage() {
                             })}
                           </ul>
                         </CardContent>
-                        <CardFooter className="relative z-10 mt-auto">
+                        <CardFooter className="relative z-10 mt-auto pt-0 -mt-4">
                           <Button 
                             className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
                             onClick={() => navigate(`/contact-us?package=${packageName}`)}
@@ -1021,8 +1021,8 @@ export default function HomePage() {
                   <CardTitle className="text-2xl font-bold text-white">R{PACKAGE_PRICES[packageName as keyof typeof PACKAGE_PRICES]}</CardTitle>
                   <CardDescription className="text-gray-300 font-medium">per month</CardDescription>
                 </CardHeader>
-                <CardContent className="pb-0 relative z-10 flex-grow overflow-y-auto max-h-[550px] mb-1">
-                  <ul className="space-y-1">
+                <CardContent className="pb-0 relative z-10 flex-grow overflow-y-auto max-h-[550px] mb-0">
+                  <ul className="space-y-1 mb-0">
                     {/* Available features first (green checkmarks) */}
                     {ALL_FEATURES.map((feature, index) => {
                       const value = feature.values[packageName as keyof typeof feature.values];
@@ -1058,7 +1058,7 @@ export default function HomePage() {
                     })}
                   </ul>
                 </CardContent>
-                <CardFooter className="relative z-10 mt-auto">
+                <CardFooter className="relative z-10 mt-auto pt-0 -mt-4">
                   <Button 
                     className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black font-semibold"
                     onClick={() => navigate(`/contact-us?package=${packageName}`)}
