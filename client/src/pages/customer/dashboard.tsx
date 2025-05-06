@@ -269,43 +269,55 @@ function CustomerDashboardContent() {
         <div>
           {/* Referral Section */}
           {hasReferralAccess ? (
-            <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-card-foreground dark:text-white text-lg">Referral Program</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="mb-4">
-                  <ReferralSection className="bg-transparent p-0 text-card-foreground dark:text-white border-0 shadow-none" />
-                </div>
-              </CardContent>
+            <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden relative">
+              <div 
+                className="absolute inset-0 bg-cover bg-center z-0 opacity-20" 
+                style={{ backgroundImage: 'url(/DancingRichChick.png)' }}
+              />
+              <div className="relative z-10">
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-card-foreground dark:text-white text-lg">Referral Program</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="mb-4">
+                    <ReferralSection className="bg-transparent p-0 text-card-foreground dark:text-white border-0 shadow-none" />
+                  </div>
+                </CardContent>
+              </div>
             </Card>
           ) : (
-            <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-card-foreground dark:text-white text-lg">Referral Program</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
-                    <p className="text-sm text-muted-foreground dark:text-gray-300">
-                      Earn points when your referrals join and receive additional bonuses from their referrals.
-                    </p>
-                    <p className="text-xs text-muted-foreground dark:text-gray-400">
-                      Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
-                    </p>
+            <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden relative">
+              <div 
+                className="absolute inset-0 bg-cover bg-center z-0 opacity-15" 
+                style={{ backgroundImage: 'url(/DancingRichChick.png)' }}
+              />
+              <div className="relative z-10">
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-card-foreground dark:text-white text-lg">Referral Program</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
+                      <p className="text-sm text-muted-foreground dark:text-gray-300">
+                        Earn points when your referrals join and receive additional bonuses from their referrals.
+                      </p>
+                      <p className="text-xs text-muted-foreground dark:text-gray-400">
+                        Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
+                      </p>
+                    </div>
+                    <Button 
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                      onClick={() => toast({
+                        title: "Package Upgrade",
+                        description: "Please contact support to upgrade your package."
+                      })}
+                    >
+                      Upgrade Package
+                    </Button>
                   </div>
-                  <Button 
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                    onClick={() => toast({
-                      title: "Package Upgrade",
-                      description: "Please contact support to upgrade your package."
-                    })}
-                  >
-                    Upgrade Package
-                  </Button>
-                </div>
-              </CardContent>
+                </CardContent>
+              </div>
             </Card>
           )}
         </div>
