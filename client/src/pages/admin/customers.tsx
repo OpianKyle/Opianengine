@@ -602,7 +602,7 @@ export default function AdminCustomers() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-full overflow-hidden flex flex-col">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Customer Management</h1>
         <div className="flex gap-2">
@@ -636,7 +636,7 @@ export default function AdminCustomers() {
         </div>
       </div>
 
-      <Card>
+      <Card className="flex-1 overflow-hidden flex flex-col">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>All Customers</CardTitle>
           {isCustomersLoading && (
@@ -646,7 +646,7 @@ export default function AdminCustomers() {
             </div>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 overflow-hidden flex flex-col">
           {isCustomersError ? (
             <div className="flex flex-col items-center justify-center py-10 text-destructive">
               <p className="text-center mb-4">Failed to load customers</p>
@@ -658,7 +658,7 @@ export default function AdminCustomers() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
