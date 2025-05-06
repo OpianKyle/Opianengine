@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Package as PackageIcon, Users } from "lucide-react";
+import { AlertCircle, Copy, Package as PackageIcon, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -165,11 +165,11 @@ export default function ReferralSection() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Refer & Earn Points</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="border-b border-border/40">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-6">
           <div className="space-y-2">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-10" />
@@ -181,14 +181,14 @@ export default function ReferralSection() {
 
   if (packageUpgradeRequired) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="shadow-sm">
+        <CardHeader className="border-b border-border/40">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold flex items-center gap-2">
             <Users className="h-5 w-5" />
             <span>Refer & Earn Points</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="space-y-4">
             <div className="border border-[#43EB3E]/30 rounded-lg overflow-hidden">
               <div className="bg-[#43EB3E]/5 p-4 border-b border-[#43EB3E]/20">
@@ -230,25 +230,28 @@ export default function ReferralSection() {
   
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Refer & Earn Points</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="border-b border-border/40">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive">
-            Failed to load referral information. Please try again later.
-          </p>
+        <CardContent className="space-y-4 p-6">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            <p className="text-sm">
+              Failed to load referral information. Please try again later.
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Refer & Earn Points</CardTitle>
+    <Card className="shadow-sm">
+      <CardHeader className="border-b border-border/40">
+        <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-6">
         <div className="text-sm text-muted-foreground">
           Share your referral link with friends. When they register, you'll earn 2,000 points!
         </div>

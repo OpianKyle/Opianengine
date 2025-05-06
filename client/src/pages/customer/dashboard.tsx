@@ -168,12 +168,12 @@ function CustomerDashboardContent() {
         <h1 className="text-3xl font-bold text-[#1b75bc]">Your Dashboard</h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="points-card overflow-hidden">
-          <CardHeader className="flex justify-between items-center">
-            <CardTitle>Current Points & Tier</CardTitle>
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="points-card overflow-hidden shadow-sm">
+          <CardHeader className="flex justify-between items-center border-b border-border/40">
+            <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Current Points & Tier</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-6">
             {isUserLoading ? (
               <>
                 <div className="h-10 w-36 bg-muted rounded animate-pulse mb-4"></div>
@@ -221,13 +221,13 @@ function CustomerDashboardContent() {
           </CardContent>
         </Card>
 
-        <Card className="rewards-section">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="rewards-section shadow-sm">
+          <CardHeader className="border-b border-border/40">
+            <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold">
               <DollarSign className="h-5 w-5 text-muted-foreground" /> Cash Redemption
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-6">
             {isUserLoading ? (
               <>
                 <div className="space-y-2">
@@ -313,11 +313,11 @@ function CustomerDashboardContent() {
         )}
       </div>
 
-      <Card className="recent-transactions">
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+      <Card className="recent-transactions shadow-sm">
+        <CardHeader className="border-b border-border/40">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Recent Activity</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <ScrollArea className="h-[300px]">
             <div className="space-y-4">
               {isTransactionsLoading ? (
