@@ -216,10 +216,10 @@ function CustomerDashboardContent() {
             
             <div className="flex items-center mt-4">
               <div className="w-full">
-                <div className="flex items-center mt-8 mb-2">
-                  <span className="text-lg font-medium text-gray-300">{tierInfo.name}</span>
-                  <span className="mx-2 text-gray-500">•</span>
-                  <span className="text-lg font-medium text-gray-300">{points.toLocaleString()}</span>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-base font-medium text-gray-300">{tierInfo.name}</span>
+                  <span className="text-gray-500">•</span>
+                  <span className="text-base font-medium text-gray-300">{points.toLocaleString()}</span>
                 </div>
                 
                 {tierInfo.nextTier && (
