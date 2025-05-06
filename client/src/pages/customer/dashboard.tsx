@@ -202,17 +202,19 @@ function CustomerDashboardContent() {
             <p className="text-xs text-gray-400">{lastUpdated}</p>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex">
-              <div className="w-1/3">
-                <div className="relative flex items-center justify-center">
-                  <Award className="h-16 w-16 text-blue-400 opacity-80" />
-                  <Badge className={`${tierInfo.color} absolute -bottom-1 text-xs px-2 py-0.5`}>
-                    {tierInfo.name} Tier
-                  </Badge>
+            <div className="flex items-center">
+              <div className="w-1/4">
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <Award className="h-14 w-14 text-blue-400 opacity-80" />
+                    <Badge className={`${tierInfo.color} absolute -bottom-1 text-xs px-2 py-0.5 left-1/2 transform -translate-x-1/2`}>
+                      {tierInfo.name}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-              <div className="w-2/3">
-                <h3 className="text-4xl font-bold mb-2">{points.toLocaleString()}</h3>
+              <div className="w-3/4">
+                <h3 className="text-5xl font-bold mb-2">{points.toLocaleString()}</h3>
                 {tierInfo.nextTier && (
                   <div className="mb-2 space-y-1">
                     <Progress
@@ -236,14 +238,14 @@ function CustomerDashboardContent() {
             <p className="text-xs text-gray-400">{lastUpdated}</p>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex">
-              <div className="w-1/3">
-                <div className="flex items-center justify-center h-full">
-                  <DollarSign className="h-16 w-16 text-green-400 opacity-80" />
+            <div className="flex items-center">
+              <div className="w-1/4">
+                <div className="flex justify-center">
+                  <DollarSign className="h-14 w-14 text-green-400 opacity-80" />
                 </div>
               </div>
-              <div className="w-2/3">
-                <h3 className="text-4xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
+              <div className="w-3/4">
+                <h3 className="text-5xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
                 <div className="flex flex-col gap-2">
                   <Input
                     type="number"
@@ -267,119 +269,6 @@ function CustomerDashboardContent() {
           </CardContent>
         </Card>
       </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Load Cards */}
-        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-white text-lg">Load Cards</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex flex-col h-[150px] justify-between">
-              <div>
-                <p className="text-sm mb-5">Batch Card Loads</p>
-                <Button variant="outline" className="text-white border-white hover:bg-white/10 w-full text-sm">
-                  <span className="bg-white text-[#011d3d] rounded-full w-5 h-5 inline-flex items-center justify-center mr-2">?</span>
-                  How it works
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Fund Profile */}
-        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-white text-lg">Fund Profile</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex flex-col h-[150px] justify-between">
-              <div>
-                <p className="text-sm mb-5">Request Quote/Invoice/Banking Details</p>
-                <Button variant="outline" className="text-white border-white hover:bg-white/10 w-full text-sm">
-                  <span className="bg-white text-[#011d3d] rounded-full w-5 h-5 inline-flex items-center justify-center mr-2">?</span>
-                  How it works
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Active Cards */}
-        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-white text-lg">Active Cards</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex flex-col h-[150px] justify-between">
-              <div>
-                <p className="text-sm mb-5">Single Card Loads</p>
-                <Button variant="outline" className="text-white border-white hover:bg-white/10 w-full text-sm">
-                  <span className="bg-white text-[#011d3d] rounded-full w-5 h-5 inline-flex items-center justify-center mr-2">?</span>
-                  How it works
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Activate Cards */}
-        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-white text-lg">Activate Cards</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex flex-col h-[150px] justify-between">
-              <div>
-                <p className="text-sm mb-5">View Inactive Cards</p>
-                <Button variant="outline" className="text-white border-white hover:bg-white/10 w-full text-sm">
-                  <span className="bg-white text-[#011d3d] rounded-full w-5 h-5 inline-flex items-center justify-center mr-2">?</span>
-                  How it works
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Order Cards */}
-      <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
-        <CardHeader className="pb-2 pt-4">
-          <CardTitle className="text-white text-lg">Order Cards</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div>
-            <p className="text-sm mb-5">Request Quote/Invoice</p>
-            <Button variant="outline" className="text-white border-white hover:bg-white/10 text-sm">
-              <span className="bg-white text-[#011d3d] rounded-full w-5 h-5 inline-flex items-center justify-center mr-2">?</span>
-              How it works
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Training Videos */}
-      <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
-        <CardHeader className="pb-2 pt-4">
-          <CardTitle className="text-white text-lg">Training Videos</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0 flex">
-          <div className="w-3/4">
-            <p className="text-sm mb-5">Learn how to use the OPIAN Rewards system effectively</p>
-            <Button variant="outline" className="text-white border-white hover:bg-white/10 text-sm">
-              Watch now
-            </Button>
-          </div>
-          <div className="w-1/4 flex justify-end">
-            <div className="w-20 h-20 bg-black/30 flex items-center justify-center rounded">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
       
       {/* Referral Section */}
       {hasReferralAccess ? (
@@ -468,6 +357,29 @@ function CustomerDashboardContent() {
               )}
             </div>
           </ScrollArea>
+        </CardContent>
+      </Card>
+      
+      {/* Training Videos */}
+      <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-white text-lg">Training Videos</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 flex">
+          <div className="w-3/4">
+            <p className="text-sm mb-5">Learn how to use the OPIAN Rewards system effectively</p>
+            <Button variant="outline" className="text-white border-white hover:bg-white/10 text-sm">
+              Watch now
+            </Button>
+          </div>
+          <div className="w-1/4 flex justify-end">
+            <div className="w-20 h-20 bg-black/30 flex items-center justify-center rounded">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

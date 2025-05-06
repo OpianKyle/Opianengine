@@ -57,7 +57,11 @@ interface ReferralInfo {
   };
 }
 
-export default function ReferralSection() {
+interface ReferralSectionProps {
+  className?: string;
+}
+
+export default function ReferralSection({ className }: ReferralSectionProps) {
   const [copied, setCopied] = useState(false);
   const [packageUpgradeRequired, setPackageUpgradeRequired] = useState(false);
   const [userPackage, setUserPackage] = useState<string>("");
@@ -165,7 +169,7 @@ export default function ReferralSection() {
 
   if (isLoading) {
     return (
-      <Card className="shadow-sm">
+      <Card className={className || "shadow-sm"}>
         <CardHeader className="border-b border-border/40">
           <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
         </CardHeader>
@@ -181,7 +185,7 @@ export default function ReferralSection() {
 
   if (packageUpgradeRequired) {
     return (
-      <Card className="shadow-sm">
+      <Card className={className || "shadow-sm"}>
         <CardHeader className="border-b border-border/40">
           <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -230,7 +234,7 @@ export default function ReferralSection() {
   
   if (error) {
     return (
-      <Card className="shadow-sm">
+      <Card className={className || "shadow-sm"}>
         <CardHeader className="border-b border-border/40">
           <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
         </CardHeader>
@@ -247,7 +251,7 @@ export default function ReferralSection() {
   }
 
   return (
-    <Card className="shadow-sm">
+    <Card className={className || "shadow-sm"}>
       <CardHeader className="border-b border-border/40">
         <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
       </CardHeader>
