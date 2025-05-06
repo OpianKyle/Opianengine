@@ -78,10 +78,18 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen w-full">
-      {/* Header with Theme Toggle, Notification Bell, and Menu */}
+      {/* Header with Theme Toggle, Notification Bell, Profile and Menu */}
       <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-2">
         <ThemeToggle />
         <NotificationBell />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full h-9 w-9 bg-background shadow-sm flex items-center justify-center border"
+          onClick={() => handleNavigation('/profile')}
+        >
+          <User className="h-5 w-5" />
+        </Button>
         <Button
           variant="outline"
           size="icon"

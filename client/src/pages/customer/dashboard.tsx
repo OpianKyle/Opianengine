@@ -154,212 +154,418 @@ function CustomerDashboardContent() {
 
   // Get current time of day
   const currentDate = new Date();
+  const currentDateString = currentDate.toLocaleDateString();
   const timeOfDay = currentDate.getHours() < 12 ? 'morning' : currentDate.getHours() < 17 ? 'afternoon' : 'evening';
+  
+  // Create select options for client dropdown (just placeholder)
+  const clients = [{ value: 'Option 1', label: 'Option 1' }];
+  
+  // Create select options for department dropdown (just placeholder)
+  const departments = [{ value: 'All', label: 'All' }];
+
+  // Last updated timestamp for cards
+  const lastUpdated = `Last Updated: ${currentDateString} @${currentDate.getHours()}:${currentDate.getMinutes().toString().padStart(2, '0')}`;
 
   return (
     <div className="space-y-6">
       {/* Tour Component */}
       <CustomerTour />
       
-      <div className="space-y-2 welcome-dashboard">
-        <h2 className="text-2xl font-semibold text-muted-foreground">
-          Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome to OPIAN Rewards'}
-        </h2>
-        <h1 className="text-3xl font-bold text-[#1b75bc]">Your Dashboard</h1>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="points-card overflow-hidden shadow-sm">
-          <CardHeader className="flex justify-between items-center border-b border-border/40">
-            <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Current Points & Tier</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 p-6">
-            {isUserLoading ? (
-              <>
-                <div className="h-10 w-36 bg-muted rounded animate-pulse mb-4"></div>
-                <div className="space-y-4">
-                  <div className="h-8 w-24 bg-muted rounded animate-pulse"></div>
-                  <div className="space-y-2">
-                    <div className="h-2 w-full bg-muted rounded animate-pulse"></div>
-                    <div className="h-5 w-48 bg-muted rounded animate-pulse"></div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <AnimatedMetric 
-                  title="Your Points Balance"
-                  value={points}
-                  icon={Award}
-                  formatter={(val) => val.toLocaleString()}
-                  description={
-                    <div className="mt-2">
-                      <Badge className={`${tierInfo.color} text-sm px-3 py-1`}>
-                        {tierInfo.name} Tier
-                      </Badge>
-                      {tierInfo.nextTier && (
-                        <div className="mt-3 space-y-2">
-                          <Progress
-                            value={(points / tierInfo.nextTier.pointsNeeded) * 100}
-                            className="h-2"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            {tierInfo.nextTier.pointsNeeded.toLocaleString()} points needed to reach{" "}
-                            {tierInfo.nextTier.name}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  }
-                  isLoading={isUserLoading}
-                  delay={100}
-                  colorScheme="primary"
-                  className="mb-2 -mt-4 -mx-6 p-0"
-                />
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rewards-section shadow-sm">
-          <CardHeader className="border-b border-border/40">
-            <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold">
-              <DollarSign className="h-5 w-5 text-muted-foreground" /> Cash Redemption
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 p-6">
-            {isUserLoading ? (
-              <>
-                <div className="space-y-2">
-                  <div className="h-5 w-32 bg-muted rounded animate-pulse"></div>
-                  <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
-                  <div className="h-4 w-48 bg-muted rounded animate-pulse"></div>
-                </div>
-                <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
-              </>
-            ) : (
-              <>
-                <AnimatedMetric 
-                  title="Cash Value"
-                  value={points * 0.015}
-                  prefix="R"
-                  formatter={(val) => val.toFixed(2)}
-                  description="Current points exchange rate: 1 point = R0.015"
-                  isLoading={isUserLoading}
-                  delay={250}
-                  colorScheme="success"
-                  className="mb-4 -mt-4 -mx-6 p-0"
-                />
-                <div className="space-y-2 mt-4">
-                  <label className="text-sm font-medium">Points to Redeem</label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max={points}
-                    value={pointsToRedeem}
-                    onChange={(e) => setPointsToRedeem(Number(e.target.value))}
-                    placeholder="Enter points amount"
-                  />
-                  {pointsToRedeem > 0 && (
-                    <p className="text-sm font-medium mt-2">
-                      You will receive: <span className="text-green-500">R{randValue}</span>
-                    </p>
-                  )}
-                </div>
-                <Button
-                  className="w-full mt-2"
-                  onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
-                  disabled={!canRedeem}
-                >
-                  {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Only show referral section for users with PROSPER package or higher */}
-        {hasReferralAccess && <div className="referral-section"><ReferralSection /></div>}
+      <div className="flex flex-row justify-between items-center mb-4">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold">
+            Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome to OPIAN Rewards'}
+          </h2>
+        </div>
         
-        {/* Show upgrade message for users without access */}
-        {!hasReferralAccess && (
-          <Card className="referral-section bg-gradient-to-br from-slate-900 to-slate-800 text-white border border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-[#43EB3E] flex items-center gap-2">
-                <PackageIcon className="h-5 w-5" /> Refer & Earn Points
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
-                <p className="text-sm text-slate-300">
-                  Earn points when your referrals join and receive additional bonuses from their referrals.
-                </p>
-                <p className="text-xs text-slate-400">
-                  Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
-                </p>
-              </div>
-              <Button 
-                className="w-full bg-[#43EB3E] text-slate-900 hover:bg-[#3ad036]"
-                onClick={() => toast({
-                  title: "Package Upgrade",
-                  description: "Please contact support to upgrade your package."
-                })}
-              >
-                Upgrade Package
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        <div className="flex gap-3">
+          <div className="w-40">
+            <label className="text-xs block mb-1">Client</label>
+            <select className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
+              <option>Option 1</option>
+            </select>
+          </div>
+          <div className="w-40">
+            <label className="text-xs block mb-1">Department</label>
+            <select className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
+              <option>All</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <Card className="recent-transactions shadow-sm">
-        <CardHeader className="border-b border-border/40">
-          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <ScrollArea className="h-[300px]">
-            <div className="space-y-4">
-              {isTransactionsLoading ? (
-                // Skeleton loading state
-                Array(5).fill(0).map((_, index) => (
-                  <div key={`skeleton-${index}`} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-1">
-                      <div className="h-5 w-64 bg-muted rounded animate-pulse"></div>
-                      <div className="h-4 w-32 bg-muted rounded animate-pulse"></div>
-                    </div>
-                    <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
-                  </div>
-                ))
-              ) : transactions?.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {transaction.type ? formatTransactionType(transaction.type) : ''} - {transaction.description}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(transaction.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <PointsDisplay
-                    points={transaction.points}
-                    showSign
-                    size="small"
-                  />
-                </div>
-              ))}
-              {(!isTransactionsLoading && (!transactions || transactions.length === 0)) && (
-                <p className="text-center text-muted-foreground py-4">
-                  No recent activity
-                </p>
-              )}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Profile Balance Card */}
+        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-white text-lg">Your Profile Balance</CardTitle>
+            <p className="text-xs text-gray-400">{lastUpdated}</p>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex">
+              <div className="w-1/3">
+                <img src="/opian-chart-icon.png" alt="Chart" className="h-20 w-20 opacity-80" 
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMDA3NmZmIi8+PHBhdGggZD0iTTIwIDgwIEw0MCA0MCBMNjAgNjAgTDgwIDIwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIvPjwvc3ZnPg==';
+                  }}
+                />
+              </div>
+              <div className="w-2/3">
+                <h3 className="text-4xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">Top-Up Balance</Button>
+              </div>
             </div>
-          </ScrollArea>
+          </CardContent>
+        </Card>
+
+        {/* Card Activity Card */}
+        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-white text-lg">Card Activity</CardTitle>
+            <p className="text-xs text-gray-400">{lastUpdated}</p>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex justify-center items-center h-[140px]">
+              <div className="rounded-full w-32 h-32 bg-gray-700 border-8 border-gray-600 flex items-center justify-center relative">
+                {/* Activity Chart (simplified for now) */}
+                <div className="absolute inset-0">
+                  {/* Green segment (25%) */}
+                  <div className="absolute top-0 left-0 w-1/2 h-1/2 origin-bottom-right bg-green-500 rounded-tl-full"></div>
+                  {/* Blue segment (25%) */}
+                  <div className="absolute top-0 right-0 w-1/2 h-1/2 origin-bottom-left bg-blue-500 rounded-tr-full"></div>
+                </div>
+                <div className="z-10 bg-[#011d3d] rounded-full w-20 h-20 flex items-center justify-center">
+                  <span className="text-xs text-center">Activity<br/>Summary</span>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 text-xs mt-2">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-sm bg-green-500"></div>
+                <span>Qualifying</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-sm bg-blue-500"></div>
+                <span>Credits/Bonuses</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-sm bg-yellow-500"></div>
+                <span>Inactive Cards</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Load Cards */}
+        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-white text-lg">Load Cards</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-col h-[150px] justify-between">
+              <div>
+                <p className="text-sm mb-5">Batch Card Loads</p>
+                <Button variant="outline" className="text-white border-white hover:bg-white/10 w-full text-sm">
+                  <span className="bg-white text-[#011d3d] rounded-full w-5 h-5 inline-flex items-center justify-center mr-2">?</span>
+                  How it works
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Fund Profile */}
+        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-white text-lg">Fund Profile</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-col h-[150px] justify-between">
+              <div>
+                <p className="text-sm mb-5">Request Quote/Invoice/Banking Details</p>
+                <Button variant="outline" className="text-white border-white hover:bg-white/10 w-full text-sm">
+                  <span className="bg-white text-[#011d3d] rounded-full w-5 h-5 inline-flex items-center justify-center mr-2">?</span>
+                  How it works
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Cards */}
+        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-white text-lg">Active Cards</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-col h-[150px] justify-between">
+              <div>
+                <p className="text-sm mb-5">Single Card Loads</p>
+                <Button variant="outline" className="text-white border-white hover:bg-white/10 w-full text-sm">
+                  <span className="bg-white text-[#011d3d] rounded-full w-5 h-5 inline-flex items-center justify-center mr-2">?</span>
+                  How it works
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Activate Cards */}
+        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-white text-lg">Activate Cards</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-col h-[150px] justify-between">
+              <div>
+                <p className="text-sm mb-5">View Inactive Cards</p>
+                <Button variant="outline" className="text-white border-white hover:bg-white/10 w-full text-sm">
+                  <span className="bg-white text-[#011d3d] rounded-full w-5 h-5 inline-flex items-center justify-center mr-2">?</span>
+                  How it works
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Order Cards */}
+      <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-white text-lg">Order Cards</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div>
+            <p className="text-sm mb-5">Request Quote/Invoice</p>
+            <Button variant="outline" className="text-white border-white hover:bg-white/10 text-sm">
+              <span className="bg-white text-[#011d3d] rounded-full w-5 h-5 inline-flex items-center justify-center mr-2">?</span>
+              How it works
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Training Videos */}
+      <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-white text-lg">Training Videos</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 flex">
+          <div className="w-3/4">
+            <p className="text-sm mb-5">Learn how to use the OPIAN Rewards system effectively</p>
+            <Button variant="outline" className="text-white border-white hover:bg-white/10 text-sm">
+              Watch now
+            </Button>
+          </div>
+          <div className="w-1/4 flex justify-end">
+            <div className="w-20 h-20 bg-black/30 flex items-center justify-center rounded">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Original cards below in a hidden div */}
+      <div className="hidden">
+        <div className="grid gap-6 md:grid-cols-3">
+          <Card className="points-card overflow-hidden shadow-sm">
+            <CardHeader className="flex justify-between items-center border-b border-border/40">
+              <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Current Points & Tier</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 p-6">
+              {isUserLoading ? (
+                <>
+                  <div className="h-10 w-36 bg-muted rounded animate-pulse mb-4"></div>
+                  <div className="space-y-4">
+                    <div className="h-8 w-24 bg-muted rounded animate-pulse"></div>
+                    <div className="space-y-2">
+                      <div className="h-2 w-full bg-muted rounded animate-pulse"></div>
+                      <div className="h-5 w-48 bg-muted rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <AnimatedMetric 
+                    title="Your Points Balance"
+                    value={points}
+                    icon={Award}
+                    formatter={(val) => val.toLocaleString()}
+                    description={
+                      <div className="mt-2">
+                        <Badge className={`${tierInfo.color} text-sm px-3 py-1`}>
+                          {tierInfo.name} Tier
+                        </Badge>
+                        {tierInfo.nextTier && (
+                          <div className="mt-3 space-y-2">
+                            <Progress
+                              value={(points / tierInfo.nextTier.pointsNeeded) * 100}
+                              className="h-2"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {tierInfo.nextTier.pointsNeeded.toLocaleString()} points needed to reach{" "}
+                              {tierInfo.nextTier.name}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    }
+                    isLoading={isUserLoading}
+                    delay={100}
+                    colorScheme="primary"
+                    className="mb-2 -mt-4 -mx-6 p-0"
+                  />
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="rewards-section shadow-sm">
+            <CardHeader className="border-b border-border/40">
+              <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold">
+                <DollarSign className="h-5 w-5 text-muted-foreground" /> Cash Redemption
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 p-6">
+              {isUserLoading ? (
+                <>
+                  <div className="space-y-2">
+                    <div className="h-5 w-32 bg-muted rounded animate-pulse"></div>
+                    <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
+                    <div className="h-4 w-48 bg-muted rounded animate-pulse"></div>
+                  </div>
+                  <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
+                </>
+              ) : (
+                <>
+                  <AnimatedMetric 
+                    title="Cash Value"
+                    value={points * 0.015}
+                    prefix="R"
+                    formatter={(val) => val.toFixed(2)}
+                    description="Current points exchange rate: 1 point = R0.015"
+                    isLoading={isUserLoading}
+                    delay={250}
+                    colorScheme="success"
+                    className="mb-4 -mt-4 -mx-6 p-0"
+                  />
+                  <div className="space-y-2 mt-4">
+                    <label className="text-sm font-medium">Points to Redeem</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={points}
+                      value={pointsToRedeem}
+                      onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                      placeholder="Enter points amount"
+                    />
+                    {pointsToRedeem > 0 && (
+                      <p className="text-sm font-medium mt-2">
+                        You will receive: <span className="text-green-500">R{randValue}</span>
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    className="w-full mt-2"
+                    onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
+                    disabled={!canRedeem}
+                  >
+                    {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Only show referral section for users with PROSPER package or higher */}
+          {hasReferralAccess && <div className="referral-section"><ReferralSection /></div>}
+          
+          {/* Show upgrade message for users without access */}
+          {!hasReferralAccess && (
+            <Card className="referral-section bg-gradient-to-br from-slate-900 to-slate-800 text-white border border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-[#43EB3E] flex items-center gap-2">
+                  <PackageIcon className="h-5 w-5" /> Refer & Earn Points
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
+                  <p className="text-sm text-slate-300">
+                    Earn points when your referrals join and receive additional bonuses from their referrals.
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
+                  </p>
+                </div>
+                <Button 
+                  className="w-full bg-[#43EB3E] text-slate-900 hover:bg-[#3ad036]"
+                  onClick={() => toast({
+                    title: "Package Upgrade",
+                    description: "Please contact support to upgrade your package."
+                  })}
+                >
+                  Upgrade Package
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <Card className="recent-transactions shadow-sm">
+          <CardHeader className="border-b border-border/40">
+            <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <ScrollArea className="h-[300px]">
+              <div className="space-y-4">
+                {isTransactionsLoading ? (
+                  // Skeleton loading state
+                  Array(5).fill(0).map((_, index) => (
+                    <div key={`skeleton-${index}`} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="h-5 w-64 bg-muted rounded animate-pulse"></div>
+                        <div className="h-4 w-32 bg-muted rounded animate-pulse"></div>
+                      </div>
+                      <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
+                    </div>
+                  ))
+                ) : transactions?.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        {transaction.type ? formatTransactionType(transaction.type) : ''} - {transaction.description}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(transaction.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <PointsDisplay
+                      points={transaction.points}
+                      showSign
+                      size="small"
+                    />
+                  </div>
+                ))}
+                {(!isTransactionsLoading && (!transactions || transactions.length === 0)) && (
+                  <p className="text-center text-muted-foreground py-4">
+                    No recent activity
+                  </p>
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
