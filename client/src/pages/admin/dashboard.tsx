@@ -7,6 +7,7 @@ import {
 import { Users, ShoppingBag, TrendingUp, Award } from 'lucide-react';
 import { formatTransactionType } from "@/lib/utils";
 import { getQueryFn } from "@/lib/queryClient";
+import AnimatedMetric from "@/components/shared/animated-metric";
 
 interface DashboardStats {
   totalCustomers: number;
@@ -140,17 +141,22 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {dashboardStats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">{stat.description}</p>
-            </CardContent>
-          </Card>
+        {dashboardStats.map((stat, index) => (
+          <AnimatedMetric
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            description={stat.description}
+            isLoading={isLoading}
+            delay={100 + (index * 150)} // Stagger the animations
+            colorScheme={
+              index === 0 ? 'primary' :
+              index === 1 ? 'success' :
+              index === 2 ? 'warning' :
+              'default'
+            }
+          />
         ))}
       </div>
 

@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users, UserCheck, Award } from 'lucide-react';
 import { useState } from 'react';
+import AnimatedMetric from "@/components/shared/animated-metric";
 
 // Commission record type
 interface Commission {
@@ -99,44 +100,35 @@ export default function AgentDashboard() {
       <h1 className="text-3xl font-bold">Agent Dashboard</h1>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="bg-white/5 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle>Total Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-8 w-16 animate-pulse bg-muted rounded"></div>
-            ) : (
-              <p className="text-2xl font-bold">{statistics?.totalCustomers || 0}</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/5 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle>Active Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-8 w-16 animate-pulse bg-muted rounded"></div>
-            ) : (
-              <p className="text-2xl font-bold">{statistics?.activeCustomers || 0}</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/5 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle>Total Points Assigned</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="h-8 w-24 animate-pulse bg-muted rounded"></div>
-            ) : (
-              <p className="text-2xl font-bold">{statistics?.totalPoints?.toLocaleString() || 0}</p>
-            )}
-          </CardContent>
-        </Card>
+        <AnimatedMetric
+          title="Total Customers"
+          value={statistics?.totalCustomers || 0}
+          icon={Users}
+          description="All customers assigned to you"
+          isLoading={isLoading}
+          delay={100}
+          colorScheme="primary"
+        />
+        
+        <AnimatedMetric
+          title="Active Customers"
+          value={statistics?.activeCustomers || 0}
+          icon={UserCheck}
+          description="Customers with active packages"
+          isLoading={isLoading}
+          delay={250}
+          colorScheme="success"
+        />
+        
+        <AnimatedMetric
+          title="Total Points Assigned"
+          value={statistics?.totalPoints || 0}
+          icon={Award}
+          description="Points assigned to your customers"
+          isLoading={isLoading}
+          delay={400}
+          colorScheme="warning"
+        />
       </div>
 
       {/* Commission Dashboard Section */}
@@ -187,106 +179,64 @@ export default function AgentDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            <Card 
-              className={`cursor-pointer hover:shadow-md transition-shadow ${filterType === 'upfront' ? 'ring-2 ring-primary' : ''}`}
+            <div 
+              className={`cursor-pointer ${filterType === 'upfront' ? 'ring-2 ring-primary rounded-lg' : ''}`}
               onClick={() => setFilterType(filterType === 'upfront' ? 'all' : 'upfront')}
             >
-              <CardHeader className="py-3">
-                <CardTitle className="text-sm font-medium">Upfront Sign Ups (30%)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <>
-                    <div className="h-8 w-20 animate-pulse bg-muted rounded mb-2"></div>
-                    <div className="h-3 w-32 animate-pulse bg-muted rounded"></div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">
-                      R{calculateTotalCommission(false).toFixed(2)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      From {allCommissions.filter((c: Commission) => !c.isRenewal).length} customer registrations
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+              <AnimatedMetric
+                title="Upfront Sign Ups (30%)"
+                value={calculateTotalCommission(false)}
+                prefix="R"
+                formatter={(val) => val.toFixed(2)}
+                description={`From ${allCommissions.filter((c: Commission) => !c.isRenewal).length} customer registrations`}
+                isLoading={isLoading}
+                delay={100}
+                colorScheme={filterType === 'upfront' ? 'primary' : 'default'}
+                className="hover:shadow-md transition-shadow"
+              />
+            </div>
 
-            <Card 
-              className={`cursor-pointer hover:shadow-md transition-shadow ${filterType === 'renewal' ? 'ring-2 ring-primary' : ''}`}
+            <div 
+              className={`cursor-pointer ${filterType === 'renewal' ? 'ring-2 ring-primary rounded-lg' : ''}`}
               onClick={() => setFilterType(filterType === 'renewal' ? 'all' : 'renewal')}
             >
-              <CardHeader className="py-3">
-                <CardTitle className="text-sm font-medium">Renewals (10%)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <>
-                    <div className="h-8 w-20 animate-pulse bg-muted rounded mb-2"></div>
-                    <div className="h-3 w-32 animate-pulse bg-muted rounded"></div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">
-                      R{calculateTotalCommission(true).toFixed(2)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      From {allCommissions.filter((c: Commission) => c.isRenewal).length} customer renewals
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+              <AnimatedMetric
+                title="Renewals (10%)"
+                value={calculateTotalCommission(true)}
+                prefix="R"
+                formatter={(val) => val.toFixed(2)}
+                description={`From ${allCommissions.filter((c: Commission) => c.isRenewal).length} customer renewals`}
+                isLoading={isLoading}
+                delay={250}
+                colorScheme={filterType === 'renewal' ? 'primary' : 'default'}
+                className="hover:shadow-md transition-shadow"
+              />
+            </div>
 
-            <Card className="bg-primary/5">
-              <CardHeader className="py-3">
-                <CardTitle className="text-sm font-medium">Potential Commissions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <>
-                    <div className="h-8 w-20 animate-pulse bg-muted rounded mb-2"></div>
-                    <div className="h-3 w-32 animate-pulse bg-muted rounded"></div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">
-                      R{(calculateTotalCommission(false) + calculateTotalCommission(true)).toFixed(2)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      From {allCommissions.length} transactions
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <AnimatedMetric
+              title="Potential Commissions"
+              value={calculateTotalCommission(false) + calculateTotalCommission(true)}
+              prefix="R"
+              formatter={(val) => val.toFixed(2)}
+              description={`From ${allCommissions.length} transactions`}
+              isLoading={isLoading}
+              delay={400}
+              colorScheme="success"
+              className="bg-primary/5"
+            />
 
-            <Card>
-              <CardHeader className="py-3">
-                <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <>
-                    <div className="h-8 w-16 animate-pulse bg-muted rounded mb-2"></div>
-                    <div className="h-3 w-32 animate-pulse bg-muted rounded"></div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">
-                      {allCommissions.length > 0 ? 
-                        `${((allCommissions.filter((c: Commission) => !c.isRenewal).length / 
-                        Math.max(allCommissions.length, 1)) * 100).toFixed(1)}%` : 
-                        '0%'}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Of leads converted to customers
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <AnimatedMetric
+              title="Conversion Rate"
+              value={allCommissions.length > 0 ? 
+                ((allCommissions.filter((c: Commission) => !c.isRenewal).length / 
+                Math.max(allCommissions.length, 1)) * 100) : 0}
+              suffix="%"
+              formatter={(val) => val.toFixed(1)}
+              description="Of leads converted to customers"
+              isLoading={isLoading}
+              delay={550}
+              colorScheme="warning"
+            />
           </div>
           
           {/* Filter status indicator */}

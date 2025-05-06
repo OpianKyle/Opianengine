@@ -11,9 +11,10 @@ import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import ReferralSection from "@/components/shared/referral-section";
 import { formatTransactionType } from "@/lib/utils";
-import { Package as PackageIcon } from "lucide-react";
+import { Package as PackageIcon, Award, DollarSign } from "lucide-react";
 import CustomerTour from "@/components/onboarding/CustomerTour";
 import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext";
+import AnimatedMetric from "@/components/shared/animated-metric";
 
 interface User {
   id: number;
@@ -168,8 +169,8 @@ function CustomerDashboardContent() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="points-card">
-          <CardHeader>
+        <Card className="points-card overflow-hidden">
+          <CardHeader className="flex justify-between items-center">
             <CardTitle>Current Points & Tier</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -186,24 +187,35 @@ function CustomerDashboardContent() {
               </>
             ) : (
               <>
-                <PointsDisplay points={points} size="large" />
-                <div className="space-y-4">
-                  <Badge className={`${tierInfo.color} text-lg px-4 py-2`}>
-                    {tierInfo.name} Tier
-                  </Badge>
-                  {tierInfo.nextTier && (
-                    <div className="space-y-2">
-                      <Progress
-                        value={(points / tierInfo.nextTier.pointsNeeded) * 100}
-                        className="h-2"
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        {tierInfo.nextTier.pointsNeeded.toLocaleString()} points needed to reach{" "}
-                        {tierInfo.nextTier.name}
-                      </p>
+                <AnimatedMetric 
+                  title="Your Points Balance"
+                  value={points}
+                  icon={Award}
+                  formatter={(val) => val.toLocaleString()}
+                  description={
+                    <div className="mt-2">
+                      <Badge className={`${tierInfo.color} text-sm px-3 py-1`}>
+                        {tierInfo.name} Tier
+                      </Badge>
+                      {tierInfo.nextTier && (
+                        <div className="mt-3 space-y-2">
+                          <Progress
+                            value={(points / tierInfo.nextTier.pointsNeeded) * 100}
+                            className="h-2"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {tierInfo.nextTier.pointsNeeded.toLocaleString()} points needed to reach{" "}
+                            {tierInfo.nextTier.name}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  }
+                  isLoading={isUserLoading}
+                  delay={100}
+                  colorScheme="primary"
+                  className="mb-2 -mt-4 -mx-6 p-0"
+                />
               </>
             )}
           </CardContent>
@@ -211,7 +223,9 @@ function CustomerDashboardContent() {
 
         <Card className="rewards-section">
           <CardHeader>
-            <CardTitle>Cash Redemption</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-muted-foreground" /> Cash Redemption
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {isUserLoading ? (
@@ -225,7 +239,18 @@ function CustomerDashboardContent() {
               </>
             ) : (
               <>
-                <div className="space-y-2">
+                <AnimatedMetric 
+                  title="Cash Value"
+                  value={points * 0.015}
+                  prefix="R"
+                  formatter={(val) => val.toFixed(2)}
+                  description="Current points exchange rate: 1 point = R0.015"
+                  isLoading={isUserLoading}
+                  delay={250}
+                  colorScheme="success"
+                  className="mb-4 -mt-4 -mx-6 p-0"
+                />
+                <div className="space-y-2 mt-4">
                   <label className="text-sm font-medium">Points to Redeem</label>
                   <Input
                     type="number"
@@ -235,17 +260,14 @@ function CustomerDashboardContent() {
                     onChange={(e) => setPointsToRedeem(Number(e.target.value))}
                     placeholder="Enter points amount"
                   />
-                  <p className="text-sm text-muted-foreground">
-                    Conversion rate: 1 point = R0.015
-                  </p>
                   {pointsToRedeem > 0 && (
-                    <p className="text-sm font-medium">
-                      You will receive: R{randValue}
+                    <p className="text-sm font-medium mt-2">
+                      You will receive: <span className="text-green-500">R{randValue}</span>
                     </p>
                   )}
                 </div>
                 <Button
-                  className="w-full"
+                  className="w-full mt-2"
                   onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
                   disabled={!canRedeem}
                 >
