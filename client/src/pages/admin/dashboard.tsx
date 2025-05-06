@@ -162,8 +162,8 @@ export default function AdminDashboard() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Points Transaction History</CardTitle>
+          <CardHeader className="border-b border-border/40">
+            <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Points Transaction History</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -186,8 +186,8 @@ export default function AdminDashboard() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Transaction Types Distribution</CardTitle>
+          <CardHeader className="border-b border-border/40">
+            <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Transaction Types Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
