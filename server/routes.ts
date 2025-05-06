@@ -4,7 +4,7 @@ import passport from "passport";
 import { setupAuth, checkAgent, checkAdmin, verifyJwtToken, getUserFromTokenOrSession } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
 import { getAgentByReferralCode } from "./utils/referral";
-import { createConnection } from './db';
+import { createConnection, connectionPool } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
@@ -1312,6 +1312,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     const cacheKey = `customers_${page}_${limit}`;
     const now = Date.now();
     
+    // Increase cache TTL to reduce database load (30 minutes)
+    const CUSTOMERS_CACHE_TTL = 1000 * 60 * 30; 
+    
     // Check if we have a valid cached response for this pagination state
     if (customersCache.has(cacheKey)) {
       const cacheEntry = customersCache.get(cacheKey);
@@ -1319,7 +1322,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         console.log('Returning cached customers data:', {
           page,
           limit,
-          count: cacheEntry.data.length,
+          count: cacheEntry.data.data.length,
           cacheAge: Math.round((now - cacheEntry.timestamp) / 1000) + 's'
         });
         return res.json(cacheEntry.data);
@@ -1328,34 +1331,36 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
     console.time('customersQuery'); // Start timing the query
     
-    const connection = await createConnection();
+    // Use the connection pool instead of creating a new connection
+    const connection = await connectionPool.getConnection();
+    
     try {
       console.log('Fetching customers...');
-      // Check admin status using users table - optimized with index hint
+      
+      // Check admin status using more efficient query with PRIMARY key
       const [adminCheck] = await connection.execute(
         'SELECT is_admin FROM users USE INDEX (PRIMARY) WHERE id = ? LIMIT 1',
         [req.user.id]
       );
 
       if (!adminCheck || !adminCheck[0]?.is_admin) {
+        connection.release(); // Release connection back to pool
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Breaking this into three separate queries for better performance
-      // 1. First get all users (including admins and agents, but separated by type)
+      // Improved query using LEFT JOIN instead of a subquery for better performance
       // Count total users for pagination info
       const [countResult] = await connection.execute(
         `SELECT COUNT(*) as total 
          FROM users u 
-         WHERE u.is_agent = 0 AND (
-           SELECT COUNT(*) FROM admin_users WHERE user_id = u.id
-         ) = 0`
+         LEFT JOIN admin_users au ON u.id = au.user_id
+         WHERE u.is_agent = 0 AND au.user_id IS NULL`
       );
       
       const totalCustomers = countResult[0]?.total || 0;
       const totalPages = Math.ceil(totalCustomers / limit);
       
-      // Get users with pagination
+      // Get users with pagination using improved JOIN strategy
       const [users] = await connection.execute(
         `SELECT 
           u.id,
@@ -1388,63 +1393,80 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           au.role_type as admin_role
          FROM users u
          LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE u.is_agent = 0 AND (
-           SELECT COUNT(*) FROM admin_users WHERE user_id = u.id
-         ) = 0
+         WHERE u.is_agent = 0 AND au.user_id IS NULL
          ORDER BY u.created_at DESC
          LIMIT ?, ?`,
         [offset, limit]
       );
       
       if (!users || users.length === 0) {
-        return res.json([]);
+        connection.release(); // Release connection back to pool
+        return res.json({
+          data: [],
+          pagination: {
+            page,
+            limit,
+            totalItems: 0,
+            totalPages: 0
+          }
+        });
       }
       
       // Extract user IDs for subsequent queries
       const userIds = users.map(user => user.id);
-      const userIdsString = userIds.join(',');
       
-      // 2. Get product assignments in a separate query
-      const [assignments] = await connection.execute(
-        `SELECT 
-          pa.user_id,
-          p.id as product_id,
-          p.name as product_name,
-          p.description as product_description
-         FROM product_assignments pa
-         JOIN products p ON pa.product_id = p.id
-         WHERE pa.user_id IN (${userIdsString})`
-      );
+      // Run the next 3 queries in parallel for improved performance
+      const [assignmentsResult, transactionsResult, activitiesResult] = await Promise.all([
+        // Get product assignments with parameterized query
+        connection.execute(
+          `SELECT 
+            pa.user_id,
+            p.id as product_id,
+            p.name as product_name,
+            p.description as product_description
+           FROM product_assignments pa
+           JOIN products p ON pa.product_id = p.id
+           WHERE pa.user_id IN (?)`,
+          [userIds]
+        ),
+        
+        // Get latest transactions
+        connection.execute(
+          `SELECT 
+            t1.user_id,
+            t1.created_at as last_transaction,
+            t1.type as transaction_type,
+            t1.points as transaction_points
+           FROM transactions t1
+           INNER JOIN (
+             SELECT user_id, MAX(created_at) as max_created_at
+             FROM transactions
+             WHERE user_id IN (?)
+             GROUP BY user_id
+           ) t2 ON t1.user_id = t2.user_id AND t1.created_at = t2.max_created_at`,
+          [userIds]
+        ),
+        
+        // Get product activities
+        connection.execute(
+          `SELECT 
+            pa.id,
+            pa.product_id,
+            pa.type,
+            pa.points_value
+           FROM product_activities pa
+           JOIN products p ON pa.product_id = p.id
+           JOIN product_assignments ps ON p.id = ps.product_id
+           WHERE ps.user_id IN (?)
+           GROUP BY pa.id, pa.product_id, pa.type, pa.points_value`,
+          [userIds]
+        )
+      ]);
       
-      // 3. Get latest transactions in a separate query
-      const [transactions] = await connection.execute(
-        `SELECT 
-          t1.user_id,
-          t1.created_at as last_transaction,
-          t1.type as transaction_type,
-          t1.points as transaction_points
-         FROM transactions t1
-         INNER JOIN (
-           SELECT user_id, MAX(created_at) as max_created_at
-           FROM transactions
-           WHERE user_id IN (${userIdsString})
-           GROUP BY user_id
-         ) t2 ON t1.user_id = t2.user_id AND t1.created_at = t2.max_created_at`
-      );
-      
-      // 4. Get product activities in a separate query
-      const [activities] = await connection.execute(
-        `SELECT 
-          pa.id,
-          pa.product_id,
-          pa.type,
-          pa.points_value
-         FROM product_activities pa
-         JOIN products p ON pa.product_id = p.id
-         JOIN product_assignments ps ON p.id = ps.product_id
-         WHERE ps.user_id IN (${userIdsString})
-         GROUP BY pa.id, pa.product_id, pa.type, pa.points_value`
-      );
+      // Destructure results
+      const [assignments] = assignmentsResult;
+      const [transactions] = transactionsResult;
+      const [activities] = activitiesResult;
       
       // Create lookup maps for faster association
       const transactionsByUserId = {};
@@ -1581,10 +1603,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       
       res.status(500).json({ 
         error: 'Failed to fetch customers',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
       });
     } finally {
-      await connection.end();
+      // Release the connection back to the pool
+      connection.release();
     }
   });
   

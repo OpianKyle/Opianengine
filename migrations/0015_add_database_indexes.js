@@ -20,10 +20,24 @@ export async function up(db) {
   await db.execute(`CREATE INDEX idx_users_is_agent ON users(is_agent)`);
   await db.execute(`CREATE INDEX idx_users_agent_id ON users(agent_id)`);
   await db.execute(`CREATE INDEX idx_users_referral_code ON users(referral_code)`);
+  await db.execute(`CREATE INDEX idx_users_created_at ON users(created_at)`); // For sorting
+  await db.execute(`CREATE INDEX idx_users_customer_query ON users(is_agent, created_at)`); // For customers API
+  
+  // Add indexes for admin_users table 
+  await db.execute(`CREATE INDEX idx_admin_users_user_id ON admin_users(user_id)`);
+  
+  // Add indexes for product_assignments table
+  await db.execute(`CREATE INDEX idx_product_assignments_user_id ON product_assignments(user_id)`);
+  await db.execute(`CREATE INDEX idx_product_assignments_product_id ON product_assignments(product_id)`);
   
   // Add indexes for transactions table
   await db.execute(`CREATE INDEX idx_transactions_type ON transactions(type)`);
   await db.execute(`CREATE INDEX idx_transactions_created_at ON transactions(created_at)`);
+  await db.execute(`CREATE INDEX idx_transactions_user_id ON transactions(user_id)`);
+  await db.execute(`CREATE INDEX idx_transactions_user_created ON transactions(user_id, created_at)`);
+  
+  // Add indexes for product_activities table
+  await db.execute(`CREATE INDEX idx_product_activities_product_id ON product_activities(product_id)`);
   
   // Add indexes for rewards table
   await db.execute(`CREATE INDEX idx_rewards_available ON rewards(available)`);
@@ -46,10 +60,24 @@ export async function down(db) {
   await db.execute(`DROP INDEX IF EXISTS idx_users_is_agent ON users`);
   await db.execute(`DROP INDEX IF EXISTS idx_users_agent_id ON users`);
   await db.execute(`DROP INDEX IF EXISTS idx_users_referral_code ON users`);
+  await db.execute(`DROP INDEX IF EXISTS idx_users_created_at ON users`);
+  await db.execute(`DROP INDEX IF EXISTS idx_users_customer_query ON users`);
+  
+  // Remove indexes from admin_users table
+  await db.execute(`DROP INDEX IF EXISTS idx_admin_users_user_id ON admin_users`);
+  
+  // Remove indexes from product_assignments table
+  await db.execute(`DROP INDEX IF EXISTS idx_product_assignments_user_id ON product_assignments`);
+  await db.execute(`DROP INDEX IF EXISTS idx_product_assignments_product_id ON product_assignments`);
   
   // Remove indexes from transactions table
   await db.execute(`DROP INDEX IF EXISTS idx_transactions_type ON transactions`);
   await db.execute(`DROP INDEX IF EXISTS idx_transactions_created_at ON transactions`);
+  await db.execute(`DROP INDEX IF EXISTS idx_transactions_user_id ON transactions`);
+  await db.execute(`DROP INDEX IF EXISTS idx_transactions_user_created ON transactions`);
+  
+  // Remove indexes from product_activities table
+  await db.execute(`DROP INDEX IF EXISTS idx_product_activities_product_id ON product_activities`);
   
   // Remove indexes from rewards table
   await db.execute(`DROP INDEX IF EXISTS idx_rewards_available ON rewards`);

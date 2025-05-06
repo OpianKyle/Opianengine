@@ -1,0 +1,124 @@
+This API endpoint is quite comprehensive, and there are several reasons why it might take a long time to load. Here’s a breakdown of the potential performance bottlenecks and suggestions to improve them:
+
+🔍 1. Multiple Sequential Database Queries
+You're executing 4 separate database queries:
+
+Main user/customer data
+
+Product assignments
+
+Latest transactions
+
+Product activities
+
+These are executed sequentially, not in parallel, which increases response time.
+
+✅ Solution: Use Promise.all() to run these queries in parallel after the main user data is fetched.
+
+🔄 2. IN-Clause with Long User ID List
+You're building a comma-separated string of user IDs:
+
+js
+Copy
+Edit
+const userIdsString = userIds.join(',');
+If there are many users per page, this can lead to large IN clauses, which are inefficient.
+
+It also risks SQL injection or syntax errors if any value is invalid.
+
+✅ Solution: Use parameterized queries with ? placeholders and pass userIds as an array, like:
+
+sql
+Copy
+Edit
+WHERE user_id IN (?)
+and in code:
+
+js
+Copy
+Edit
+connection.execute(sql, [userIds])
+🧮 3. Counting Users in a Subquery
+sql
+Copy
+Edit
+SELECT COUNT(*) as total 
+FROM users u 
+WHERE u.is_agent = 0 AND (
+  SELECT COUNT(*) FROM admin_users WHERE user_id = u.id
+) = 0
+The subquery in the WHERE clause for each user is inefficient and not well-optimized.
+
+This means for every user row, MySQL has to do a count query against admin_users.
+
+✅ Solution: Use a LEFT JOIN and filter where admin_users.user_id IS NULL:
+
+sql
+Copy
+Edit
+SELECT COUNT(*) as total 
+FROM users u
+LEFT JOIN admin_users au ON u.id = au.user_id
+WHERE u.is_agent = 0 AND au.user_id IS NULL
+🔁 4. Repeating the Same Filter Logic
+The same complex filter logic is repeated in both the count query and the select query.
+
+This not only duplicates effort but also increases maintenance complexity.
+
+✅ Solution: Use a Common Table Expression (CTE) or extract the logic into a subquery or view if supported.
+
+🐌 5. No Index on Filtering Columns
+You are filtering by is_agent, and admin_users.user_id, and sorting by created_at.
+
+If these columns are not indexed, MySQL will scan many rows.
+
+✅ Solution: Ensure indexes exist on:
+
+users.is_agent
+
+users.created_at
+
+admin_users.user_id
+
+product_assignments.user_id
+
+transactions.user_id, transactions.created_at
+
+product_activities.product_id
+
+📦 6. Large Payload
+You're returning a lot of data per customer, including:
+
+Full personal info
+
+Banking info
+
+Assigned products
+
+Product activities
+
+Latest transaction
+
+This increases JSON serialization time and network transfer time.
+
+✅ Solution:
+
+Paginate deeply, or use optional query flags like ?includeDetails=true
+
+Consider loading product activities or transactions in a separate request if not needed upfront
+
+🔁 7. Caching Too Late
+Caching is only applied after all DB work is done.
+
+If the cache TTL is short or not used effectively, you always hit the DB.
+
+✅ Solution:
+
+Increase CUSTOMERS_CACHE_TTL (e.g., 5–10 minutes)
+
+Optionally pre-warm the cache during low-traffic periods
+
+🧪 8. Use of createConnection() Instead of Pool
+You're creating a new DB connection per request, which is slower and resource-intensive.
+
+✅ Solution: Use a connection pool with mysql2.createPool() for better performance under load.
