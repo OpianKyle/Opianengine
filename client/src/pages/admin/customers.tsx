@@ -834,28 +834,28 @@ export default function AdminCustomers() {
                                       Edit Details
                                     </DropdownMenuItem>
                                   </DialogTrigger>
-                                  <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white overflow-hidden">
+                                  <DialogContent className="max-w-5xl bg-card border-border text-card-foreground overflow-hidden">
                                     <DialogHeader>
-                                      <DialogTitle className="text-[#43EB3E]">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
+                                      <DialogTitle className="text-primary">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
                                     </DialogHeader>
                                     <Form {...editDetailsForm}>
                                       <form onSubmit={editDetailsForm.handleSubmit((data) =>
                                         updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
                                       )}>
-                                        <div className="grid grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-4 [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
+                                        <div className="grid grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-4 [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-accent/60 [&::-webkit-scrollbar-thumb]:bg-primary [&::-webkit-scrollbar-thumb]:rounded-[4px]">
                                           <div className="col-span-4">
-                                            <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
+                                            <h3 className="text-lg font-semibold mb-2 text-primary">Personal Information</h3>
                                           </div>
                                           <FormField
                                             control={editDetailsForm.control}
                                             name="selectedPackage"
                                             render={({ field }) => (
                                               <FormItem>
-                                                <FormLabel className="text-white">Package</FormLabel>
+                                                <FormLabel>Package</FormLabel>
                                                 <FormControl>
                                                   <select
                                                     {...field}
-                                                    className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
+                                                    className="w-full p-2 rounded bg-card border-input text-card-foreground"
                                                   >
                                                     <option value="OPPORTUNITY">OPPORTUNITY</option>
                                                     <option value="MOMENTUM">MOMENTUM</option>
@@ -873,9 +873,9 @@ export default function AdminCustomers() {
                                             name="firstName"
                                             render={({ field }) => (
                                               <FormItem>
-                                                <FormLabel className="text-white">First Name</FormLabel>
+                                                <FormLabel>First Name</FormLabel>
                                                 <FormControl>
-                                                  <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                                  <Input {...field} className="bg-card border-input text-card-foreground" />
                                                 </FormControl>
                                                 <FormMessage />
                                               </FormItem>
@@ -886,9 +886,9 @@ export default function AdminCustomers() {
                                             name="lastName"
                                             render={({ field }) => (
                                               <FormItem>
-                                                <FormLabel className="text-white">Last Name</FormLabel>
+                                                <FormLabel>Last Name</FormLabel>
                                                 <FormControl>
-                                                  <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                                  <Input {...field} className="bg-card border-input text-card-foreground" />
                                                 </FormControl>
                                                 <FormMessage />
                                               </FormItem>
@@ -899,9 +899,9 @@ export default function AdminCustomers() {
                                             name="email"
                                             render={({ field }) => (
                                               <FormItem>
-                                                <FormLabel className="text-white">Email</FormLabel>
+                                                <FormLabel>Email</FormLabel>
                                                 <FormControl>
-                                                  <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                                  <Input {...field} className="bg-card border-input text-card-foreground" />
                                                 </FormControl>
                                                 <FormMessage />
                                               </FormItem>
@@ -912,9 +912,9 @@ export default function AdminCustomers() {
                                             name="phoneNumber"
                                             render={({ field }) => (
                                               <FormItem>
-                                                <FormLabel className="text-white">Phone Number</FormLabel>
+                                                <FormLabel>Phone Number</FormLabel>
                                                 <FormControl>
-                                                  <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                                  <Input {...field} className="bg-card border-input text-card-foreground" />
                                                 </FormControl>
                                                 <FormMessage />
                                               </FormItem>
@@ -925,12 +925,12 @@ export default function AdminCustomers() {
                                             name="gender"
                                             render={({ field }) => (
                                               <FormItem>
-                                                <FormLabel className="text-white">Gender</FormLabel>
+                                                <FormLabel>Gender</FormLabel>
                                                 <FormControl>
                                                   <select
                                                     {...field}
                                                     value={field.value || ""}
-                                                    className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
+                                                    className="w-full p-2 rounded bg-card border-input text-card-foreground"
                                                   >
                                                     <option value="">Select Gender</option>
                                                     {genderEnum.map((gender) => (
@@ -949,9 +949,9 @@ export default function AdminCustomers() {
                                             name="dateOfBirth"
                                             render={({ field }) => (
                                               <FormItem>
-                                                <FormLabel className="text-white">Date of Birth</FormLabel>
+                                                <FormLabel>Date of Birth</FormLabel>
                                                 <FormControl>
-                                                  <Input {...field} type="date" className="bg-[#022b5c] border-[#043875] text-white" />
+                                                  <Input {...field} type="date" className="bg-card border-input text-card-foreground" />
                                                 </FormControl>
                                                 <FormMessage />
                                               </FormItem>
@@ -962,9 +962,9 @@ export default function AdminCustomers() {
                                             name="idNumber"
                                             render={({ field }) => (
                                               <FormItem>
-                                                <FormLabel className="text-white">ID Number</FormLabel>
+                                                <FormLabel>ID Number</FormLabel>
                                                 <FormControl>
-                                                  <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                                  <Input {...field} className="bg-card border-input text-card-foreground" />
                                                 </FormControl>
                                                 <FormMessage />
                                               </FormItem>
@@ -972,16 +972,16 @@ export default function AdminCustomers() {
                                           />
 
                                     <div className="col-span-4 mt-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Address Information</h3>
+                                      <h3 className="text-lg font-semibold mb-2 text-primary">Address Information</h3>
                                     </div>
                                     <FormField
                                       control={editDetailsForm.control}
                                       name="address"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Address</FormLabel>
+                                          <FormLabel>Address</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -992,9 +992,9 @@ export default function AdminCustomers() {
                                       name="city"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">City</FormLabel>
+                                          <FormLabel>City</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1005,9 +1005,9 @@ export default function AdminCustomers() {
                                       name="postalCode"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Postal Code</FormLabel>
+                                          <FormLabel>Postal Code</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1018,12 +1018,12 @@ export default function AdminCustomers() {
                                       name="isSouthAfrican"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Is South African</FormLabel>
+                                          <FormLabel>Is South African</FormLabel>
                                           <FormControl>
                                             <Checkbox
                                               checked={field.value}
                                               onCheckedChange={field.onChange}
-                                              className="bg-[#022b5c] border-[#043875]"
+                                              className="bg-card border-input"
                                             />
                                           </FormControl>
                                           <FormMessage />
@@ -1032,16 +1032,16 @@ export default function AdminCustomers() {
                                     />
 
                                     <div className="col-span-4 mt-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Employment Information</h3>
+                                      <h3 className="text-lg font-semibold mb-2 text-primary">Employment Information</h3>
                                     </div>
                                     <FormField
                                       control={editDetailsForm.control}
                                       name="industry"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Industry</FormLabel>
+                                          <FormLabel>Industry</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1052,9 +1052,9 @@ export default function AdminCustomers() {
                                       name="occupation"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Occupation</FormLabel>
+                                          <FormLabel>Occupation</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1062,16 +1062,16 @@ export default function AdminCustomers() {
                                     />
 
                                     <div className="col-span-4 mt-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Banking Information</h3>
+                                      <h3 className="text-lg font-semibold mb-2 text-primary">Banking Information</h3>
                                     </div>
                                     <FormField
                                       control={editDetailsForm.control}
                                       name="bankName"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Bank Name</FormLabel>
+                                          <FormLabel>Bank Name</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1082,9 +1082,9 @@ export default function AdminCustomers() {
                                       name="accountType"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Account Type</FormLabel>
+                                          <FormLabel>Account Type</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1095,9 +1095,9 @@ export default function AdminCustomers() {
                                       name="accountNumber"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Account Number</FormLabel>
+                                          <FormLabel>Account Number</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1108,9 +1108,9 @@ export default function AdminCustomers() {
                                       name="accountHolderName"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Account Holder Name</FormLabel>
+                                          <FormLabel>Account Holder Name</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1121,9 +1121,9 @@ export default function AdminCustomers() {
                                       name="branchCode"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Branch Code</FormLabel>
+                                          <FormLabel>Branch Code</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1134,12 +1134,12 @@ export default function AdminCustomers() {
                                       name="hasCreditCard"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Has Credit Card</FormLabel>
+                                          <FormLabel>Has Credit Card</FormLabel>
                                           <FormControl>
                                             <Checkbox
                                               checked={field.value}
                                               onCheckedChange={field.onChange}
-                                              className="bg-[#022b5c] border-[#043875]"
+                                              className="bg-card border-input"
                                             />
                                           </FormControl>
                                           <FormMessage />
@@ -1218,9 +1218,9 @@ export default function AdminCustomers() {
                                 Assign Points
                               </DropdownMenuItem>
                             </DialogTrigger>
-                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white overflow-hidden">
+                            <DialogContent className="max-w-5xl bg-card border-border text-card-foreground overflow-hidden">
                               <DialogHeader>
-                                <DialogTitle className="text-[#43EB3E]">Assign Points to {customer.firstName}</DialogTitle>
+                                <DialogTitle className="text-primary">Assign Points to {customer.firstName}</DialogTitle>
                                 <div className="flex items-center gap-2 mt-2">
                                   <span className="text-sm text-muted-foreground">Current Tier:</span>
                                   <Badge className={`${getTierInfo(customer.points).color}`}>
