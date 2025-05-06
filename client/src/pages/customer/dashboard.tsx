@@ -373,26 +373,32 @@ function CustomerDashboardContent() {
           </Card>
           
           {/* Training Videos */}
-          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
-            <CardHeader className="pb-2 pt-4">
-              <CardTitle className="text-card-foreground dark:text-white text-lg">Training Videos</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 flex">
-              <div className="w-3/4">
-                <p className="text-sm mb-5">Learn how to use the OPIAN Rewards system effectively</p>
-                <Button variant="outline" className="text-card-foreground border-border dark:text-white dark:border-white hover:bg-accent dark:hover:bg-white/10 text-sm">
-                  Watch now
-                </Button>
-              </div>
-              <div className="w-1/4 flex justify-end">
-                <div className="w-20 h-20 bg-muted dark:bg-black/30 flex items-center justify-center rounded">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-card-foreground dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden relative">
+            <div 
+              className="absolute inset-0 bg-cover bg-center z-0 opacity-30" 
+              style={{ backgroundImage: 'url(/Training.JPG)' }}
+            />
+            <div className="relative z-10">
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-card-foreground dark:text-white text-lg">Training Videos</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 flex">
+                <div className="w-3/4">
+                  <p className="text-sm mb-5 text-white font-medium">Learn how to use the OPIAN Rewards system effectively</p>
+                  <Button variant="outline" className="bg-black/30 text-white border-white/40 hover:bg-black/50 hover:text-white text-sm">
+                    Watch now
+                  </Button>
                 </div>
-              </div>
-            </CardContent>
+                <div className="w-1/4 flex justify-end">
+                  <div className="w-20 h-20 bg-black/40 flex items-center justify-center rounded-full border border-white/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </CardContent>
+            </div>
           </Card>
         </div>
       </div>
