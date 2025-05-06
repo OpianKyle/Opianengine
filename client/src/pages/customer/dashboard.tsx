@@ -195,63 +195,73 @@ function CustomerDashboardContent() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Profile Balance Card */}
+        {/* Profile Balance Card - Points */}
         <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
           <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-white text-lg">Your Profile Balance</CardTitle>
+            <CardTitle className="text-white text-lg">Your Points Balance</CardTitle>
             <p className="text-xs text-gray-400">{lastUpdated}</p>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="flex">
               <div className="w-1/3">
-                <img src="/opian-chart-icon.png" alt="Chart" className="h-20 w-20 opacity-80" 
-                  onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMDA3NmZmIi8+PHBhdGggZD0iTTIwIDgwIEw0MCA0MCBMNjAgNjAgTDgwIDIwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIvPjwvc3ZnPg==';
-                  }}
-                />
+                <div className="relative flex items-center justify-center">
+                  <Award className="h-16 w-16 text-blue-400 opacity-80" />
+                  <Badge className={`${tierInfo.color} absolute -bottom-1 text-xs px-2 py-0.5`}>
+                    {tierInfo.name} Tier
+                  </Badge>
+                </div>
               </div>
               <div className="w-2/3">
-                <h3 className="text-4xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">Top-Up Balance</Button>
+                <h3 className="text-4xl font-bold mb-2">{points.toLocaleString()}</h3>
+                {tierInfo.nextTier && (
+                  <div className="mb-2 space-y-1">
+                    <Progress
+                      value={(points / tierInfo.nextTier.pointsNeeded) * 100}
+                      className="h-2 bg-gray-700"
+                    />
+                    <p className="text-xs text-gray-300">
+                      {tierInfo.nextTier.pointsNeeded.toLocaleString()} points to {tierInfo.nextTier.name}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Card Activity Card */}
+        {/* Redeem Points Card - Cash Value */}
         <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
           <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-white text-lg">Card Activity</CardTitle>
+            <CardTitle className="text-white text-lg">Cash Redemption</CardTitle>
             <p className="text-xs text-gray-400">{lastUpdated}</p>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex justify-center items-center h-[140px]">
-              <div className="rounded-full w-32 h-32 bg-gray-700 border-8 border-gray-600 flex items-center justify-center relative">
-                {/* Activity Chart (simplified for now) */}
-                <div className="absolute inset-0">
-                  {/* Green segment (25%) */}
-                  <div className="absolute top-0 left-0 w-1/2 h-1/2 origin-bottom-right bg-green-500 rounded-tl-full"></div>
-                  {/* Blue segment (25%) */}
-                  <div className="absolute top-0 right-0 w-1/2 h-1/2 origin-bottom-left bg-blue-500 rounded-tr-full"></div>
-                </div>
-                <div className="z-10 bg-[#011d3d] rounded-full w-20 h-20 flex items-center justify-center">
-                  <span className="text-xs text-center">Activity<br/>Summary</span>
+            <div className="flex">
+              <div className="w-1/3">
+                <div className="flex items-center justify-center h-full">
+                  <DollarSign className="h-16 w-16 text-green-400 opacity-80" />
                 </div>
               </div>
-            </div>
-            <div className="grid grid-cols-3 text-xs mt-2">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-sm bg-green-500"></div>
-                <span>Qualifying</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-sm bg-blue-500"></div>
-                <span>Credits/Bonuses</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-sm bg-yellow-500"></div>
-                <span>Inactive Cards</span>
+              <div className="w-2/3">
+                <h3 className="text-4xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
+                <div className="flex flex-col gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max={points}
+                    value={pointsToRedeem}
+                    onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                    placeholder="Enter points to redeem"
+                    className="bg-[#022b5c] border-[#033872] text-white placeholder:text-gray-400"
+                  />
+                  <Button 
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
+                    disabled={!canRedeem}
+                  >
+                    {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -368,6 +378,96 @@ function CustomerDashboardContent() {
               </svg>
             </div>
           </div>
+        </CardContent>
+      </Card>
+      
+      {/* Referral Section */}
+      {hasReferralAccess ? (
+        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-white text-lg">Referral Program</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="mb-4">
+              <ReferralSection className="bg-transparent p-0 text-white border-0 shadow-none" />
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-white text-lg">Referral Program</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
+                <p className="text-sm text-gray-300">
+                  Earn points when your referrals join and receive additional bonuses from their referrals.
+                </p>
+                <p className="text-xs text-gray-400">
+                  Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
+                </p>
+              </div>
+              <Button 
+                className="w-full bg-[#43EB3E] text-slate-900 hover:bg-[#3ad036]"
+                onClick={() => toast({
+                  title: "Package Upgrade",
+                  description: "Please contact support to upgrade your package."
+                })}
+              >
+                Upgrade Package
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Recent Activity Section */}
+      <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-white text-lg">Recent Activity</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <ScrollArea className="h-[300px]">
+            <div className="space-y-4">
+              {isTransactionsLoading ? (
+                // Skeleton loading state
+                Array(5).fill(0).map((_, index) => (
+                  <div key={`skeleton-${index}`} className="flex items-center justify-between p-4 border border-[#043675] rounded-lg bg-[#022757]">
+                    <div className="space-y-1">
+                      <div className="h-5 w-64 bg-[#043675] rounded animate-pulse"></div>
+                      <div className="h-4 w-32 bg-[#043675] rounded animate-pulse"></div>
+                    </div>
+                    <div className="h-8 w-20 bg-[#043675] rounded animate-pulse"></div>
+                  </div>
+                ))
+              ) : transactions?.length > 0 ? (
+                transactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-4 border border-[#043675] rounded-lg bg-[#022757]"
+                  >
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        {transaction.type ? formatTransactionType(transaction.type) : ''} - {transaction.description}
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        {new Date(transaction.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className={`font-mono font-bold ${transaction.points > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {transaction.points > 0 ? '+' : ''}{transaction.points.toLocaleString()}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-gray-400">
+                  <p>No recent activity to display</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
 
