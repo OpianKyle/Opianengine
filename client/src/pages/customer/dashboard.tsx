@@ -194,8 +194,8 @@ function CustomerDashboardContent() {
         </div>
       </div>
 
-      {/* First row: Points Balance */}
-      <div className="grid gap-4 lg:grid-cols-1">
+      {/* First row: Points Balance and Activity side by side */}
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Profile Balance Card - Points */}
         <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
           <CardHeader className="pb-2 pt-4">
@@ -231,51 +231,7 @@ function CustomerDashboardContent() {
             </div>
           </CardContent>
         </Card>
-      </div>
-      
-      {/* Second row: Cash Redemption */}
-      <div className="grid gap-4 lg:grid-cols-1">
-        {/* Redeem Points Card - Cash Value */}
-        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-white text-lg">Cash Redemption</CardTitle>
-            <p className="text-xs text-gray-400">{lastUpdated}</p>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center">
-              <div className="w-1/4">
-                <div className="flex justify-center">
-                  <DollarSign className="h-14 w-14 text-green-400 opacity-80" />
-                </div>
-              </div>
-              <div className="w-3/4">
-                <h3 className="text-5xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
-                <div className="flex flex-col gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max={points}
-                    value={pointsToRedeem}
-                    onChange={(e) => setPointsToRedeem(Number(e.target.value))}
-                    placeholder="Enter points to redeem"
-                    className="bg-[#022b5c] border-[#033872] text-white placeholder:text-gray-400"
-                  />
-                  <Button 
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
-                    disabled={!canRedeem}
-                  >
-                    {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Third row: Activity and Referrals side by side */}
-      <div className="grid gap-4 lg:grid-cols-2">
+
         {/* Recent Activity Section */}
         <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
           <CardHeader className="pb-2 pt-4">
@@ -323,7 +279,51 @@ function CustomerDashboardContent() {
             </ScrollArea>
           </CardContent>
         </Card>
-        
+      </div>
+      
+      {/* Second row: Cash Redemption */}
+      <div className="grid gap-4 lg:grid-cols-1">
+        {/* Redeem Points Card - Cash Value */}
+        <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-white text-lg">Cash Redemption</CardTitle>
+            <p className="text-xs text-gray-400">{lastUpdated}</p>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex items-center">
+              <div className="w-1/4">
+                <div className="flex justify-center">
+                  <DollarSign className="h-14 w-14 text-green-400 opacity-80" />
+                </div>
+              </div>
+              <div className="w-3/4">
+                <h3 className="text-5xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
+                <div className="flex flex-col gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max={points}
+                    value={pointsToRedeem}
+                    onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                    placeholder="Enter points to redeem"
+                    className="bg-[#022b5c] border-[#033872] text-white placeholder:text-gray-400"
+                  />
+                  <Button 
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
+                    disabled={!canRedeem}
+                  >
+                    {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Third row: Referral and Training Videos side by side */}
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Referral Section */}
         {hasReferralAccess ? (
           <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
@@ -365,10 +365,7 @@ function CustomerDashboardContent() {
             </CardContent>
           </Card>
         )}
-      </div>
-      
-      {/* Fourth row: Training Videos */}
-      <div className="grid gap-4 lg:grid-cols-1">
+        
         {/* Training Videos */}
         <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
           <CardHeader className="pb-2 pt-4">
