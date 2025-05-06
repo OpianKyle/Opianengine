@@ -194,33 +194,33 @@ export default function ReferralSection({ className }: ReferralSectionProps) {
         </CardHeader>
         <CardContent className="p-6">
           <div className="space-y-4">
-            <div className="border border-[#43EB3E]/30 rounded-lg overflow-hidden">
-              <div className="bg-[#43EB3E]/5 p-4 border-b border-[#43EB3E]/20">
-                <h3 className="text-[#43EB3E] font-medium flex items-center gap-2">
-                  <PackageIcon className="h-5 w-5 text-[#43EB3E]" />
+            <div className="border border-blue-400/30 rounded-lg overflow-hidden">
+              <div className="bg-blue-500/10 p-4 border-b border-blue-400/20">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  <PackageIcon className="h-5 w-5 text-white" />
                   Package Upgrade Required
                 </h3>
               </div>
-              <div className="p-4 space-y-3">
+              <div className="p-4 space-y-3 text-white">
                 <p>
                   The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p>
                   Your current package: <strong>{userPackage || "OPPORTUNITY"}</strong>
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-blue-100">
                   Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
                 </p>
-                <div className="bg-[#43EB3E]/5 p-3 rounded-md border border-[#43EB3E]/20">
-                  <h4 className="text-[#43EB3E] text-sm font-medium mb-2">Why upgrade?</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
-                    <li>Earn referral fees from your direct referrals</li>
-                    <li>Earn additional rewards from your referral network</li> 
+                <div className="bg-black/50 p-4 rounded-md border border-blue-400/30">
+                  <h4 className="text-white font-semibold text-base mb-2">Why upgrade?</h4>
+                  <ul className="text-white space-y-2 list-disc pl-5">
+                    <li>Earn 7.5% referral fee from your direct referrals</li>
+                    <li>Get 2000 points per successful referral</li> 
                     <li>Access exclusive PROSPER-level benefits</li>
                   </ul>
                 </div>
                 <div className="flex justify-center mt-4">
-                  <Button className="bg-[#43EB3E] hover:bg-[#43EB3E]/80 text-black">
+                  <Button className="bg-blue-500 hover:bg-blue-600 text-white">
                     Upgrade to PROSPER Package
                   </Button>
                 </div>
@@ -259,12 +259,10 @@ export default function ReferralSection({ className }: ReferralSectionProps) {
         <div className="text-sm text-muted-foreground">
           Share your referral link with friends. When they register, you'll earn 2,000 points!
         </div>
-        <div className="bg-[rgba(255,255,255,0.05)] p-5 rounded-lg my-5">
-          <h3 className="text-[#43EB3E] mt-0">Your Referral Rewards</h3>
+        <div className="bg-[rgba(0,0,0,0.5)] p-5 rounded-lg my-5">
+          <h3 className="text-white font-semibold text-lg mt-0">Your Referral Rewards</h3>
           <ul className="list-none pl-0 my-2.5">
-            <li className="my-1.5">• Level 1: 30% referral fee + 2000 points per direct referral</li>
-            <li className="my-1.5">• Level 2: 5% referral fee from your referrals' referrals</li>
-            <li className="my-1.5">• Level 3: 2.5% referral fee from level 3 referrals</li>
+            <li className="my-1.5 text-white">• Level 1: 7.5% referral fee + 2000 points per direct referral</li>
           </ul>
         </div>
         {referralLink && (
