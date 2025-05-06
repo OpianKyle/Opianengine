@@ -22,27 +22,17 @@ const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' 
 
 // Tour Button Component
 function TourGuideButton() {
-  // Use OnboardingContext directly to address the tour guide issue
-  const onboardingContext = useOnboarding();
-  
-  const handleStartTour = () => {
-    console.log("Starting tour from header button");
-    if (onboardingContext && typeof onboardingContext.startTour === 'function') {
-      onboardingContext.startTour();
-    } else {
-      console.error("Tour function not available in context");
-    }
-  };
+  const { startTour } = useOnboarding();
   
   return (
     <Button
-      onClick={handleStartTour}
+      onClick={startTour}
       variant="ghost"
       size="icon"
-      className="tour-guide-button h-10 w-10 bg-background shadow-sm flex items-center justify-center border rounded-full"
+      className="tour-guide-button h-9 w-9 bg-background shadow-sm flex items-center justify-center border rounded-full"
       title="Start Tour Guide"
     >
-      <HelpCircle className="h-6 w-6 text-[#43EB3E]" />
+      <HelpCircle className="h-5 w-5 text-[#43EB3E]" />
     </Button>
   );
 }
