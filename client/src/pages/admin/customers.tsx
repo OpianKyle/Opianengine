@@ -775,7 +775,7 @@ export default function AdminCustomers() {
                                       Edit Details
                                     </DropdownMenuItem>
                                   </DialogTrigger>
-                                  <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
+                                  <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white overflow-hidden">
                                     <DialogHeader>
                                       <DialogTitle className="text-[#43EB3E]">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
                                     </DialogHeader>
@@ -1159,7 +1159,7 @@ export default function AdminCustomers() {
                                 Assign Points
                               </DropdownMenuItem>
                             </DialogTrigger>
-                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
+                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white overflow-hidden">
                               <DialogHeader>
                                 <DialogTitle className="text-[#43EB3E]">Assign Points to {customer.firstName}</DialogTitle>
                                 <div className="flex items-center gap-2 mt-2">
