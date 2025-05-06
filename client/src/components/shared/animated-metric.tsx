@@ -40,37 +40,42 @@ export default function AnimatedMetric({
   const animationFrameId = useRef<number | null>(null);
   const startTime = useRef<number | null>(null);
 
-  // Color schemes
+  // Color schemes with improved contrast
   const colorSchemes = {
     default: {
-      card: 'bg-background border-border',
-      title: 'text-foreground',
-      value: 'text-foreground',
+      card: 'bg-card border-border',
+      title: 'text-card-foreground font-medium',
+      value: 'text-card-foreground font-bold',
       icon: 'text-muted-foreground',
+      description: 'text-muted-foreground/90',
     },
     primary: {
-      card: 'bg-primary/10 border-primary/20',
-      title: 'text-primary-foreground',
-      value: 'text-primary',
-      icon: 'text-primary',
+      card: 'bg-primary/10 border-primary/30 dark:bg-primary/20 dark:border-primary/30',
+      title: 'text-primary-700 dark:text-primary-300',
+      value: 'text-primary-700 dark:text-primary-300', 
+      icon: 'text-primary-600 dark:text-primary-400',
+      description: 'text-slate-600 dark:text-slate-300',
     },
     success: {
-      card: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900',
-      title: 'text-green-900 dark:text-green-50',
-      value: 'text-green-600 dark:text-green-400',
-      icon: 'text-green-500',
+      card: 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800',
+      title: 'text-green-800 dark:text-green-200',
+      value: 'text-green-700 dark:text-green-200',
+      icon: 'text-green-600 dark:text-green-300',
+      description: 'text-slate-600 dark:text-slate-300',
     },
     warning: {
-      card: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900',
-      title: 'text-amber-900 dark:text-amber-50',
-      value: 'text-amber-600 dark:text-amber-400',
-      icon: 'text-amber-500',
+      card: 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800',
+      title: 'text-amber-800 dark:text-amber-200',
+      value: 'text-amber-700 dark:text-amber-200',
+      icon: 'text-amber-600 dark:text-amber-300',
+      description: 'text-slate-600 dark:text-slate-300',
     },
     danger: {
-      card: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900',
-      title: 'text-red-900 dark:text-red-50',
-      value: 'text-red-600 dark:text-red-400',
-      icon: 'text-red-500',
+      card: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800',
+      title: 'text-red-800 dark:text-red-200',
+      value: 'text-red-700 dark:text-red-200',
+      icon: 'text-red-600 dark:text-red-300',
+      description: 'text-slate-600 dark:text-slate-300',
     },
   };
 
@@ -199,7 +204,7 @@ export default function AnimatedMetric({
               {prefix}{formatter(displayValue)}{suffix}
             </div>
             {description && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className={cn("text-xs mt-1", colors.description)}>
                 {description}
               </p>
             )}
