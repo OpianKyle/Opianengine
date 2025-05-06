@@ -603,47 +603,49 @@ export default function AdminCustomers() {
   
   // Pagination component to be reused at top and bottom
   const PaginationControls = ({ totalItems }: { totalItems: number }) => (
-    <div className="flex items-center justify-between">
-      <div className="text-sm text-muted-foreground">
-        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalItems)} of {totalItems} customers
+    <div className="text-sm text-muted-foreground">
+      Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalItems)} of {totalItems} customers
+    </div>
+  );
+  
+  // Pagination navigation component
+  const PaginationNavigation = () => (
+    <div className="flex items-center space-x-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setPage(p => Math.max(1, p - 1))}
+        disabled={page === 1 || isCustomersLoading}
+      >
+        <ChevronLeft className="h-4 w-4" />
+        <span className="sr-only">Previous Page</span>
+      </Button>
+      <div className="flex items-center">
+        <span className="text-sm font-medium mr-2">Page</span>
+        <Input
+          type="number"
+          min={1}
+          max={Math.ceil(pagination.totalItems / limit)}
+          value={page}
+          onChange={(e) => {
+            const value = parseInt(e.target.value);
+            if (value && value > 0 && value <= Math.ceil(pagination.totalItems / limit)) {
+              setPage(value);
+            }
+          }}
+          className="w-16 h-8"
+        />
+        <span className="text-sm font-medium mx-2">of {Math.ceil(pagination.totalItems / limit)}</span>
       </div>
-      <div className="flex items-center space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPage(p => Math.max(1, p - 1))}
-          disabled={page === 1 || isCustomersLoading}
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span className="sr-only">Previous Page</span>
-        </Button>
-        <div className="flex items-center">
-          <span className="text-sm font-medium mr-2">Page</span>
-          <Input
-            type="number"
-            min={1}
-            max={Math.ceil(totalItems / limit)}
-            value={page}
-            onChange={(e) => {
-              const value = parseInt(e.target.value);
-              if (value && value > 0 && value <= Math.ceil(totalItems / limit)) {
-                setPage(value);
-              }
-            }}
-            className="w-16 h-8"
-          />
-          <span className="text-sm font-medium mx-2">of {Math.ceil(totalItems / limit)}</span>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPage(p => Math.min(Math.ceil(totalItems / limit), p + 1))}
-          disabled={page === Math.ceil(totalItems / limit) || isCustomersLoading}
-        >
-          <ChevronRight className="h-4 w-4" />
-          <span className="sr-only">Next Page</span>
-        </Button>
-      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setPage(p => Math.min(Math.ceil(pagination.totalItems / limit), p + 1))}
+        disabled={page === Math.ceil(pagination.totalItems / limit) || isCustomersLoading}
+      >
+        <ChevronRight className="h-4 w-4" />
+        <span className="sr-only">Next Page</span>
+      </Button>
     </div>
   );
 
@@ -695,7 +697,10 @@ export default function AdminCustomers() {
           </div>
           
           {!isCustomersError && customersResponse && (
-            <PaginationControls totalItems={pagination.totalItems} />
+            <div className="flex items-center justify-between mt-2">
+              <PaginationControls totalItems={pagination.totalItems} />
+              <PaginationNavigation />
+            </div>
           )}
         </CardHeader>
         <CardContent className="pt-0 pb-0 flex-1 flex flex-col">
@@ -1498,20 +1503,23 @@ export default function AdminCustomers() {
               {pagination.totalItems > 0 && (
                 <div className="py-3 border-t mt-2 flex items-center justify-between sticky bottom-0 bg-background">
                   <PaginationControls totalItems={pagination.totalItems} />
-                  <Select value={limit.toString()} onValueChange={(value) => {
-                    setLimit(parseInt(value));
-                    setPage(1);
-                  }}>
-                    <SelectTrigger className="w-[100px]">
-                      <SelectValue placeholder="Per page" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10 per page</SelectItem>
-                      <SelectItem value="25">25 per page</SelectItem>
-                      <SelectItem value="50">50 per page</SelectItem>
-                      <SelectItem value="100">100 per page</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-4">
+                    <PaginationNavigation />
+                    <Select value={limit.toString()} onValueChange={(value) => {
+                      setLimit(parseInt(value));
+                      setPage(1);
+                    }}>
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue placeholder="Per page" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10 per page</SelectItem>
+                        <SelectItem value="25">25 per page</SelectItem>
+                        <SelectItem value="50">50 per page</SelectItem>
+                        <SelectItem value="100">100 per page</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
             </div>
