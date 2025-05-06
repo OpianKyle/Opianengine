@@ -205,7 +205,7 @@ function CustomerDashboardContent() {
           <CardContent className="pt-0">
             <div className="flex items-center mb-2">
               <div className="w-1/5">
-                <div className="flex justify-center">
+                <div className="flex justify-start">
                   <Award className="h-14 w-14 text-blue-400 opacity-80" />
                 </div>
               </div>
