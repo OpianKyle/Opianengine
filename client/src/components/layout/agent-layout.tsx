@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { prefetchAgentData, AGENT_API_ENDPOINTS } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/providers/theme-provider";
 
 // Helper function for section determination
 const getSectionFromHref = (href: string): 'dashboard' | 'customers' | 'leads' | 'all' => {
@@ -109,9 +110,9 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
           {/* Logo */}
           <div className="p-4 border-b">
             <img 
-              src="/opian-logo-white.png" 
+              src={useTheme().theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'} 
               alt="OPIAN Rewards"
-              className="h-8 w-auto object-contain mx-auto dark:invert"
+              className="h-8 w-auto object-contain mx-auto"
               onError={(e) => {
                 const img = e.target as HTMLImageElement;
                 img.onerror = null;
