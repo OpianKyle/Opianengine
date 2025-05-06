@@ -697,9 +697,11 @@ export default function AdminCustomers() {
           </div>
           
           {!isCustomersError && customersResponse && (
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between mt-2 py-2 border-b">
               <PaginationControls totalItems={pagination.totalItems} />
-              <PaginationNavigation />
+              <div className="flex items-center gap-4">
+                <PaginationNavigation />
+              </div>
             </div>
           )}
         </CardHeader>
@@ -1501,7 +1503,7 @@ export default function AdminCustomers() {
               
               {/* Pagination Controls */}
               {pagination.totalItems > 0 && (
-                <div className="py-3 border-t mt-2 flex items-center justify-between sticky bottom-0 bg-background">
+                <div className="py-3 border-t mt-2 flex items-center justify-between sticky bottom-0 bg-card">
                   <PaginationControls totalItems={pagination.totalItems} />
                   <div className="flex items-center gap-4">
                     <PaginationNavigation />
