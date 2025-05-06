@@ -194,37 +194,26 @@ export default function ReferralSection({ className }: ReferralSectionProps) {
         </CardHeader>
         <CardContent className="p-6">
           <div className="space-y-4">
-            <div 
-              className="rounded-lg overflow-hidden relative" 
-              style={{
-                backgroundImage: 'url(/Dancing Rich Chick.png)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            >
-              {/* Dark overlay with some opacity */}
-              <div className="absolute inset-0 bg-black bg-opacity-70"></div>
-              
-              {/* Content on top of the overlay */}
-              <div className="relative z-10 p-4 border-b border-[#43EB3E]/20">
+            <div className="border border-[#43EB3E]/30 rounded-lg overflow-hidden">
+              <div className="bg-[#43EB3E]/5 p-4 border-b border-[#43EB3E]/20">
                 <h3 className="text-[#43EB3E] font-medium flex items-center gap-2">
                   <PackageIcon className="h-5 w-5 text-[#43EB3E]" />
                   Package Upgrade Required
                 </h3>
               </div>
-              <div className="relative z-10 p-4 space-y-3 text-white">
+              <div className="p-4 space-y-3">
                 <p>
                   The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
                 </p>
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-muted-foreground">
                   Your current package: <strong>{userPackage || "OPPORTUNITY"}</strong>
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
                 </p>
-                <div className="bg-black bg-opacity-50 p-3 rounded-md border border-[#43EB3E]/20">
+                <div className="bg-[#43EB3E]/5 p-3 rounded-md border border-[#43EB3E]/20">
                   <h4 className="text-[#43EB3E] text-sm font-medium mb-2">Why upgrade?</h4>
-                  <ul className="text-sm text-gray-300 space-y-1 list-disc pl-5">
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
                     <li>Earn referral fees from your direct referrals</li>
                     <li>Earn additional rewards from your referral network</li> 
                     <li>Access exclusive PROSPER-level benefits</li>
@@ -250,24 +239,11 @@ export default function ReferralSection({ className }: ReferralSectionProps) {
           <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 p-6">
-          <div 
-            className="rounded-lg overflow-hidden relative p-5" 
-            style={{
-              backgroundImage: 'url(/Dancing Rich Chick.png)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }}
-          >
-            {/* Dark overlay with some opacity */}
-            <div className="absolute inset-0 bg-black bg-opacity-70"></div>
-            
-            {/* Content on top of the overlay */}
-            <div className="relative z-10 flex items-center gap-2 text-white">
-              <AlertCircle className="h-5 w-5 text-red-400" />
-              <p className="text-sm">
-                Failed to load referral information. Please try again later.
-              </p>
-            </div>
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            <p className="text-sm">
+              Failed to load referral information. Please try again later.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -283,26 +259,13 @@ export default function ReferralSection({ className }: ReferralSectionProps) {
         <div className="text-sm text-muted-foreground">
           Share your referral link with friends. When they register, you'll earn 2,000 points!
         </div>
-        <div 
-          className="p-5 rounded-lg my-5 relative overflow-hidden"
-          style={{
-            backgroundImage: 'url(/Dancing Rich Chick.png)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        >
-          {/* Dark overlay with some opacity */}
-          <div className="absolute inset-0 bg-black bg-opacity-70"></div>
-          
-          {/* Content on top of the overlay */}
-          <div className="relative z-10">
-            <h3 className="text-[#43EB3E] mt-0 text-lg font-semibold">Your Referral Rewards</h3>
-            <ul className="list-none pl-0 my-2.5 text-white">
-              <li className="my-1.5">• Level 1: 30% referral fee + 2000 points per direct referral</li>
-              <li className="my-1.5">• Level 2: 5% referral fee from your referrals' referrals</li>
-              <li className="my-1.5">• Level 3: 2.5% referral fee from level 3 referrals</li>
-            </ul>
-          </div>
+        <div className="bg-[rgba(255,255,255,0.05)] p-5 rounded-lg my-5">
+          <h3 className="text-[#43EB3E] mt-0">Your Referral Rewards</h3>
+          <ul className="list-none pl-0 my-2.5">
+            <li className="my-1.5">• Level 1: 30% referral fee + 2000 points per direct referral</li>
+            <li className="my-1.5">• Level 2: 5% referral fee from your referrals' referrals</li>
+            <li className="my-1.5">• Level 3: 2.5% referral fee from level 3 referrals</li>
+          </ul>
         </div>
         {referralLink && (
           <>
