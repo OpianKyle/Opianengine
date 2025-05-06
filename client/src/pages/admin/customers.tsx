@@ -600,6 +600,52 @@ export default function AdminCustomers() {
       points: 0,
     },
   });
+  
+  // Pagination component to be reused at top and bottom
+  const PaginationControls = ({ totalItems }: { totalItems: number }) => (
+    <div className="flex items-center justify-between">
+      <div className="text-sm text-muted-foreground">
+        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalItems)} of {totalItems} customers
+      </div>
+      <div className="flex items-center space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setPage(p => Math.max(1, p - 1))}
+          disabled={page === 1 || isCustomersLoading}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="sr-only">Previous Page</span>
+        </Button>
+        <div className="flex items-center">
+          <span className="text-sm font-medium mr-2">Page</span>
+          <Input
+            type="number"
+            min={1}
+            max={Math.ceil(totalItems / limit)}
+            value={page}
+            onChange={(e) => {
+              const value = parseInt(e.target.value);
+              if (value && value > 0 && value <= Math.ceil(totalItems / limit)) {
+                setPage(value);
+              }
+            }}
+            className="w-16 h-8"
+          />
+          <span className="text-sm font-medium mx-2">of {Math.ceil(totalItems / limit)}</span>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setPage(p => Math.min(Math.ceil(totalItems / limit), p + 1))}
+          disabled={page === Math.ceil(totalItems / limit) || isCustomersLoading}
+        >
+          <ChevronRight className="h-4 w-4" />
+          <span className="sr-only">Next Page</span>
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 h-full overflow-hidden flex flex-col">
@@ -637,13 +683,19 @@ export default function AdminCustomers() {
       </div>
 
       <Card className="flex-1 overflow-hidden flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>All Customers</CardTitle>
-          {isCustomersLoading && (
-            <div className="flex items-center text-muted-foreground text-sm">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading customers data...
-            </div>
+        <CardHeader className="flex flex-col gap-4">
+          <div className="flex flex-row items-center justify-between">
+            <CardTitle>All Customers</CardTitle>
+            {isCustomersLoading && (
+              <div className="flex items-center text-muted-foreground text-sm">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading customers data...
+              </div>
+            )}
+          </div>
+          
+          {!isCustomersError && customersResponse && (
+            <PaginationControls totalItems={pagination.totalItems} />
           )}
         </CardHeader>
         <CardContent className="flex-1 overflow-hidden flex flex-col">
@@ -1419,7 +1471,9 @@ export default function AdminCustomers() {
                                           data: {
                                             points: formData.points,
                                             description: formData.description,
-                                            selectedActivities: formData.selectedActivities
+                                            selectedActivities: formData.selectedActivities,
+                                            posPoints: formData.posPoints,
+                                            posBaseValue: formData.posBaseValue
                                           }
                                         });
                                       }}
@@ -1442,61 +1496,22 @@ export default function AdminCustomers() {
               
               {/* Pagination Controls */}
               {pagination.totalItems > 0 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {(page - 1) * limit + 1} to {Math.min(page * limit, pagination.totalItems)} of {pagination.totalItems} customers
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1 || isCustomersLoading}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      <span className="sr-only">Previous Page</span>
-                    </Button>
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium mr-2">Page</span>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={Math.ceil(pagination.totalItems / limit)}
-                        value={page}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value);
-                          if (!isNaN(value) && value >= 1 && value <= Math.ceil(pagination.totalItems / limit)) {
-                            setPage(value);
-                          }
-                        }}
-                        className="w-12 h-8"
-                      />
-                      <span className="text-sm font-medium mx-2">of {Math.ceil(pagination.totalItems / limit)}</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(p => Math.min(Math.ceil(pagination.totalItems / limit), p + 1))}
-                      disabled={page === Math.ceil(pagination.totalItems / limit) || isCustomersLoading}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                      <span className="sr-only">Next Page</span>
-                    </Button>
-                    <Select value={limit.toString()} onValueChange={(value) => {
-                      setLimit(parseInt(value));
-                      setPage(1);
-                    }}>
-                      <SelectTrigger className="w-[100px]">
-                        <SelectValue placeholder="Per page" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="10">10 per page</SelectItem>
-                        <SelectItem value="25">25 per page</SelectItem>
-                        <SelectItem value="50">50 per page</SelectItem>
-                        <SelectItem value="100">100 per page</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <PaginationControls totalItems={pagination.totalItems} />
+                  <Select value={limit.toString()} onValueChange={(value) => {
+                    setLimit(parseInt(value));
+                    setPage(1);
+                  }}>
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue placeholder="Per page" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 per page</SelectItem>
+                      <SelectItem value="25">25 per page</SelectItem>
+                      <SelectItem value="50">50 per page</SelectItem>
+                      <SelectItem value="100">100 per page</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>
