@@ -21,7 +21,7 @@ const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' 
 };
 
 // Tour Button Component
-function TourGuideButton() {
+export function TourGuideButton() {
   const { startTour } = useOnboarding();
   
   return (
@@ -95,10 +95,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen w-full">
-      {/* Header with Theme Toggle, Tour Guide, Notification Bell, Profile and Menu */}
-      <div className="fixed top-0 right-0 z-50 pt-4 flex items-center gap-2 lg:px-8">
+      {/* Header with Theme Toggle, Notification Bell, Profile and Menu */}
+      <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-2">
         <ThemeToggle />
-        <TourGuideButton />
         <NotificationBell />
         <Button
           variant="ghost"

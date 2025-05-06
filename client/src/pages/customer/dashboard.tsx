@@ -15,6 +15,7 @@ import { Package as PackageIcon, Award, DollarSign } from "lucide-react";
 
 import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext";
 import AnimatedMetric from "@/components/shared/animated-metric";
+import { HelpCircle } from "lucide-react";
 
 interface User {
   id: number;
@@ -168,6 +169,15 @@ function CustomerDashboardContent() {
             Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome to OPIAN Rewards'}
           </h2>
         </div>
+        <Button
+          onClick={() => onboarding.startTour()}
+          variant="ghost"
+          size="icon"
+          className="tour-guide-button h-9 w-9 bg-background shadow-sm flex items-center justify-center border rounded-full"
+          title="Start Tour Guide"
+        >
+          <HelpCircle className="h-5 w-5 text-[#43EB3E]" />
+        </Button>
       </div>
 
       {/* First row: Points Balance and Cash Redemption side by side */}
