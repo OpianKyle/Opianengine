@@ -203,28 +203,34 @@ function CustomerDashboardContent() {
             <p className="text-xs text-gray-400">{lastUpdated}</p>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex items-center">
-              <div className="w-1/4">
-                <div className="flex justify-center">
-                  <div className="relative">
+            <div className="flex flex-col">
+              <div className="flex items-center mb-6">
+                <div className="w-1/5">
+                  <div className="flex justify-center">
                     <Award className="h-14 w-14 text-blue-400 opacity-80" />
-                    <Badge className={`${tierInfo.color} absolute -bottom-1 text-xs px-2 py-0.5 left-1/2 transform -translate-x-1/2`}>
-                      {tierInfo.name}
-                    </Badge>
                   </div>
                 </div>
+                <div className="w-4/5">
+                  <h3 className="text-5xl font-bold">{points.toLocaleString()}</h3>
+                </div>
               </div>
-              <div className="w-3/4">
-                <h3 className="text-5xl font-bold mb-2">{points.toLocaleString()}</h3>
+              
+              <div className="mt-6 pt-4 border-t border-[#033872]">
+                <p className="text-lg font-medium text-gray-300 mb-2">
+                  {tierInfo.name}
+                  <span className="ml-3">•</span>
+                  <span className="ml-3">{points.toLocaleString()}</span>
+                </p>
+                
                 {tierInfo.nextTier && (
-                  <div className="mb-2 space-y-1">
+                  <div className="space-y-2 mt-3">
+                    <p className="text-sm text-gray-300">
+                      {tierInfo.nextTier.pointsNeeded.toLocaleString()} points to {tierInfo.nextTier.name}
+                    </p>
                     <Progress
                       value={(points / tierInfo.nextTier.pointsNeeded) * 100}
                       className="h-2 bg-gray-700"
                     />
-                    <p className="text-xs text-gray-300">
-                      {tierInfo.nextTier.pointsNeeded.toLocaleString()} points to {tierInfo.nextTier.name}
-                    </p>
                   </div>
                 )}
               </div>
