@@ -200,30 +200,30 @@ function CustomerDashboardContent() {
         <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-white text-lg">Your Points Balance</CardTitle>
-            <p className="text-xs text-gray-400">{lastUpdated}</p>
+            <p className="text-xs text-gray-400 mb-6">{lastUpdated}</p>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex flex-col">
-              <div className="flex items-center mb-6">
-                <div className="w-1/5">
-                  <div className="flex justify-center">
-                    <Award className="h-14 w-14 text-blue-400 opacity-80" />
-                  </div>
-                </div>
-                <div className="w-4/5">
-                  <h3 className="text-5xl font-bold">{points.toLocaleString()}</h3>
+            <div className="flex items-center mb-2">
+              <div className="w-1/5">
+                <div className="flex justify-center">
+                  <Award className="h-14 w-14 text-blue-400 opacity-80" />
                 </div>
               </div>
-              
-              <div className="mt-6 pt-4 border-t border-[#033872]">
-                <p className="text-lg font-medium text-gray-300 mb-2">
-                  {tierInfo.name}
-                  <span className="ml-3">•</span>
-                  <span className="ml-3">{points.toLocaleString()}</span>
-                </p>
+              <div className="w-4/5">
+                <h3 className="text-5xl font-bold">{points.toLocaleString()}</h3>
+              </div>
+            </div>
+            
+            <div className="flex items-center mt-4">
+              <div className="w-full">
+                <div className="flex items-center mt-8 mb-2">
+                  <span className="text-lg font-medium text-gray-300">{tierInfo.name}</span>
+                  <span className="mx-2 text-gray-500">•</span>
+                  <span className="text-lg font-medium text-gray-300">{points.toLocaleString()}</span>
+                </div>
                 
                 {tierInfo.nextTier && (
-                  <div className="space-y-2 mt-3">
+                  <div className="space-y-2">
                     <p className="text-sm text-gray-300">
                       {tierInfo.nextTier.pointsNeeded.toLocaleString()} points to {tierInfo.nextTier.name}
                     </p>
