@@ -96,7 +96,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   return (
     <div className="flex h-screen w-full">
       {/* Header with Theme Toggle, Tour Guide, Notification Bell, Profile and Menu */}
-      <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-2 lg:pr-8">
+      <div className="fixed top-0 right-0 z-50 pt-4 flex items-center gap-2 lg:px-8">
         <ThemeToggle />
         <TourGuideButton />
         <NotificationBell />
@@ -188,7 +188,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       {/* Main content */}
       <main className="flex-1 w-0 lg:w-auto lg:pl-72">
         <div className="min-h-screen pt-16 pb-20">
-          <div className="mx-auto px-4 sm:px-6 lg:px-8 lg:pr-8" style={{ maxWidth: "100rem" }}>
+          <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: "100rem" }}>
             <OnboardingProvider section="customer">
               {children}
             </OnboardingProvider>
