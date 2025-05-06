@@ -157,12 +157,6 @@ function CustomerDashboardContent() {
   const currentDateString = currentDate.toLocaleDateString();
   const timeOfDay = currentDate.getHours() < 12 ? 'morning' : currentDate.getHours() < 17 ? 'afternoon' : 'evening';
   
-  // Create select options for client dropdown (just placeholder)
-  const clients = [{ value: 'Option 1', label: 'Option 1' }];
-  
-  // Create select options for department dropdown (just placeholder)
-  const departments = [{ value: 'All', label: 'All' }];
-
   // Last updated timestamp for cards
   const lastUpdated = `Last Updated: ${currentDateString} @${currentDate.getHours()}:${currentDate.getMinutes().toString().padStart(2, '0')}`;
 
@@ -176,21 +170,6 @@ function CustomerDashboardContent() {
           <h2 className="text-xl font-semibold">
             Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome to OPIAN Rewards'}
           </h2>
-        </div>
-        
-        <div className="flex gap-3">
-          <div className="w-40">
-            <label className="text-xs block mb-1">Client</label>
-            <select className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
-              <option>Option 1</option>
-            </select>
-          </div>
-          <div className="w-40">
-            <label className="text-xs block mb-1">Department</label>
-            <select className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm">
-              <option>All</option>
-            </select>
-          </div>
         </div>
       </div>
 
