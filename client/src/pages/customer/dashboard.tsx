@@ -194,7 +194,8 @@ function CustomerDashboardContent() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* First row: Points Balance */}
+      <div className="grid gap-4 lg:grid-cols-1">
         {/* Profile Balance Card - Points */}
         <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
           <CardHeader className="pb-2 pt-4">
@@ -230,7 +231,10 @@ function CustomerDashboardContent() {
             </div>
           </CardContent>
         </Card>
-
+      </div>
+      
+      {/* Second row: Cash Redemption */}
+      <div className="grid gap-4 lg:grid-cols-1">
         {/* Redeem Points Card - Cash Value */}
         <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
           <CardHeader className="pb-2 pt-4">
@@ -270,118 +274,124 @@ function CustomerDashboardContent() {
         </Card>
       </div>
       
-      {/* Referral Section */}
-      {hasReferralAccess ? (
+      {/* Third row: Activity and Referrals side by side */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Recent Activity Section */}
         <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
           <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-white text-lg">Referral Program</CardTitle>
+            <CardTitle className="text-white text-lg">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="mb-4">
-              <ReferralSection className="bg-transparent p-0 text-white border-0 shadow-none" />
-            </div>
+            <ScrollArea className="h-[300px]">
+              <div className="space-y-4">
+                {isTransactionsLoading ? (
+                  // Skeleton loading state
+                  Array(5).fill(0).map((_, index) => (
+                    <div key={`skeleton-${index}`} className="flex items-center justify-between p-4 border border-[#043675] rounded-lg bg-[#022757]">
+                      <div className="space-y-1">
+                        <div className="h-5 w-64 bg-[#043675] rounded animate-pulse"></div>
+                        <div className="h-4 w-32 bg-[#043675] rounded animate-pulse"></div>
+                      </div>
+                      <div className="h-8 w-20 bg-[#043675] rounded animate-pulse"></div>
+                    </div>
+                  ))
+                ) : transactions?.length > 0 ? (
+                  transactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="flex items-center justify-between p-4 border border-[#043675] rounded-lg bg-[#022757]"
+                    >
+                      <div className="space-y-1">
+                        <p className="font-medium">
+                          {transaction.type ? formatTransactionType(transaction.type) : ''} - {transaction.description}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          {new Date(transaction.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className={`font-mono font-bold ${transaction.points > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {transaction.points > 0 ? '+' : ''}{transaction.points.toLocaleString()}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-gray-400">
+                    <p>No recent activity to display</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
-      ) : (
+        
+        {/* Referral Section */}
+        {hasReferralAccess ? (
+          <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+            <CardHeader className="pb-2 pt-4">
+              <CardTitle className="text-white text-lg">Referral Program</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="mb-4">
+                <ReferralSection className="bg-transparent p-0 text-white border-0 shadow-none" />
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
+            <CardHeader className="pb-2 pt-4">
+              <CardTitle className="text-white text-lg">Referral Program</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
+                  <p className="text-sm text-gray-300">
+                    Earn points when your referrals join and receive additional bonuses from their referrals.
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
+                  </p>
+                </div>
+                <Button 
+                  className="w-full bg-[#43EB3E] text-slate-900 hover:bg-[#3ad036]"
+                  onClick={() => toast({
+                    title: "Package Upgrade",
+                    description: "Please contact support to upgrade your package."
+                  })}
+                >
+                  Upgrade Package
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+      
+      {/* Fourth row: Training Videos */}
+      <div className="grid gap-4 lg:grid-cols-1">
+        {/* Training Videos */}
         <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
           <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-white text-lg">Referral Program</CardTitle>
+            <CardTitle className="text-white text-lg">Training Videos</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
-                <p className="text-sm text-gray-300">
-                  Earn points when your referrals join and receive additional bonuses from their referrals.
-                </p>
-                <p className="text-xs text-gray-400">
-                  Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
-                </p>
-              </div>
-              <Button 
-                className="w-full bg-[#43EB3E] text-slate-900 hover:bg-[#3ad036]"
-                onClick={() => toast({
-                  title: "Package Upgrade",
-                  description: "Please contact support to upgrade your package."
-                })}
-              >
-                Upgrade Package
+          <CardContent className="pt-0 flex">
+            <div className="w-3/4">
+              <p className="text-sm mb-5">Learn how to use the OPIAN Rewards system effectively</p>
+              <Button variant="outline" className="text-white border-white hover:bg-white/10 text-sm">
+                Watch now
               </Button>
             </div>
+            <div className="w-1/4 flex justify-end">
+              <div className="w-20 h-20 bg-black/30 flex items-center justify-center rounded">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
           </CardContent>
         </Card>
-      )}
-      
-      {/* Recent Activity Section */}
-      <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
-        <CardHeader className="pb-2 pt-4">
-          <CardTitle className="text-white text-lg">Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <ScrollArea className="h-[300px]">
-            <div className="space-y-4">
-              {isTransactionsLoading ? (
-                // Skeleton loading state
-                Array(5).fill(0).map((_, index) => (
-                  <div key={`skeleton-${index}`} className="flex items-center justify-between p-4 border border-[#043675] rounded-lg bg-[#022757]">
-                    <div className="space-y-1">
-                      <div className="h-5 w-64 bg-[#043675] rounded animate-pulse"></div>
-                      <div className="h-4 w-32 bg-[#043675] rounded animate-pulse"></div>
-                    </div>
-                    <div className="h-8 w-20 bg-[#043675] rounded animate-pulse"></div>
-                  </div>
-                ))
-              ) : transactions?.length > 0 ? (
-                transactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between p-4 border border-[#043675] rounded-lg bg-[#022757]"
-                  >
-                    <div className="space-y-1">
-                      <p className="font-medium">
-                        {transaction.type ? formatTransactionType(transaction.type) : ''} - {transaction.description}
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        {new Date(transaction.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className={`font-mono font-bold ${transaction.points > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {transaction.points > 0 ? '+' : ''}{transaction.points.toLocaleString()}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-6 text-gray-400">
-                  <p>No recent activity to display</p>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-      
-      {/* Training Videos */}
-      <Card className="bg-[#011d3d] text-white border-[#022b5c] shadow-md overflow-hidden">
-        <CardHeader className="pb-2 pt-4">
-          <CardTitle className="text-white text-lg">Training Videos</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0 flex">
-          <div className="w-3/4">
-            <p className="text-sm mb-5">Learn how to use the OPIAN Rewards system effectively</p>
-            <Button variant="outline" className="text-white border-white hover:bg-white/10 text-sm">
-              Watch now
-            </Button>
-          </div>
-          <div className="w-1/4 flex justify-end">
-            <div className="w-20 h-20 bg-black/30 flex items-center justify-center rounded">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* Original cards below in a hidden div */}
       <div className="hidden">
