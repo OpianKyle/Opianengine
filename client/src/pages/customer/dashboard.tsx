@@ -12,7 +12,7 @@ import { useState } from "react";
 import ReferralSection from "@/components/shared/referral-section";
 import { formatTransactionType } from "@/lib/utils";
 import { Package as PackageIcon, Award, DollarSign } from "lucide-react";
-import CustomerTour from "@/components/onboarding/CustomerTour";
+
 import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext";
 import AnimatedMetric from "@/components/shared/animated-metric";
 
@@ -161,10 +161,7 @@ function CustomerDashboardContent() {
   const lastUpdated = `Last Updated: ${currentDateString} @${currentDate.getHours()}:${currentDate.getMinutes().toString().padStart(2, '0')}`;
 
   return (
-    <div className="space-y-6">
-      {/* Tour Component */}
-      <CustomerTour />
-      
+    <div className="space-y-6 welcome-dashboard">
       <div className="flex flex-row justify-between items-center mb-4">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold">

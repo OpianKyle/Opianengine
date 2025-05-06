@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Home, Gift, Users, User, Menu, X, ShoppingBag, CreditCard } from "lucide-react";
+import { Home, Gift, Users, User, Menu, X, ShoppingBag, CreditCard, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/NotificationBell";
 import { prefetchCustomerData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { OnboardingProvider } from "@/contexts/OnboardingContext";
+import { OnboardingProvider, useOnboarding } from "@/contexts/OnboardingContext";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/providers/theme-provider";
 
@@ -19,6 +19,23 @@ const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' 
   // Subscription section removed as requested
   return 'all';
 };
+
+// Tour Button Component
+function TourGuideButton() {
+  const { startTour } = useOnboarding();
+  
+  return (
+    <Button
+      onClick={startTour}
+      variant="ghost"
+      size="icon"
+      className="tour-guide-button h-9 w-9 bg-background shadow-sm flex items-center justify-center border rounded-full"
+      title="Start Tour Guide"
+    >
+      <HelpCircle className="h-5 w-5 text-[#43EB3E]" />
+    </Button>
+  );
+}
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const { logoutMutation, token } = useAuth();
@@ -78,9 +95,10 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen w-full">
-      {/* Header with Theme Toggle, Notification Bell, Profile and Menu */}
+      {/* Header with Theme Toggle, Tour Guide, Notification Bell, Profile and Menu */}
       <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-2">
         <ThemeToggle />
+        <TourGuideButton />
         <NotificationBell />
         <Button
           variant="ghost"
