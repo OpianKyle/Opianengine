@@ -169,19 +169,19 @@ function CustomerDashboardContent() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="points-card overflow-hidden shadow-sm bg-[#011d3d] border-[#022b5c] text-white">
-          <CardHeader className="flex justify-between items-center border-b border-[#022b5c]/60">
-            <CardTitle className="text-white font-semibold">Current Points & Tier</CardTitle>
+        <Card className="points-card overflow-hidden shadow-sm">
+          <CardHeader className="flex justify-between items-center border-b border-border/40">
+            <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Current Points & Tier</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 p-6">
             {isUserLoading ? (
               <>
-                <div className="h-10 w-36 bg-[#022b5c] rounded animate-pulse mb-4"></div>
+                <div className="h-10 w-36 bg-muted rounded animate-pulse mb-4"></div>
                 <div className="space-y-4">
-                  <div className="h-8 w-24 bg-[#022b5c] rounded animate-pulse"></div>
+                  <div className="h-8 w-24 bg-muted rounded animate-pulse"></div>
                   <div className="space-y-2">
-                    <div className="h-2 w-full bg-[#022b5c] rounded animate-pulse"></div>
-                    <div className="h-5 w-48 bg-[#022b5c] rounded animate-pulse"></div>
+                    <div className="h-2 w-full bg-muted rounded animate-pulse"></div>
+                    <div className="h-5 w-48 bg-muted rounded animate-pulse"></div>
                   </div>
                 </div>
               </>
@@ -201,9 +201,9 @@ function CustomerDashboardContent() {
                         <div className="mt-3 space-y-2">
                           <Progress
                             value={(points / tierInfo.nextTier.pointsNeeded) * 100}
-                            className="h-2 bg-[#022b5c]"
+                            className="h-2"
                           />
-                          <p className="text-xs text-slate-300">
+                          <p className="text-xs text-muted-foreground">
                             {tierInfo.nextTier.pointsNeeded.toLocaleString()} points needed to reach{" "}
                             {tierInfo.nextTier.name}
                           </p>
@@ -221,21 +221,21 @@ function CustomerDashboardContent() {
           </CardContent>
         </Card>
 
-        <Card className="rewards-section shadow-sm bg-[#011d3d] border-[#022b5c] text-white">
-          <CardHeader className="border-b border-[#022b5c]/60">
-            <CardTitle className="flex items-center gap-2 text-white font-semibold">
-              <DollarSign className="h-5 w-5 text-[#43EB3E]" /> Cash Redemption
+        <Card className="rewards-section shadow-sm">
+          <CardHeader className="border-b border-border/40">
+            <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold">
+              <DollarSign className="h-5 w-5 text-muted-foreground" /> Cash Redemption
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 p-6">
             {isUserLoading ? (
               <>
                 <div className="space-y-2">
-                  <div className="h-5 w-32 bg-[#022b5c] rounded animate-pulse"></div>
-                  <div className="h-10 w-full bg-[#022b5c] rounded animate-pulse"></div>
-                  <div className="h-4 w-48 bg-[#022b5c] rounded animate-pulse"></div>
+                  <div className="h-5 w-32 bg-muted rounded animate-pulse"></div>
+                  <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
+                  <div className="h-4 w-48 bg-muted rounded animate-pulse"></div>
                 </div>
-                <div className="h-10 w-full bg-[#022b5c] rounded animate-pulse"></div>
+                <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
               </>
             ) : (
               <>
@@ -251,7 +251,7 @@ function CustomerDashboardContent() {
                   className="mb-4 -mt-4 -mx-6 p-0"
                 />
                 <div className="space-y-2 mt-4">
-                  <label className="text-sm font-medium text-white">Points to Redeem</label>
+                  <label className="text-sm font-medium">Points to Redeem</label>
                   <Input
                     type="number"
                     min="0"
@@ -259,16 +259,15 @@ function CustomerDashboardContent() {
                     value={pointsToRedeem}
                     onChange={(e) => setPointsToRedeem(Number(e.target.value))}
                     placeholder="Enter points amount"
-                    className="bg-[#022b5c] border-[#043b7c] text-white placeholder:text-slate-400"
                   />
                   {pointsToRedeem > 0 && (
                     <p className="text-sm font-medium mt-2">
-                      You will receive: <span className="text-[#43EB3E]">R{randValue}</span>
+                      You will receive: <span className="text-green-500">R{randValue}</span>
                     </p>
                   )}
                 </div>
                 <Button
-                  className="w-full mt-2 bg-[#43EB3E] hover:bg-[#43EB3E]/90 text-[#011d3d] font-medium"
+                  className="w-full mt-2"
                   onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
                   disabled={!canRedeem}
                 >
@@ -284,13 +283,13 @@ function CustomerDashboardContent() {
         
         {/* Show upgrade message for users without access */}
         {!hasReferralAccess && (
-          <Card className="referral-section bg-[#011d3d] border-[#022b5c] text-white">
-            <CardHeader className="border-b border-[#022b5c]/60">
+          <Card className="referral-section bg-gradient-to-br from-slate-900 to-slate-800 text-white border border-slate-700">
+            <CardHeader>
               <CardTitle className="text-[#43EB3E] flex items-center gap-2">
                 <PackageIcon className="h-5 w-5" /> Refer & Earn Points
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 p-6">
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
                 <p className="text-sm text-slate-300">
@@ -301,7 +300,7 @@ function CustomerDashboardContent() {
                 </p>
               </div>
               <Button 
-                className="w-full bg-[#43EB3E] text-[#011d3d] hover:bg-[#43EB3E]/90"
+                className="w-full bg-[#43EB3E] text-slate-900 hover:bg-[#3ad036]"
                 onClick={() => toast({
                   title: "Package Upgrade",
                   description: "Please contact support to upgrade your package."
@@ -314,9 +313,9 @@ function CustomerDashboardContent() {
         )}
       </div>
 
-      <Card className="recent-transactions shadow-sm bg-[#011d3d] border-[#022b5c] text-white">
-        <CardHeader className="border-b border-[#022b5c]/60">
-          <CardTitle className="text-white font-semibold">Recent Activity</CardTitle>
+      <Card className="recent-transactions shadow-sm">
+        <CardHeader className="border-b border-border/40">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <ScrollArea className="h-[300px]">
@@ -324,24 +323,24 @@ function CustomerDashboardContent() {
               {isTransactionsLoading ? (
                 // Skeleton loading state
                 Array(5).fill(0).map((_, index) => (
-                  <div key={`skeleton-${index}`} className="flex items-center justify-between p-4 border border-[#022b5c] rounded-lg">
+                  <div key={`skeleton-${index}`} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="space-y-1">
-                      <div className="h-5 w-64 bg-[#022b5c] rounded animate-pulse"></div>
-                      <div className="h-4 w-32 bg-[#022b5c] rounded animate-pulse"></div>
+                      <div className="h-5 w-64 bg-muted rounded animate-pulse"></div>
+                      <div className="h-4 w-32 bg-muted rounded animate-pulse"></div>
                     </div>
-                    <div className="h-8 w-20 bg-[#022b5c] rounded animate-pulse"></div>
+                    <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
                   </div>
                 ))
               ) : transactions?.map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-4 border border-[#022b5c] rounded-lg"
+                  className="flex items-center justify-between p-4 border rounded-lg"
                 >
                   <div className="space-y-1">
-                    <p className="font-medium text-white">
+                    <p className="font-medium">
                       {transaction.type ? formatTransactionType(transaction.type) : ''} - {transaction.description}
                     </p>
-                    <p className="text-sm text-slate-300">
+                    <p className="text-sm text-muted-foreground">
                       {new Date(transaction.createdAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -353,7 +352,7 @@ function CustomerDashboardContent() {
                 </div>
               ))}
               {(!isTransactionsLoading && (!transactions || transactions.length === 0)) && (
-                <p className="text-center text-slate-300 py-4">
+                <p className="text-center text-muted-foreground py-4">
                   No recent activity
                 </p>
               )}

@@ -165,14 +165,14 @@ export default function ReferralSection() {
 
   if (isLoading) {
     return (
-      <Card className="shadow-sm bg-[#011d3d] border-[#022b5c] text-white">
-        <CardHeader className="border-b border-[#022b5c]/60">
-          <CardTitle className="text-white font-semibold">Refer & Earn Points</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="border-b border-border/40">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 p-6">
           <div className="space-y-2">
-            <Skeleton className="h-4 w-3/4 bg-[#022b5c]" />
-            <Skeleton className="h-10 bg-[#022b5c]" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-10" />
           </div>
         </CardContent>
       </Card>
@@ -181,42 +181,42 @@ export default function ReferralSection() {
 
   if (packageUpgradeRequired) {
     return (
-      <Card className="shadow-sm bg-[#011d3d] border-[#022b5c] text-white">
-        <CardHeader className="border-b border-[#022b5c]/60">
-          <CardTitle className="text-white font-semibold flex items-center gap-2">
-            <Users className="h-5 w-5 text-[#43EB3E]" />
+      <Card className="shadow-sm">
+        <CardHeader className="border-b border-border/40">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold flex items-center gap-2">
+            <Users className="h-5 w-5" />
             <span>Refer & Earn Points</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="space-y-4">
             <div className="border border-[#43EB3E]/30 rounded-lg overflow-hidden">
-              <div className="bg-[#43EB3E]/10 p-4 border-b border-[#43EB3E]/20">
+              <div className="bg-[#43EB3E]/5 p-4 border-b border-[#43EB3E]/20">
                 <h3 className="text-[#43EB3E] font-medium flex items-center gap-2">
                   <PackageIcon className="h-5 w-5 text-[#43EB3E]" />
                   Package Upgrade Required
                 </h3>
               </div>
               <div className="p-4 space-y-3">
-                <p className="text-white">
+                <p>
                   The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
                 </p>
-                <p className="text-sm text-slate-300">
+                <p className="text-sm text-muted-foreground">
                   Your current package: <strong>{userPackage || "OPPORTUNITY"}</strong>
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
                 </p>
-                <div className="bg-[#043b7c] p-3 rounded-md border border-[#043b7c]/90">
+                <div className="bg-[#43EB3E]/5 p-3 rounded-md border border-[#43EB3E]/20">
                   <h4 className="text-[#43EB3E] text-sm font-medium mb-2">Why upgrade?</h4>
-                  <ul className="text-sm text-slate-300 space-y-1 list-disc pl-5">
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
                     <li>Earn referral fees from your direct referrals</li>
                     <li>Earn additional rewards from your referral network</li> 
                     <li>Access exclusive PROSPER-level benefits</li>
                   </ul>
                 </div>
                 <div className="flex justify-center mt-4">
-                  <Button className="bg-[#43EB3E] hover:bg-[#43EB3E]/90 text-[#011d3d] font-medium">
+                  <Button className="bg-[#43EB3E] hover:bg-[#43EB3E]/80 text-black">
                     Upgrade to PROSPER Package
                   </Button>
                 </div>
@@ -230,12 +230,12 @@ export default function ReferralSection() {
   
   if (error) {
     return (
-      <Card className="shadow-sm bg-[#011d3d] border-[#022b5c] text-white">
-        <CardHeader className="border-b border-[#022b5c]/60">
-          <CardTitle className="text-white font-semibold">Refer & Earn Points</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="border-b border-border/40">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 p-6">
-          <div className="flex items-center gap-2 text-red-400">
+          <div className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-5 w-5" />
             <p className="text-sm">
               Failed to load referral information. Please try again later.
@@ -247,17 +247,17 @@ export default function ReferralSection() {
   }
 
   return (
-    <Card className="shadow-sm bg-[#011d3d] border-[#022b5c] text-white">
-      <CardHeader className="border-b border-[#022b5c]/60">
-        <CardTitle className="text-white font-semibold">Refer & Earn Points</CardTitle>
+    <Card className="shadow-sm">
+      <CardHeader className="border-b border-border/40">
+        <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 p-6">
-        <div className="text-sm text-slate-300">
+        <div className="text-sm text-muted-foreground">
           Share your referral link with friends. When they register, you'll earn 2,000 points!
         </div>
-        <div className="bg-[#043b7c] p-5 rounded-lg my-5">
+        <div className="bg-[rgba(255,255,255,0.05)] p-5 rounded-lg my-5">
           <h3 className="text-[#43EB3E] mt-0">Your Referral Rewards</h3>
-          <ul className="list-none pl-0 my-2.5 text-slate-300">
+          <ul className="list-none pl-0 my-2.5">
             <li className="my-1.5">• Level 1: 30% referral fee + 2000 points per direct referral</li>
             <li className="my-1.5">• Level 2: 5% referral fee from your referrals' referrals</li>
             <li className="my-1.5">• Level 3: 2.5% referral fee from level 3 referrals</li>
@@ -269,13 +269,13 @@ export default function ReferralSection() {
               <Input
                 value={referralLink}
                 readOnly
-                className="font-mono text-sm bg-[#022b5c] border-[#043b7c] text-white"
+                className="font-mono text-sm"
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={copyToClipboard}
-                className={copied ? "text-[#43EB3E] border-[#043b7c] bg-[#022b5c] hover:bg-[#043b7c] text-white" : "border-[#043b7c] bg-[#022b5c] hover:bg-[#043b7c] text-white"}
+                className={copied ? "text-green-500" : ""}
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -285,7 +285,7 @@ export default function ReferralSection() {
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.twitter, '_blank')}
-                className="text-[#1DA1F2] hover:text-[#1DA1F2] border-[#043b7c] bg-[#022b5c] hover:bg-[#043b7c]"
+                className="text-[#1DA1F2] hover:text-[#1DA1F2]/80"
               >
                 <TwitterIcon className="h-4 w-4" />
               </Button>
@@ -293,7 +293,7 @@ export default function ReferralSection() {
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.facebook, '_blank')}
-                className="text-[#4267B2] hover:text-[#4267B2] border-[#043b7c] bg-[#022b5c] hover:bg-[#043b7c]"
+                className="text-[#4267B2] hover:text-[#4267B2]/80"
               >
                 <FacebookIcon className="h-4 w-4" />
               </Button>
@@ -301,7 +301,7 @@ export default function ReferralSection() {
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.linkedin, '_blank')}
-                className="text-[#0077B5] hover:text-[#0077B5] border-[#043b7c] bg-[#022b5c] hover:bg-[#043b7c]"
+                className="text-[#0077B5] hover:text-[#0077B5]/80"
               >
                 <LinkedInIcon className="h-4 w-4" />
               </Button>
@@ -309,7 +309,7 @@ export default function ReferralSection() {
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.whatsapp, '_blank')}
-                className="text-[#25D366] hover:text-[#25D366] border-[#043b7c] bg-[#022b5c] hover:bg-[#043b7c]"
+                className="text-[#25D366] hover:text-[#25D366]/80"
               >
                 <WhatsAppIcon className="h-4 w-4" />
               </Button>
@@ -317,7 +317,7 @@ export default function ReferralSection() {
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.telegram, '_blank')}
-                className="text-[#0088cc] hover:text-[#0088cc] border-[#043b7c] bg-[#022b5c] hover:bg-[#043b7c]"
+                className="text-[#0088cc] hover:text-[#0088cc]/80"
               >
                 <TelegramIcon className="h-4 w-4" />
               </Button>
@@ -325,7 +325,7 @@ export default function ReferralSection() {
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.email, '_blank')}
-                className="text-white hover:text-white border-[#043b7c] bg-[#022b5c] hover:bg-[#043b7c]"
+                className="text-gray-600 hover:text-gray-800"
               >
                 <EmailIcon className="h-4 w-4" />
               </Button>
@@ -333,7 +333,7 @@ export default function ReferralSection() {
           </>
         )}
         {referralInfo && referralInfo.referralCount > 0 && (
-          <div className="text-sm text-white mt-4">
+          <div className="text-sm">
             <span className="font-medium">{referralInfo.referralCount}</span> successful referrals
           </div>
         )}
