@@ -182,7 +182,7 @@ function CustomerDashboardContent() {
             <div className="flex items-center mb-2">
               <div className="w-1/5">
                 <div className="flex justify-start">
-                  <Award className="h-14 w-14 text-primary dark:text-blue-400 opacity-80" />
+                  <Award className="h-16 w-16 text-primary dark:text-blue-400 opacity-80" />
                 </div>
               </div>
               <div className="w-4/5">
@@ -224,7 +224,7 @@ function CustomerDashboardContent() {
             <div className="flex items-center">
               <div className="w-1/4">
                 <div className="flex justify-start">
-                  <DollarSign className="h-14 w-14 text-green-500 dark:text-green-400 opacity-80" />
+                  <DollarSign className="h-16 w-16 text-green-500 dark:text-green-400 opacity-80" />
                 </div>
               </div>
               <div className="w-3/4">
@@ -303,7 +303,7 @@ function CustomerDashboardContent() {
         {/* Right column - Activity and Training Videos stacked */}
         <div className="grid gap-4">
           {/* Recent Activity Section */}
-          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
+          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden h-full">
             <CardHeader className="pb-2 pt-4">
               <CardTitle className="text-card-foreground dark:text-white text-lg">Recent Activity</CardTitle>
             </CardHeader>
@@ -351,7 +351,7 @@ function CustomerDashboardContent() {
           </Card>
           
           {/* Training Videos */}
-          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
+          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden h-full">
             <CardHeader className="pb-2 pt-4">
               <CardTitle className="text-card-foreground dark:text-white text-lg">Training Videos</CardTitle>
             </CardHeader>
@@ -363,8 +363,8 @@ function CustomerDashboardContent() {
                 </Button>
               </div>
               <div className="w-1/4 flex justify-end">
-                <div className="w-20 h-20 bg-muted dark:bg-black/30 flex items-center justify-center rounded">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-card-foreground dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-24 h-24 bg-muted dark:bg-black/30 flex items-center justify-center rounded">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-card-foreground dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
