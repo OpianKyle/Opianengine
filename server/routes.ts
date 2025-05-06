@@ -1415,10 +1415,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       // Extract user IDs for subsequent queries
       const userIds = users.map(user => user.id);
       
+      // Prepare comma-separated list of IDs for IN clauses
+      const userIdsString = userIds.join(',');
+      
       // Run the next 3 queries in parallel for improved performance
       const [assignmentsResult, transactionsResult, activitiesResult] = await Promise.all([
-        // Get product assignments with parameterized query
-        connection.execute(
+        // Get product assignments using a safe approach for IN clause
+        connection.query(
           `SELECT 
             pa.user_id,
             p.id as product_id,
@@ -1426,12 +1429,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
             p.description as product_description
            FROM product_assignments pa
            JOIN products p ON pa.product_id = p.id
-           WHERE pa.user_id IN (?)`,
-          [userIds]
+           WHERE pa.user_id IN (${userIds.map(() => '?').join(',')})`,
+          userIds
         ),
         
         // Get latest transactions
-        connection.execute(
+        connection.query(
           `SELECT 
             t1.user_id,
             t1.created_at as last_transaction,
@@ -1441,14 +1444,14 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
            INNER JOIN (
              SELECT user_id, MAX(created_at) as max_created_at
              FROM transactions
-             WHERE user_id IN (?)
+             WHERE user_id IN (${userIds.map(() => '?').join(',')})
              GROUP BY user_id
            ) t2 ON t1.user_id = t2.user_id AND t1.created_at = t2.max_created_at`,
-          [userIds]
+          [...userIds]
         ),
         
         // Get product activities
-        connection.execute(
+        connection.query(
           `SELECT 
             pa.id,
             pa.product_id,
@@ -1457,9 +1460,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
            FROM product_activities pa
            JOIN products p ON pa.product_id = p.id
            JOIN product_assignments ps ON p.id = ps.product_id
-           WHERE ps.user_id IN (?)
+           WHERE ps.user_id IN (${userIds.map(() => '?').join(',')})
            GROUP BY pa.id, pa.product_id, pa.type, pa.points_value`,
-          [userIds]
+          [...userIds]
         )
       ]);
       
