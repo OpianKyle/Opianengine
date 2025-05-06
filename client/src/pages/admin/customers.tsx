@@ -648,7 +648,7 @@ export default function AdminCustomers() {
   );
 
   return (
-    <div className="space-y-6 h-full flex flex-col max-h-[calc(100vh-6rem)]">
+    <div className="space-y-6 flex flex-col" style={{ height: 'calc(100vh - 6rem)' }}>
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Customer Management</h1>
         <div className="flex gap-2">
@@ -682,8 +682,8 @@ export default function AdminCustomers() {
         </div>
       </div>
 
-      <Card className="flex-1 flex flex-col min-h-0">
-        <CardHeader className="flex flex-col gap-4 flex-shrink-0">
+      <Card className="flex-1 flex flex-col">
+        <CardHeader className="pb-4 flex-shrink-0">
           <div className="flex flex-row items-center justify-between">
             <CardTitle>All Customers</CardTitle>
             {isCustomersLoading && (
@@ -698,7 +698,7 @@ export default function AdminCustomers() {
             <PaginationControls totalItems={pagination.totalItems} />
           )}
         </CardHeader>
-        <CardContent className="flex-1 min-h-0 flex flex-col">
+        <CardContent className="pt-0 pb-0 flex-1 flex flex-col">
           {isCustomersError ? (
             <div className="flex flex-col items-center justify-center py-10 text-destructive">
               <p className="text-center mb-4">Failed to load customers</p>
@@ -1496,7 +1496,7 @@ export default function AdminCustomers() {
               
               {/* Pagination Controls */}
               {pagination.totalItems > 0 && (
-                <div className="mt-4 flex items-center justify-between">
+                <div className="py-3 border-t mt-2 flex items-center justify-between sticky bottom-0 bg-background">
                   <PaginationControls totalItems={pagination.totalItems} />
                   <Select value={limit.toString()} onValueChange={(value) => {
                     setLimit(parseInt(value));
