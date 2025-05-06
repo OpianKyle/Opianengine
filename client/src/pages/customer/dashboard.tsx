@@ -271,7 +271,7 @@ function CustomerDashboardContent() {
           {hasReferralAccess ? (
             <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden relative">
               <div 
-                className="absolute inset-0 bg-cover bg-center z-0 opacity-15 after:content-[''] after:absolute after:inset-0 after:bg-black after:opacity-70" 
+                className="absolute inset-0 bg-cover bg-center z-0 opacity-20" 
                 style={{ backgroundImage: 'url(/DancingRichChick.png)' }}
               />
               <div className="relative z-10">
@@ -288,7 +288,7 @@ function CustomerDashboardContent() {
           ) : (
             <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden relative">
               <div 
-                className="absolute inset-0 bg-cover bg-center z-0 opacity-15 after:content-[''] after:absolute after:inset-0 after:bg-black after:opacity-70" 
+                className="absolute inset-0 bg-cover bg-center z-0 opacity-15" 
                 style={{ backgroundImage: 'url(/DancingRichChick.png)' }}
               />
               <div className="relative z-10">
