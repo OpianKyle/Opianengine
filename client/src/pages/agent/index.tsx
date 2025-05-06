@@ -99,7 +99,7 @@ export default function AgentDashboard() {
     <div className="space-y-6 h-full">
       <h1 className="text-3xl font-bold">Agent Dashboard</h1>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 -mt-4 -mx-6">
         <AnimatedMetric
           title="Total Customers"
           value={statistics?.totalCustomers || 0}
@@ -178,7 +178,7 @@ export default function AgentDashboard() {
           </button>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6 -mt-4 -mx-6">
             <div 
               className={`cursor-pointer ${filterType === 'upfront' ? 'ring-2 ring-primary rounded-lg' : ''}`}
               onClick={() => setFilterType(filterType === 'upfront' ? 'all' : 'upfront')}
