@@ -165,8 +165,8 @@ function CustomerDashboardContent() {
   return (
     <div className="space-y-4 md:space-y-6 welcome-dashboard">
       <div className="flex flex-row justify-between items-center mb-2 md:mb-4">
-        <div className="flex items-center space-x-2 md:space-x-3">
-          <h2 className="text-lg md:text-xl font-semibold truncate max-w-[200px] sm:max-w-full">
+        <div className="flex flex-wrap items-center space-x-1 md:space-x-3">
+          <h2 className="text-lg md:text-xl font-semibold break-words">
             Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome'}
           </h2>
           <Button
@@ -351,7 +351,7 @@ function CustomerDashboardContent() {
                         className="flex items-center justify-between p-2 md:p-4 border border-border dark:border-[#043675] rounded-lg bg-muted/50 dark:bg-[#022757]"
                       >
                         <div className="space-y-1">
-                          <p className="font-medium text-xs md:text-sm truncate max-w-[180px] sm:max-w-full">
+                          <p className="font-medium text-xs md:text-sm break-words">
                             {transaction.type ? formatTransactionType(transaction.type) : ''} - {transaction.description}
                           </p>
                           <p className="text-xs md:text-sm text-muted-foreground dark:text-gray-400">
