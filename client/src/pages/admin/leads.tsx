@@ -206,11 +206,17 @@ export default function AdminLeads() {
       queryParams.set('limit', pageSize.toString());
 
       // Fetch data from API
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add authorization if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`/api/leads?${queryParams.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
       });
 
@@ -220,18 +226,27 @@ export default function AdminLeads() {
 
       return response.json();
     },
-    enabled: !!token,
+    // Always load data when the page loads, regardless of filters
+    enabled: true,
+    // Ensure data is fresh on component mount
+    refetchOnMount: true,
   });
 
   // Function to handle lead edit form submission
   const handleLeadUpdate = async (leadId: number, updatedData: Partial<Lead>) => {
     try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add authorization if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify(updatedData),
       });
