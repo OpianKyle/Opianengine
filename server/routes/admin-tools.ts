@@ -3,6 +3,7 @@ import { checkAdmin } from '../auth';
 import mysql from 'mysql2/promise';
 import { logAdminAction } from '../admin-logger';
 import { convertSignupToRenewal } from '../../scripts/convert-signups-to-renewals.js';
+import { convertAllSignupsToRenewal } from '../../scripts/convert-all-signups-to-renewals.js';
 
 const router = Router();
 
@@ -170,6 +171,43 @@ router.post('/convert-signups-to-renewals', checkAdmin, async (req: Request, res
     res.status(500).json({
       success: false,
       error: error.message || 'An error occurred during the conversion process'
+    });
+  }
+});
+
+/**
+ * Admin route to convert ALL SIGNUP commissions to RENEWAL type (one-time operation)
+ * This is a special endpoint that converts all signup commissions, regardless of date
+ */
+router.post('/convert-all-signups-to-renewals', checkAdmin, async (req: Request, res: Response) => {
+  try {
+    console.log('ADMIN TRIGGERED ONE-TIME CONVERSION OF ALL SIGNUP COMMISSIONS TO RENEWAL');
+    console.log('⚠️ This is a high-impact operation that affects all signup commissions!');
+    
+    // Get user for logging
+    const adminUser = req.user;
+    
+    // Call the all-conversion function
+    const results = await convertAllSignupsToRenewal();
+    
+    // Log the admin action
+    if (adminUser && adminUser.id) {
+      await logAdminAction({
+        adminId: adminUser.id,
+        actionType: "PROCESS_ALL_RENEWALS",
+        details: `ONE-TIME OPERATION: Converted ${results.recordsConverted} SIGNUP commissions to RENEWAL type with 10% rate`
+      });
+    }
+    
+    console.log('One-time conversion complete with results:', results);
+    
+    // Return the results to the client
+    res.json(results);
+  } catch (error) {
+    console.error('Error during one-time conversion process:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'An error occurred during the one-time conversion process'
     });
   }
 });

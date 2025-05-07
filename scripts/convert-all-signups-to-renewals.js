@@ -1,11 +1,14 @@
 /**
- * Convert Signup Commissions to Renewal Script
+ * Convert All Signup Commissions to Renewal Script
  * 
- * This script converts all SIGNUP commission records from the previous month 
+ * This is a one-time script that converts ALL SIGNUP commission records in the database
  * to RENEWAL type with the appropriate 10% commission rate (instead of 30%).
  * 
+ * This script should ONLY be run when you need to convert all historical records at once.
+ * For regular monthly processing, use convert-signups-to-renewals.js instead.
+ * 
  * The script:
- * 1. Finds all SIGNUP commission records from the previous month
+ * 1. Finds all SIGNUP commission records (regardless of when they were created)
  * 2. Updates their commission_type to RENEWAL
  * 3. Recalculates the commission_percentage to 10%
  * 4. Recalculates the commission_amount based on the premium_amount
@@ -32,9 +35,9 @@ const COMMISSION_PERCENTAGE = {
 };
 
 /**
- * Main function to convert signup commissions to renewal
+ * Main function to convert all signup commissions to renewal
  */
-async function convertSignupToRenewal() {
+async function convertAllSignupsToRenewal() {
   let connection;
   const results = {
     success: true,
@@ -44,21 +47,7 @@ async function convertSignupToRenewal() {
   };
 
   try {
-    // Get the first and last day of the previous month
-    const now = new Date();
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const firstDayLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
-    const lastDayLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
-    
-    // Format dates for SQL query
-    const startDate = firstDayLastMonth.toISOString().split('T')[0];
-    const endDate = lastDayLastMonth.toISOString().split('T')[0] + ' 23:59:59';
-    
-    // For the case where we need to process older records too, uncomment this line to override the date range
-    // Set startDate to beginning of time to catch all historic SIGNUP commissions if needed
-    // const startDate = '2020-01-01';
-    
-    console.log(`Converting SIGNUP commissions to RENEWAL for date range: ${startDate} to ${endDate}`);
+    console.log('Starting conversion of ALL SIGNUP commissions to RENEWAL type');
 
     // Connect to the database
     connection = await mysql.createConnection({
@@ -71,7 +60,7 @@ async function convertSignupToRenewal() {
 
     console.log('Successfully connected to database');
 
-    // Get all SIGNUP commission records from the previous month, handling different case variations
+    // Get all SIGNUP commission records (no date filtering), handling different case variations
     const [commissions] = await connection.execute(`
       SELECT 
         id, 
@@ -85,10 +74,9 @@ async function convertSignupToRenewal() {
         created_at
       FROM agent_commissions
       WHERE (commission_type = 'SIGNUP' OR commission_type = 'signup' OR commission_type = 'SignUp')
-      AND created_at BETWEEN ? AND ?
-    `, [startDate, endDate]);
+    `);
     
-    console.log(`Found ${commissions.length} SIGNUP commission records from last month`);
+    console.log(`Found ${commissions.length} SIGNUP commission records in total`);
     results.recordsFound = commissions.length;
     
     // Begin transaction
@@ -152,7 +140,7 @@ async function convertSignupToRenewal() {
 
 // Run the script if called directly (not imported)
 if (require.main === module) {
-  convertSignupToRenewal()
+  convertAllSignupsToRenewal()
     .then(results => {
       console.log('Conversion results:', JSON.stringify(results, null, 2));
       process.exit(0);
@@ -163,4 +151,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { convertSignupToRenewal };
+module.exports = { convertAllSignupsToRenewal };

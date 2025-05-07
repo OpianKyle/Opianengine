@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle, RefreshCw, Wrench, Layers, DollarSign } from "lucide-react";
+import { AlertCircle, CheckCircle, RefreshCw, Wrench, Layers, DollarSign, AlertTriangle } from "lucide-react";
 import { useMigration } from "@/hooks/use-migration";
 import { useManualMigration } from "@/hooks/use-manual-migration";
 import { usePackageTypes } from "@/hooks/use-package-types";
@@ -11,17 +11,30 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Migrations() {
   const { runAgentCustomersMigration, isLoading, isSuccess, results, error } = useMigration();
   const { runManualMigration, isManualMigrationRunning, manualMigrationResults, isManualMigrationSuccess, manualMigrationError } = useManualMigration();
   const { updatePackageTypes, isUpdating, isSuccess: isPackageTypesSuccess, error: packageTypesError } = usePackageTypes();
-  const { convertSignupsToRenewals, isLoading: isConverting, isSuccess: isConversionSuccess, results: conversionResults, error: conversionError } = useCommissionConversion();
+  const { 
+    convertSignupsToRenewals, 
+    isLoading: isConverting, 
+    isSuccess: isConversionSuccess, 
+    results: conversionResults, 
+    error: conversionError,
+    convertAllSignupsToRenewals,
+    isAllLoading,
+    isAllSuccess,
+    allResults,
+    allError
+  } = useCommissionConversion();
   const { toast } = useToast();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmingManual, setIsConfirmingManual] = useState(false);
   const [isConfirmingPackageTypesUpdate, setIsConfirmingPackageTypesUpdate] = useState(false);
   const [isConfirmingConversion, setIsConfirmingConversion] = useState(false);
+  const [isConfirmingAllConversion, setIsConfirmingAllConversion] = useState(false);
   const [forceProductionMode, setForceProductionMode] = useState(false);
 
   const handleRunMigration = async () => {
@@ -62,6 +75,10 @@ export default function Migrations() {
   
   const handleCancelConversion = () => {
     setIsConfirmingConversion(false);
+  };
+  
+  const handleCancelAllConversion = () => {
+    setIsConfirmingAllConversion(false);
   };
 
   const handleRunManualMigration = () => {
@@ -133,6 +150,30 @@ export default function Migrations() {
       });
     } finally {
       setIsConfirmingConversion(false);
+    }
+  };
+  
+  const handleRunAllCommissionConversion = async () => {
+    if (!isConfirmingAllConversion) {
+      setIsConfirmingAllConversion(true);
+      return;
+    }
+    
+    try {
+      await convertAllSignupsToRenewals.mutateAsync();
+      toast({
+        title: "Full database conversion successful",
+        description: "ALL sign-up commissions in the database were successfully converted to renewal type.",
+        variant: "success",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Full database conversion failed",
+        description: err?.message || "An unknown error occurred during the full database conversion",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirmingAllConversion(false);
     }
   };
 
@@ -395,13 +436,13 @@ export default function Migrations() {
               Commission Type Conversion
             </CardTitle>
             <CardDescription>
-              Convert SIGNUP commissions to RENEWAL type for previous month
+              Convert SIGNUP commissions to RENEWAL type
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="mb-4">
-              This utility converts agent commissions from SIGNUP type (30%) to RENEWAL type (10%) for the previous month.
-              This should be run at the beginning of each month to maintain the correct commission rates over time.
+              This utility converts agent commissions from SIGNUP type (30%) to RENEWAL type (10%).
+              Two modes are available: monthly conversion for routine maintenance, and one-time full database conversion.
             </p>
             
             <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-md mb-4 border border-amber-200 dark:border-amber-800">
@@ -412,73 +453,168 @@ export default function Migrations() {
               <ul className="text-amber-700 dark:text-amber-400 text-sm space-y-1 list-disc pl-5">
                 <li>This operation changes commission types from SIGNUP (30%) to RENEWAL (10%)</li>
                 <li>Commission amounts will be recalculated based on the 10% rate</li>
-                <li>Only commissions from the previous month will be affected</li>
                 <li>This operation uses database transactions and will roll back if any errors occur</li>
               </ul>
             </div>
             
-            {conversionError && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Conversion Error</AlertTitle>
-                <AlertDescription>
-                  {conversionError instanceof Error 
-                    ? conversionError.message 
-                    : "An unknown error occurred during commission conversion"}
-                </AlertDescription>
-              </Alert>
-            )}
+            <Tabs defaultValue="monthly" className="mt-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="monthly">Monthly Conversion</TabsTrigger>
+                <TabsTrigger value="all">Full Conversion (One-time)</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="monthly">
+                <div className="p-4 border rounded-md mt-4">
+                  <h3 className="text-lg font-semibold mb-2">Previous Month Conversion</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Convert SIGNUP commissions from the previous month to RENEWAL type (10%).
+                    This should be run at the beginning of each month as part of routine maintenance.
+                  </p>
+                  
+                  {conversionError && (
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Conversion Error</AlertTitle>
+                      <AlertDescription>
+                        {conversionError instanceof Error 
+                          ? conversionError.message 
+                          : "An unknown error occurred during commission conversion"}
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
-            {isConversionSuccess && conversionResults && (
-              <Alert className="mb-4">
-                <CheckCircle className="h-4 w-4" />
-                <AlertTitle>Conversion Results</AlertTitle>
-                <AlertDescription>
-                  <div className="mt-2">
-                    <p>Records found: {conversionResults.recordsFound || 0}</p>
-                    <p>Records converted: {conversionResults.recordsConverted || 0}</p>
-                    {conversionResults.errors && conversionResults.errors.length > 0 && (
-                      <div className="mt-2">
-                        <p className="font-semibold">Errors:</p>
-                        <ul className="list-disc pl-5">
-                          {conversionResults.errors.map((err: any, i: number) => (
-                            <li key={i}>{typeof err === 'string' ? err : err.error || err.message || JSON.stringify(err)}</li>
-                          ))}
-                        </ul>
-                      </div>
+                  {isConversionSuccess && conversionResults && (
+                    <Alert className="mb-4">
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertTitle>Conversion Results</AlertTitle>
+                      <AlertDescription>
+                        <div className="mt-2">
+                          <p>Records found: {conversionResults.recordsFound || 0}</p>
+                          <p>Records converted: {conversionResults.recordsConverted || 0}</p>
+                          {conversionResults.errors && conversionResults.errors.length > 0 && (
+                            <div className="mt-2">
+                              <p className="font-semibold">Errors:</p>
+                              <ul className="list-disc pl-5">
+                                {conversionResults.errors.map((err: any, i: number) => (
+                                  <li key={i}>{typeof err === 'string' ? err : err.error || err.message || JSON.stringify(err)}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <div className="flex justify-end space-x-2 mt-4">
+                    {isConfirmingConversion && (
+                      <Button 
+                        variant="outline" 
+                        onClick={handleCancelConversion} 
+                        disabled={isConverting}
+                      >
+                        Cancel
+                      </Button>
                     )}
+                    <Button 
+                      onClick={handleRunCommissionConversion} 
+                      disabled={isConverting}
+                      variant={isConfirmingConversion ? "destructive" : "default"}
+                    >
+                      {isConverting ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Converting Month...
+                        </>
+                      ) : isConfirmingConversion ? (
+                        "Confirm Monthly Conversion"
+                      ) : (
+                        "Run Monthly Conversion"
+                      )}
+                    </Button>
                   </div>
-                </AlertDescription>
-              </Alert>
-            )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="all">
+                <div className="p-4 border rounded-md mt-4 border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950">
+                  <div className="flex items-center mb-3">
+                    <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mr-2" />
+                    <h3 className="text-lg font-semibold text-red-700 dark:text-red-400">ONE-TIME Full Database Conversion</h3>
+                  </div>
+                  
+                  <p className="text-sm text-red-700 dark:text-red-400 mb-4">
+                    <strong>CAUTION:</strong> This operation will convert <u>ALL</u> SIGNUP commissions in the database to RENEWAL type, 
+                    regardless of date. This is a one-time operation intended to fix historical data issues, and should only be 
+                    run once with administrative approval.
+                  </p>
+                  
+                  {allError && (
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Full Conversion Error</AlertTitle>
+                      <AlertDescription>
+                        {allError instanceof Error 
+                          ? allError.message 
+                          : "An unknown error occurred during full database conversion"}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {isAllSuccess && allResults && (
+                    <Alert className="mb-4">
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertTitle>Full Conversion Results</AlertTitle>
+                      <AlertDescription>
+                        <div className="mt-2">
+                          <p>Records found: {allResults.recordsFound || 0}</p>
+                          <p>Records converted: {allResults.recordsConverted || 0}</p>
+                          {allResults.errors && allResults.errors.length > 0 && (
+                            <div className="mt-2">
+                              <p className="font-semibold">Errors:</p>
+                              <ul className="list-disc pl-5">
+                                {allResults.errors.map((err: any, i: number) => (
+                                  <li key={i}>{typeof err === 'string' ? err : err.error || err.message || JSON.stringify(err)}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <div className="flex justify-end space-x-2 mt-4">
+                    {isConfirmingAllConversion && (
+                      <Button 
+                        variant="outline" 
+                        onClick={handleCancelAllConversion} 
+                        disabled={isAllLoading}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    <Button 
+                      onClick={handleRunAllCommissionConversion} 
+                      disabled={isAllLoading}
+                      variant={isConfirmingAllConversion ? "destructive" : "default"}
+                    >
+                      {isAllLoading ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Converting ALL Records...
+                        </>
+                      ) : isConfirmingAllConversion ? (
+                        "Confirm FULL DATABASE Conversion"
+                      ) : (
+                        "Run Full Database Conversion"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
-          <CardFooter className="flex justify-end space-x-2">
-            {isConfirmingConversion && (
-              <Button 
-                variant="outline" 
-                onClick={handleCancelConversion} 
-                disabled={isConverting}
-              >
-                Cancel
-              </Button>
-            )}
-            <Button 
-              onClick={handleRunCommissionConversion} 
-              disabled={isConverting}
-              variant={isConfirmingConversion ? "destructive" : "default"}
-            >
-              {isConverting ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Converting Commissions...
-                </>
-              ) : isConfirmingConversion ? (
-                "Confirm Commission Conversion"
-              ) : (
-                "Convert Commissions"
-              )}
-            </Button>
-          </CardFooter>
         </Card>
 
         <Separator />
@@ -491,7 +627,9 @@ export default function Migrations() {
             <li>Users that already exist in the agent_commissions table will be skipped</li>
             <li>This migration will calculate referral fee points based on customer selected package</li>
             <li>If the standard migration times out, try the manual migration option which uses a different approach</li>
-            <li>Commission conversion should be run at the beginning of each month</li>
+            <li>Commission conversion (monthly) should be run at the beginning of each month</li>
+            <li>The full database conversion is a one-time operation to fix historical SIGNUP commissions</li>
+            <li>All commission conversions recalculate amounts based on package price (30% → 10%)</li>
           </ul>
         </div>
       </div>
