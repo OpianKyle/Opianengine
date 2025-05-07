@@ -315,11 +315,6 @@ export default function TeamPage() {
                     src="/FlashingtheOpiancard.png" 
                     alt="Our Mission" 
                     className="w-full h-full object-cover opacity-30"
-                    onError={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      img.onerror = null;
-                      img.style.display = 'none';
-                    }}
                   />
                   <div className="absolute inset-0 bg-[#022b5c]/90"></div>
                 </div>
@@ -342,11 +337,6 @@ export default function TeamPage() {
                     src="/jane-holding-card-2.jpg" 
                     alt="Our Vision" 
                     className="w-full h-full object-cover opacity-30"
-                    onError={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      img.onerror = null;
-                      img.style.display = 'none';
-                    }}
                   />
                   <div className="absolute inset-0 bg-[#022b5c]/90"></div>
                 </div>
@@ -369,11 +359,6 @@ export default function TeamPage() {
                     src="/jane-holding-card-1.jpg" 
                     alt="Our Values" 
                     className="w-full h-full object-cover opacity-30"
-                    onError={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      img.onerror = null;
-                      img.style.display = 'none';
-                    }}
                   />
                   <div className="absolute inset-0 bg-[#022b5c]/90"></div>
                 </div>
