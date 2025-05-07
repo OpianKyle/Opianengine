@@ -166,16 +166,14 @@ function CustomerDashboardContent() {
     <div className="space-y-4 md:space-y-6 welcome-dashboard">
       <div className="flex flex-row justify-between items-center mb-2 md:mb-4">
         <div className="flex items-center space-x-2 md:space-x-3">
-          <div className="max-w-[130px] xs:max-w-[180px] sm:max-w-full overflow-hidden">
-            <h2 className="text-lg md:text-xl font-semibold whitespace-nowrap overflow-hidden text-ellipsis">
-              Good {timeOfDay}, {user ? `${user.firstName}` : 'Welcome'}
-            </h2>
-          </div>
+          <h2 className="text-lg md:text-xl font-semibold truncate max-w-[200px] sm:max-w-full">
+            Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome'}
+          </h2>
           <Button
             onClick={() => onboarding.startTour()}
             variant="ghost"
             size="icon"
-            className="tour-guide-button h-8 w-8 md:h-9 md:w-9 bg-background shadow-sm flex items-center justify-center border rounded-full ml-1 md:ml-2 flex-shrink-0"
+            className="tour-guide-button h-8 w-8 md:h-9 md:w-9 bg-background shadow-sm flex items-center justify-center border rounded-full ml-1 md:ml-2"
             title="Start Tour Guide"
           >
             <HelpCircle className="h-4 w-4 md:h-5 md:w-5 text-[#43EB3E]" />
