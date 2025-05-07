@@ -236,17 +236,24 @@ function CustomerDashboardContent() {
           <CardContent className="pt-0 px-3 md:px-6">
             <div className="flex flex-col">
               <div className="w-full">
-                <h3 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
-                <div className="flex flex-col gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max={points}
-                    value={pointsToRedeem}
-                    onChange={(e) => setPointsToRedeem(Number(e.target.value))}
-                    placeholder="Enter points to redeem"
-                    className="h-9 md:h-10 bg-background border-input dark:bg-[#022b5c] dark:border-[#033872] dark:text-white dark:placeholder:text-gray-400"
-                  />
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <p className="text-sm font-medium mb-1">Enter points to redeem:</p>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={points}
+                      value={pointsToRedeem}
+                      onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                      placeholder="Enter points to redeem"
+                      className="h-9 md:h-10 bg-background border-input dark:bg-[#022b5c] dark:border-[#033872] dark:text-white dark:placeholder:text-gray-400"
+                    />
+                    {pointsToRedeem > 0 && (
+                      <p className="text-sm font-medium mt-2">
+                        You will receive: <span className="text-2xl sm:text-3xl font-bold text-green-500">R{randValue}</span>
+                      </p>
+                    )}
+                  </div>
                   <Button 
                     className="w-full h-9 md:h-10 bg-green-600 hover:bg-green-700 text-white text-sm md:text-base"
                     onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
