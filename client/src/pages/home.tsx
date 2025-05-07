@@ -833,7 +833,7 @@ export default function HomePage() {
                   {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
                     <div key={`mobile-${packageName}`} className="flex-[0_0_90%] min-w-0 pl-4 first:pl-8 pr-4">
                       <Card 
-                        className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group flex flex-col h-[800px]`}
+                        className={`border-t-8 border-t-[#022b5c] overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group flex flex-col h-[800px]`}
                       >
                         {/* Particle-like green shade overlay */}
                         <div className="absolute inset-0 bg-[#43EB3E] opacity-5 dark:opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
@@ -945,7 +945,7 @@ export default function HomePage() {
             {Object.entries(PACKAGE_FEATURES).map(([packageName, features]) => (
               <Card 
                 key={packageName} 
-                className={`border-t-8 ${PACKAGE_COLORS[packageName as keyof typeof PACKAGE_COLORS]} overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group flex flex-col h-[800px]`}
+                className={`border-t-8 border-t-[#022b5c] overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 bg-[#01162f] text-white relative group flex flex-col h-[800px]`}
               >
                 {/* Particle-like green shade overlay */}
                 <div className="absolute inset-0 bg-[#43EB3E] opacity-5 dark:opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
