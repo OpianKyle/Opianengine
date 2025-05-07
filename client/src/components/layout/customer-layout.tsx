@@ -197,12 +197,12 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {/* Bottom Navigation Bar - Mobile Only */}
       <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden" style={{ 
-        background: 'var(--background)',
+        background: 'white',
         boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.1)',
-        borderTop: '1px solid var(--border)',
+        borderTop: '1px solid #e5e7eb',
         backdropFilter: 'none' 
       }}>
-        <div className="flex items-center justify-around h-16" style={{ background: 'var(--background)' }}>
+        <div className="flex items-center justify-around h-16" style={{ background: 'white' }}>
           {menuItems.map((item) => (
             <Button
               key={item.href}
