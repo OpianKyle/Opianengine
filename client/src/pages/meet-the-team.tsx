@@ -308,7 +308,7 @@ export default function TeamPage() {
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Our Mission, Vision and Values</h2>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-t-8 border-[#022b5c]">
+              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                 {/* Background image with overlay */}
                 <div className="absolute inset-0 z-0">
                   <img 
@@ -330,7 +330,7 @@ export default function TeamPage() {
                 </div>
               </div>
               
-              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-t-8 border-[#022b5c]">
+              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                 {/* Background image with overlay */}
                 <div className="absolute inset-0 z-0">
                   <img 
@@ -352,7 +352,7 @@ export default function TeamPage() {
                 </div>
               </div>
               
-              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-t-8 border-[#022b5c]">
+              <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                 {/* Background image with overlay */}
                 <div className="absolute inset-0 z-0">
                   <img 
