@@ -18,9 +18,7 @@ interface NotificationBellProps {
 
 const NotificationBell = ({ className, iconSize = 6 }: NotificationBellProps = {}) => {
   const { user } = useUser();
-  const { notifications, unreadCount, markAsRead } = useNotifications();
-  // Default to connected since isConnected may not be present in all versions
-  const isConnected = true;
+  const { notifications, unreadCount, markAsRead, isConnected } = useNotifications();
 
   // Only render if user is authenticated
   if (!user) return null;
@@ -76,14 +74,8 @@ const NotificationBell = ({ className, iconSize = 6 }: NotificationBellProps = {
                 <div className="flex justify-between items-start mb-1">
                   <div className="font-medium">
                     {notification.type === "POINTS_ALLOCATION" || notification.type === "POINTS_AWARDED" ? (
-                      <span className={
-                        notification.hasOwnProperty('points') && 
-                        typeof (notification as any).points === 'number' && 
-                        (notification as any).points >= 0 
-                          ? "text-green-600" 
-                          : "text-red-600"
-                      }>
-                        {(notification as any).formattedPoints || (notification as any).points || ""} points
+                      <span className={notification.points && notification.points >= 0 ? "text-green-600" : "text-red-600"}>
+                        {notification.formattedPoints} points
                       </span>
                     ) : (
                       "New Notification"
@@ -104,10 +96,10 @@ const NotificationBell = ({ className, iconSize = 6 }: NotificationBellProps = {
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {(notification as any).description || notification.message || "New notification"}
+                  {notification.description}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {format(new Date((notification as any).timestamp || notification.createdAt || new Date()), "MMM d, h:mm a")}
+                  {format(new Date(notification.timestamp), "MMM d, h:mm a")}
                 </p>
               </div>
             </DropdownMenuItem>
