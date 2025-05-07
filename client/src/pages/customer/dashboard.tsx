@@ -15,6 +15,7 @@ import { Package as PackageIcon, Award, DollarSign } from "lucide-react";
 
 import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext";
 import AnimatedMetric from "@/components/shared/animated-metric";
+import CustomerTour from "@/components/onboarding/CustomerTour";
 import { HelpCircle } from "lucide-react";
 
 interface User {
@@ -606,6 +607,7 @@ function CustomerDashboardContent() {
 export default function CustomerDashboard() {
   return (
     <OnboardingProvider section="dashboard">
+      <CustomerTour />
       <CustomerDashboardContent />
     </OnboardingProvider>
   );
