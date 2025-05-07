@@ -227,7 +227,63 @@ function CustomerDashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Redeem Points Card - Cash Value - Hidden as requested */}
+        {/* Redeem Points Card - Cash Value */}
+        <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden cash-redemption">
+          <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
+            <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Cash Redemption</CardTitle>
+            <p className="text-xs text-muted-foreground dark:text-gray-400 mb-2 md:mb-6">{lastUpdated}</p>
+          </CardHeader>
+          <CardContent className="pt-0 px-3 md:px-6">
+            <div className="flex flex-col gap-2 md:gap-4">
+              <div className="flex items-center mb-1 md:mb-2">
+                <div className="flex justify-center items-center w-16 h-16 bg-muted/50 dark:bg-[#022757] rounded-lg mr-2 md:mr-4">
+                  <AnimatedMetric
+                    value={randValue}
+                    prefix="R"
+                    className="text-xl md:text-3xl font-bold"
+                  />
+                </div>
+                <div className="text-sm md:text-base">
+                  <p className="font-normal mb-1">Cash Value</p>
+                  <p className="text-xs md:text-sm text-muted-foreground dark:text-gray-400">
+                    {pointsToRedeem > 0 ? pointsToRedeem.toLocaleString() : 0} points selected
+                  </p>
+                </div>
+              </div>
+              
+              <div className="grid gap-2 md:gap-3 grid-cols-1">
+                <div className="flex flex-col md:flex-row gap-2 md:gap-3">
+                  <Input
+                    type="number"
+                    placeholder="Points to redeem"
+                    value={pointsToRedeem || ''}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setPointsToRedeem(isNaN(val) ? 0 : val);
+                    }}
+                    min={1}
+                    max={points}
+                    className="h-9 md:h-10 text-sm md:text-base w-full"
+                  />
+                </div>
+                <Button 
+                  onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
+                  disabled={!canRedeem || redeemCashMutation.isPending}
+                  className="h-9 md:h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm md:text-base"
+                >
+                  {redeemCashMutation.isPending ? (
+                    "Processing..."
+                  ) : (
+                    `Redeem R${randValue}`
+                  )}
+                </Button>
+                <p className="text-xs md:text-sm text-center text-muted-foreground dark:text-gray-400">
+                  Points are redeemed at a rate of R0.015 per point
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Second row: Referral Program on left, Activity and Training Videos stacked on right */}
