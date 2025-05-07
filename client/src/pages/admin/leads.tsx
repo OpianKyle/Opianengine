@@ -125,21 +125,26 @@ export default function AdminLeads() {
   } = useQuery({
     queryKey: ['/api/admin/agents/list'],
     queryFn: async () => {
-      const response = await fetch('/api/admin/agents/list', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
+      try {
+        const response = await fetch('/api/admin/agents/list', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch agents');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch agents: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Agents fetched:', data);
+        return data;
+      } catch (error) {
+        console.error('Error fetching agents:', error);
+        throw error;
       }
-
-      const data = await response.json();
-      console.log('Agents fetched:', data);
-      return data;
     },
     enabled: !!token,
   });
