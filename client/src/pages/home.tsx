@@ -211,7 +211,7 @@ const STEPS = [
   {
     title: "Earn Points Effortlessly",
     description: "Use your Opian card for everyday purchases and bill payments. Each transaction earns you reward points automatically.",
-    backgroundImage: "/DancingRichChick.png",
+    backgroundImage: "/Opian-Earn-Points-Effortlessly.jpg",
     fallbackColor: "#01162f"
   },
   {
