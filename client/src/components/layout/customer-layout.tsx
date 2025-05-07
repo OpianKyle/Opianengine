@@ -96,24 +96,24 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   return (
     <div className="flex h-screen w-full">
       {/* Header with Theme Toggle, Notification Bell, Profile and Menu */}
-      <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-3">
-        <ThemeToggle className="h-11 w-11" iconSize={6} />
-        <NotificationBell />
+      <div className="fixed top-0 right-0 z-50 p-3 flex items-center gap-2">
+        <ThemeToggle className="h-12 w-12" iconSize={24} />
+        <NotificationBell iconSize={24} />
         <Button
           variant="ghost"
           size="icon"
-          className="rounded-full h-11 w-11 bg-background shadow-sm flex items-center justify-center border profile-link"
+          className="rounded-full h-12 w-12 bg-background shadow-sm flex items-center justify-center border profile-link"
           onClick={() => handleNavigation('/profile')}
         >
-          <User className="h-6 w-6" />
+          <User className="h-7 w-7" />
         </Button>
         <Button
           variant="outline"
           size="icon"
-          className="lg:hidden h-11 w-11 bg-background shadow-md"
+          className="lg:hidden h-12 w-12 bg-background shadow-md"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >
-          {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {sidebarOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
         </Button>
       </div>
 
@@ -134,7 +134,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <div className="flex flex-col h-full">
-          <div className="p-4 md:p-6 border-b lg:hidden">
+          <div className="p-4 md:p-6 border-b">
             <img 
               src={useTheme().theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'} 
               alt="OPIAN Rewards"

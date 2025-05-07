@@ -28,12 +28,12 @@ const NotificationBell = ({ className, iconSize = 6 }: NotificationBellProps = {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className={`relative h-11 w-11 rounded-full ${!isConnected ? 'opacity-50' : ''} ${className || ''}`}
+          className={`relative h-12 w-12 rounded-full ${!isConnected ? 'opacity-50' : ''} ${className || ''}`}
           title={isConnected ? 'Notifications' : 'Connecting to notification service...'}
         >
           <Bell style={{ height: `${iconSize}px`, width: `${iconSize}px` }} />
           {unreadCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+            <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] text-white">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
