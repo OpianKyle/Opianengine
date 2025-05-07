@@ -96,7 +96,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   return (
     <div className="flex h-screen w-full">
       {/* Header with Theme Toggle, Notification Bell, Profile and Menu */}
-      <div className="fixed top-0 right-0 z-50 p-3 flex items-center gap-2">
+      <div className="fixed top-0 right-5 z-50 p-3 flex items-center gap-2">
         <ThemeToggle className="h-12 w-12" iconSize={24} />
         <NotificationBell iconSize={24} />
         <Button
@@ -130,15 +130,14 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         "fixed lg:fixed inset-y-0 left-0 z-40",
         "w-64 lg:w-72 bg-background border-r",
         "transform transition-transform duration-300 ease-in-out",
-        "pt-16", // Add padding top for the navbar
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <div className="flex flex-col h-full">
-          <div className="p-4 md:p-6 border-b">
+          <div className="pt-3 pb-2 px-4 border-b">
             <img 
               src={useTheme().theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'} 
               alt="OPIAN Rewards"
-              className="h-8 md:h-12 w-auto object-contain mx-auto"
+              className="h-12 w-auto object-contain mx-auto"
               onError={(e) => {
                 const img = e.target as HTMLImageElement;
                 img.onerror = null;
@@ -187,7 +186,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {/* Main content */}
       <main className="flex-1 w-0 lg:w-auto lg:pl-72">
-        <div className="min-h-screen pt-20 pb-20">
+        <div className="min-h-screen pt-16 pb-20">
           <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: "100rem" }}>
             <OnboardingProvider section="customer">
               {children}
