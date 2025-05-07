@@ -186,41 +186,41 @@ export default function ReferralSection({ className }: ReferralSectionProps) {
   if (packageUpgradeRequired) {
     return (
       <Card className={className || "shadow-sm"}>
-        <CardHeader className="border-b border-border/40">
-          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold flex items-center gap-2">
-            <Users className="h-5 w-5" />
+        <CardHeader className="border-b border-border/40 pb-1 pt-3 md:pb-2 md:pt-4">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold flex items-center gap-1 md:gap-2 text-base md:text-lg">
+            <Users className="h-4 w-4 md:h-5 md:w-5" />
             <span>Refer & Earn Points</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="space-y-4">
+        <CardContent className="p-3 md:p-6">
+          <div className="space-y-3 md:space-y-4">
             <div className="border border-blue-400/30 rounded-lg overflow-hidden">
-              <div className="bg-blue-500/10 p-4 border-b border-blue-400/20">
-                <h3 className="text-white font-semibold flex items-center gap-2">
-                  <PackageIcon className="h-5 w-5 text-white" />
+              <div className="bg-blue-500/10 p-2 md:p-4 border-b border-blue-400/20">
+                <h3 className="text-white font-semibold flex items-center gap-1 md:gap-2 text-sm md:text-base">
+                  <PackageIcon className="h-4 w-4 md:h-5 md:w-5 text-white" />
                   Package Upgrade Required
                 </h3>
               </div>
-              <div className="p-4 space-y-3 text-white">
-                <p>
+              <div className="p-3 md:p-4 space-y-2 md:space-y-3 text-white">
+                <p className="text-sm md:text-base">
                   The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
                 </p>
-                <p>
+                <p className="text-sm md:text-base">
                   Your current package: <strong>{userPackage || "OPPORTUNITY"}</strong>
                 </p>
-                <p className="text-sm text-blue-100">
+                <p className="text-xs md:text-sm text-blue-100">
                   Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
                 </p>
-                <div className="bg-black/50 p-4 rounded-md border border-blue-400/30">
-                  <h4 className="text-white font-semibold text-base mb-2">Why upgrade?</h4>
-                  <ul className="text-white space-y-2 list-disc pl-5">
+                <div className="bg-black/50 p-2 md:p-4 rounded-md border border-blue-400/30">
+                  <h4 className="text-white font-semibold text-sm md:text-base mb-1 md:mb-2">Why upgrade?</h4>
+                  <ul className="text-white text-xs md:text-sm space-y-1 md:space-y-2 list-disc pl-4 md:pl-5">
                     <li>Earn 7.5% referral fee from your direct referrals</li>
                     <li>Get 2000 points per successful referral</li> 
                     <li>Access exclusive PROSPER-level benefits</li>
                   </ul>
                 </div>
-                <div className="flex justify-center mt-4">
-                  <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+                <div className="flex justify-center mt-2 md:mt-4">
+                  <Button className="h-8 md:h-10 text-xs md:text-sm bg-blue-500 hover:bg-blue-600 text-white">
                     Upgrade to PROSPER Package
                   </Button>
                 </div>
@@ -259,77 +259,77 @@ export default function ReferralSection({ className }: ReferralSectionProps) {
         <div className="text-sm text-muted-foreground">
           Share your referral link with friends. When they register, you'll earn 2,000 points!
         </div>
-        <div className="bg-[rgba(0,0,0,0.5)] p-5 rounded-lg my-5">
-          <h3 className="text-white font-semibold text-lg mt-0">Your Referral Rewards</h3>
-          <ul className="list-none pl-0 my-2.5">
-            <li className="my-1.5 text-white">• Level 1: 7.5% referral fee + 2000 points per direct referral</li>
+        <div className="bg-[rgba(0,0,0,0.5)] p-3 md:p-5 rounded-lg my-3 md:my-5">
+          <h3 className="text-white font-semibold text-base md:text-lg mt-0">Your Referral Rewards</h3>
+          <ul className="list-none pl-0 my-2">
+            <li className="my-1 md:my-1.5 text-white text-sm md:text-base">• Level 1: 7.5% referral fee + 2000 points per direct referral</li>
           </ul>
         </div>
         {referralLink && (
           <>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2">
               <Input
                 value={referralLink}
                 readOnly
-                className="font-mono text-sm"
+                className="font-mono text-xs md:text-sm h-8 md:h-10"
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={copyToClipboard}
-                className={copied ? "text-green-500" : ""}
+                className={`h-8 w-8 md:h-10 md:w-10 ${copied ? "text-green-500" : ""}`}
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
             </div>
-            <div className="flex gap-2 justify-center">
+            <div className="flex gap-1 md:gap-2 justify-center flex-wrap mt-2">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.twitter, '_blank')}
-                className="text-[#1DA1F2] hover:text-[#1DA1F2]/80"
+                className="h-8 w-8 md:h-10 md:w-10 text-[#1DA1F2] hover:text-[#1DA1F2]/80"
               >
-                <TwitterIcon className="h-4 w-4" />
+                <TwitterIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.facebook, '_blank')}
-                className="text-[#4267B2] hover:text-[#4267B2]/80"
+                className="h-8 w-8 md:h-10 md:w-10 text-[#4267B2] hover:text-[#4267B2]/80"
               >
-                <FacebookIcon className="h-4 w-4" />
+                <FacebookIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.linkedin, '_blank')}
-                className="text-[#0077B5] hover:text-[#0077B5]/80"
+                className="h-8 w-8 md:h-10 md:w-10 text-[#0077B5] hover:text-[#0077B5]/80"
               >
-                <LinkedInIcon className="h-4 w-4" />
+                <LinkedInIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.whatsapp, '_blank')}
-                className="text-[#25D366] hover:text-[#25D366]/80"
+                className="h-8 w-8 md:h-10 md:w-10 text-[#25D366] hover:text-[#25D366]/80"
               >
-                <WhatsAppIcon className="h-4 w-4" />
+                <WhatsAppIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.telegram, '_blank')}
-                className="text-[#0088cc] hover:text-[#0088cc]/80"
+                className="h-8 w-8 md:h-10 md:w-10 text-[#0088cc] hover:text-[#0088cc]/80"
               >
-                <TelegramIcon className="h-4 w-4" />
+                <TelegramIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.email, '_blank')}
-                className="text-gray-600 hover:text-gray-800"
+                className="h-8 w-8 md:h-10 md:w-10 text-gray-600 hover:text-gray-800"
               >
-                <EmailIcon className="h-4 w-4" />
+                <EmailIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
             </div>
           </>

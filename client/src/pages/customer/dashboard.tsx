@@ -163,20 +163,20 @@ function CustomerDashboardContent() {
   const lastUpdated = `Last Updated: ${currentDateString} @${currentDate.getHours()}:${currentDate.getMinutes().toString().padStart(2, '0')}`;
 
   return (
-    <div className="space-y-6 welcome-dashboard">
-      <div className="flex flex-row justify-between items-center mb-4">
-        <div className="flex items-center space-x-3">
-          <h2 className="text-xl font-semibold">
-            Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome to OPIAN Rewards'}
+    <div className="space-y-4 md:space-y-6 welcome-dashboard">
+      <div className="flex flex-row justify-between items-center mb-2 md:mb-4">
+        <div className="flex items-center space-x-2 md:space-x-3">
+          <h2 className="text-lg md:text-xl font-semibold truncate max-w-[200px] sm:max-w-full">
+            Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome'}
           </h2>
           <Button
             onClick={() => onboarding.startTour()}
             variant="ghost"
             size="icon"
-            className="tour-guide-button h-9 w-9 bg-background shadow-sm flex items-center justify-center border rounded-full ml-2"
+            className="tour-guide-button h-8 w-8 md:h-9 md:w-9 bg-background shadow-sm flex items-center justify-center border rounded-full ml-1 md:ml-2"
             title="Start Tour Guide"
           >
-            <HelpCircle className="h-5 w-5 text-[#43EB3E]" />
+            <HelpCircle className="h-4 w-4 md:h-5 md:w-5 text-[#43EB3E]" />
           </Button>
         </div>
         <div> {/* Empty div to maintain the flex spacing */}
@@ -184,41 +184,41 @@ function CustomerDashboardContent() {
       </div>
 
       {/* First row: Points Balance and Cash Redemption side by side */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2">
         {/* Profile Balance Card - Points */}
         <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden points-card">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-card-foreground dark:text-white text-lg">Your Points Balance</CardTitle>
-            <p className="text-xs text-muted-foreground dark:text-gray-400 mb-6">{lastUpdated}</p>
+          <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
+            <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Your Points Balance</CardTitle>
+            <p className="text-xs text-muted-foreground dark:text-gray-400 mb-2 md:mb-6">{lastUpdated}</p>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 px-3 md:px-6">
             <div className="flex items-center mb-2">
-              <div className="w-1/5">
+              <div className="w-1/6 md:w-1/5">
                 <div className="flex justify-start">
-                  <Award className="h-14 w-14 text-primary dark:text-blue-400 opacity-80" />
+                  <Award className="h-10 w-10 md:h-14 md:w-14 text-primary dark:text-blue-400 opacity-80" />
                 </div>
               </div>
-              <div className="w-4/5">
-                <h3 className="text-5xl font-bold">{points.toLocaleString()}</h3>
+              <div className="w-5/6 md:w-4/5">
+                <h3 className="text-3xl md:text-5xl font-bold">{points.toLocaleString()}</h3>
               </div>
             </div>
             
-            <div className="flex items-center mt-4">
+            <div className="flex items-center mt-2 md:mt-4">
               <div className="w-full">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-base font-medium text-card-foreground dark:text-gray-300">{tierInfo.name}</span>
+                <div className="flex items-center gap-2 mb-1 md:mb-2">
+                  <span className="text-sm md:text-base font-medium text-card-foreground dark:text-gray-300">{tierInfo.name}</span>
                   <span className="text-muted-foreground dark:text-gray-500">•</span>
-                  <span className="text-base font-medium text-card-foreground dark:text-gray-300">{points.toLocaleString()}</span>
+                  <span className="text-sm md:text-base font-medium text-card-foreground dark:text-gray-300">{points.toLocaleString()}</span>
                 </div>
                 
                 {tierInfo.nextTier && (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground dark:text-gray-300">
+                  <div className="space-y-1 md:space-y-2">
+                    <p className="text-xs md:text-sm text-muted-foreground dark:text-gray-300">
                       {tierInfo.nextTier.pointsNeeded.toLocaleString()} points to {tierInfo.nextTier.name}
                     </p>
                     <Progress
                       value={(points / tierInfo.nextTier.pointsNeeded) * 100}
-                      className="h-2 bg-muted dark:bg-gray-700"
+                      className="h-1.5 md:h-2 bg-muted dark:bg-gray-700"
                     />
                   </div>
                 )}
@@ -229,19 +229,17 @@ function CustomerDashboardContent() {
 
         {/* Redeem Points Card - Cash Value */}
         <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden rewards-section">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-card-foreground dark:text-white text-lg">Cash Redemption</CardTitle>
+          <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
+            <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Cash Redemption</CardTitle>
             <p className="text-xs text-muted-foreground dark:text-gray-400">{lastUpdated}</p>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center">
-              <div className="w-1/4">
-                <div className="flex justify-start">
-                  <DollarSign className="h-14 w-14 text-green-500 dark:text-green-400 opacity-80" />
-                </div>
+          <CardContent className="pt-0 px-3 md:px-6">
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <div className="w-full sm:w-1/4 flex justify-start mb-2 sm:mb-0">
+                <DollarSign className="h-10 w-10 md:h-14 md:w-14 text-green-500 dark:text-green-400 opacity-80" />
               </div>
-              <div className="w-3/4">
-                <h3 className="text-5xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
+              <div className="w-full sm:w-3/4">
+                <h3 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
                 <div className="flex flex-col gap-2">
                   <Input
                     type="number"
@@ -250,10 +248,10 @@ function CustomerDashboardContent() {
                     value={pointsToRedeem}
                     onChange={(e) => setPointsToRedeem(Number(e.target.value))}
                     placeholder="Enter points to redeem"
-                    className="bg-background border-input dark:bg-[#022b5c] dark:border-[#033872] dark:text-white dark:placeholder:text-gray-400"
+                    className="h-9 md:h-10 bg-background border-input dark:bg-[#022b5c] dark:border-[#033872] dark:text-white dark:placeholder:text-gray-400"
                   />
                   <Button 
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    className="w-full h-9 md:h-10 bg-green-600 hover:bg-green-700 text-white text-sm md:text-base"
                     onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
                     disabled={!canRedeem}
                   >
@@ -267,7 +265,7 @@ function CustomerDashboardContent() {
       </div>
       
       {/* Second row: Referral Program on left, Activity and Training Videos stacked on right */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2">
         {/* Left column - Referral Program */}
         <div>
           {/* Referral Section */}
@@ -278,11 +276,11 @@ function CustomerDashboardContent() {
                 style={{ backgroundImage: 'url(/DancingRichChick.png)' }}
               />
               <div className="relative z-10">
-                <CardHeader className="pb-2 pt-4">
-                  <CardTitle className="text-card-foreground dark:text-white text-lg">Referral Program</CardTitle>
+                <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
+                  <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Referral Program</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="mb-4">
+                <CardContent className="pt-0 px-3 md:px-6">
+                  <div className="mb-2 md:mb-4">
                     <ReferralSection className="bg-transparent p-0 text-card-foreground dark:text-white border-0 shadow-none" />
                   </div>
                 </CardContent>
@@ -295,14 +293,14 @@ function CustomerDashboardContent() {
                 style={{ backgroundImage: 'url(/DancingRichChick.png)' }}
               />
               <div className="relative z-10">
-                <CardHeader className="pb-2 pt-4">
-                  <CardTitle className="text-card-foreground dark:text-white text-lg">Referral Program</CardTitle>
+                <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
+                  <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Referral Program</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <p>Unlock our referral program by upgrading to PROSPER package or higher.</p>
-                      <p className="text-sm text-muted-foreground dark:text-gray-300">
+                <CardContent className="pt-0 px-3 md:px-6">
+                  <div className="space-y-3 md:space-y-4">
+                    <div className="space-y-1 md:space-y-2">
+                      <p className="text-sm md:text-base">Unlock our referral program by upgrading to PROSPER package or higher.</p>
+                      <p className="text-xs md:text-sm text-muted-foreground dark:text-gray-300">
                         Earn points when your referrals join and receive additional bonuses from their referrals.
                       </p>
                       <p className="text-xs text-muted-foreground dark:text-gray-400">
@@ -310,7 +308,7 @@ function CustomerDashboardContent() {
                       </p>
                     </div>
                     <Button 
-                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                      className="w-full h-9 md:h-10 bg-primary text-primary-foreground hover:bg-primary/90 text-sm md:text-base"
                       onClick={() => toast({
                         title: "Package Upgrade",
                         description: "Please contact support to upgrade your package."
@@ -326,48 +324,48 @@ function CustomerDashboardContent() {
         </div>
         
         {/* Right column - Activity and Training Videos stacked */}
-        <div className="grid gap-4">
+        <div className="grid gap-3 md:gap-4">
           {/* Recent Activity Section */}
           <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden recent-transactions">
-            <CardHeader className="pb-2 pt-4">
-              <CardTitle className="text-card-foreground dark:text-white text-lg">Recent Activity</CardTitle>
+            <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
+              <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Recent Activity</CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <ScrollArea className="h-[220px]">
-                <div className="space-y-4">
+            <CardContent className="pt-0 px-3 md:px-6">
+              <ScrollArea className="h-[180px] md:h-[220px]">
+                <div className="space-y-2 md:space-y-4">
                   {isTransactionsLoading ? (
                     // Skeleton loading state
-                    Array(5).fill(0).map((_, index) => (
-                      <div key={`skeleton-${index}`} className="flex items-center justify-between p-4 border border-border dark:border-[#043675] rounded-lg bg-muted/50 dark:bg-[#022757]">
+                    Array(3).fill(0).map((_, index) => (
+                      <div key={`skeleton-${index}`} className="flex items-center justify-between p-2 md:p-4 border border-border dark:border-[#043675] rounded-lg bg-muted/50 dark:bg-[#022757]">
                         <div className="space-y-1">
-                          <div className="h-5 w-64 bg-muted dark:bg-[#043675] rounded animate-pulse"></div>
-                          <div className="h-4 w-32 bg-muted dark:bg-[#043675] rounded animate-pulse"></div>
+                          <div className="h-4 md:h-5 w-32 md:w-64 bg-muted dark:bg-[#043675] rounded animate-pulse"></div>
+                          <div className="h-3 md:h-4 w-24 md:w-32 bg-muted dark:bg-[#043675] rounded animate-pulse"></div>
                         </div>
-                        <div className="h-8 w-20 bg-muted dark:bg-[#043675] rounded animate-pulse"></div>
+                        <div className="h-6 md:h-8 w-16 md:w-20 bg-muted dark:bg-[#043675] rounded animate-pulse"></div>
                       </div>
                     ))
                   ) : transactions && transactions.length > 0 ? (
                     transactions.map((transaction) => (
                       <div
                         key={transaction.id}
-                        className="flex items-center justify-between p-4 border border-border dark:border-[#043675] rounded-lg bg-muted/50 dark:bg-[#022757]"
+                        className="flex items-center justify-between p-2 md:p-4 border border-border dark:border-[#043675] rounded-lg bg-muted/50 dark:bg-[#022757]"
                       >
                         <div className="space-y-1">
-                          <p className="font-medium">
+                          <p className="font-medium text-xs md:text-sm truncate max-w-[180px] sm:max-w-full">
                             {transaction.type ? formatTransactionType(transaction.type) : ''} - {transaction.description}
                           </p>
-                          <p className="text-sm text-muted-foreground dark:text-gray-400">
+                          <p className="text-xs md:text-sm text-muted-foreground dark:text-gray-400">
                             {new Date(transaction.createdAt).toLocaleDateString()}
                           </p>
                         </div>
-                        <div className={`font-mono font-bold ${transaction.points > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        <div className={`font-mono font-bold text-xs md:text-sm ${transaction.points > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {transaction.points > 0 ? '+' : ''}{transaction.points.toLocaleString()}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-6 text-muted-foreground dark:text-gray-400">
-                      <p>No recent activity to display</p>
+                    <div className="text-center py-4 md:py-6 text-muted-foreground dark:text-gray-400">
+                      <p className="text-sm">No recent activity to display</p>
                     </div>
                   )}
                 </div>
@@ -382,19 +380,19 @@ function CustomerDashboardContent() {
               style={{ backgroundImage: 'url(/Training.JPG)' }}
             />
             <div className="relative z-10">
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-card-foreground dark:text-white text-lg">Training Videos</CardTitle>
+              <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
+                <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Training Videos</CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 flex">
-                <div className="w-3/4">
-                  <p className="text-sm mb-5 text-white font-medium">Learn how to use the OPIAN Rewards system effectively</p>
-                  <Button variant="outline" className="bg-black/30 text-white border-white/40 hover:bg-black/50 hover:text-white text-sm">
+              <CardContent className="pt-0 px-3 md:px-6 flex flex-col sm:flex-row items-center sm:items-start">
+                <div className="w-full sm:w-3/4 mb-3 sm:mb-0">
+                  <p className="text-xs md:text-sm mb-3 md:mb-5 text-white font-medium">Learn how to use the OPIAN Rewards system effectively</p>
+                  <Button variant="outline" className="h-8 md:h-10 bg-black/30 text-white border-white/40 hover:bg-black/50 hover:text-white text-xs md:text-sm">
                     Watch now
                   </Button>
                 </div>
-                <div className="w-1/4 flex justify-end">
-                  <div className="w-20 h-20 bg-black/40 flex items-center justify-center rounded-full border border-white/20">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-full sm:w-1/4 flex justify-center sm:justify-end">
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-black/40 flex items-center justify-center rounded-full border border-white/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 md:h-10 md:w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
