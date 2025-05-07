@@ -487,9 +487,9 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
       
       console.log(`New referral lead created for ${firstName} ${lastName} using code ${referralCode}${agentId ? ` - Assigned to agent ID: ${agentId}` : ''}, referred by user ID: ${referrer.id}`);
       
-      // INTEGRATION FIX: Also insert into the leads table to ensure it appears in the agent dashboard
+      // INTEGRATION FIX: Also insert into the leads table but leave assigned_agent_id as NULL for admin assignment
       try {
-        console.log(`INTEGRATION FIX: Also inserting lead into leads table for agent visibility`);
+        console.log(`INTEGRATION FIX: Also inserting lead into leads table for admin assignment`);
         
         const leadsSql = `
           INSERT INTO leads (
@@ -504,7 +504,7 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
             created_at, 
             updated_at
           ) VALUES (
-            ?, ?, ?, ?, ?, ?, 'new', ?, NOW(), NOW()
+            ?, ?, ?, ?, ?, ?, 'new', NULL, NOW(), NOW()
           )
         `;
         
@@ -514,12 +514,11 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
           email,
           phoneNumber,
           referralCode.replace(/-/g, ''),
-          (notes || 'Referral lead through customer referral'),
-          agentId || null
+          (notes || 'Referral lead through customer referral - Requires agent assignment')
         ];
         
         await connection.execute(leadsSql, leadsParams);
-        console.log(`INTEGRATION FIX: Successfully added referral to leads table for agent dashboard visibility`);
+        console.log(`INTEGRATION FIX: Successfully added referral to leads table for admin assignment`);
       } catch (leadsError) {
         // Just log the error but don't fail the whole request
         console.error(`INTEGRATION FIX: Failed to add referral to leads table:`, leadsError);

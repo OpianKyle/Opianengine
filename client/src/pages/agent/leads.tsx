@@ -11,8 +11,10 @@ import {
   Download,
   Mail,
   Phone,
-  MessageSquare
+  MessageSquare,
+  UserPlus
 } from 'lucide-react';
+import { LeadConversionModal, type CustomerFormData } from '@/components/agents/lead-conversion-modal';
 import { useToast } from '@/hooks/use-toast';
 
 import {
@@ -113,6 +115,7 @@ export default function AgentLeads() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isConversionModalOpen, setIsConversionModalOpen] = useState(false);
 
   // Fetch leads assigned to the current agent
   const { data, isLoading, error, refetch } = useQuery<LeadsResponse>({
@@ -166,6 +169,41 @@ export default function AgentLeads() {
     onError: (error: Error) => {
       toast({
         title: 'Update Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Convert lead to customer mutation
+  const convertLeadMutation = useMutation({
+    mutationFn: async (formData: CustomerFormData & { leadId?: number }) => {
+      const response = await fetch('/api/referral/agent/register-customer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to convert lead to customer');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      toast({
+        title: 'Customer Created',
+        description: 'Lead has been successfully converted to a customer.',
+      });
+      setIsConversionModalOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Conversion Failed',
         description: error.message,
         variant: 'destructive',
       });
@@ -578,16 +616,28 @@ export default function AgentLeads() {
             </div>
             
             <DialogFooter className="sm:justify-between">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  handleLeadUpdate(selectedLead.id, { status: "converted" });
-                  setIsEditDialogOpen(false);
-                }}
-              >
-                <UserCheck className="h-4 w-4 mr-2" />
-                Mark as Converted
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    handleLeadUpdate(selectedLead.id, { status: "converted" });
+                    setIsEditDialogOpen(false);
+                  }}
+                >
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Mark as Converted
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setIsConversionModalOpen(true);
+                  }}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Convert to Customer
+                </Button>
+              </div>
               <DialogClose asChild>
                 <Button type="button">
                   Close
@@ -597,6 +647,30 @@ export default function AgentLeads() {
           </DialogContent>
         </Dialog>
       )}
+      
+      {/* Lead to Customer Conversion Modal */}
+      <LeadConversionModal
+        open={isConversionModalOpen}
+        onOpenChange={setIsConversionModalOpen}
+        leadData={selectedLead ? {
+          id: selectedLead.id,
+          firstName: selectedLead.firstName,
+          lastName: selectedLead.lastName,
+          email: selectedLead.email,
+          phoneNumber: selectedLead.mobileNumber,
+          notes: selectedLead.notes || undefined
+        } : null}
+        onConvert={async (formData) => {
+          if (selectedLead) {
+            await convertLeadMutation.mutateAsync({
+              ...formData,
+              leadId: selectedLead.id
+            });
+            // Update the lead status after successful conversion
+            handleLeadUpdate(selectedLead.id, { status: "converted" });
+          }
+        }}
+      />
     </div>
   );
 }

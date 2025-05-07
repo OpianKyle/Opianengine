@@ -61,9 +61,9 @@ export async function up(db) {
         NEW.phone_number, 
         NULL,  
         NEW.referral_code, 
-        COALESCE(NEW.notes, 'Referral lead'), 
+        COALESCE(NEW.notes, 'Referral lead - Requires agent assignment'), 
         'new', 
-        NEW.signed_up_user_id,
+        NULL, -- Set to NULL for manual assignment by admin
         NEW.created_at, 
         NEW.updated_at
       WHERE 

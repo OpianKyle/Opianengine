@@ -70,7 +70,7 @@ async function syncReferralsToLeads() {
           rl.referral_code, 
           COALESCE(rl.notes, 'Referral lead'), 
           'new', 
-          rl.signed_up_user_id,
+          NULL, -- Set to NULL for manual assignment by admin
           rl.created_at, 
           rl.updated_at
         FROM 
