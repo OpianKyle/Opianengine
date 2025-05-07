@@ -178,26 +178,33 @@ export default function AgentLeads() {
   // Convert lead to customer mutation
   const convertLeadMutation = useMutation({
     mutationFn: async (formData: CustomerFormData & { leadId?: number }) => {
-      const response = await fetch('/api/referral/agent/register-customer', {
+      const response = await fetch('/api/agent/customers/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        credentials: 'include',
+        body: JSON.stringify({
+          ...formData,
+          leadId: formData.leadId
+        }),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to convert lead to customer');
+        throw new Error(errorData.error || 'Failed to convert lead to customer');
       }
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/agent/customers'] });
       toast({
         title: 'Customer Created',
-        description: 'Lead has been successfully converted to a customer.',
+        description: data.temporaryPassword 
+          ? `Lead has been successfully converted to a customer. Temporary password: ${data.temporaryPassword}` 
+          : 'Lead has been successfully converted to a customer.',
       });
       setIsConversionModalOpen(false);
     },
@@ -658,7 +665,8 @@ export default function AgentLeads() {
           lastName: selectedLead.lastName,
           email: selectedLead.email,
           phoneNumber: selectedLead.mobileNumber,
-          notes: selectedLead.notes || undefined
+          notes: selectedLead.notes || undefined,
+          selectedPackage: selectedLead.selectedPackage
         } : null}
         onConvert={async (formData) => {
           if (selectedLead) {

@@ -140,7 +140,7 @@ router.post('/customers/create', async (req: any, res) => {
       gender, idNumber, occupation, industry, addressLine1,
       suburb, postalCode, selectedPackage, bankName,
       accountType, accountNumber, accountHolderName,
-      branchCode, isSouthAfrican, hasCreditCard
+      branchCode, isSouthAfrican, hasCreditCard, leadId
     } = req.body;
 
     // Check for existing user
@@ -298,6 +298,20 @@ router.post('/customers/create', async (req: any, res) => {
       } catch (error) {
         console.error('Error adding to agent_commissions table:', error);
         // Continue the process even if commission record fails
+      }
+
+      // Update lead status if this customer was created from a lead
+      if (leadId) {
+        try {
+          console.log(`Updating lead ID ${leadId} to status 'converted'`);
+          await connection.execute(
+            'UPDATE leads SET status = ?, updated_at = NOW() WHERE id = ? AND assigned_agent_id = ?',
+            ['converted', leadId, req.user.id]
+          );
+        } catch (leadError) {
+          console.error('Error updating lead status:', leadError);
+          // Continue process even if lead update fails
+        }
       }
 
       await connection.commit();

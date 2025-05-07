@@ -1,34 +1,70 @@
 import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
 
-// Define schema for customer registration
+const packages = [
+  { id: 'OPPORTUNITY', name: 'Opportunity', price: 350 },
+  { id: 'MOMENTUM', name: 'Momentum', price: 450 },
+  { id: 'PROSPER', name: 'Prosper', price: 550 },
+  { id: 'PRESTIGE', name: 'Prestige', price: 695 },
+  { id: 'PINNACLE', name: 'Pinnacle', price: 825 }
+];
+
 const customerSchema = z.object({
-  firstName: z.string().min(2, { message: 'First name must be at least 2 characters' }),
-  lastName: z.string().min(2, { message: 'Last name must be at least 2 characters' }),
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  phoneNumber: z.string().min(10, { message: 'Phone number must be at least 10 characters' }),
-  selectedPackage: z.string().min(1, { message: 'Please select a package' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters' }),
-  confirmPassword: z.string().min(8, { message: 'Confirm password must be at least 8 characters' }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+  email: z.string().email("Invalid email address"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  isSouthAfrican: z.boolean(),
+  idNumber: z.string().min(1, "ID Number is required"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  gender: z.enum(["male", "female", "other"], { required_error: "Please select a gender" }),
+  mobileNumber: z.string().min(10, "Phone number must be at least 10 digits"),
+  occupation: z.string().min(1, "Occupation is required"),
+  industry: z.string().min(1, "Industry is required"),
+  addressLine1: z.string().min(1, "Address is required"),
+  suburb: z.string().min(1, "Suburb is required"),
+  postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
+  hasCreditCard: z.boolean(),
+  selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]),
+  accountHolderName: z.string().min(1, "Account holder name is required"),
+  bankName: z.string().min(1, "Bank name is required"),
+  branchCode: z.string().min(1, "Branch code is required"),
+  accountNumber: z.string().min(1, "Account number is required"),
+  accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"], { required_error: "Please select an account type" }),
+  mandateAgreement: z.boolean()
+    .refine(val => val === true, {
+      message: "You must agree to the mandate terms"
+    }),
 });
 
 export type CustomerFormData = z.infer<typeof customerSchema>;
@@ -43,198 +79,509 @@ type LeadConversionModalProps = {
     email: string;
     phoneNumber: string;
     notes?: string;
+    selectedPackage?: string | null;
   } | null;
-  onConvert: (formData: CustomerFormData) => Promise<void>;
+  onConvert: (formData: CustomerFormData & { leadId?: number }) => Promise<void>;
 };
 
-const packageOptions = [
-  { value: 'OPPORTUNITY', label: 'Opportunity' },
-  { value: 'MOMENTUM', label: 'Momentum' },
-  { value: 'PROSPER', label: 'Prosper' },
-  { value: 'PRESTIGE', label: 'Prestige' },
-  { value: 'PINNACLE', label: 'Pinnacle' },
+const accountTypes = ["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"];
+
+const industries = [
+  "Agriculture",
+  "Construction",
+  "Education",
+  "Finance",
+  "Healthcare",
+  "Information Technology",
+  "Manufacturing",
+  "Mining",
+  "Retail",
+  "Services",
+  "Transport",
+  "Other"
 ];
 
 export function LeadConversionModal({ open, onOpenChange, leadData, onConvert }: LeadConversionModalProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Create form with validation
+  
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phoneNumber: '',
-      selectedPackage: '',
-      password: '',
-      confirmPassword: '',
-    },
+      email: "",
+      firstName: "",
+      lastName: "",
+      isSouthAfrican: false,
+      idNumber: "",
+      dateOfBirth: "",
+      gender: "male",
+      mobileNumber: "",
+      occupation: "",
+      industry: "",
+      addressLine1: "",
+      suburb: "",
+      postalCode: "",
+      hasCreditCard: false,
+      selectedPackage: "OPPORTUNITY",
+      accountHolderName: "",
+      bankName: "",
+      branchCode: "",
+      accountNumber: "",
+      accountType: "SAVINGS",
+      mandateAgreement: false,
+    }
   });
 
   // Update form values when lead data changes
   useEffect(() => {
     if (leadData) {
-      form.reset({
-        firstName: leadData.firstName || '',
-        lastName: leadData.lastName || '',
-        email: leadData.email || '',
-        phoneNumber: leadData.phoneNumber || '',
-        selectedPackage: '',
-        password: '',
-        confirmPassword: '',
-      });
+      form.setValue('firstName', leadData.firstName || '');
+      form.setValue('lastName', leadData.lastName || '');
+      form.setValue('email', leadData.email || '');
+      form.setValue('mobileNumber', leadData.phoneNumber || '');
+      
+      // If lead has a selected package, set it in the form
+      if (leadData.selectedPackage) {
+        const normalizedPackage = leadData.selectedPackage.toUpperCase();
+        // Check if it's one of our valid package types
+        const validPackages = ["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"];
+        if (validPackages.includes(normalizedPackage)) {
+          // Type assertion to tell TypeScript this is a valid package type
+          form.setValue('selectedPackage', normalizedPackage as "OPPORTUNITY" | "MOMENTUM" | "PROSPER" | "PRESTIGE" | "PINNACLE");
+        }
+      }
     }
   }, [leadData, form]);
 
-  async function handleSubmit(data: CustomerFormData) {
+  async function onSubmit(data: CustomerFormData) {
     try {
       setIsSubmitting(true);
-      await onConvert(data);
-      
-      toast({
-        title: 'Success',
-        description: 'Lead converted to customer successfully',
+      // Include the lead ID when submitting the form to link the new customer to the original lead
+      await onConvert({
+        ...data,
+        leadId: leadData?.id
       });
       
+      toast({
+        title: "Success",
+        description: "Lead converted to customer successfully",
+      });
+      
+      form.reset();
       onOpenChange(false);
     } catch (error) {
       console.error('Error converting lead:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to convert lead to customer',
-        variant: 'destructive',
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to convert lead to customer",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  const today = new Date().toISOString().split('T')[0];
+  const MandateText = `This signed Authority and Mandate refers to our contract dated
+${today}
+("the Agreement").
+
+I / We hereby authorise you to issue and deliver payment instructions of ${
+    packages.find(pkg => pkg.id === form.getValues().selectedPackage)?.price || 0
+  } per month for the subscription fee to your Banker for collection against my / our abovementioned account at my / our above-mentioned Bank (or any other bank or branch to which I / we may transfer my / our account) on condition that the sum of such payment instructions will never exceed my / our obligations as as agreed to in the Agreement and commencing on 1st of each month and continuing until this Authority and Mandate is terminated by me / us by giving you notice in writing of not less than 60 ordinary working days, and sent by prepaid registered post or delivered to your address as indicated above.
+
+The individual payment instructions so authorised to be issued must be issued and delivered as follows: ${
+    packages.find(pkg => pkg.id === form.getValues().selectedPackage)?.price || 0
+  } monthly for 12 months. This is an annual agreement which is automatically renewable unless canceled in writing 
+
+In the event that the payment day falls on a Sunday, or recognised South African public holiday, the payment day will automatically be the preceding ordinary business day.
+
+Payment Instructions due in December may be debited against my account on a earlier date
+
+I / We understand that the withdrawals hereby authorized will be processed through a computerized system provided by the South African Banks and I also understand that details of each withdrawal will be printed on my bank statement. Each transaction will contain a number, which must be included in the said payment instruction and if provided to you should enable you to identify the Agreement. A payment reference is added to this form before the issuing of any payment instruction.
+Mandate
+I /We acknowledge that all payment instructions issued by you shall be treated by my / our above-mentioned Bank as if the instructions have been issued by me/us personally.
+
+Cancellation
+I /We agree that although this Authority and Mandate may be cancelled by me/us, such cancellation will not cancel the Agreement. I/We shall not be entitled to any refund of amounts which you have withdrawn while this authority was in force, if such amounts were legally owing to you.
+
+Assignment
+I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty) Ltd as per your agreement with Netcash (Pty) Ltd, but in the absence of such assignment of the Agreement, this Authority and Mandate will be null and void.`;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Convert Lead to Customer</DialogTitle>
-          <DialogDescription>
-            Create a new customer account using this lead's information
+      <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto bg-background border-border [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-[#43EB3E]">
+        <DialogHeader className="border-b pb-4">
+          <DialogTitle className="text-foreground">Convert Lead to Customer</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Create a new customer account using this lead's information.
           </DialogDescription>
         </DialogHeader>
-
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Personal Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="mobileNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mobile Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="idNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ID Number/Passport</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isSouthAfrican"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">South African citizen</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="dateOfBirth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date of Birth</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="phoneNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="selectedPackage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Package</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a package" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {packageOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="password" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="password" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Employment & Address Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <FormField
+                  control={form.control}
+                  name="occupation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Occupation</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="industry"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Industry</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Industry" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {industries.map(industry => (
+                            <SelectItem key={industry} value={industry}>{industry}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="addressLine1"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="suburb"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Suburb</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="postalCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Postal Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            <DialogFooter>
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Package & Financial Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <FormField
+                  control={form.control}
+                  name="selectedPackage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Package</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a package" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="OPPORTUNITY">Opportunity - R350/month</SelectItem>
+                          <SelectItem value="MOMENTUM">Momentum - R450/month</SelectItem>
+                          <SelectItem value="PROSPER">Prosper - R550/month</SelectItem>
+                          <SelectItem value="PRESTIGE">Prestige - R695/month</SelectItem>
+                          <SelectItem value="PINNACLE">Pinnacle - R825/month</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="hasCreditCard"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2 h-10 px-3 border rounded-md mt-6">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">Do you own a credit card?</FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Banking Details</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <FormField
+                  control={form.control}
+                  name="accountHolderName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Holder Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="bankName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bank Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="branchCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Branch Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="accountNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="accountType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Type</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select account type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {accountTypes.map(type => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold border-b pb-2 text-foreground">Mandate Agreement</h3>
+              <div className="border rounded-lg p-4 bg-muted space-y-3">
+                <ScrollArea className="h-[300px] w-full rounded-md border p-6 bg-background [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-muted [&::-webkit-scrollbar-thumb]:bg-[#43EB3E]">
+                  <div className="whitespace-pre-wrap text-foreground text-base leading-relaxed">
+                    {MandateText}
+                  </div>
+                </ScrollArea>
+                <FormField
+                  control={form.control}
+                  name="mandateAgreement"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="border-[#43EB3E] data-[state=checked]:bg-[#43EB3E] data-[state=checked]:text-white"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-foreground">
+                          <div className="space-y-2">
+                            <p>I confirm that the customer has agreed to the above mandate</p>
+                          </div>
+                        </FormLabel>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"
@@ -243,17 +590,20 @@ export function LeadConversionModal({ open, onOpenChange, leadData, onConvert }:
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating...
                   </>
                 ) : (
-                  'Create Customer'
+                  "Create Customer"
                 )}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
       </DialogContent>
