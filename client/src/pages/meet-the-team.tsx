@@ -309,7 +309,21 @@ export default function TeamPage() {
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
+                {/* Background image with overlay */}
+                <div className="absolute inset-0 z-0">
+                  <img 
+                    src="/FlashingtheOpiancard.png" 
+                    alt="Our Mission" 
+                    className="w-full h-full object-cover opacity-30"
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.onerror = null;
+                      img.style.display = 'none';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-[#022b5c]/90"></div>
+                </div>
+                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full z-10"></div>
                 <div className="relative z-10">
                   <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
                     <Compass className="h-8 w-8 text-[#43EB3E]" />
@@ -322,7 +336,21 @@ export default function TeamPage() {
               </div>
               
               <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
+                {/* Background image with overlay */}
+                <div className="absolute inset-0 z-0">
+                  <img 
+                    src="/jane-holding-card-2.jpg" 
+                    alt="Our Vision" 
+                    className="w-full h-full object-cover opacity-30"
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.onerror = null;
+                      img.style.display = 'none';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-[#022b5c]/90"></div>
+                </div>
+                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full z-10"></div>
                 <div className="relative z-10">
                   <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
                     <Shield className="h-8 w-8 text-[#43EB3E]" />
@@ -335,7 +363,21 @@ export default function TeamPage() {
               </div>
               
               <div className="bg-[#022b5c] p-8 rounded-lg shadow-md relative overflow-hidden transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full"></div>
+                {/* Background image with overlay */}
+                <div className="absolute inset-0 z-0">
+                  <img 
+                    src="/jane-holding-card-1.jpg" 
+                    alt="Our Values" 
+                    className="w-full h-full object-cover opacity-30"
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.onerror = null;
+                      img.style.display = 'none';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-[#022b5c]/90"></div>
+                </div>
+                <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full z-10"></div>
                 <div className="relative z-10">
                   <div className="w-16 h-16 bg-[#43EB3E]/10 rounded-full flex items-center justify-center mb-6">
                     <Award className="h-8 w-8 text-[#43EB3E]" />
