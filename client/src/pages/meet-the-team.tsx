@@ -314,9 +314,9 @@ export default function TeamPage() {
                   <img 
                     src="/FlashingtheOpiancard.png" 
                     alt="Our Mission" 
-                    className="w-full h-full object-cover opacity-30"
+                    className="w-full h-full object-cover opacity-60"
                   />
-                  <div className="absolute inset-0 bg-[#022b5c]/90"></div>
+                  <div className="absolute inset-0 bg-[#022b5c]/75"></div>
                 </div>
                 <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full z-10"></div>
                 <div className="relative z-10">
@@ -336,9 +336,9 @@ export default function TeamPage() {
                   <img 
                     src="/jane-holding-card-2.jpg" 
                     alt="Our Vision" 
-                    className="w-full h-full object-cover opacity-30"
+                    className="w-full h-full object-cover opacity-60"
                   />
-                  <div className="absolute inset-0 bg-[#022b5c]/90"></div>
+                  <div className="absolute inset-0 bg-[#022b5c]/75"></div>
                 </div>
                 <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full z-10"></div>
                 <div className="relative z-10">
@@ -358,9 +358,9 @@ export default function TeamPage() {
                   <img 
                     src="/jane-holding-card-1.jpg" 
                     alt="Our Values" 
-                    className="w-full h-full object-cover opacity-30"
+                    className="w-full h-full object-cover opacity-60"
                   />
-                  <div className="absolute inset-0 bg-[#022b5c]/90"></div>
+                  <div className="absolute inset-0 bg-[#022b5c]/75"></div>
                 </div>
                 <div className="absolute top-0 right-0 w-20 h-20 bg-[#43EB3E]/5 rounded-bl-full z-10"></div>
                 <div className="relative z-10">
