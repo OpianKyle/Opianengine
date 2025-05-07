@@ -243,7 +243,7 @@ function CustomerDashboardContent() {
                       type="number"
                       min="0"
                       max={points}
-                      value={pointsToRedeem}
+                      value={pointsToRedeem !== 0 ? pointsToRedeem : ''}
                       onChange={(e) => setPointsToRedeem(Number(e.target.value))}
                       placeholder="Enter points to redeem"
                       className="h-9 md:h-10 bg-background border-input dark:bg-[#022b5c] dark:border-[#033872] dark:text-white dark:placeholder:text-gray-400"
