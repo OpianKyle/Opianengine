@@ -260,8 +260,8 @@ export default function AdminAgents() {
       </Card>
 
       <Dialog open={!!selectedAgentId} onOpenChange={() => setSelectedAgentId(null)}>
-        <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
-          <DialogHeader className="mb-4">
+        <DialogContent className="max-w-5xl max-h-[85vh] bg-[#011d3d] border-[#022b5c] text-white">
+          <DialogHeader className="mb-4 sticky top-0 z-10 bg-[#011d3d] pt-6">
             <DialogTitle className="text-xl font-semibold text-white">
               {selectedAgent?.firstName} {selectedAgent?.lastName}'s Customers
             </DialogTitle>
@@ -276,9 +276,9 @@ export default function AdminAgents() {
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
             </div>
           ) : (
-            <div className="relative">
+            <div className="relative overflow-auto max-h-[60vh]">
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 z-10 bg-[#011d3d]">
                   <TableRow className="border-[#022b5c]">
                     <TableHead className="text-gray-300">Name</TableHead>
                     <TableHead className="text-gray-300">Email</TableHead>
