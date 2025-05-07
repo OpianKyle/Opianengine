@@ -42,155 +42,7 @@ const profileSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
-const packages = [
-  {
-    name: "OPPORTUNITY",
-    display: "Opportunity",
-    price: 350,
-    points: 2500,
-    perks: [
-      "Activation Points: 2,500",
-      "EMS Assist",
-      "Legal Assist",
-      "Repatriation Cover",
-      "Celebrate Life",
-      "24/7 Nurse On-Call"
-    ]
-  },
-  {
-    name: "MOMENTUM",
-    display: "Momentum",
-    price: 450,
-    points: 5000,
-    perks: [
-      "Activation Points: 5,000",
-      "Funeral Cover: R5,000",
-      "Funeral Assist",
-      "EMS Assist",
-      "Legal Assist",
-      "Repatriation Cover",
-      "Celebrate Life",
-      "24/7 Nurse On-Call"
-    ]
-  },
-  {
-    name: "PROSPER",
-    display: "Prosper",
-    price: 550,
-    points: 7500,
-    perks: [
-      "Activation Points: 7,500",
-      "Funeral Cover: R10,000",
-      "Accidental Death Cover: R20,000",
-      "Funeral Assist",
-      "Family Income Benefit: R5,000 x6",
-      "EMS Assist",
-      "Legal Assist",
-      "Repatriation Cover",
-      "Celebrate Life",
-      "24/7 Nurse On-Call",
-      "Virtual GP Assistant",
-      "Medical Second Opinion"
-    ]
-  },
-  {
-    name: "PRESTIGE",
-    display: "Prestige",
-    price: 695,
-    points: 10000,
-    perks: [
-      "Activation Points: 10,000",
-      "Funeral Cover: R15,000",
-      "Accidental Death Cover: R50,000",
-      "Funeral Assist",
-      "Family Income Benefit: R5,000 x6",
-      "EMS Assist",
-      "Legal Assist",
-      "Repatriation Cover",
-      "Celebrate Life",
-      "24/7 Nurse On-Call",
-      "Virtual GP Assistant",
-      "Medical Second Opinion",
-      "Crime Victim Assist",
-      "Assault & Trauma Assist",
-      "Emergency Medical Services"
-    ]
-  },
-  {
-    name: "PINNACLE",
-    display: "Pinnacle",
-    price: 825,
-    points: 12500,
-    perks: [
-      "Activation Points: 12,500",
-      "Funeral Cover: R20,000",
-      "Accidental Death Cover: R100,000",
-      "Funeral Assist",
-      "Family Income Benefit: R5,000 x6",
-      "EMS Assist",
-      "Legal Assist",
-      "Lawyer Assist",
-      "Repatriation Cover",
-      "Celebrate Life",
-      "24/7 Nurse On-Call",
-      "Virtual GP Assistant",
-      "Medical Second Opinion",
-      "Crime Victim Assist",
-      "Assault & Trauma Assist",
-      "Emergency Medical Services"
-    ]
-  }
-];
-
-const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
-  pkg: typeof packages[0],
-  isSelected: boolean,
-  onSelect: () => void,
-  anySelected: boolean
-}) => (
-  <div className="w-full px-4">
-    <Card
-      className={`w-full h-[700px] cursor-pointer transition-all relative overflow-visible
-        ${isSelected
-          ? 'border-[#43EB3E] ring-2 ring-[#43EB3E] shadow-[0_0_10px_rgba(67,235,62,0.3)]'
-          : anySelected
-            ? 'opacity-50 hover:opacity-75'
-            : 'hover:border-primary'
-        }`}
-      onClick={onSelect}
-    >
-      <CardHeader className="p-4 sm:p-6">
-        <CardTitle className="flex justify-between items-center text-lg">
-          {pkg.display}
-          {isSelected && (
-            <Check className="h-5 w-5 text-[#43EB3E]" />
-          )}
-        </CardTitle>
-        <CardDescription className="text-base">R{pkg.price}/month</CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 sm:p-6">
-        <div className="space-y-2">
-          <ul className="space-y-2">
-            {pkg.perks.map((perk, index) => (
-              <li key={index} className="flex items-start text-sm">
-                <Badge variant="outline" className="mr-2 shrink-0">✓</Badge>
-                <span>{perk}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </CardContent>
-      <div className="absolute bottom-6 left-6 right-6">
-        <Button
-          className={`w-full ${isSelected ? 'bg-[#43EB3E] hover:bg-[#43EB3E]' : ''}`}
-          variant={isSelected ? "default" : "outline"}
-        >
-          {isSelected ? "Selected" : "Select Package"}
-        </Button>
-      </div>
-    </Card>
-  </div>
-);
+// Package types moved to products page
 
 export default function ProfilePage() {
   const queryClient = useQueryClient();
@@ -342,9 +194,6 @@ export default function ProfilePage() {
     );
   }
 
-  const currentPackage = packages.find(pkg => pkg.name === profile?.selectedPackage);
-  const newPackage = packages.find(pkg => pkg.name === selectedPackage);
-
   return (
     <div className="w-full min-h-full">
       <div className="space-y-0.5 px-4 sm:px-6 mb-4">
@@ -357,36 +206,22 @@ export default function ProfilePage() {
       <Separator className="my-4" />
 
       <div className="px-4 sm:px-6 space-y-4 pb-20 lg:pb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Package Selection</CardTitle>
-            <CardDescription>
-              Your current package: {currentPackage ? `${currentPackage.display} (R${currentPackage.price}/month)` : 'No package selected'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-2 sm:p-6">
-            <div className="relative w-full">
-              <Carousel className="w-full">
-                <CarouselContent className="-ml-2 sm:-ml-4">
-                  {packages.map((pkg) => (
-                    <CarouselItem key={pkg.name} className="pl-2 sm:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
-                      <PackageCard
-                        pkg={pkg}
-                        isSelected={pkg.name === profile?.selectedPackage}
-                        anySelected={!!profile?.selectedPackage}
-                        onSelect={() => handlePackageSelect(pkg.name)}
-                      />
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <div className="hidden sm:block">
-                  <CarouselPrevious className="-left-4 sm:-left-12" />
-                  <CarouselNext className="-right-4 sm:-right-12" />
-                </div>
-              </Carousel>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-medium">Subscription Package</h3>
+            <p className="text-sm text-muted-foreground">
+              {profile?.selectedPackage 
+                ? `Current package: ${profile.selectedPackage}` 
+                : 'No package selected'}
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => window.location.href = '/customer/products'}
+          >
+            View Packages
+          </Button>
+        </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(data => updateProfileMutation.mutate(data))}>
@@ -708,48 +543,7 @@ export default function ProfilePage() {
         </Form>
       </div>
 
-      <Dialog open={showPackageDialog} onOpenChange={setShowPackageDialog}>
-        <DialogContent className="max-w-[95vw] sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Confirm Package Change</DialogTitle>
-            <DialogDescription>
-              {currentPackage && newPackage ? (
-                <>
-                  You are about to change your package from {currentPackage.display} (R{currentPackage.price}/month) to {newPackage.display} (R{newPackage.price}/month).
-                  <br /><br />
-                  {newPackage.price > currentPackage.price ? (
-                    <>
-                      This will increase your monthly payment by R{newPackage.price - currentPackage.price}.
-                      <br /><br />
-                    </>
-                  ) : newPackage.price < currentPackage.price ? (
-                    <>
-                      This will decrease your monthly payment by R{currentPackage.price - newPackage.price}.
-                      <br /><br />
-                    </>
-                  ) : null}
-                  This change will update your monthly debit order mandate. A new mandate agreement will be sent to you via email.
-                </>
-              ) : (
-                'Package information not available'
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowPackageDialog(false)} className="w-full sm:w-auto">Cancel</Button>
-            <Button onClick={confirmPackageChange} disabled={updateProfileMutation.isPending} className="w-full sm:w-auto">
-              {updateProfileMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Updating...
-                </>
-              ) : (
-                'Confirm Change'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Package selection dialog removed - now handled in the products page */}
     </div>
   );
 }
