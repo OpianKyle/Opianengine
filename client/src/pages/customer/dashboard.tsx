@@ -11,7 +11,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import ReferralSection from "@/components/shared/referral-section";
 import { formatTransactionType } from "@/lib/utils";
-import { Package as PackageIcon, Award, DollarSign } from "lucide-react";
+import { Package as PackageIcon, Award } from "lucide-react";
 
 import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext";
 import AnimatedMetric from "@/components/shared/animated-metric";
@@ -234,11 +234,8 @@ function CustomerDashboardContent() {
             <p className="text-xs text-muted-foreground dark:text-gray-400">{lastUpdated}</p>
           </CardHeader>
           <CardContent className="pt-0 px-3 md:px-6">
-            <div className="flex flex-col sm:flex-row sm:items-center">
-              <div className="w-full sm:w-1/4 flex justify-start mb-2 sm:mb-0">
-                <DollarSign className="h-10 w-10 md:h-14 md:w-14 text-green-500 dark:text-green-400 opacity-80" />
-              </div>
-              <div className="w-full sm:w-3/4">
+            <div className="flex flex-col">
+              <div className="w-full">
                 <h3 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-2">R{(points * 0.015).toFixed(2)}</h3>
                 <div className="flex flex-col gap-2">
                   <Input
@@ -462,7 +459,7 @@ function CustomerDashboardContent() {
           <Card className="rewards-section shadow-sm">
             <CardHeader className="border-b border-border/40">
               <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold">
-                <DollarSign className="h-5 w-5 text-muted-foreground" /> Cash Redemption
+                Cash Redemption
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-6">
