@@ -9,11 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Loader2, Check } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Match the account types with the database schema
@@ -357,36 +355,7 @@ export default function ProfilePage() {
       <Separator className="my-4" />
 
       <div className="px-4 sm:px-6 space-y-4 pb-20 lg:pb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Package Selection</CardTitle>
-            <CardDescription>
-              Your current package: {currentPackage ? `${currentPackage.display} (R${currentPackage.price}/month)` : 'No package selected'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-2 sm:p-6">
-            <div className="relative w-full">
-              <Carousel className="w-full">
-                <CarouselContent className="-ml-2 sm:-ml-4">
-                  {packages.map((pkg) => (
-                    <CarouselItem key={pkg.name} className="pl-2 sm:pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
-                      <PackageCard
-                        pkg={pkg}
-                        isSelected={pkg.name === profile?.selectedPackage}
-                        anySelected={!!profile?.selectedPackage}
-                        onSelect={() => handlePackageSelect(pkg.name)}
-                      />
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <div className="hidden sm:block">
-                  <CarouselPrevious className="-left-4 sm:-left-12" />
-                  <CarouselNext className="-right-4 sm:-right-12" />
-                </div>
-              </Carousel>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Package Selection section moved to Products page as requested */}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(data => updateProfileMutation.mutate(data))}>
