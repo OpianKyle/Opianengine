@@ -158,6 +158,7 @@ router.post("/", async (req, res, next) => {
       mobileNumber: req.body.mobileNumber,
       selectedPackage: req.body.selectedPackage,
       referralCode: req.body.referralCode,
+      notes: req.body.notes || '',
       status: 'new',
       createdAt: new Date(),
       updatedAt: new Date()
@@ -170,43 +171,70 @@ router.post("/", async (req, res, next) => {
       throw new ResponseError(validationError.message, 400);
     }
     
-    // Insert the lead using MySQL method
-    const insertResult = await db.insert(leads).values(result.data);
+    // Use direct connection for more control over the insert query
+    const connection = await pool.getConnection();
     
-    // Get the inserted ID and fetch the complete lead record
-    const leadId = insertResult.insertId;
-    
-    // Check if we have a valid ID before querying
-    if (!leadId || isNaN(Number(leadId))) {
-      // Return the submitted data without querying if no valid ID
+    try {
+      // Start a transaction
+      await connection.beginTransaction();
+      
+      // Prepare insert query
+      const insertQuery = `
+        INSERT INTO leads (
+          first_name, last_name, email, mobile_number, 
+          selected_package, notes, status, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      const insertParams = [
+        leadData.firstName,
+        leadData.lastName,
+        leadData.email,
+        leadData.mobileNumber,
+        leadData.selectedPackage,
+        leadData.notes,
+        'new',
+        new Date().toISOString().slice(0, 19).replace('T', ' '),
+        new Date().toISOString().slice(0, 19).replace('T', ' ')
+      ];
+      
+      // Execute insert
+      const [insertResult] = await connection.execute(insertQuery, insertParams);
+      const insertId = insertResult.insertId;
+      
+      // Commit the transaction
+      await connection.commit();
+      
+      // Log the submission in admin logs if the user is logged in
+      if (req.isAuthenticated() && req.user?.id) {
+        await adminLog({
+          user_id: req.user.id,
+          action: "lead_submitted",
+          details: `Lead submitted: ${leadData.firstName} ${leadData.lastName} (${leadData.email})`,
+        });
+      } else {
+        console.log('Lead submitted from public form');
+      }
+      
+      // Return success with the lead data we already have
       res.status(201).json({
         success: true,
-        lead: leadData,
-        message: "Lead information submitted successfully, but could not retrieve the record"
+        lead: {
+          ...leadData,
+          id: insertId
+        },
+        message: "Lead information submitted successfully",
       });
-      return;
+    } catch (dbError) {
+      // If there was an error, rollback the transaction
+      await connection.rollback();
+      throw dbError;
+    } finally {
+      // Always release the connection back to the pool
+      connection.release();
     }
-    
-    // Fetch the inserted record
-    const [lead] = await db.select().from(leads).where(eq(leads.id, Number(leadId)));
-    
-    // Log the submission in admin logs if the user is logged in
-    if (req.isAuthenticated() && req.user?.id) {
-      await adminLog({
-        user_id: req.user.id,
-        action: "lead_submitted",
-        details: `Lead submitted: ${leadData.firstName} ${leadData.lastName} (${leadData.email})`,
-      });
-    } else {
-      console.log('Lead submitted from public form');
-    }
-
-    res.status(201).json({
-      success: true,
-      lead,
-      message: "Lead information submitted successfully",
-    });
   } catch (error) {
+    console.error('Error in lead submission:', error);
     next(error);
   }
 });
