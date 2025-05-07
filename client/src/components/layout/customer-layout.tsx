@@ -186,7 +186,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {/* Main content */}
       <main className="flex-1 w-0 lg:w-auto lg:pl-72">
-        <div className="min-h-screen pt-16 pb-20">
+        <div className="min-h-screen pt-16 pb-28 lg:pb-20">
           <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: "100rem" }}>
             <OnboardingProvider section="customer">
               {children}
@@ -196,8 +196,13 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       </main>
 
       {/* Bottom Navigation Bar - Mobile Only */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-background border-t lg:hidden shadow-lg">
-        <div className="flex items-center justify-around h-16 bg-background">
+      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden" style={{ 
+        background: 'var(--background)',
+        boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.1)',
+        borderTop: '1px solid var(--border)',
+        backdropFilter: 'none' 
+      }}>
+        <div className="flex items-center justify-around h-16" style={{ background: 'var(--background)' }}>
           {menuItems.map((item) => (
             <Button
               key={item.href}
@@ -223,7 +228,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
             </Button>
           ))}
         </div>
-      </nav>
+      </div>
     </div>
   );
 }
