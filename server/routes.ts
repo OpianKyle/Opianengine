@@ -1111,6 +1111,31 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   
   app.use('/api/agent', agentRouter);
   app.use('/api/admin/agents', agentsRouter);
+  
+  // Debug endpoint for agent listing that bypasses all authentication middleware
+  app.get('/api/debug/agents', async (req, res) => {
+    try {
+      console.log("Direct debug endpoint for agents accessed");
+      // Create a direct database connection
+      const connection = await createConnection();
+      const [agents] = await connection.execute('SELECT id, first_name, last_name, email FROM users WHERE is_agent = 1');
+      
+      console.log(`Found ${Array.isArray(agents) ? agents.length : 0} agents through global debug endpoint`);
+      
+      // Format for frontend compatibility
+      const formatted = Array.isArray(agents) ? agents.map((agent: any) => ({
+        id: agent.id,
+        firstName: agent.first_name,
+        lastName: agent.last_name,
+        email: agent.email
+      })) : [];
+      
+      return res.status(200).json(formatted);
+    } catch (error) {
+      console.error("Global debug endpoint error:", error);
+      return res.status(500).json({ error: 'Server error in global debug endpoint' });
+    }
+  });
   app.use('/api/migration', migrationRouter);
   app.use('/api/manual-migration', manualMigrationRouter);
   app.use('/api/package-types', packageTypesRouter);

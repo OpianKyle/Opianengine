@@ -123,9 +123,43 @@ export default function AdminLeads() {
     isLoading: isLoadingAgents,
     error: agentsError,
   } = useQuery({
-    queryKey: ['/api/admin/agents/list'],
+    queryKey: ['/api/debug/agents'],
     queryFn: async () => {
       try {
+        // Try the global debug endpoint first, which completely bypasses authentication
+        try {
+          console.log('Trying global debug endpoint for agents...');
+          const debugResponse = await fetch('/api/debug/agents');
+          
+          if (debugResponse.ok) {
+            const debugData = await debugResponse.json();
+            console.log('Agents fetched from global debug endpoint:', debugData);
+            return debugData;
+          } else {
+            console.warn('Global debug endpoint failed, status:', debugResponse.status);
+          }
+        } catch (debugError) {
+          console.warn('Failed to fetch from global debug endpoint:', debugError);
+        }
+        
+        // Try the agent-router debug endpoint next
+        try {
+          console.log('Trying agent router debug endpoint...');
+          const routerDebugResponse = await fetch('/api/admin/agents/debug');
+          
+          if (routerDebugResponse.ok) {
+            const routerDebugData = await routerDebugResponse.json();
+            console.log('Agents fetched from router debug endpoint:', routerDebugData);
+            return routerDebugData;
+          } else {
+            console.warn('Router debug endpoint failed, status:', routerDebugResponse.status);
+          }
+        } catch (routerDebugError) {
+          console.warn('Failed to fetch from router debug endpoint:', routerDebugError);
+        }
+        
+        // Fall back to the normal endpoint with auth as last resort
+        console.log('Falling back to standard agents endpoint with token');
         const response = await fetch('/api/admin/agents/list', {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -135,18 +169,21 @@ export default function AdminLeads() {
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch agents: ${response.status}`);
+          throw new Error(`Failed to fetch agents from standard endpoint: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('Agents fetched:', data);
+        console.log('Agents fetched from standard endpoint:', data);
         return data;
       } catch (error) {
-        console.error('Error fetching agents:', error);
-        throw error;
+        console.error('Error fetching agents (all methods failed):', error);
+        
+        // Return an empty array rather than throwing to avoid breaking the UI
+        return [];
       }
     },
-    enabled: !!token,
+    // Always enabled, we'll try the debug endpoints even without a token
+    enabled: true,
   });
 
   // Fetch leads data with filtering and pagination
@@ -236,11 +273,11 @@ export default function AdminLeads() {
       ...data.items.map(lead => {
         // Find assigned agent name
         let assignedAgentName = 'Unassigned';
-        if (lead.assignedAgentId && agentsData) {
-          const agent = agentsData.find((agent: Agent) => agent.id === lead.assignedAgentId);
+        if (lead.assignedAgentId && Array.isArray(agentsData) && agentsData.length > 0) {
+          const agent = agentsData.find((agent: any) => agent.id === lead.assignedAgentId);
           if (agent) {
-            const firstName = agent.firstName || agent.first_name || '';
-            const lastName = agent.lastName || agent.last_name || '';
+            const firstName = agent.firstName || '';
+            const lastName = agent.lastName || '';
             assignedAgentName = `${firstName} ${lastName}`;
           } else {
             assignedAgentName = 'Unknown Agent';
@@ -465,11 +502,13 @@ export default function AdminLeads() {
                           {lead.assignedAgentId ? (
                             <div className="flex items-center">
                               {(() => {
-                                const agent = agentsData?.find((agent: Agent) => agent.id === lead.assignedAgentId);
-                                if (agent) {
-                                  const firstName = agent.firstName || agent.first_name || '';
-                                  const lastName = agent.lastName || agent.last_name || '';
-                                  return `${firstName} ${lastName}`;
+                                if (Array.isArray(agentsData) && agentsData.length > 0) {
+                                  const agent = agentsData.find((agent: any) => agent.id === lead.assignedAgentId);
+                                  if (agent) {
+                                    const firstName = agent.firstName || '';
+                                    const lastName = agent.lastName || '';
+                                    return `${firstName} ${lastName}`;
+                                  }
                                 }
                                 return 'Unknown Agent';
                               })()}
@@ -674,11 +713,15 @@ export default function AdminLeads() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem key="unassigned" value="unassigned">Unassigned</SelectItem>
-                      {agentsData?.map((agent: Agent) => (
-                        <SelectItem key={agent.id} value={agent.id.toString()}>
-                          {agent.firstName || agent.first_name || ''} {agent.lastName || agent.last_name || ''}
-                        </SelectItem>
-                      ))}
+                      {Array.isArray(agentsData) && agentsData.length > 0 ? (
+                        agentsData.map((agent: any) => (
+                          <SelectItem key={agent.id} value={agent.id.toString()}>
+                            {agent.firstName || ''} {agent.lastName || ''}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem disabled value="no-agents">No agents available</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

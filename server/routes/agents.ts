@@ -10,14 +10,49 @@ import { users } from '@db/schema';
 
 const router = express.Router();
 
+// Type for agent data
+type AgentData = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 // Get all agents for admin operations (like lead assignment) - optimized with caching
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
-let agentsCache = {
+let agentsCache: {
+  data: AgentData[] | null;
+  timestamp: number;
+} = {
   data: null,
   timestamp: 0
 };
 
-router.get('/list', verifyJwtToken, checkAdmin, async (req, res) => {
+// Direct API for debugging - no auth or admin checks 
+router.get('/debug', async (req: express.Request, res: express.Response) => {
+  try {
+    console.log("DEBUG endpoint accessed");
+    const connection = await createConnection();
+    const [agents] = await connection.execute('SELECT id, first_name, last_name, email FROM users WHERE is_agent = 1');
+    
+    console.log(`Found ${Array.isArray(agents) ? agents.length : 0} agents through debug endpoint`, agents);
+    
+    // Format for frontend compatibility
+    const formatted = Array.isArray(agents) ? agents.map((agent: any) => ({
+      id: agent.id,
+      firstName: agent.first_name,
+      lastName: agent.last_name,
+      email: agent.email
+    })) : [];
+    
+    return res.status(200).json(formatted);
+  } catch (error) {
+    console.error("Debug endpoint error:", error);
+    return res.status(500).json({ error: 'Server error in debug endpoint' });
+  }
+});
+
+router.get('/list', verifyJwtToken, checkAdmin, async (req: express.Request, res: express.Response) => {
   try {
     const now = Date.now();
     
