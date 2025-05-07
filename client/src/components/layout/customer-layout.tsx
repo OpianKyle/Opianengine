@@ -95,26 +95,47 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen w-full">
-      {/* Header with Theme Toggle, Notification Bell, Profile and Menu */}
-      <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-2">
-        <ThemeToggle />
-        <NotificationBell />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full h-9 w-9 bg-background shadow-sm flex items-center justify-center border profile-link"
-          onClick={() => handleNavigation('/profile')}
-        >
-          <User className="h-5 w-5" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          className="lg:hidden h-10 w-10 bg-background shadow-md"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+      {/* Top Navbar with Theme Toggle, Notification Bell, Profile and Menu */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-background dark:bg-[#011d3d] border-b border-border dark:border-[#022b5c] shadow-sm">
+        <div className="flex items-center justify-between h-16 px-4 max-w-[100rem] mx-auto">
+          {/* Left section - Logo and menu toggle for mobile */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="lg:hidden h-10 w-10 bg-background dark:bg-[#022b5c] shadow-sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+            <div className="hidden lg:block">
+              <img 
+                src={useTheme().theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'} 
+                alt="OPIAN Rewards"
+                className="h-8 w-auto object-contain"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.onerror = null;
+                  img.src = '/logo-fallback.png';
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Right section - Actions */}
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <NotificationBell />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full h-9 w-9 bg-background dark:bg-[#022b5c] shadow-sm flex items-center justify-center border profile-link"
+              onClick={() => handleNavigation('/profile')}
+            >
+              <User className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Overlay for mobile */}
@@ -127,13 +148,14 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed lg:fixed inset-y-0 left-0 z-50",
+        "fixed lg:fixed inset-y-0 left-0 z-40",
         "w-64 lg:w-72 bg-background border-r",
         "transform transition-transform duration-300 ease-in-out",
+        "pt-16", // Add padding top for the navbar
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <div className="flex flex-col h-full">
-          <div className="p-4 md:p-6 border-b">
+          <div className="p-4 md:p-6 border-b lg:hidden">
             <img 
               src={useTheme().theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'} 
               alt="OPIAN Rewards"
@@ -186,7 +208,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {/* Main content */}
       <main className="flex-1 w-0 lg:w-auto lg:pl-72">
-        <div className="min-h-screen pt-16 pb-20">
+        <div className="min-h-screen pt-20 pb-20">
           <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: "100rem" }}>
             <OnboardingProvider section="customer">
               {children}

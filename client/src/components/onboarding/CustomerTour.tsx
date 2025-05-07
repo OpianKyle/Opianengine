@@ -308,24 +308,8 @@ const CustomerTour: React.FC = () => {
     }
   };
   
-  // Tour restart button to show in the dashboard with green styling
-  const TourButton = () => (
-    <Button
-      onClick={startTour}
-      className="tour-guide-button bg-[#43EB3E] hover:bg-[#43EB3E]/80 text-[#011d3d] font-medium border border-[#1b75bc] shadow-sm"
-    >
-      Start Tour Guide
-    </Button>
-  );
-
   return (
     <>
-      {/* Only show tour button when tour is not running */}
-      {!showTour && (
-        <div className="flex justify-end mb-4">
-          <TourButton />
-        </div>
-      )}
       <Joyride
         steps={tourSteps}
         run={showTour}
