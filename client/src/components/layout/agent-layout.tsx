@@ -123,7 +123,7 @@ export default function AgentLayout({ children }: { children: React.ReactNode })
 
           {/* Navigation */}
           <nav className="flex-1 px-2 py-4 overflow-y-auto">
-            <h2 className="mb-2 px-4 text-lg font-semibold text-[#1b75bc]">
+            <h2 className="mb-2 px-4 text-lg font-semibold text-foreground">
               Agent Portal
             </h2>
             <div className="space-y-1">

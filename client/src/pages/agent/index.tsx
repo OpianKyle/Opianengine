@@ -97,7 +97,7 @@ export default function AgentDashboard() {
 
   return (
     <div className="space-y-6 h-full">
-      <h1 className="text-3xl font-bold">Agent Dashboard</h1>
+      <h1 className="text-3xl font-bold text-foreground">Agent Dashboard</h1>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 -mt-4 -mx-6">
         <AnimatedMetric

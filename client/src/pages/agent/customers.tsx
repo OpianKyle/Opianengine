@@ -132,7 +132,7 @@ export default function AgentCustomers() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">My Customers</h1>
+        <h1 className="text-3xl font-bold text-foreground">My Customers</h1>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
           Create Customer
