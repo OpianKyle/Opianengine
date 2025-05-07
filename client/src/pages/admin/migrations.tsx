@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle, RefreshCw, Wrench, Layers } from "lucide-react";
+import { AlertCircle, CheckCircle, RefreshCw, Wrench, Layers, DollarSign } from "lucide-react";
 import { useMigration } from "@/hooks/use-migration";
 import { useManualMigration } from "@/hooks/use-manual-migration";
 import { usePackageTypes } from "@/hooks/use-package-types";
+import { useCommissionConversion } from "@/hooks/use-commission-conversion";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,10 +16,12 @@ export default function Migrations() {
   const { runAgentCustomersMigration, isLoading, isSuccess, results, error } = useMigration();
   const { runManualMigration, isManualMigrationRunning, manualMigrationResults, isManualMigrationSuccess, manualMigrationError } = useManualMigration();
   const { updatePackageTypes, isUpdating, isSuccess: isPackageTypesSuccess, error: packageTypesError } = usePackageTypes();
+  const { convertSignupsToRenewals, isLoading: isConverting, isSuccess: isConversionSuccess, results: conversionResults, error: conversionError } = useCommissionConversion();
   const { toast } = useToast();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmingManual, setIsConfirmingManual] = useState(false);
   const [isConfirmingPackageTypesUpdate, setIsConfirmingPackageTypesUpdate] = useState(false);
+  const [isConfirmingConversion, setIsConfirmingConversion] = useState(false);
   const [forceProductionMode, setForceProductionMode] = useState(false);
 
   const handleRunMigration = async () => {
@@ -55,6 +58,10 @@ export default function Migrations() {
 
   const handleCancelPackageTypesUpdate = () => {
     setIsConfirmingPackageTypesUpdate(false);
+  };
+  
+  const handleCancelConversion = () => {
+    setIsConfirmingConversion(false);
   };
 
   const handleRunManualMigration = () => {
@@ -102,6 +109,30 @@ export default function Migrations() {
       });
     } finally {
       setIsConfirmingPackageTypesUpdate(false);
+    }
+  };
+  
+  const handleRunCommissionConversion = async () => {
+    if (!isConfirmingConversion) {
+      setIsConfirmingConversion(true);
+      return;
+    }
+    
+    try {
+      await convertSignupsToRenewals.mutateAsync();
+      toast({
+        title: "Commission conversion successful",
+        description: "Sign-up commissions were successfully converted to renewal type.",
+        variant: "success",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Commission conversion failed",
+        description: err?.message || "An unknown error occurred during commission conversion",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirmingConversion(false);
     }
   };
 
@@ -357,6 +388,99 @@ export default function Migrations() {
           </CardFooter>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <DollarSign className="h-5 w-5 mr-2" />
+              Commission Type Conversion
+            </CardTitle>
+            <CardDescription>
+              Convert SIGNUP commissions to RENEWAL type for previous month
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4">
+              This utility converts agent commissions from SIGNUP type (30%) to RENEWAL type (10%) for the previous month.
+              This should be run at the beginning of each month to maintain the correct commission rates over time.
+            </p>
+            
+            <div className="bg-amber-50 dark:bg-amber-950 p-4 rounded-md mb-4 border border-amber-200 dark:border-amber-800">
+              <h4 className="text-amber-800 dark:text-amber-300 font-medium mb-2 flex items-center">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                Important Information
+              </h4>
+              <ul className="text-amber-700 dark:text-amber-400 text-sm space-y-1 list-disc pl-5">
+                <li>This operation changes commission types from SIGNUP (30%) to RENEWAL (10%)</li>
+                <li>Commission amounts will be recalculated based on the 10% rate</li>
+                <li>Only commissions from the previous month will be affected</li>
+                <li>This operation uses database transactions and will roll back if any errors occur</li>
+              </ul>
+            </div>
+            
+            {conversionError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Conversion Error</AlertTitle>
+                <AlertDescription>
+                  {conversionError instanceof Error 
+                    ? conversionError.message 
+                    : "An unknown error occurred during commission conversion"}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {isConversionSuccess && conversionResults && (
+              <Alert className="mb-4">
+                <CheckCircle className="h-4 w-4" />
+                <AlertTitle>Conversion Results</AlertTitle>
+                <AlertDescription>
+                  <div className="mt-2">
+                    <p>Records found: {conversionResults.recordsFound || 0}</p>
+                    <p>Records converted: {conversionResults.recordsConverted || 0}</p>
+                    {conversionResults.errors && conversionResults.errors.length > 0 && (
+                      <div className="mt-2">
+                        <p className="font-semibold">Errors:</p>
+                        <ul className="list-disc pl-5">
+                          {conversionResults.errors.map((err: any, i: number) => (
+                            <li key={i}>{typeof err === 'string' ? err : err.error || err.message || JSON.stringify(err)}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-end space-x-2">
+            {isConfirmingConversion && (
+              <Button 
+                variant="outline" 
+                onClick={handleCancelConversion} 
+                disabled={isConverting}
+              >
+                Cancel
+              </Button>
+            )}
+            <Button 
+              onClick={handleRunCommissionConversion} 
+              disabled={isConverting}
+              variant={isConfirmingConversion ? "destructive" : "default"}
+            >
+              {isConverting ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Converting Commissions...
+                </>
+              ) : isConfirmingConversion ? (
+                "Confirm Commission Conversion"
+              ) : (
+                "Convert Commissions"
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+
         <Separator />
 
         <div className="text-sm text-muted-foreground">
@@ -367,6 +491,7 @@ export default function Migrations() {
             <li>Users that already exist in the agent_commissions table will be skipped</li>
             <li>This migration will calculate referral fee points based on customer selected package</li>
             <li>If the standard migration times out, try the manual migration option which uses a different approach</li>
+            <li>Commission conversion should be run at the beginning of each month</li>
           </ul>
         </div>
       </div>

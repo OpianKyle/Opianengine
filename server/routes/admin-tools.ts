@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { checkAdmin } from '../auth';
 import mysql from 'mysql2/promise';
+import { logAdminAction } from '../admin-logger';
+import { convertSignupToRenewal } from '../../scripts/convert-signups-to-renewals.js';
 
 const router = Router();
 
@@ -15,7 +17,8 @@ const PACKAGE_PRICING = {
 
 // Commission percentages
 const COMMISSION_PERCENTAGE = {
-  AGENT: 30, // 30% for agents
+  AGENT: 30, // 30% for initial sign-ups
+  RENEWAL: 10 // 10% for renewals
 };
 
 /**
@@ -131,6 +134,43 @@ router.post('/fix-commission-percentages', checkAdmin, async (req: Request, res:
       await connection.end();
       console.log('Database connection closed');
     }
+  }
+});
+
+/**
+ * Admin route to convert all SIGNUP commissions from last month to RENEWAL type
+ * This changes the commission type and recalculates the commission amount based on
+ * the 10% renewal rate instead of the 30% signup rate
+ */
+router.post('/convert-signups-to-renewals', checkAdmin, async (req: Request, res: Response) => {
+  try {
+    console.log('Admin triggered conversion of SIGNUP commissions to RENEWAL');
+    
+    // Get user for logging
+    const adminUser = req.user;
+    
+    // Call the conversion function
+    const results = await convertSignupToRenewal();
+    
+    // Log the admin action
+    if (adminUser && adminUser.id) {
+      await logAdminAction({
+        adminId: adminUser.id,
+        actionType: "PROCESS_RENEWALS",
+        details: `Converted ${results.recordsConverted} SIGNUP commissions to RENEWAL type with 10% rate`
+      });
+    }
+    
+    console.log('Conversion complete with results:', results);
+    
+    // Return the results to the client
+    res.json(results);
+  } catch (error) {
+    console.error('Error during conversion process:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'An error occurred during the conversion process'
+    });
   }
 });
 
