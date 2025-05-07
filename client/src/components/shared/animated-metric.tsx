@@ -189,7 +189,7 @@ export default function AnimatedMetric({
         </CardTitle>
         {Icon && <Icon className={cn("h-4 w-4", colors.icon)} />}
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-4">
         {isLoading ? (
           <>
             <div className="h-8 w-24 animate-pulse bg-muted rounded mb-1"></div>
@@ -199,12 +199,12 @@ export default function AnimatedMetric({
           <>
             <div 
               ref={valueRef}
-              className={cn("text-2xl font-bold transition-transform", colors.value)}
+              className={cn("text-2xl font-bold transition-transform truncate overflow-hidden text-ellipsis", colors.value)}
             >
               {prefix}{formatter(displayValue)}{suffix}
             </div>
             {description && (
-              <p className={cn("text-xs mt-1", colors.description)}>
+              <p className={cn("text-xs mt-2 overflow-hidden line-clamp-2 min-h-[2.5rem]", colors.description)}>
                 {description}
               </p>
             )}
