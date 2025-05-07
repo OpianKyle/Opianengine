@@ -90,8 +90,8 @@ export default function ContactUsPage() {
         notes: data.message,
       };
       
-      // Submit to the leads API
-      const response = await fetch("/api/leads", {
+      // Submit to our new dedicated contact form API
+      const response = await fetch("/api/contact-submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
