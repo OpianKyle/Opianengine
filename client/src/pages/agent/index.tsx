@@ -133,9 +133,9 @@ export default function AgentDashboard() {
 
       {/* Commission Dashboard Section */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 pt-6">
           <div>
-            <CardTitle>Commission Dashboard</CardTitle>
+            <CardTitle className="text-xl mb-1">Commission Dashboard</CardTitle>
             <CardDescription>
               Track your commission earnings from referrals and renewals.
             </CardDescription>
@@ -178,7 +178,7 @@ export default function AgentDashboard() {
           </button>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6 -mt-4 -mx-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6 mt-2">
             <div 
               className={`cursor-pointer ${filterType === 'upfront' ? 'ring-2 ring-primary rounded-lg' : ''}`}
               onClick={() => setFilterType(filterType === 'upfront' ? 'all' : 'upfront')}
