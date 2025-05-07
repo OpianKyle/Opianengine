@@ -96,25 +96,36 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   return (
     <div className="flex h-screen w-full">
       {/* Header with Theme Toggle, Notification Bell, Profile and Menu */}
-      <div className="fixed top-0 right-5 z-50 p-3 flex items-center gap-2">
-        <ThemeToggle className="h-12 w-12" iconSize={24} />
-        <NotificationBell iconSize={24} />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full h-12 w-12 bg-background shadow-sm flex items-center justify-center border profile-link"
-          onClick={() => handleNavigation('/profile')}
-        >
-          <User className="h-7 w-7" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          className="lg:hidden h-12 w-12 bg-background shadow-md"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          {sidebarOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
-        </Button>
+      <div className="fixed top-0 right-0 z-50 flex items-center py-2 px-3 sm:px-4 w-full lg:w-auto bg-background/95 backdrop-blur-md border-b lg:border-b-0 lg:border-l lg:rounded-bl-lg shadow-sm">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          <ThemeToggle 
+            className="h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12" 
+            iconSize={18} 
+          />
+          <NotificationBell 
+            iconSize={18}
+            className="h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12 bg-background shadow-sm flex items-center justify-center border profile-link"
+            onClick={() => handleNavigation('/profile')}
+          >
+            <User className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="lg:hidden h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12 bg-background shadow-md"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? 
+              <X className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" /> : 
+              <Menu className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+            }
+          </Button>
+        </div>
       </div>
 
       {/* Overlay for mobile */}
@@ -186,8 +197,8 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {/* Main content */}
       <main className="flex-1 w-0 lg:w-auto lg:pl-72">
-        <div className="min-h-screen pt-16 pb-28 lg:pb-20">
-          <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: "100rem" }}>
+        <div className="min-h-screen pt-16 sm:pt-16 pb-28 lg:pb-20">
+          <div className="mx-auto px-3 sm:px-6 lg:px-8" style={{ maxWidth: "100rem" }}>
             <OnboardingProvider section="customer">
               {children}
             </OnboardingProvider>
