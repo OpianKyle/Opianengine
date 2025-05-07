@@ -2,8 +2,7 @@ import { Router, Request, Response } from 'express';
 import { checkAdmin } from '../auth';
 import mysql from 'mysql2/promise';
 import { logAdminAction } from '../admin-logger';
-import { convertSignupToRenewal } from '../../scripts/convert-signups-to-renewals.js';
-import { convertAllSignupsToRenewal } from '../../scripts/convert-all-signups-to-renewals.js';
+// We'll dynamically import the CommonJS modules in the route handlers
 
 const router = Router();
 
@@ -150,6 +149,10 @@ router.post('/convert-signups-to-renewals', checkAdmin, async (req: Request, res
     // Get user for logging
     const adminUser = req.user;
     
+    // Dynamically import the conversion module
+    const module = await import('../../scripts/convert-signups-to-renewals.js');
+    const { convertSignupToRenewal } = module;
+    
     // Call the conversion function
     const results = await convertSignupToRenewal();
     
@@ -187,6 +190,10 @@ router.post('/convert-all-signups-to-renewals', checkAdmin, async (req: Request,
     // Get user for logging
     const adminUser = req.user;
     
+    // Dynamically import the conversion module
+    const module = await import('../../scripts/convert-all-signups-to-renewals.js');
+    const { convertAllSignupsToRenewal } = module;
+    
     // Call the all-conversion function
     const results = await convertAllSignupsToRenewal();
     
@@ -194,7 +201,7 @@ router.post('/convert-all-signups-to-renewals', checkAdmin, async (req: Request,
     if (adminUser && adminUser.id) {
       await logAdminAction({
         adminId: adminUser.id,
-        actionType: "PROCESS_ALL_RENEWALS",
+        actionType: "PROCESS_RENEWALS", // Changed to match existing action type
         details: `ONE-TIME OPERATION: Converted ${results.recordsConverted} SIGNUP commissions to RENEWAL type with 10% rate`
       });
     }
