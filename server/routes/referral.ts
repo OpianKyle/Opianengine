@@ -487,6 +487,44 @@ referralRouter.post('/public/submit', async (req: Request, res: Response) => {
       
       console.log(`New referral lead created for ${firstName} ${lastName} using code ${referralCode}${agentId ? ` - Assigned to agent ID: ${agentId}` : ''}, referred by user ID: ${referrer.id}`);
       
+      // INTEGRATION FIX: Also insert into the leads table to ensure it appears in the agent dashboard
+      try {
+        console.log(`INTEGRATION FIX: Also inserting lead into leads table for agent visibility`);
+        
+        const leadsSql = `
+          INSERT INTO leads (
+            first_name, 
+            last_name, 
+            email, 
+            mobile_number, 
+            referral_code, 
+            notes, 
+            status, 
+            assigned_agent_id,
+            created_at, 
+            updated_at
+          ) VALUES (
+            ?, ?, ?, ?, ?, ?, 'new', ?, NOW(), NOW()
+          )
+        `;
+        
+        const leadsParams = [
+          firstName,
+          lastName,
+          email,
+          phoneNumber,
+          referralCode.replace(/-/g, ''),
+          (notes || 'Referral lead through customer referral'),
+          agentId || null
+        ];
+        
+        await connection.execute(leadsSql, leadsParams);
+        console.log(`INTEGRATION FIX: Successfully added referral to leads table for agent dashboard visibility`);
+      } catch (leadsError) {
+        // Just log the error but don't fail the whole request
+        console.error(`INTEGRATION FIX: Failed to add referral to leads table:`, leadsError);
+      }
+      
       return res.status(201).json({
         success: true,
         message: 'Referral lead submitted successfully'
