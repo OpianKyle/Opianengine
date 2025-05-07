@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquare, Clock, Loader2 } from "lucide-react";
+import { MessageSquare, Clock, Loader2, Check } from "lucide-react";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -164,17 +164,49 @@ export default function CustomerProducts() {
   return (
     <div className="space-y-6">
       {/* Package selection section */}
+      {/* Current Package Display - Prominent section at the top */}
+      {currentPackage && (
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-6 mb-6 shadow-lg">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Your Current Package: {currentPackage.display}</h2>
+              <p className="text-lg opacity-90">R{currentPackage.price}/month with {currentPackage.points.toLocaleString()} activation points</p>
+            </div>
+            <div className="flex items-center bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+              <Check className="h-5 w-5 mr-2 text-green-400" />
+              <span className="font-semibold">Active Package</span>
+            </div>
+          </div>
+          <div className="mt-4">
+            <h3 className="text-sm font-medium mb-2">Package Benefits:</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {currentPackage.perks.slice(0, 8).map((perk, index) => (
+                <div key={index} className="flex items-center">
+                  <span className="inline-block mr-1 text-green-400">✓</span>
+                  <span className="text-sm">{perk}</span>
+                </div>
+              ))}
+              {currentPackage.perks.length > 8 && (
+                <div className="text-sm font-medium">+{currentPackage.perks.length - 8} more benefits</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
-        <h1 className="text-3xl font-bold">Packages</h1>
+        <h1 className="text-3xl font-bold">Available Packages</h1>
         <p className="text-muted-foreground">
-          Select a package or view your current package
+          Browse our packages and select the one that fits your needs
         </p>
         
         <Card>
           <CardHeader>
             <CardTitle>Package Selection</CardTitle>
             <CardDescription>
-              Your current package: {currentPackage ? `${currentPackage.display} (R${currentPackage.price}/month)` : 'No package selected'}
+              {currentPackage 
+                ? "Switch to a different package by selecting from the options below"
+                : "Choose your first package from the options below"}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-2 sm:p-6">
