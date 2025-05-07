@@ -27,23 +27,61 @@ router.get('/list', verifyJwtToken, checkAdmin, async (req, res) => {
     }
     
     // Use Drizzle ORM to query agent users with optimized select
-    const agentsList = await db
-      .select({
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email
-      })
-      .from(users)
-      .where(eq(users.isAgent, true));
-
-    // Update cache
-    agentsCache = {
-      data: agentsList,
-      timestamp: now
-    };
-
-    return res.status(200).json(agentsList);
+    // Using debug logs to trace execution
+    console.log("Fetching agents from database...");
+    
+    try {
+      const agentsList = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email
+        })
+        .from(users)
+        .where(eq(users.isAgent, true));
+      
+      console.log(`Found ${agentsList.length} agents:`, agentsList);
+      
+      // If no agents found but we know there should be some, try a raw query
+      if (agentsList.length === 0) {
+        // Connect directly to database for troubleshooting
+        const connection = await createConnection();
+        const [rawAgents] = await connection.execute(
+          'SELECT id, first_name, last_name, email FROM users WHERE is_agent = 1'
+        );
+        console.log("Raw query results:", rawAgents);
+        
+        if (Array.isArray(rawAgents) && rawAgents.length > 0) {
+          // Format raw results to match expected format
+          const formattedAgents = rawAgents.map(agent => ({
+            id: agent.id,
+            firstName: agent.first_name,
+            lastName: agent.last_name,
+            email: agent.email
+          }));
+          
+          // Update cache with formatted data
+          agentsCache = {
+            data: formattedAgents,
+            timestamp: now
+          };
+          
+          return res.status(200).json(formattedAgents);
+        }
+      }
+      
+      // Normal flow - update cache with ORM query results
+      agentsCache = {
+        data: agentsList,
+        timestamp: now
+      };
+      
+      return res.status(200).json(agentsList);
+    } catch (dbError) {
+      console.error("Database error fetching agents:", dbError);
+      throw dbError; // Re-throw to trigger the catch handler
+    }
   } catch (error) {
     console.error('Error fetching agents list:', error);
     
