@@ -312,7 +312,7 @@ export default function TeamPage() {
                 {/* Background image with overlay */}
                 <div className="absolute inset-0 z-0">
                   <img 
-                    src="/FlashingtheOpiancard.png" 
+                    src="/DancingRichChick.png" 
                     alt="Our Mission" 
                     className="w-full h-full object-cover opacity-30"
                     onError={(e) => {
@@ -339,7 +339,7 @@ export default function TeamPage() {
                 {/* Background image with overlay */}
                 <div className="absolute inset-0 z-0">
                   <img 
-                    src="/jane-holding-card-2.jpg" 
+                    src="/team-member-image.png" 
                     alt="Our Vision" 
                     className="w-full h-full object-cover opacity-30"
                     onError={(e) => {
@@ -366,7 +366,7 @@ export default function TeamPage() {
                 {/* Background image with overlay */}
                 <div className="absolute inset-0 z-0">
                   <img 
-                    src="/jane-holding-card-1.jpg" 
+                    src="/Training.JPG" 
                     alt="Our Values" 
                     className="w-full h-full object-cover opacity-30"
                     onError={(e) => {
