@@ -424,7 +424,7 @@ export default function TeamPage() {
                     >
                       <div className="flex flex-col items-center py-8 px-6">
                         {/* Circular image */}
-                        <div className="w-40 h-40 rounded-full overflow-hidden mb-4 border-2 border-[#43EB3E]/20">
+                        <div className="w-52 h-52 rounded-full overflow-hidden mb-4 border-2 border-[#43EB3E]/20">
                           <img 
                             src={member.image} 
                             alt={member.name} 
