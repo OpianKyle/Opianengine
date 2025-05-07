@@ -102,7 +102,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         <Button
           variant="ghost"
           size="icon"
-          className="rounded-full h-9 w-9 bg-background shadow-sm flex items-center justify-center border"
+          className="rounded-full h-9 w-9 bg-background shadow-sm flex items-center justify-center border profile-link"
           onClick={() => handleNavigation('/profile')}
         >
           <User className="h-5 w-5" />
