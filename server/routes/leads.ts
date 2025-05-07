@@ -174,8 +174,21 @@ router.post("/", async (req, res, next) => {
     const insertResult = await db.insert(leads).values(result.data);
     
     // Get the inserted ID and fetch the complete lead record
-    const leadId = Number(insertResult.insertId);
-    const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+    const leadId = insertResult.insertId;
+    
+    // Check if we have a valid ID before querying
+    if (!leadId || isNaN(Number(leadId))) {
+      // Return the submitted data without querying if no valid ID
+      res.status(201).json({
+        success: true,
+        lead: leadData,
+        message: "Lead information submitted successfully, but could not retrieve the record"
+      });
+      return;
+    }
+    
+    // Fetch the inserted record
+    const [lead] = await db.select().from(leads).where(eq(leads.id, Number(leadId)));
     
     // Log the submission in admin logs if the user is logged in
     if (req.isAuthenticated() && req.user?.id) {
