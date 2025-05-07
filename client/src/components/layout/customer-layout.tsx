@@ -68,7 +68,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const menuItems = [
     { label: "Dashboard", href: "/dashboard", icon: <Home className="h-4 w-4 mr-2" /> },
     { label: "Products", href: "/products", icon: <ShoppingBag className="h-4 w-4 mr-2" /> },
-    // Rewards menu item hidden as requested
+    { label: "Rewards", href: "/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Referrals", href: "/referrals", icon: <Users className="h-4 w-4 mr-2" /> },
     // Subscription menu item removed as requested
     { label: "Profile", href: "/profile", icon: <User className="h-4 w-4 mr-2" />, className: "profile-link" },
