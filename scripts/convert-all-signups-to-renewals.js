@@ -14,9 +14,9 @@
  * 4. Recalculates the commission_amount based on the premium_amount
  */
 
-// Use CommonJS require for compatibility with both ESM and CommonJS
-const mysql = require('mysql2/promise');
-const dotenv = require('dotenv');
+// Use ES Modules syntax for compatibility with the server
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
 dotenv.config();
 
 // Package pricing structure
@@ -139,7 +139,11 @@ async function convertAllSignupsToRenewal() {
 }
 
 // Run the script if called directly (not imported)
-if (require.main === module) {
+// This checks if the file is being run directly (not imported)
+// In ES modules, we can check if import.meta.url is the same as the executed script
+const isMainModule = import.meta.url.endsWith(process.argv[1]);
+
+if (isMainModule) {
   convertAllSignupsToRenewal()
     .then(results => {
       console.log('Conversion results:', JSON.stringify(results, null, 2));
@@ -151,4 +155,5 @@ if (require.main === module) {
     });
 }
 
-module.exports = { convertAllSignupsToRenewal };
+// Export as ES module
+export { convertAllSignupsToRenewal };
