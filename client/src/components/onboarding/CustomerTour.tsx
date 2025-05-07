@@ -100,7 +100,7 @@ const tourSteps: Step[] = [
     target: '.welcome-dashboard', 
     content: 'Welcome to your OPIAN Rewards dashboard! This tour will help you learn how to navigate the platform and make the most of your rewards.',
     disableBeacon: true,
-    placement: 'auto',
+    placement: 'top-start',
     isFixed: true, // Keep the tooltip in a fixed position
   },
   {

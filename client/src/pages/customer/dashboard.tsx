@@ -165,20 +165,22 @@ function CustomerDashboardContent() {
   return (
     <div className="space-y-6 welcome-dashboard">
       <div className="flex flex-row justify-between items-center mb-4">
-        <div className="space-y-1">
+        <div className="flex items-center space-x-3">
           <h2 className="text-xl font-semibold">
             Good {timeOfDay}, {user ? `${user.firstName} ${user.lastName}` : 'Welcome to OPIAN Rewards'}
           </h2>
+          <Button
+            onClick={() => onboarding.startTour()}
+            variant="ghost"
+            size="icon"
+            className="tour-guide-button h-9 w-9 bg-background shadow-sm flex items-center justify-center border rounded-full ml-2"
+            title="Start Tour Guide"
+          >
+            <HelpCircle className="h-5 w-5 text-[#43EB3E]" />
+          </Button>
         </div>
-        <Button
-          onClick={() => onboarding.startTour()}
-          variant="ghost"
-          size="icon"
-          className="tour-guide-button h-9 w-9 bg-background shadow-sm flex items-center justify-center border rounded-full"
-          title="Start Tour Guide"
-        >
-          <HelpCircle className="h-5 w-5 text-[#43EB3E]" />
-        </Button>
+        <div> {/* Empty div to maintain the flex spacing */}
+        </div>
       </div>
 
       {/* First row: Points Balance and Cash Redemption side by side */}
