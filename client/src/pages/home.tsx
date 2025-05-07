@@ -211,7 +211,7 @@ const STEPS = [
   {
     title: "Earn Points Effortlessly",
     description: "Use your Opian card for everyday purchases and bill payments. Each transaction earns you reward points automatically.",
-    backgroundImage: "/Opian-Earn-Points-Effortlessly.jpg",
+    backgroundImage: "/DancingRichChick.png",
     fallbackColor: "#01162f"
   },
   {
@@ -678,7 +678,7 @@ export default function HomePage() {
                   {/* Background image covering the entire left section */}
                   <div className="relative h-full min-h-[500px]">
                     <img 
-                      src="/Opian-Earn-Points-Effortlessly.jpg" 
+                      src="/DancingRichChick.png" 
                       alt="Woman earning points with Opian Rewards Card" 
                       className="rounded-xl w-full h-full object-cover absolute inset-0"
                     />
