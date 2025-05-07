@@ -104,14 +104,24 @@ const tourSteps: Step[] = [
     isFixed: true, // Keep the tooltip in a fixed position
   },
   {
+    // First card in the first row - Points Balance
     target: '.points-card',
-    content: 'Here you can see your current points balance. You earn points through referrals, purchases, and special promotions.',
+    content: 'Here you can see your current points balance and tier level. You earn points through referrals, purchases, and special promotions.',
     disableBeacon: true,
     placement: 'bottom',
     spotlightPadding: 15,
     offset: 20,
     disableScrolling: false,
     disableOverlayClose: false,
+  },
+  {
+    // Second card in the first row - Cash Redemption
+    target: '.rewards-section',
+    content: 'Redeem your points for cash at a rate of R0.015 per point. Enter the amount you want to redeem and click the button to process your request.',
+    disableBeacon: true,
+    placement: 'bottom',
+    spotlightPadding: 15,
+    offset: 20,
   },
   {
     target: '.sidebar-navigation',
@@ -121,20 +131,30 @@ const tourSteps: Step[] = [
     spotlightPadding: 10,
   },
   {
+    // Target the referral program card specifically
     target: '.referral-section',
     content: 'Share your unique referral code with friends and family. You\'ll earn 2000 points for each successful referral!',
     disableBeacon: true,
-    placement: 'bottom',
+    placement: 'right',
     spotlightPadding: 20,
     disableOverlay: false,
     disableScrolling: false,
     offset: 20,
   },
   {
+    // Recent Activity card
     target: '.recent-transactions',
     content: 'Track your recent point transactions, including earnings and redemptions.',
     disableBeacon: true,
-    placement: 'top',
+    placement: 'left',
+    spotlightPadding: 15,
+  },
+  {
+    // Training Videos card
+    target: '.training-videos',
+    content: 'Access training videos and resources to learn more about OPIAN Rewards and how to maximize your benefits.',
+    disableBeacon: true,
+    placement: 'left',
     spotlightPadding: 15,
   },
   {
@@ -199,24 +219,24 @@ const CustomerTour: React.FC = () => {
           const targetElement = document.querySelector(step.target);
           if (targetElement) {
             // Special handling for specific steps that need custom scroll positioning
-            if (index === 1) {
-              console.log(`Enhanced scrolling for points card (step ${index})`);
-              // For points card, scroll to show the full card
+            if (index === 1 || index === 2) {
+              console.log(`Enhanced scrolling for cards in first row (step ${index})`);
+              // For points and cash redemption cards, scroll to show the full card
               window.scrollTo({
-                top: Math.max(0, targetElement.getBoundingClientRect().top + window.scrollY - 300),
+                top: Math.max(0, targetElement.getBoundingClientRect().top + window.scrollY - 200),
                 behavior: 'smooth'
               });
-            } else if (index === 3) {
-              console.log(`Enhanced scrolling for referral section (step ${index})`);
+            } else if (index === 4 || index === 5 || index === 6) {
+              console.log(`Enhanced scrolling for second row cards (step ${index})`);
               // Force scroll to element with additional offset
               window.scrollTo({
-                top: Math.max(0, targetElement.getBoundingClientRect().top + window.scrollY - 300),
+                top: Math.max(0, targetElement.getBoundingClientRect().top + window.scrollY - 150),
                 behavior: 'smooth'
               });
               
               // Add a slight delay to ensure scrolling completes
               setTimeout(() => {
-                console.log('Highlighting referral section after scroll');
+                console.log(`Highlighting card element after scroll for step ${index}`);
                 // If needed, we could add additional handling here
               }, 300);
             } else {

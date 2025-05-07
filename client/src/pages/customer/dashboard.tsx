@@ -184,7 +184,7 @@ function CustomerDashboardContent() {
       {/* First row: Points Balance and Cash Redemption side by side */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Profile Balance Card - Points */}
-        <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
+        <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden points-card">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-card-foreground dark:text-white text-lg">Your Points Balance</CardTitle>
             <p className="text-xs text-muted-foreground dark:text-gray-400 mb-6">{lastUpdated}</p>
@@ -226,7 +226,7 @@ function CustomerDashboardContent() {
         </Card>
 
         {/* Redeem Points Card - Cash Value */}
-        <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
+        <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden rewards-section">
           <CardHeader className="pb-2 pt-4">
             <CardTitle className="text-card-foreground dark:text-white text-lg">Cash Redemption</CardTitle>
             <p className="text-xs text-muted-foreground dark:text-gray-400">{lastUpdated}</p>
@@ -270,7 +270,7 @@ function CustomerDashboardContent() {
         <div>
           {/* Referral Section */}
           {hasReferralAccess ? (
-            <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden relative">
+            <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden relative referral-section">
               <div 
                 className="absolute inset-0 bg-cover bg-center z-0 opacity-20" 
                 style={{ backgroundImage: 'url(/DancingRichChick.png)' }}
@@ -326,7 +326,7 @@ function CustomerDashboardContent() {
         {/* Right column - Activity and Training Videos stacked */}
         <div className="grid gap-4">
           {/* Recent Activity Section */}
-          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
+          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden recent-transactions">
             <CardHeader className="pb-2 pt-4">
               <CardTitle className="text-card-foreground dark:text-white text-lg">Recent Activity</CardTitle>
             </CardHeader>
@@ -344,7 +344,7 @@ function CustomerDashboardContent() {
                         <div className="h-8 w-20 bg-muted dark:bg-[#043675] rounded animate-pulse"></div>
                       </div>
                     ))
-                  ) : transactions?.length > 0 ? (
+                  ) : transactions && transactions.length > 0 ? (
                     transactions.map((transaction) => (
                       <div
                         key={transaction.id}
@@ -374,7 +374,7 @@ function CustomerDashboardContent() {
           </Card>
           
           {/* Training Videos */}
-          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden relative">
+          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden relative training-videos">
             <div 
               className="absolute inset-0 bg-cover bg-center z-0 opacity-30" 
               style={{ backgroundImage: 'url(/Training.JPG)' }}
@@ -569,7 +569,7 @@ function CustomerDashboardContent() {
                       <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
                     </div>
                   ))
-                ) : transactions?.map((transaction) => (
+                ) : transactions && transactions.map((transaction) => (
                   <div
                     key={transaction.id}
                     className="flex items-center justify-between p-4 border rounded-lg"
