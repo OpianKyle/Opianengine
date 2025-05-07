@@ -11,7 +11,12 @@ import { ScrollArea } from "./ui/scroll-area";
 import { format } from "date-fns";
 import { useUser } from "@/hooks/use-user";
 
-const NotificationBell = () => {
+interface NotificationBellProps {
+  className?: string;
+  iconSize?: number;
+}
+
+const NotificationBell = ({ className, iconSize = 6 }: NotificationBellProps = {}) => {
   const { user } = useUser();
   const { notifications, unreadCount, markAsRead, isConnected } = useNotifications();
 
@@ -23,10 +28,10 @@ const NotificationBell = () => {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className={`relative h-8 w-8 rounded-full ${!isConnected ? 'opacity-50' : ''}`}
+          className={`relative h-11 w-11 rounded-full ${!isConnected ? 'opacity-50' : ''} ${className || ''}`}
           title={isConnected ? 'Notifications' : 'Connecting to notification service...'}
         >
-          <Bell className="h-5 w-5" />
+          <Bell style={{ height: `${iconSize}px`, width: `${iconSize}px` }} />
           {unreadCount > 0 && (
             <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
               {unreadCount > 9 ? '9+' : unreadCount}

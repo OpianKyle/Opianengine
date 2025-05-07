@@ -95,47 +95,26 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen w-full">
-      {/* Top Navbar with Theme Toggle, Notification Bell, Profile and Menu */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-background dark:bg-[#011d3d] border-b border-border dark:border-[#022b5c] shadow-sm">
-        <div className="flex items-center justify-between h-16 px-4 max-w-[100rem] mx-auto">
-          {/* Left section - Logo and menu toggle for mobile */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="lg:hidden h-10 w-10 bg-background dark:bg-[#022b5c] shadow-sm"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-            <div className="hidden lg:block">
-              <img 
-                src={useTheme().theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'} 
-                alt="OPIAN Rewards"
-                className="h-8 w-auto object-contain"
-                onError={(e) => {
-                  const img = e.target as HTMLImageElement;
-                  img.onerror = null;
-                  img.src = '/logo-fallback.png';
-                }}
-              />
-            </div>
-          </div>
-          
-          {/* Right section - Actions */}
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <NotificationBell />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full h-9 w-9 bg-background dark:bg-[#022b5c] shadow-sm flex items-center justify-center border profile-link"
-              onClick={() => handleNavigation('/profile')}
-            >
-              <User className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+      {/* Header with Theme Toggle, Notification Bell, Profile and Menu */}
+      <div className="fixed top-0 right-0 z-50 p-4 flex items-center gap-3">
+        <ThemeToggle className="h-11 w-11" iconSize={6} />
+        <NotificationBell />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full h-11 w-11 bg-background shadow-sm flex items-center justify-center border profile-link"
+          onClick={() => handleNavigation('/profile')}
+        >
+          <User className="h-6 w-6" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="lg:hidden h-11 w-11 bg-background shadow-md"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </Button>
       </div>
 
       {/* Overlay for mobile */}
