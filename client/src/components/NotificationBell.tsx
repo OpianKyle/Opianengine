@@ -16,7 +16,7 @@ interface NotificationBellProps {
   iconSize?: number;
 }
 
-const NotificationBell = ({ className, iconSize = 6 }: NotificationBellProps = {}) => {
+const NotificationBell = ({ className, iconSize = 8 }: NotificationBellProps = {}) => {
   const { user } = useUser();
   const { notifications, unreadCount, markAsRead } = useNotifications();
   // Determine connection status based on presence of notifications (fallback solution)
@@ -30,7 +30,7 @@ const NotificationBell = ({ className, iconSize = 6 }: NotificationBellProps = {
       <DropdownMenuTrigger asChild>
         <Button 
           variant="ghost" 
-          className={`relative h-9 w-9 md:h-10 md:w-10 rounded-full bg-background/80 shadow-sm border ${!isConnected ? 'opacity-50' : ''} ${className || ''}`}
+          className={`relative h-11 w-11 md:h-12 md:w-12 rounded-full bg-background/80 shadow-sm border ${!isConnected ? 'opacity-50' : ''} ${className || ''}`}
           title={isConnected ? 'Notifications' : 'Connecting to notification service...'}
         >
           <Bell style={{ height: `${iconSize}px`, width: `${iconSize}px` }} />

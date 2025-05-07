@@ -118,74 +118,71 @@ export default function TeamPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-[#01162f] flex flex-col">
       {/* Header */}
-      <header className="border-b border-gray-200 dark:border-[#022b5c] py-4">
-        <div className="container mx-auto px-4 flex justify-between items-center">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/">
-              <div className="flex items-center">
-                <img 
-                  src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
-                  alt="OPIAN Rewards" 
-                  className="h-10"
-                  onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    img.onerror = null;
-                    img.src = '/logo-fallback.png';
-                  }}
-                />
-              </div>
-            </Link>
-          </div>
-          
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
-            <a href="/" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Home</a>
-            <a href="/how-it-works" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
-            <a href="/meet-the-team" className="text-[#43EB3E] font-medium">Meet The Team</a>
-            <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">FAQ</a>
-          </nav>
-          
-          {/* Desktop buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            <ThemeToggle />
-            {user ? (
-              <Button 
-                onClick={() => navigate(user.is_admin ? "/admin" : "/dashboard")}
-                className="bg-[#43EB3E] hover:bg-[#3ad036] text-black font-medium"
-              >
-                Dashboard
-              </Button>
-            ) : (
-              <>
+      <header className="bg-white dark:bg-[#01162f] text-foreground dark:text-white sticky top-0 z-50">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center">
+              <img 
+                src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
+                alt="OPIAN Rewards" 
+                className="h-8 sm:h-10 w-auto"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.onerror = null;
+                  img.src = '/logo-fallback.png';
+                }}
+              />
+            </div>
+            
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex space-x-8">
+              <a href="/" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Home</a>
+              <a href="/how-it-works" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
+              <a href="/meet-the-team" className="text-[#43EB3E] font-medium">Meet The Team</a>
+              <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">FAQ</a>
+            </nav>
+            
+            {/* Desktop buttons */}
+            <div className="hidden md:flex items-center space-x-4">
+              <ThemeToggle />
+              {user ? (
                 <Button 
-                  variant="outline" 
-                  className="bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
-                  onClick={() => navigate("/login")}
-                >
-                  Login
-                </Button>
-                <Button 
-                  onClick={() => navigate("/contact-us")}
+                  onClick={() => navigate(user.is_admin ? "/admin" : "/dashboard")}
                   className="bg-[#43EB3E] hover:bg-[#3ad036] text-black font-medium"
                 >
-                  Get Information
+                  Dashboard
                 </Button>
-              </>
-            )}
-          </div>
-          
-          {/* Mobile buttons */}
-          <div className="flex md:hidden items-center space-x-3">
-            <ThemeToggle />
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="ml-auto text-[#43EB3E] p-1"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
+              ) : (
+                <>
+                  <Button 
+                    variant="outline" 
+                    className="bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
+                    onClick={() => navigate("/login")}
+                  >
+                    Login
+                  </Button>
+                  <Button 
+                    onClick={() => navigate("/contact-us")}
+                    className="bg-[#43EB3E] hover:bg-[#3ad036] text-black font-medium"
+                  >
+                    Get Information
+                  </Button>
+                </>
+              )}
+            </div>
+            
+            {/* Mobile buttons */}
+            <div className="flex md:hidden items-center space-x-3">
+              <ThemeToggle />
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="ml-auto text-[#43EB3E] p-1"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </Button>
+            </div>
           </div>
           
           {/* Mobile Navigation - Dropdown */}

@@ -8,24 +8,24 @@ interface ThemeToggleProps {
   iconSize?: number;
 }
 
-export function ThemeToggle({ className, iconSize = 5 }: ThemeToggleProps) {
+export function ThemeToggle({ className, iconSize = 24 }: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme();
 
   return (
     <Button 
       variant="ghost" 
-      size="icon" 
+      size="lg" 
       onClick={toggleTheme}
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
       className={cn(
-        "transition-colors hover:bg-opacity-15 hover:bg-[#43EB3E] border-none", 
+        "transition-colors hover:bg-opacity-15 hover:bg-[#43EB3E] border-none rounded-full h-12 w-12 p-2", 
         className
       )}
     >
       {theme === 'dark' ? (
-        <Sun className="text-[#43EB3E]" style={{ height: `${iconSize}px`, width: `${iconSize}px` }} />
+        <Sun className="text-[#43EB3E] h-full w-full" />
       ) : (
-        <Moon className="text-[#043375]" style={{ height: `${iconSize}px`, width: `${iconSize}px` }} />
+        <Moon className="text-[#043375] h-full w-full" />
       )}
     </Button>
   );

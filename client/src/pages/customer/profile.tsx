@@ -498,6 +498,7 @@ export default function ProfilePage() {
                               <Switch
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
+                                className="scale-125"
                               />
                             </FormControl>
                           </div>
@@ -655,6 +656,7 @@ export default function ProfilePage() {
                               <Switch
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
+                                className="scale-125"
                               />
                             </FormControl>
                           </div>
