@@ -39,6 +39,8 @@ const TRANSACTION_TYPES = [
 
 const TRANSACTION_STATUS = ["PENDING", "PROCESSED"] as const;
 
+const CARD_STATUS = ["NOT_DELIVERED", "OUT_FOR_DELIVERY", "DELIVERED"] as const;
+
 const ADMIN_ACTION_TYPES = [
   "POINT_ADJUSTMENT",
   "ADMIN_CREATED",
@@ -115,6 +117,7 @@ export const users = mysqlTable("users", {
   accountHolderName: text("account_holder_name"),
   branchCode: text("branch_code"),
   hasCreditCard: boolean("has_credit_card").default(false),
+  cardStatus: mysqlEnum("card_status", CARD_STATUS).default("NOT_DELIVERED"),
   signature: text("signature"),
   mandateAccepted: boolean("mandate_accepted").default(false),
   mandateAcceptedAt: timestamp("mandate_accepted_at"),

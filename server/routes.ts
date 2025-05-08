@@ -18,6 +18,7 @@ import migrationRouter from './routes/migration';
 import manualMigrationRouter from './routes/manual-migration';
 import packageTypesRouter from './routes/package-types';
 import subscriptionRouter from './routes/subscription';
+import { setupCardStatusRoutes } from './routes/card-status';
 import { leadsRouter } from './routes/leads';
 import { contactRouter } from './routes/contact';
 import adminToolsRouter from './routes/admin-tools';
@@ -1113,6 +1114,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   
   app.use('/api/agent', agentRouter);
   app.use('/api/admin/agents', agentsRouter);
+  
+  // Setup card status routes
+  setupCardStatusRoutes(app);
   
   // Debug endpoint for agent listing that bypasses all authentication middleware
   app.get('/api/debug/agents', async (req, res) => {
