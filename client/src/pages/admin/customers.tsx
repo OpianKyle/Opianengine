@@ -1642,7 +1642,37 @@ export default function AdminCustomers() {
 
   function handleCardStatusUpdateComplete() {
     setShowCardStatusUpdate(false);
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit] });
+    
+    // Enhanced caching strategy with multiple refresh steps
+    console.log('Running enhanced cache refresh from handleCardStatusUpdateComplete');
+    
+    // Step 1: First clear the cache completely for all customer queries
+    queryClient.removeQueries({ queryKey: ["/api/admin/customers"] });
+    
+    // Step 2: Then invalidate and force an immediate refetch
+    queryClient.invalidateQueries({ 
+      queryKey: ["/api/admin/customers"],
+      refetchType: 'all'
+    });
+    
+    // Step 3: Invalidate the specific page query
+    queryClient.invalidateQueries({ 
+      queryKey: ["/api/admin/customers", page, limit],
+      refetchType: 'all'
+    });
+    
+    // Step 4: Schedule a delayed refresh to handle any race conditions
+    setTimeout(() => {
+      console.log('Running delayed cache refresh');
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/admin/customers"],
+        refetchType: 'all'
+      });
+    }, 1000);
+    
+    // Clear selection after successful update
+    setSelectedCustomerIds([]);
+    
     toast({ 
       title: "Success", 
       description: `Card status updated for ${selectedCustomerIds.length} customer${selectedCustomerIds.length > 1 ? 's' : ''}`

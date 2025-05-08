@@ -24,22 +24,48 @@ export function useCardStatusMutation() {
       return await res.json();
     },
     onSuccess: (data) => {
-      // Force refetch by removing the cache entry completely before invalidating
+      console.log('Card status update successful, running enhanced cache invalidation');
+      
+      // Stage 1: Force refetch by removing all customer queries from cache
       queryClient.removeQueries({ queryKey: ["/api/admin/customers"] });
       
-      // Then invalidate all customers queries to ensure fresh data
+      // Stage 2: Invalidate all customer queries to trigger refetch with fresh data
       queryClient.invalidateQueries({ 
         queryKey: ["/api/admin/customers"],
-        refetchType: 'all' // Force immediate refetch
+        refetchType: 'all', // Force immediate refetch
+        exact: false // Include all queries that start with this key
       });
       
-      // Add a delayed refetch to catch any race conditions with the cache
+      // Stage 3: Multiple delayed refetches to catch any race conditions
+      // First delayed refetch
       setTimeout(() => {
+        console.log('Running first delayed refetch after card status update');
         queryClient.invalidateQueries({ 
           queryKey: ["/api/admin/customers"],
-          refetchType: 'all'
+          refetchType: 'all',
+          exact: false
         });
-      }, 500);
+      }, 300);
+      
+      // Second delayed refetch with longer timeout
+      setTimeout(() => {
+        console.log('Running second delayed refetch after card status update');
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/admin/customers"],
+          refetchType: 'all',
+          exact: false
+        });
+      }, 1000);
+      
+      // Final delayed refetch to ensure data is eventually consistent
+      setTimeout(() => {
+        console.log('Running final delayed refetch after card status update');
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/admin/customers"],
+          refetchType: 'all',
+          exact: false
+        });
+      }, 2500);
       
       // Show success toast
       toast({
