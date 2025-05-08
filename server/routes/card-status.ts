@@ -74,11 +74,30 @@ export function setupCardStatusRoutes(app: Express) {
       // Clear the customers cache from the main routes file to refresh data
       console.log('Clearing customers cache after card status update');
       if (global.customersCache) {
+        const cacheSize = global.customersCache.size;
+        const cacheKeys = Array.from(global.customersCache.keys());
+        console.log(`Customers cache before clearing: ${cacheSize} entries`, cacheKeys);
+        
         global.customersCache.clear();
-        console.log('Customers cache cleared successfully');
+        
+        console.log('Customers cache cleared successfully:', {
+          beforeSize: cacheSize,
+          afterSize: global.customersCache.size,
+          userId: user.id,
+          cardStatus,
+          affectedUserIds: userIds
+        });
       } else {
         console.warn('Could not access global customers cache for clearing');
       }
+      
+      // Force a delayed clear as well to catch any race conditions
+      setTimeout(() => {
+        if (global.customersCache) {
+          global.customersCache.clear();
+          console.log('Performed delayed cache clear');
+        }
+      }, 100);
 
       // Log the action for each user
       const adminLogPromises = userIds.map(async (userId) => {

@@ -24,8 +24,22 @@ export function useCardStatusMutation() {
       return await res.json();
     },
     onSuccess: (data) => {
-      // Invalidate customers query to refresh the data
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
+      // Force refetch by removing the cache entry completely before invalidating
+      queryClient.removeQueries({ queryKey: ["/api/admin/customers"] });
+      
+      // Then invalidate all customers queries to ensure fresh data
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/admin/customers"],
+        refetchType: 'all' // Force immediate refetch
+      });
+      
+      // Add a delayed refetch to catch any race conditions with the cache
+      setTimeout(() => {
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/admin/customers"],
+          refetchType: 'all'
+        });
+      }, 500);
       
       // Show success toast
       toast({

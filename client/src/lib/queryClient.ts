@@ -9,12 +9,12 @@ type FetchOptions = {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 10 * 60 * 1000, // 10 minutes - double the cache time for better performance
+      staleTime: 5 * 1000, // 5 seconds - reduced for development to see updates faster
       gcTime: 15 * 60 * 1000, // 15 minutes - how long inactive data remains in cache (renamed from cacheTime)
       retry: 1,
       retryDelay: 1000,
-      refetchOnWindowFocus: false,
-      refetchOnMount: false, // Prevent automatic refetching when component mounts
+      refetchOnWindowFocus: true, // Enable refetch when window regains focus
+      refetchOnMount: true, // Enable automatic refetching when component mounts
       refetchOnReconnect: 'always', // Always refetch on network reconnection
     },
   },
