@@ -682,6 +682,8 @@ export function formatNewCustomerAdminEmail(
     accountHolderName?: string;
     branchCode?: string;
     mandate_accepted?: boolean;
+    agentId?: number;
+    agentName?: string;
   }
 ): { text: string; html: string } {
   // Debug log to verify mandate_accepted is passed correctly
@@ -690,10 +692,17 @@ export function formatNewCustomerAdminEmail(
   // Use Replit domain for images (they actually work)
   const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
   
+  // Format agent information if available
+  const agentInfo = customerData.agentId 
+    ? `Agent Information:
+    Agent ID: ${customerData.agentId}
+    Agent Name: ${customerData.agentName || 'Not available'}`
+    : '';
+  
   const text = `
     New Customer Registration
 
-    Personal Details:
+    ${agentInfo ? agentInfo + '\n\n' : ''}Personal Details:
     First Name: ${customerData.firstName}
     Last Name: ${customerData.lastName}
     Email: ${customerData.email}
