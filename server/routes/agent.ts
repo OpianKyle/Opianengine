@@ -352,7 +352,8 @@ router.post('/customers/create', async (req: any, res) => {
             hasCreditCard,
             createdAt: new Date().toISOString(),
             mandate_accepted: true,  // Use the correct field name (mandate_accepted instead of mandateAccepted)
-            agentId: req.user.id
+            agentId: req.user.id,
+            agentName: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim()
           };
           
           console.log('Sending admin notification with data:', JSON.stringify({
