@@ -266,6 +266,8 @@ export default function AdminCustomers() {
   const [showAssignProducts, setShowAssignProducts] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
+  const [showCardStatusUpdate, setShowCardStatusUpdate] = useState(false);
   
   const { data: customersResponse, isLoading: isCustomersLoading, isError: isCustomersError, error: customersError } = useQuery({
     queryKey: ["/api/admin/customers", page, limit],
@@ -658,6 +660,16 @@ export default function AdminCustomers() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Customer Management</h1>
         <div className="flex gap-2">
+          {selectedCustomerIds.length > 0 && (
+            <Button 
+              variant="outline" 
+              className="bg-blue-500 text-white hover:bg-blue-600"
+              onClick={() => setShowCardStatusUpdate(true)}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Update Card Status ({selectedCustomerIds.length})
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => exportCustomersMutation.mutate()}
@@ -686,6 +698,31 @@ export default function AdminCustomers() {
             </Button>
           </label>
         </div>
+        
+        <Dialog open={showCardStatusUpdate} onOpenChange={setShowCardStatusUpdate}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Update Card Status</DialogTitle>
+              <DialogDescription>
+                Change the card status for {selectedCustomerIds.length} selected customer(s).
+              </DialogDescription>
+            </DialogHeader>
+            
+            <BulkCardStatusUpdate 
+              selectedIds={selectedCustomerIds} 
+              onUpdateComplete={() => {
+                setShowCardStatusUpdate(false);
+                setSelectedCustomerIds([]);
+              }}
+            />
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCardStatusUpdate(false)}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card className="flex-1 flex flex-col">
@@ -704,6 +741,17 @@ export default function AdminCustomers() {
             <div className="flex items-center justify-between mt-2 py-2 border-b">
               <PaginationControls totalItems={pagination.totalItems} />
               <div className="flex items-center gap-4">
+                {selectedCustomerIds.length > 0 && (
+                  <Button
+                    onClick={() => setShowCardStatusUpdate(true)}
+                    className="flex items-center gap-2"
+                    variant="secondary"
+                    size="sm"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Update Card Status ({selectedCustomerIds.length})
+                  </Button>
+                )}
                 <PaginationNavigation />
               </div>
             </div>
@@ -725,6 +773,22 @@ export default function AdminCustomers() {
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox 
+                        checked={
+                          customers.length > 0 && 
+                          selectedCustomerIds.length === customers.length
+                        }
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedCustomerIds(customers.map(c => c.id));
+                          } else {
+                            setSelectedCustomerIds([]);
+                          }
+                        }}
+                        aria-label="Select all customers"
+                      />
+                    </TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
@@ -732,6 +796,7 @@ export default function AdminCustomers() {
                     <TableHead>Tier</TableHead>
                     <TableHead>Points</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Card Status</TableHead>
                     <TableHead>Assigned Products</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -739,14 +804,14 @@ export default function AdminCustomers() {
                 <TableBody>
                   {isCustomersLoading && !customers.length ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center">
+                      <TableCell colSpan={11} className="h-24 text-center">
                         <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
                         <p className="text-sm text-muted-foreground mt-2">Loading customer data...</p>
                       </TableCell>
                     </TableRow>
                   ) : !customers.length ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center">
+                      <TableCell colSpan={11} className="h-24 text-center">
                         No customers found.
                       </TableCell>
                     </TableRow>
@@ -760,6 +825,19 @@ export default function AdminCustomers() {
                             !customer.isEnabled && "opacity-60 bg-muted/50"
                           )}
                         >
+                          <TableCell>
+                            <Checkbox 
+                              checked={selectedCustomerIds.includes(customer.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedCustomerIds(prev => [...prev, customer.id]);
+                                } else {
+                                  setSelectedCustomerIds(prev => prev.filter(id => id !== customer.id));
+                                }
+                              }}
+                              aria-label={`Select customer ${customer.firstName} ${customer.lastName}`}
+                            />
+                          </TableCell>
                           <TableCell>{customer.firstName} {customer.lastName}</TableCell>
                           <TableCell>{customer.email}</TableCell>
                           <TableCell>{customer.phoneNumber}</TableCell>
@@ -791,6 +869,9 @@ export default function AdminCustomers() {
                             }`}>
                               {customer.isEnabled ? 'Active' : 'Disabled'}
                             </span>
+                          </TableCell>
+                          <TableCell>
+                            <CardStatusLabel status={customer.cardStatus || "NOT_DELIVERED"} />
                           </TableCell>
                           <TableCell>
                             <ScrollArea className="h-[100px]">
@@ -1532,6 +1613,33 @@ export default function AdminCustomers() {
           )}
         </CardContent>
       </Card>
+
+      {/* Card Status Update Dialog */}
+      {showCardStatusUpdate && (
+        <Dialog open={showCardStatusUpdate} onOpenChange={setShowCardStatusUpdate}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Update Card Status</DialogTitle>
+              <DialogDescription>
+                Update the card status for {selectedCustomerIds.length} selected customer{selectedCustomerIds.length > 1 ? 's' : ''}.
+              </DialogDescription>
+            </DialogHeader>
+            <BulkCardStatusUpdate 
+              selectedIds={selectedCustomerIds} 
+              onUpdateComplete={handleCardStatusUpdateComplete} 
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
+
+  function handleCardStatusUpdateComplete() {
+    setShowCardStatusUpdate(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit] });
+    toast({ 
+      title: "Success", 
+      description: `Card status updated for ${selectedCustomerIds.length} customer${selectedCustomerIds.length > 1 ? 's' : ''}`
+    });
+  }
 }
