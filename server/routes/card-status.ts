@@ -70,6 +70,15 @@ export function setupCardStatusRoutes(app: Express) {
         `UPDATE users SET card_status = ? WHERE id IN (${questionMarks})`,
         [cardStatus, ...userIds]
       );
+      
+      // Clear the customers cache from the main routes file to refresh data
+      console.log('Clearing customers cache after card status update');
+      if (global.customersCache) {
+        global.customersCache.clear();
+        console.log('Customers cache cleared successfully');
+      } else {
+        console.warn('Could not access global customers cache for clearing');
+      }
 
       // Log the action for each user
       const adminLogPromises = userIds.map(async (userId) => {

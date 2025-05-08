@@ -1326,10 +1326,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
   // Admin customers endpoint - get only regular customers
   // Cache for customers data with segmented caching by page and limit
-  const CUSTOMERS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-  const CUSTOMERS_CACHE_STALE_TTL = 30 * 60 * 1000; // 30 minutes for stale data
+  const CUSTOMERS_CACHE_TTL = 30 * 1000; // 30 seconds - reduced to improve refresh rate
+  const CUSTOMERS_CACHE_STALE_TTL = 5 * 60 * 1000; // 5 minutes for stale data
   // Use a map for caching different pagination states
   const customersCache = new Map();
+  
+  // Make cache available globally for other modules to access and clear
+  global.customersCache = customersCache;
 
   app.get("/api/admin/customers", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -1345,13 +1348,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     const cacheKey = `customers_${page}_${limit}`;
     const now = Date.now();
     
-    // Increase cache TTL to reduce database load (30 minutes)
-    const CUSTOMERS_CACHE_TTL = 1000 * 60 * 30; 
+    // Changed to 10 seconds for development to enable immediate updates
+    const cacheTTL = 10 * 1000;
     
     // Check if we have a valid cached response for this pagination state
     if (customersCache.has(cacheKey)) {
       const cacheEntry = customersCache.get(cacheKey);
-      if (now - cacheEntry.timestamp < CUSTOMERS_CACHE_TTL) {
+      if (now - cacheEntry.timestamp < cacheTTL) {
         console.log('Returning cached customers data:', {
           page,
           limit,
