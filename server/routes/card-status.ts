@@ -1,15 +1,17 @@
-import { Express } from "express";
+import { Express, Request, Response } from "express";
 import { createConnection } from "../db";
+import { getUserFromTokenOrSession } from "../auth";
 
 export function setupCardStatusRoutes(app: Express) {
   // Test endpoint for debugging only
-  app.get("/api/admin/customers/card-status-test", (req, res) => {
+  app.get("/api/admin/customers/card-status-test", async (req, res) => {
     console.log('Test endpoint called');
-    if (req.isAuthenticated()) {
+    const user = await getUserFromTokenOrSession(req);
+    if (user) {
       res.json({ 
         success: true, 
         message: 'Authentication successful', 
-        user: req.user,
+        user: user,
         session: req.session
       });
     } else {
@@ -18,31 +20,33 @@ export function setupCardStatusRoutes(app: Express) {
   });
 
   // Endpoint to update card status for one or multiple users
-  app.post("/api/admin/customers/update-card-status", async (req, res) => {
+  app.post("/api/admin/customers/update-card-status", async (req: Request, res: Response) => {
     console.log('Card status update request received');
     console.log('Request body:', req.body);
-    console.log('Is authenticated:', req.isAuthenticated());
-    console.log('User object:', req.user);
-    console.log('Session:', req.session);
     console.log('Headers:', req.headers);
     
-    if (!req.isAuthenticated()) {
-      console.log('Authentication check failed');
+    // Use the token-session hybrid authentication approach
+    const user = await getUserFromTokenOrSession(req);
+    
+    if (!user) {
+      console.log('Authentication check failed - no user found');
       return res.status(401).json({ error: "Unauthorized - Not authenticated" });
     }
     
-    // Use any available admin field format in the user object
-    const isAdmin = !!(
-      req.user.is_admin || 
-      req.user.is_super_admin || 
-      req.user.isAdmin || 
-      req.user.isSuperAdmin
-    );
+    console.log('Authenticated user:', {
+      id: user.id,
+      email: user.email,
+      is_admin: user.is_admin,
+      is_super_admin: user.is_super_admin
+    });
+    
+    // Check for admin privileges
+    const isAdmin = !!(user.is_admin || user.is_super_admin);
     
     console.log('Is admin check result:', isAdmin);
     
     if (!isAdmin) {
-      console.log('Admin role check failed:', req.user);
+      console.log('Admin role check failed:', user);
       return res.status(401).json({ error: "Unauthorized - Not an admin" });
     }
 
@@ -74,7 +78,7 @@ export function setupCardStatusRoutes(app: Express) {
           (admin_id, target_user_id, action_type, details) 
           VALUES (?, ?, ?, ?)`,
           [
-            req.user.id || req.user.user_id,
+            user.id, // Using the authenticated user from getUserFromTokenOrSession
             userId,
             "USER_UPDATED",
             `Card status updated to ${cardStatus}`

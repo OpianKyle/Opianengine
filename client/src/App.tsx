@@ -33,6 +33,7 @@ import AdminAgents from "@/pages/admin/agents";
 import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
 import Migrations from "@/pages/admin/migrations"; // Added import for Migrations
 import AdminLeads from "@/pages/admin/leads"; // Added import for Leads management
+import CardStatusTest from "@/pages/admin/card-status-test"; // Added import for card status test page
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -154,6 +155,11 @@ function Router() {
       <Route path="/admin/customers">
         <AdminLayout>
           <ProtectedRoute component={AdminCustomers} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/card-status-test">
+        <AdminLayout>
+          <ProtectedRoute component={CardStatusTest} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/agents">

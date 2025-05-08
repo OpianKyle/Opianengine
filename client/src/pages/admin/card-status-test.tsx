@@ -1,23 +1,43 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+
+type CardStatus = "NOT_DELIVERED" | "OUT_FOR_DELIVERY" | "DELIVERED";
 
 export default function CardStatusTest() {
   const { toast } = useToast();
   const [response, setResponse] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [userIds, setUserIds] = useState<string>("10, 11");
+  const [cardStatus, setCardStatus] = useState<CardStatus>("OUT_FOR_DELIVERY");
   
   const testCardStatus = async () => {
     try {
       setLoading(true);
       console.log('Testing card status test endpoint...');
+      
+      // Get token from localStorage if available
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {
+        'Accept': 'application/json'
+      };
+      
+      // Add token to headers if available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('Using Bearer token for authentication');
+      } else {
+        console.log('No token found in localStorage, using session-based authentication');
+      }
+      
       const response = await fetch('/api/admin/customers/card-status-test', {
         method: 'GET',
         credentials: 'include',
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers
       });
 
       console.log('Response status:', response.status);
@@ -28,12 +48,13 @@ export default function CardStatusTest() {
       
       toast({
         title: "Test result",
-        description: `Status: ${response.status}`,
+        description: `Status: ${response.status} - ${response.status === 200 ? 'Success' : 'Failed'}`,
         variant: response.status === 200 ? "default" : "destructive",
       });
       
     } catch (error) {
       console.error('Error testing card status:', error);
+      setResponse({ error: String(error) });
       toast({
         title: "Test failed",
         description: String(error),
@@ -48,13 +69,26 @@ export default function CardStatusTest() {
     try {
       setLoading(true);
       console.log('Testing card status update endpoint...');
+      
+      // Get token from localStorage if available
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      // Add token to headers if available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('Using Bearer token for authentication');
+      } else {
+        console.log('No token found in localStorage, using session-based authentication');
+      }
+      
       const response = await fetch('/api/admin/customers/update-card-status', {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers,
         body: JSON.stringify({
           userIds: [10, 11], // Use real user IDs or it will fail with a 400 error
           cardStatus: 'OUT_FOR_DELIVERY'
@@ -69,12 +103,13 @@ export default function CardStatusTest() {
       
       toast({
         title: "Update test result",
-        description: `Status: ${response.status}`,
+        description: `Status: ${response.status} - ${response.status === 200 ? 'Success' : 'Failed'}`,
         variant: response.status === 200 ? "default" : "destructive",
       });
       
     } catch (error) {
       console.error('Error testing card status update:', error);
+      setResponse({ error: String(error) });
       toast({
         title: "Update test failed",
         description: String(error),
