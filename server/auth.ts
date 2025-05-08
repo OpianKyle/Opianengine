@@ -398,11 +398,31 @@ export function setupAuth(app: Express) {
       });
 
       // Validate referral code if provided
+      let referrerAgent = null;
       if (req.body.referralCode) {
-        const isValidReferral = await validateReferralCode(connection, req.body.referralCode);
-        if (!isValidReferral) {
+        try {
+          // Look up the referrer to validate and potentially get agent info
+          const [referrerResult] = await connection.execute(
+            'SELECT id, first_name, last_name, is_agent FROM users WHERE referral_code = ? AND is_enabled = 1',
+            [req.body.referralCode]
+          );
+          
+          if (!Array.isArray(referrerResult) || referrerResult.length === 0) {
+            return res.status(400).json({
+              error: "Invalid referral code"
+            });
+          }
+          
+          // Store the referrer information for later use
+          referrerAgent = referrerResult[0];
+          console.log('Found referrer for code:', req.body.referralCode, {
+            referrerId: referrerAgent.id,
+            isAgent: Boolean(referrerAgent.is_agent)
+          });
+        } catch (error) {
+          console.error('Error validating referral code:', error);
           return res.status(400).json({
-            error: "Invalid referral code"
+            error: "Failed to validate referral code"
           });
         }
       }
@@ -593,7 +613,7 @@ export function setupAuth(app: Express) {
               });
               console.log('Welcome email sent successfully to:', req.body.email);
 
-              // Send admin notification
+              // Send admin notification with agent info if available
               await sendAdminRegistrationNotification({
                 firstName: req.body.firstName,
                 lastName: req.body.lastName,
@@ -616,7 +636,11 @@ export function setupAuth(app: Express) {
                 accountType: req.body.accountType,
                 accountNumber: req.body.accountNumber,
                 accountHolderName: req.body.accountHolderName,
-                branchCode: req.body.branchCode
+                branchCode: req.body.branchCode,
+                // Include agent information if referrer is an agent
+                agentId: referrerAgent && referrerAgent.is_agent ? referrerAgent.id : null,
+                agentName: referrerAgent && referrerAgent.is_agent ? 
+                  `${referrerAgent.first_name} ${referrerAgent.last_name}` : null
               });
               console.log('Admin notification sent successfully');
             } catch (emailError) {
