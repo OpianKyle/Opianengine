@@ -273,7 +273,9 @@ export default function AdminCustomers() {
     queryKey: ["/api/admin/customers", page, limit],
     queryFn: async () => {
       console.time('customersQuery');
-      const response = await fetch(`/api/admin/customers?page=${page}&limit=${limit}`, {
+      // Add cache-busting query parameter to avoid browser cache
+      const cacheBuster = new Date().getTime();
+      const response = await fetch(`/api/admin/customers?page=${page}&limit=${limit}&_t=${cacheBuster}`, {
         credentials: 'include'
       });
       if (!response.ok) {
@@ -283,7 +285,11 @@ export default function AdminCustomers() {
       console.timeEnd('customersQuery');
       return data;
     },
-    staleTime: 1000 * 60 * 1, // 1 minute
+    staleTime: 5 * 1000, // 5 seconds instead of 1 minute - so data becomes stale quickly
+    refetchInterval: 10 * 1000, // Refetch every 10 seconds regardless of window focus
+    refetchIntervalInBackground: true, // Continue refetching even when the browser tab is not focused
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
     retryDelay: 1000
   });
   

@@ -12,6 +12,7 @@ import {
 import { CardStatusDropdown } from "./card-status-dropdown";
 import { useCardStatusMutation } from "@/hooks/use-card-status";
 import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 type CardStatus = "NOT_DELIVERED" | "OUT_FOR_DELIVERY" | "DELIVERED";
 
@@ -29,12 +30,45 @@ export function BulkCardStatusUpdate({
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<CardStatus>("NOT_DELIVERED");
   const { mutate: updateCardStatus, isPending } = useCardStatusMutation();
+  const queryClient = useQueryClient();
+  
+  // This function will manually refetch the customers data
+  const forceRefreshCustomersData = () => {
+    console.log('Manually refreshing customers data');
+    
+    // First remove all customers queries from the cache
+    queryClient.removeQueries({ queryKey: ['/api/admin/customers'] });
+    
+    // Then force an immediate refetch with refetchType: 'all'
+    queryClient.invalidateQueries({ 
+      queryKey: ['/api/admin/customers'],
+      refetchType: 'all'
+    });
+    
+    // Add some delayed refetches to handle any race conditions
+    setTimeout(() => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/admin/customers'],
+        refetchType: 'all'
+      });
+    }, 500);
+    
+    setTimeout(() => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/admin/customers'],
+        refetchType: 'all'
+      });
+    }, 1500);
+  };
 
   const handleUpdateStatus = () => {
     updateCardStatus(
       { userIds: selectedIds, cardStatus: status },
       {
         onSuccess: () => {
+          // Force a manual refresh of the customers data
+          forceRefreshCustomersData();
+          
           setOpen(false);
           if (onUpdateComplete) {
             onUpdateComplete();
