@@ -749,6 +749,14 @@ export function formatNewCustomerAdminEmail(
         <h2 style="color: white; margin-top: 0;">Admin Notification</h2>
         <h1 style="color: #43EB3E;">New Customer Registration</h1>
 
+        ${customerData.agentId ? `
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Agent Information</h3>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Agent ID:</strong> ${customerData.agentId}</p>
+          ${customerData.agentName ? `<p style="margin: 10px 0;"><strong style="color: #43EB3E;">Agent Name:</strong> ${customerData.agentName}</p>` : ''}
+        </div>
+        ` : ''}
+
         <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
           <h3 style="color: #43EB3E; margin-top: 0;">Personal Details</h3>
           <p style="margin: 10px 0;"><strong style="color: #43EB3E;">First Name:</strong> ${customerData.firstName}</p>
@@ -982,6 +990,14 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           <h1>OPIAN REWARDS CUSTOMER REGISTRATION</h1>
           <p>Registration Date: ${new Date().toLocaleDateString()}</p>
         </div>
+
+        ${customerData.agentId ? `
+        <div class="section">
+          <h2>Agent Information</h2>
+          <p><strong>Agent ID:</strong> ${customerData.agentId}</p>
+          ${customerData.agentName ? `<p><strong>Agent Name:</strong> ${customerData.agentName}</p>` : ''}
+        </div>
+        ` : ''}
 
         <div class="section">
           <h2>Personal Details</h2>
