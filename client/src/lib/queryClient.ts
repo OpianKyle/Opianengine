@@ -308,12 +308,20 @@ export async function apiRequest(
   const options: RequestInit = {
     method,
     headers,
-    credentials: 'include',  // Still include credentials for session cookies
+    credentials: 'include',  // Always include credentials for session cookies
   };
 
   if (data !== undefined && method !== 'GET') {
     options.body = JSON.stringify(data);
   }
+  
+  console.log(`Making ${method} request to ${url} with options:`, {
+    method,
+    headers,
+    credentials: 'include',
+    bodyLength: options.body ? JSON.stringify(options.body).length : 0,
+    token: token ? 'present' : 'missing'
+  });
 
   const response = await fetch(url, options);
   

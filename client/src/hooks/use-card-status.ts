@@ -15,6 +15,7 @@ export function useCardStatusMutation() {
 
   return useMutation({
     mutationFn: async ({ userIds, cardStatus }: UpdateCardStatusParams) => {
+      // Send request to updated API endpoint with proper path
       const res = await apiRequest(
         "POST",
         "/api/admin/customers/update-card-status",

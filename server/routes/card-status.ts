@@ -2,20 +2,47 @@ import { Express } from "express";
 import { createConnection } from "../db";
 
 export function setupCardStatusRoutes(app: Express) {
+  // Test endpoint for debugging only
+  app.get("/api/admin/customers/card-status-test", (req, res) => {
+    console.log('Test endpoint called');
+    if (req.isAuthenticated()) {
+      res.json({ 
+        success: true, 
+        message: 'Authentication successful', 
+        user: req.user,
+        session: req.session
+      });
+    } else {
+      res.status(401).json({ error: 'Not authenticated' });
+    }
+  });
+
   // Endpoint to update card status for one or multiple users
   app.post("/api/admin/customers/update-card-status", async (req, res) => {
+    console.log('Card status update request received');
+    console.log('Request body:', req.body);
+    console.log('Is authenticated:', req.isAuthenticated());
+    console.log('User object:', req.user);
+    console.log('Session:', req.session);
+    console.log('Headers:', req.headers);
+    
     if (!req.isAuthenticated()) {
+      console.log('Authentication check failed');
       return res.status(401).json({ error: "Unauthorized - Not authenticated" });
     }
     
     // Use any available admin field format in the user object
-    if (!(
+    const isAdmin = !!(
       req.user.is_admin || 
       req.user.is_super_admin || 
       req.user.isAdmin || 
       req.user.isSuperAdmin
-    )) {
-      console.log('User authentication failed:', req.user);
+    );
+    
+    console.log('Is admin check result:', isAdmin);
+    
+    if (!isAdmin) {
+      console.log('Admin role check failed:', req.user);
       return res.status(401).json({ error: "Unauthorized - Not an admin" });
     }
 
