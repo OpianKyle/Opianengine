@@ -18,8 +18,7 @@ export function useCardStatusMutation() {
       const res = await apiRequest(
         "POST",
         "/api/admin/customers/update-card-status",
-        { userIds, cardStatus },
-        { credentials: 'include' }
+        { userIds, cardStatus }
       );
       return await res.json();
     },

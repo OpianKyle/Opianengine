@@ -4,8 +4,19 @@ import { createConnection } from "../db";
 export function setupCardStatusRoutes(app: Express) {
   // Endpoint to update card status for one or multiple users
   app.post("/api/admin/customers/update-card-status", async (req, res) => {
-    if (!req.isAuthenticated() || !(req.user.isAdmin || req.user.isSuperAdmin)) {
-      return res.status(401).json({ error: "Unauthorized" });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Unauthorized - Not authenticated" });
+    }
+    
+    // Use any available admin field format in the user object
+    if (!(
+      req.user.is_admin || 
+      req.user.is_super_admin || 
+      req.user.isAdmin || 
+      req.user.isSuperAdmin
+    )) {
+      console.log('User authentication failed:', req.user);
+      return res.status(401).json({ error: "Unauthorized - Not an admin" });
     }
 
     const { userIds, cardStatus } = req.body;
@@ -36,7 +47,7 @@ export function setupCardStatusRoutes(app: Express) {
           (admin_id, target_user_id, action_type, details) 
           VALUES (?, ?, ?, ?)`,
           [
-            req.user.id,
+            req.user.id || req.user.user_id,
             userId,
             "USER_UPDATED",
             `Card status updated to ${cardStatus}`
