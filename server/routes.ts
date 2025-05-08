@@ -1417,6 +1417,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           u.account_holder_name,
           u.branch_code,
           u.has_credit_card,
+          u.card_status,
           u.is_enabled,
           CAST(u.points as DECIMAL(10,2)) as points,
           u.created_at,
@@ -1586,6 +1587,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           accountHolderName: user.account_holder_name || '',
           branchCode: user.branch_code || '',
           hasCreditCard: Boolean(user.has_credit_card),
+          cardStatus: user.card_status || 'NOT_DELIVERED',
           isSouthAfrican: Boolean(user.is_south_african),
           agentId: user.agent_id || null
         };
