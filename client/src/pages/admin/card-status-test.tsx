@@ -70,6 +70,15 @@ export default function CardStatusTest() {
       setLoading(true);
       console.log('Testing card status update endpoint...');
       
+      // Parse user IDs from comma-separated string to array of numbers
+      const userIdArray = userIds.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+      
+      if (userIdArray.length === 0) {
+        throw new Error('Please enter at least one valid user ID');
+      }
+      
+      console.log(`Using user IDs: ${userIdArray.join(', ')} and status: ${cardStatus}`);
+      
       // Get token from localStorage if available
       const token = localStorage.getItem('authToken');
       const headers: Record<string, string> = {
@@ -90,8 +99,8 @@ export default function CardStatusTest() {
         credentials: 'include',
         headers,
         body: JSON.stringify({
-          userIds: [10, 11], // Use real user IDs or it will fail with a 400 error
-          cardStatus: 'OUT_FOR_DELIVERY'
+          userIds: userIdArray,
+          cardStatus: cardStatus
         })
       });
 
@@ -128,25 +137,66 @@ export default function CardStatusTest() {
           <CardDescription>Test the card status API endpoints</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <Button 
-              onClick={testCardStatus} 
-              disabled={loading}
-              className="mr-4"
-            >
-              Test Auth Endpoint
-            </Button>
+          <div className="space-y-6">
+            <div className="grid gap-4">
+              <div>
+                <Label htmlFor="userIds">User IDs (comma separated)</Label>
+                <Input
+                  id="userIds"
+                  value={userIds}
+                  onChange={(e) => setUserIds(e.target.value)}
+                  placeholder="10, 11, 12"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter user IDs separated by commas
+                </p>
+              </div>
+              
+              <div>
+                <Label htmlFor="cardStatus">Card Status</Label>
+                <Select
+                  value={cardStatus}
+                  onValueChange={(value) => setCardStatus(value as CardStatus)}
+                >
+                  <SelectTrigger id="cardStatus" className="mt-1">
+                    <SelectValue placeholder="Select card status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NOT_DELIVERED">Not Delivered</SelectItem>
+                    <SelectItem value="OUT_FOR_DELIVERY">Out For Delivery</SelectItem>
+                    <SelectItem value="DELIVERED">Delivered</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             
-            <Button 
-              onClick={testCardStatusUpdate} 
-              disabled={loading}
-              variant="outline"
-            >
-              Test Update Endpoint
-            </Button>
+            <div className="flex gap-4">
+              <Button 
+                onClick={testCardStatus} 
+                disabled={loading}
+              >
+                Test Auth Endpoint
+              </Button>
+              
+              <Button 
+                onClick={testCardStatusUpdate} 
+                disabled={loading}
+                variant="outline"
+              >
+                Update Card Status
+              </Button>
+            </div>
+            
+            {loading && (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                <span className="ml-2">Processing...</span>
+              </div>
+            )}
             
             {response && (
-              <div className="mt-4 p-4 bg-muted rounded-lg">
+              <div className="p-4 bg-muted rounded-lg">
                 <h3 className="font-medium mb-2">Response:</h3>
                 <pre className="text-xs overflow-auto max-h-[300px]">
                   {JSON.stringify(response, null, 2)}
