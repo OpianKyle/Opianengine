@@ -1,11 +1,12 @@
 import express from "express";
 import { z } from "zod";
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
-import { db } from "../../db";
+import { db, pool } from "../../db";
 import { insertLeadSchema, leads } from "../../db/leads";
 import { ResponseError } from "../utils/errors";
 import { fromZodError } from "zod-validation-error";
 import { adminLog } from "../utils/adminLog";
+import { sendLeadNotificationEmail } from "../utils/emailService";
 
 const router = express.Router();
 
@@ -214,6 +215,25 @@ router.post("/", async (req, res, next) => {
         });
       } else {
         console.log('Lead submitted from public form');
+      }
+      
+      // Send email notification to Jamie about the new lead
+      try {
+        console.log(`Sending lead notification email to Jamie (${leadData.firstName} ${leadData.lastName})...`);
+        
+        const emailSent = await sendLeadNotificationEmail({
+          ...leadData,
+          id: insertId
+        });
+        
+        if (emailSent) {
+          console.log(`Lead notification email for ${leadData.firstName} ${leadData.lastName} (ID: ${insertId}) sent successfully to jamiek@opianfsgroup.com`);
+        } else {
+          console.warn(`Failed to send lead notification email for lead ID: ${insertId}`);
+        }
+      } catch (emailError) {
+        console.error('Error sending lead notification email:', emailError instanceof Error ? emailError.message : 'Unknown error');
+        // We don't want to fail the entire request if just the email fails
       }
       
       // Return success with the lead data we already have

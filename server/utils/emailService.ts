@@ -1137,3 +1137,101 @@ export async function sendAdminRegistrationNotification(customerData: any): Prom
     return false;
   }
 }
+
+/**
+ * Format email for new lead notification
+ */
+export function formatNewLeadEmail(
+  leadData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    mobileNumber: string;
+    selectedPackage?: string;
+    referralCode?: string;
+    notes?: string;
+  }
+): { text: string; html: string } {
+  // Use Replit domain for images
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
+  
+  const text = `
+    New Lead Notification
+    
+    A new lead has been submitted to the Opian Rewards platform.
+    
+    Lead Details:
+    First Name: ${leadData.firstName}
+    Last Name: ${leadData.lastName}
+    Email: ${leadData.email}
+    Mobile Number: ${leadData.mobileNumber}
+    ${leadData.selectedPackage ? `Selected Package: ${leadData.selectedPackage}` : ''}
+    ${leadData.referralCode ? `Referral Code: ${leadData.referralCode}` : ''}
+    ${leadData.notes ? `Notes: ${leadData.notes}` : ''}
+    
+    Please log in to the Opian Rewards Admin Portal to view and manage this lead.
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${logoImageUrl}" alt="Opian Rewards Logo" style="max-width: 200px;">
+      </div>
+
+      <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
+        <h2 style="color: white; margin-top: 0;">Lead Notification</h2>
+        <h1 style="color: #43EB3E;">New Lead Submitted</h1>
+        
+        <p style="color: white; line-height: 1.6;">
+          A new lead has been submitted to the Opian Rewards platform.
+        </p>
+
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Lead Details</h3>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">First Name:</strong> ${leadData.firstName}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Last Name:</strong> ${leadData.lastName}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Email:</strong> ${leadData.email}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Mobile Number:</strong> ${leadData.mobileNumber}</p>
+          ${leadData.selectedPackage ? `<p style="margin: 10px 0;"><strong style="color: #43EB3E;">Selected Package:</strong> ${leadData.selectedPackage}</p>` : ''}
+          ${leadData.referralCode ? `<p style="margin: 10px 0;"><strong style="color: #43EB3E;">Referral Code:</strong> ${leadData.referralCode}</p>` : ''}
+          ${leadData.notes ? `<p style="margin: 10px 0;"><strong style="color: #43EB3E;">Notes:</strong> ${leadData.notes}</p>` : ''}
+        </div>
+
+        <p style="color: white; line-height: 1.6; text-align: center; margin-top: 30px;">
+          <a href="https://www.opianrewards.com/admin/leads" style="display: inline-block; background-color: #43EB3E; color: #011d3d; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            View Lead in Admin Portal
+          </a>
+        </p>
+      </div>
+
+      <div style="color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.6; margin-top: 30px; text-align: center;">
+        <p>Opian Financial Services (Pty) Ltd | Company Registration Number: 2018/584168/07 | FSP No: 50974</p>
+      </div>
+    </div>
+  `;
+
+  return { text, html };
+}
+
+/**
+ * Send an email notification about a new lead to the specified email address
+ */
+export async function sendLeadNotificationEmail(leadData: any): Promise<boolean> {
+  try {
+    console.log('Sending lead notification email...');
+    
+    const { text, html } = formatNewLeadEmail(leadData);
+
+    return await sendEmail({
+      to: 'jamiek@opianfsgroup.com', // Jamie's email address
+      subject: 'New Lead Notification - Opian Rewards',
+      text,
+      html,
+      emailType: 'LEAD_NOTIFICATION',
+      templateData: leadData
+    });
+  } catch (error) {
+    console.error('Failed to send lead notification email:', error);
+    return false;
+  }
+}
