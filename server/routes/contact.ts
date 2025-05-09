@@ -159,21 +159,19 @@ router.post("/", async (req, res, next) => {
       id: insertId
     };
     
-    // Send admin notification email about new lead (non-blocking)
+    // Send admin notification email about new lead - now waiting for it to complete
     try {
-      sendLeadNotificationEmail(leadData)
-        .then(success => {
-          if (success) {
-            console.log(`Lead notification email sent for ${data.firstName} ${data.lastName}`);
-          } else {
-            console.error(`Failed to send lead notification email for ${data.firstName} ${data.lastName}`);
-          }
-        })
-        .catch(emailError => {
-          console.error('Error sending lead notification email:', emailError);
-        });
+      console.log('About to call sendLeadNotificationEmail with data:', leadData);
+      
+      const emailResult = await sendLeadNotificationEmail(leadData);
+      
+      if (emailResult) {
+        console.log(`SUCCESS: Lead notification email sent for ${data.firstName} ${data.lastName}`);
+      } else {
+        console.error(`FAILED: Lead notification email failed for ${data.firstName} ${data.lastName}`);
+      }
     } catch (emailError) {
-      console.error('Unexpected error initiating lead notification email:', emailError);
+      console.error('CRITICAL ERROR sending lead notification email:', emailError);
       // We don't want to fail the entire request if just the email fails
     }
     

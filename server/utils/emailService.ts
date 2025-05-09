@@ -14,14 +14,32 @@ const createTransporter = () => {
   // Determine if connection should be secure
   const secure = process.env.SMTP_SECURE === 'true' || port === 465;
   
-  // For debugging
-  console.log('Email transporter configuration:', {
+  // For complete debugging
+  console.log('============ EMAIL TRANSPORTER DEBUG ============');
+  console.log('SMTP_HOST env var:', process.env.SMTP_HOST || 'Not set');
+  console.log('SMTP_PORT env var:', process.env.SMTP_PORT || 'Not set');
+  console.log('SMTP_USER env var:', process.env.SMTP_USER || 'Not set');
+  console.log('SMTP_PASSWORD env var:', process.env.SMTP_PASSWORD ? 'Set (hidden)' : 'Not set');
+  console.log('SMTP_SECURE env var:', process.env.SMTP_SECURE || 'Not set');
+  
+  console.log('Effective email transporter configuration:', {
     host,
     port,
     secure,
     user,
     passProvided: pass ? 'Yes' : 'No'
   });
+  
+  console.log('Creating transporter with the above config...');
+  
+  // If we're missing essential configuration, log a warning
+  if (!host || !user || !pass) {
+    console.error('WARNING: Missing essential SMTP configuration:');
+    if (!host) console.error('- SMTP_HOST is not set');
+    if (!user) console.error('- SMTP_USER is not set');
+    if (!pass) console.error('- SMTP_PASSWORD is not set');
+    console.error('Email sending will likely fail. Please check environment variables.');
+  }
   
   return nodemailer.createTransport({
     host,
@@ -35,8 +53,8 @@ const createTransporter = () => {
       // Do not fail on invalid certs
       rejectUnauthorized: false
     },
-    debug: process.env.NODE_ENV !== 'production',
-    logger: process.env.NODE_ENV !== 'production'
+    debug: true, // Enable debugging always
+    logger: true  // Enable SMTP traffic logging always
   });
 };
 
@@ -1218,9 +1236,26 @@ export function formatNewLeadEmail(
  */
 export async function sendLeadNotificationEmail(leadData: any): Promise<boolean> {
   try {
-    console.log('Sending lead notification email...');
+    console.log('=========== LEAD NOTIFICATION EMAIL DEBUG =============');
+    console.log('Sending lead notification email with data:', JSON.stringify(leadData, null, 2));
     
     const { text, html } = formatNewLeadEmail(leadData);
+    console.log('Lead email text content generated successfully');
+    
+    // Add debugging for email environment variables
+    console.log('SMTP_PASSWORD available:', process.env.SMTP_PASSWORD ? 'Yes (length: ' + process.env.SMTP_PASSWORD.length + ')' : 'No');
+    console.log('SMTP_HOST available:', process.env.SMTP_HOST || 'No');
+    console.log('SMTP_USER available:', process.env.SMTP_USER || 'No');
+    
+    console.log('Attempting to send email to jamiek@opianfsgroup.com...');
+    
+    // If we're missing any required SMTP settings, use a different notification approach
+    if (!process.env.SMTP_PASSWORD) {
+      console.error('SMTP_PASSWORD missing - emails cannot be sent without password');
+      
+      // Still go through the sending process for debugging but expect it to fail
+      console.warn('Will attempt to send anyway to diagnose exact failure point');
+    }
 
     return await sendEmail({
       to: 'jamiek@opianfsgroup.com', // Jamie's email address
@@ -1231,7 +1266,8 @@ export async function sendLeadNotificationEmail(leadData: any): Promise<boolean>
       templateData: leadData
     });
   } catch (error) {
-    console.error('Failed to send lead notification email:', error);
+    console.error('Critical error in sendLeadNotificationEmail:', error);
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
     return false;
   }
 }
