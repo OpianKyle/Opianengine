@@ -353,7 +353,7 @@ export default function HomePage() {
             </div>
             
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-8">
+            <nav className="hidden lg:flex space-x-8">
               <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Home</a>
               <a href="/how-it-works" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
               <a href="/meet-the-team" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Meet The Team</a>
@@ -361,7 +361,7 @@ export default function HomePage() {
             </nav>
             
             {/* Desktop buttons */}
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="hidden lg:flex items-center space-x-4">
               <ThemeToggle />
               <Button 
                 variant="outline" 
@@ -379,7 +379,7 @@ export default function HomePage() {
             </div>
             
             {/* Mobile buttons */}
-            <div className="flex md:hidden items-center space-x-3">
+            <div className="flex lg:hidden items-center space-x-3">
               <ThemeToggle />
               <Button 
                 variant="ghost" 
@@ -394,7 +394,7 @@ export default function HomePage() {
           
           {/* Mobile Navigation - Dropdown */}
           {mobileMenuOpen && (
-            <div className="md:hidden py-4 px-2 space-y-3 bg-white dark:bg-[#01162f] border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top">
+            <div className="lg:hidden py-4 px-2 space-y-3 bg-white dark:bg-[#01162f] border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top">
               <nav className="flex flex-col space-y-3">
                 <a 
                   href="#" 
