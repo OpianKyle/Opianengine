@@ -171,7 +171,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               ))}
             </div>
           </div>
-          <div className="p-3 md:p-4 border-t mt-auto">
+          <div className="p-3 md:p-4 border-t mt-auto pb-20 lg:pb-4">
             <Button 
               variant="outline" 
               className="w-full text-sm md:text-base" 

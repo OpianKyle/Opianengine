@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -194,8 +195,23 @@ const PackageCard = ({ pkg, isSelected, onSelect, anySelected }: {
 export default function ProfilePage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { logoutMutation } = useAuth();
   const [showPackageDialog, setShowPackageDialog] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+      });
+    }
+  };
 
   // Fetch user profile data
   const { data: profile, isLoading } = useQuery({
@@ -355,7 +371,7 @@ export default function ProfilePage() {
 
       <Separator className="my-4" />
 
-      <div className="px-4 sm:px-6 space-y-4 pb-20 lg:pb-6">
+      <div className="px-4 sm:px-6 space-y-4 pb-28 lg:pb-6">
         {/* Package Selection section moved to Products page as requested */}
 
         <Form {...form}>
@@ -720,6 +736,19 @@ export default function ProfilePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile-only logout button that stays above the bottom navbar */}
+      <div className="fixed bottom-20 left-0 right-0 px-4 py-2 lg:hidden z-40">
+        <Button
+          variant="destructive"
+          className="w-full flex items-center justify-center gap-2"
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
+        >
+          <LogOut className="h-4 w-4" />
+          {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
+        </Button>
+      </div>
     </div>
   );
 }
