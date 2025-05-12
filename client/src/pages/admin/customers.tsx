@@ -668,7 +668,7 @@ export default function AdminCustomers() {
   );
 
   return (
-    <div className="space-y-6 flex flex-col h-full overflow-hidden">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4 sm:items-center">
         <h1 className="text-2xl sm:text-3xl font-bold">Customer Management</h1>
         <div className="flex flex-wrap gap-2">
@@ -774,8 +774,8 @@ export default function AdminCustomers() {
               </Button>
             </div>
           ) : (
-            <div className="flex-1 overflow-auto">
-              <Table className="min-w-full">
+            <div className="overflow-auto">
+              <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
                     <TableHead className="w-[50px]">
