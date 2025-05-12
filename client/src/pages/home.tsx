@@ -628,16 +628,26 @@ export default function HomePage() {
           <div className="flex flex-col lg:flex-row gap-12">
             {/* Left side - Text content */}
             <div className="w-full lg:w-1/2">
-              <h2 className="text-3xl md:text-4xl font-bold mb-8 text-foreground dark:text-white">
-                Simple Steps.<br/>Serious Rewards.
-              </h2>
-              <div className="text-lg text-[rgb(8,42,90)] dark:text-gray-300 space-y-6">
-                <p>
-                  Getting started with Opian Rewards is simple and empowering. Every step is designed to help you 
-                  earn more and unlock greater benefits—just by doing what you already do.
-                </p>
-                <p>
-                  Our process is straightforward and user-friendly, allowing you to quickly begin earning rewards 
+              <SectionTransition
+                effect="slide"
+                direction="up"
+                delay={0.2}
+              >
+                <h2 className="text-3xl md:text-4xl font-bold mb-8 text-foreground dark:text-white">
+                  Simple Steps.<br/>Serious Rewards.
+                </h2>
+              </SectionTransition>
+              <SectionTransition
+                effect="fade"
+                delay={0.4}
+              >
+                <div className="text-lg text-[rgb(8,42,90)] dark:text-gray-300 space-y-6">
+                  <p>
+                    Getting started with Opian Rewards is simple and empowering. Every step is designed to help you 
+                    earn more and unlock greater benefits—just by doing what you already do.
+                  </p>
+                  <p>
+                    Our process is straightforward and user-friendly, allowing you to quickly begin earning rewards 
                   on your everyday purchases and bill payments.
                 </p>
                 <p>
@@ -665,6 +675,7 @@ export default function HomePage() {
                   </Button>
                 </div>
               </div>
+              </SectionTransition>
             </div>
             
             {/* Right side - Carousel */}
