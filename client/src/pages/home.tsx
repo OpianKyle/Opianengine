@@ -779,8 +779,14 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+              </SectionTransition>
               
               {/* Right side - Content points - exactly 50% width */}
+              <SectionTransition
+                effect="slide"
+                direction="right"
+                delay={0.4}
+              >
               <div className="w-full md:w-1/2 space-y-16 p-4 pl-8 md:order-1 flex flex-col justify-center">
                 <div className="flex items-start w-full">
                   <div className="w-12 h-12 flex-shrink-0 bg-gray-100 dark:bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
@@ -818,11 +824,15 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+              </SectionTransition>
             </div>
           </div>
 
 
-
+          <SectionTransition
+            effect="fade"
+            delay={0.3}
+          >
           <div className="mb-16 mt-20 relative group">
             {/* Particle effects scattered throughout */}
             <div className="w-2 h-2 absolute top-[10%] right-[15%] rounded-full bg-[#43EB3E] opacity-20 
