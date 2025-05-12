@@ -1246,6 +1246,118 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  // Bulk points allocation endpoint
+  app.post("/api/admin/points/bulk", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { userIds, points, description } = req.body;
+      console.log('Bulk points allocation request:', { userIds, points, description });
+
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ error: "No users selected" });
+      }
+
+      if (!points || isNaN(points)) {
+        return res.status(400).json({ error: "Points must be a number" });
+      }
+
+      if (!description) {
+        return res.status(400).json({ error: "Description is required" });
+      }
+
+      // Begin transaction for bulk operations
+      await connection.beginTransaction();
+
+      try {
+        // Get admin user info for logging
+        const [admins] = await connection.execute(
+          'SELECT id, email, first_name, last_name FROM users WHERE id = ?',
+          [req.user.id]
+        );
+        const admin = admins[0];
+
+        // Process each user
+        const results = [];
+        for (const userId of userIds) {
+          // Get user info
+          const [users] = await connection.execute(
+            'SELECT id, email, first_name, last_name, points FROM users WHERE id = ?',
+            [userId]
+          );
+
+          if (users && users.length > 0) {
+            const user = users[0];
+            
+            // Insert transaction record
+            await connection.execute(
+              `INSERT INTO transactions (user_id, points, type, description)
+               VALUES (?, ?, 'ADMIN_ADJUSTMENT', ?)`,
+              [userId, points, description]
+            );
+
+            // Update user points
+            await connection.execute(
+              'UPDATE users SET points = points + ? WHERE id = ?',
+              [points, userId]
+            );
+
+            // Get updated points
+            const [updatedUsers] = await connection.execute(
+              'SELECT points FROM users WHERE id = ?',
+              [userId]
+            );
+
+            // Log admin action
+            await connection.execute(
+              `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
+               VALUES (?, 'POINT_ADJUSTMENT', ?, ?)`,
+              [req.user.id, userId, `Bulk adjustment - Points: ${points}, Reason: ${description}`]
+            );
+
+            results.push({
+              userId,
+              name: `${user.first_name} ${user.last_name}`,
+              email: user.email,
+              previousPoints: user.points,
+              newPoints: updatedUsers[0].points
+            });
+          }
+        }
+
+        await connection.commit();
+
+        // Return success
+        res.json({
+          success: true,
+          message: `Points allocated to ${results.length} customers successfully`,
+          results
+        });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error allocating bulk points:', error);
+      res.status(500).json({ error: 'Failed to allocate points to multiple customers' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   // Points adjustment endpoint with notifications
   app.post("/api/admin/points/adjust", async (req, res) => {
     if (!req.isAuthenticated()) {

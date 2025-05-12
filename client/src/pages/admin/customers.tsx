@@ -268,6 +268,7 @@ export default function AdminCustomers() {
   const [limit, setLimit] = useState(50);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
   const [showCardStatusUpdate, setShowCardStatusUpdate] = useState(false);
+  const [showBulkPointsAllocation, setShowBulkPointsAllocation] = useState(false);
   
   const { data: customersResponse, isLoading: isCustomersLoading, isError: isCustomersError, error: customersError } = useQuery({
     queryKey: ["/api/admin/customers", page, limit],
