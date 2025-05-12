@@ -18,6 +18,9 @@ import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ResponsiveProvider } from "@/hooks/use-mobile";
 import ThemeProvider from "@/providers/theme-provider";
+import { useEffect } from "react";
+import { initGA } from "./lib/analytics";
+import { useAnalytics } from "./hooks/use-analytics";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -118,6 +121,9 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
 }
 
 function Router() {
+  // Track page views when routes change
+  useAnalytics();
+  
   return (
     <Switch>
       {/* Public Routes */}
@@ -265,6 +271,12 @@ function Router() {
 }
 
 function App() {
+  // Initialize Google Analytics when app loads
+  useEffect(() => {
+    initGA();
+    console.log('Google Analytics initialized');
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
