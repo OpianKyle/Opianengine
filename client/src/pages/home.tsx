@@ -490,23 +490,41 @@ export default function HomePage() {
               >
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground dark:text-white">
                   The Card that Works for You
-              </h1>
-              <p className="text-xl mb-6 text-[rgb(8,42,90)] dark:text-white">
-                Make your money go further with Opian Rewards. Earn Rewards when you purchase 
-                and pay accounts with your Opian Rewards Card, and enhance your Rewards when 
-                you make smart financial planning decisions. Reward yourself and effortlessly 
-                put more money in your pocket by doing every day things with Opian Rewards.
-              </p>
-              <Button 
-                onClick={() => navigate("/contact-us")}
-                className="bg-[#43EB3E] hover:bg-[#3ad036] text-black text-lg py-6 px-8 rounded-md"
-                size="lg"
+                </h1>
+              </SectionTransition>
+              
+              <SectionTransition 
+                effect="fade" 
+                delay={0.2}
+                className="mb-6"
               >
-                More Information
-              </Button>
+                <p className="text-xl text-[rgb(8,42,90)] dark:text-white">
+                  Make your money go further with Opian Rewards. Earn Rewards when you purchase 
+                  and pay accounts with your Opian Rewards Card, and enhance your Rewards when 
+                  you make smart financial planning decisions. Reward yourself and effortlessly 
+                  put more money in your pocket by doing every day things with Opian Rewards.
+                </p>
+              </SectionTransition>
+              <SectionTransition 
+                effect="slide" 
+                direction="up" 
+                delay={0.4}
+              >
+                <Button 
+                  onClick={() => navigate("/contact-us")}
+                  className="bg-[#43EB3E] hover:bg-[#3ad036] text-black text-lg py-6 px-8 rounded-md"
+                  size="lg"
+                >
+                  More Information
+                </Button>
+              </SectionTransition>
             </div>
             <div className="lg:w-1/2 mt-10 lg:mt-0 flex justify-center lg:justify-end relative z-10">
-              <div className="relative w-full max-w-lg overflow-hidden rounded-xl shadow-2xl">
+              <SectionTransition 
+                effect="scale" 
+                delay={0.6}
+              >
+                <div className="relative w-full max-w-lg overflow-hidden rounded-xl shadow-2xl">
                 <video 
                   autoPlay 
                   loop 
@@ -530,6 +548,7 @@ export default function HomePage() {
                   Your browser does not support the video tag.
                 </video>
               </div>
+              </SectionTransition>
             </div>
           </div>
         </div>
