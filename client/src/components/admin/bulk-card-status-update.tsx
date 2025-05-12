@@ -32,6 +32,9 @@ export function BulkCardStatusUpdate({
   const { mutate: updateCardStatus, isPending } = useCardStatusMutation();
   const queryClient = useQueryClient();
   
+  // Check if we're being rendered directly within a customers page dialog
+  const isStandalone = typeof window !== 'undefined' && window.location.pathname.includes('/admin/customers');
+  
   // This function will manually refetch the customers data
   const forceRefreshCustomersData = () => {
     console.log('Manually refreshing customers data');
@@ -78,6 +81,38 @@ export function BulkCardStatusUpdate({
     );
   };
 
+  // If we're embedded in the customers page, just render the content directly
+  if (isStandalone) {
+    return (
+      <div className="w-full">
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">Card Status</h4>
+            <CardStatusDropdown value={status} onChange={setStatus} />
+          </div>
+        </div>
+        <DialogFooter className="px-0">
+          <Button
+            type="submit"
+            onClick={handleUpdateStatus}
+            disabled={isPending}
+            className="w-full md:w-auto"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              "Update Status"
+            )}
+          </Button>
+        </DialogFooter>
+      </div>
+    );
+  }
+  
+  // Otherwise, render with its own dialog wrapper
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
