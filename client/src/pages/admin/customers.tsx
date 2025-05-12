@@ -716,31 +716,6 @@ export default function AdminCustomers() {
             </Button>
           </label>
         </div>
-        
-        <Dialog open={showCardStatusUpdate} onOpenChange={setShowCardStatusUpdate}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Update Card Status</DialogTitle>
-              <DialogDescription>
-                Change the card status for {selectedCustomerIds.length} selected customer(s).
-              </DialogDescription>
-            </DialogHeader>
-            
-            <BulkCardStatusUpdate 
-              selectedIds={selectedCustomerIds} 
-              onUpdateComplete={() => {
-                setShowCardStatusUpdate(false);
-                setSelectedCustomerIds([]);
-              }}
-            />
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCardStatusUpdate(false)}>
-                Cancel
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
 
       <Card className="flex-1 flex flex-col">
