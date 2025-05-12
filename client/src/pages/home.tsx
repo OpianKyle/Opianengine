@@ -17,6 +17,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/providers/theme-provider";
 import MetaTags from "@/components/seo/meta-tags";
 import { StructuredData } from "@/components/seo/structured-data";
+import { PageTransition, SectionTransition } from "@/components/transitions/page-transition";
 
 // Package prices in ZAR
 const PACKAGE_PRICES = {
@@ -482,8 +483,13 @@ export default function HomePage() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="flex flex-col lg:flex-row items-center">
             <div className="lg:w-1/2 z-10">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-foreground dark:text-white">
-                The Card that Works for You
+              <SectionTransition 
+                effect="slide" 
+                direction="left" 
+                className="mb-4"
+              >
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground dark:text-white">
+                  The Card that Works for You
               </h1>
               <p className="text-xl mb-6 text-[rgb(8,42,90)] dark:text-white">
                 Make your money go further with Opian Rewards. Earn Rewards when you purchase 

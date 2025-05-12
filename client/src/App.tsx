@@ -132,144 +132,206 @@ function Router() {
     <Switch>
       {/* Public Routes */}
       <Route path="/">
-        <Home />
+        <PageTransition effect="fade">
+          <Home />
+        </PageTransition>
       </Route>
       <Route path="/login">
-        <LoginPage />
+        <PageTransition effect="slide">
+          <LoginPage />
+        </PageTransition>
       </Route>
       <Route path="/register">
-        <Register />
+        <PageTransition effect="scale">
+          <Register />
+        </PageTransition>
       </Route>
       <Route path="/contact-us">
-        <ContactUsPage />
+        <PageTransition effect="fade">
+          <ContactUsPage />
+        </PageTransition>
       </Route>
       <Route path="/reset-password">
-        <ResetPassword />
+        <PageTransition effect="slide">
+          <ResetPassword />
+        </PageTransition>
       </Route>
       <Route path="/referral/:code">
-        <ReferralPage />
+        <PageTransition effect="scale">
+          <ReferralPage />
+        </PageTransition>
       </Route>
       <Route path="/how-it-works">
-        <HowItWorks />
+        <PageTransition effect="bounce">
+          <HowItWorks />
+        </PageTransition>
       </Route>
       <Route path="/meet-the-team">
-        <MeetTheTeam />
+        <PageTransition effect="flip">
+          <MeetTheTeam />
+        </PageTransition>
       </Route>
 
       {/* Admin Routes */}
       <Route path="/admin">
         <AdminLayout>
-          <ProtectedRoute component={AdminDashboard} admin />
+          <PageTransition effect="fade">
+            <ProtectedRoute component={AdminDashboard} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/customers">
         <AdminLayout>
-          <ProtectedRoute component={AdminCustomers} admin />
+          <PageTransition effect="slide">
+            <ProtectedRoute component={AdminCustomers} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/card-status-test">
         <AdminLayout>
-          <ProtectedRoute component={CardStatusTest} admin />
+          <PageTransition effect="scale">
+            <ProtectedRoute component={CardStatusTest} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/agents">
         <AdminLayout>
-          <ProtectedRoute component={AdminAgents} admin />
+          <PageTransition effect="fade">
+            <ProtectedRoute component={AdminAgents} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/email-logs">
         <AdminLayout>
-          <ProtectedRoute component={EmailLogs} admin />
+          <PageTransition effect="slide">
+            <ProtectedRoute component={EmailLogs} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/products">
         <AdminLayout>
-          <ProtectedRoute component={AdminProducts} admin />
+          <PageTransition effect="scale">
+            <ProtectedRoute component={AdminProducts} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/rewards">
         <AdminLayout>
-          <ProtectedRoute component={AdminRewards} admin />
+          <PageTransition effect="fade">
+            <ProtectedRoute component={AdminRewards} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/cash-redemptions">
         <AdminLayout>
-          <ProtectedRoute component={CashRedemptions} admin />
+          <PageTransition effect="slide">
+            <ProtectedRoute component={CashRedemptions} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/manage-users">
         <AdminLayout>
-          <ProtectedRoute component={ManageUsers} admin />
+          <PageTransition effect="scale">
+            <ProtectedRoute component={ManageUsers} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/logs">
         <AdminLayout>
-          <ProtectedRoute component={AdminLogs} admin />
+          <PageTransition effect="fade">
+            <ProtectedRoute component={AdminLogs} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/quote-requests">
         <AdminLayout>
-          <ProtectedRoute component={AdminQuoteRequests} admin />
+          <PageTransition effect="slide">
+            <ProtectedRoute component={AdminQuoteRequests} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/migrations">
         <AdminLayout>
-          <ProtectedRoute component={Migrations} admin />
+          <PageTransition effect="scale">
+            <ProtectedRoute component={Migrations} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
       <Route path="/admin/leads">
         <AdminLayout>
-          <ProtectedRoute component={AdminLeads} admin />
+          <PageTransition effect="fade">
+            <ProtectedRoute component={AdminLeads} admin />
+          </PageTransition>
         </AdminLayout>
       </Route>
 
       {/* Agent Routes */}
       <Route path="/agent">
         <AgentLayout>
-          <ProtectedRoute component={AgentDashboard} agent />
+          <PageTransition effect="bounce">
+            <ProtectedRoute component={AgentDashboard} agent />
+          </PageTransition>
         </AgentLayout>
       </Route>
       <Route path="/agent/customers">
         <AgentLayout>
-          <ProtectedRoute component={AgentCustomers} agent />
+          <PageTransition effect="scale">
+            <ProtectedRoute component={AgentCustomers} agent />
+          </PageTransition>
         </AgentLayout>
       </Route>
       <Route path="/agent/leads">
         <AgentLayout>
-          <ProtectedRoute component={AgentLeads} agent />
+          <PageTransition effect="slide">
+            <ProtectedRoute component={AgentLeads} agent />
+          </PageTransition>
         </AgentLayout>
       </Route>
 
       {/* Customer Routes */}
       <Route path="/dashboard">
         <CustomerLayout>
-          <ProtectedRoute component={CustomerDashboard} />
+          <PageTransition effect="flip">
+            <ProtectedRoute component={CustomerDashboard} />
+          </PageTransition>
         </CustomerLayout>
       </Route>
       <Route path="/rewards">
         <CustomerLayout>
-          <ProtectedRoute component={CustomerRewards} />
+          <PageTransition effect="bounce">
+            <ProtectedRoute component={CustomerRewards} />
+          </PageTransition>
         </CustomerLayout>
       </Route>
       <Route path="/referrals">
         <CustomerLayout>
-          <ProtectedRoute component={ReferralsPage} />
+          <PageTransition effect="scale">
+            <ProtectedRoute component={ReferralsPage} />
+          </PageTransition>
         </CustomerLayout>
       </Route>
       <Route path="/profile">
         <CustomerLayout>
-          <ProtectedRoute component={ProfilePage} />
+          <PageTransition effect="slide">
+            <ProtectedRoute component={ProfilePage} />
+          </PageTransition>
         </CustomerLayout>
       </Route>
       <Route path="/products">
         <CustomerLayout>
-          <ProtectedRoute component={CustomerProducts} />
+          <PageTransition effect="fade">
+            <ProtectedRoute component={CustomerProducts} />
+          </PageTransition>
         </CustomerLayout>
       </Route>
       
       {/* Subscription routes removed as requested */}
 
-      <Route component={NotFound} />
+      <Route path="*">
+        <PageTransition effect="fade">
+          <NotFound />
+        </PageTransition>
+      </Route>
     </Switch>
   );
 }
@@ -294,7 +356,7 @@ function App() {
             <OrganizationStructuredData />
             
             <div className="min-h-screen w-full bg-background transition-colors duration-300">
-              <TransitionProvider>
+              <TransitionProvider transitionEffect="fade">
                 <Router />
               </TransitionProvider>
               <Toaster />
