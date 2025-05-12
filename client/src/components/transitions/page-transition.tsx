@@ -288,7 +288,7 @@ export function SectionTransition({
       className={className}
       initial="initial"
       whileInView="animate"
-      viewport={{ once: true, margin: "-50px" }}
+      viewport={{ once: true, margin: "-100px", amount: 0.2 }}
       variants={staggerChildren ? containerAnimation : getEffect()}
     >
       {staggerChildren ? 
