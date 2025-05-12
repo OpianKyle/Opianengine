@@ -1608,38 +1608,35 @@ export default function AdminCustomers() {
       </Card>
 
       {/* Card Status Update Dialog */}
-      {showCardStatusUpdate && (
-        <Dialog open={showCardStatusUpdate} onOpenChange={setShowCardStatusUpdate}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Update Card Status</DialogTitle>
-              <DialogDescription>
-                Update the card status for {selectedCustomerIds.length} selected customer{selectedCustomerIds.length > 1 ? 's' : ''}.
-              </DialogDescription>
-            </DialogHeader>
-            <BulkCardStatusUpdate 
-              selectedIds={selectedCustomerIds} 
-              onUpdateComplete={handleCardStatusUpdateComplete} 
-              contentOnly={true}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+      <Dialog open={showCardStatusUpdate} onOpenChange={setShowCardStatusUpdate}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Update Card Status</DialogTitle>
+            <DialogDescription>
+              Update the card status for {selectedCustomerIds.length} selected customer{selectedCustomerIds.length > 1 ? 's' : ''}.
+            </DialogDescription>
+          </DialogHeader>
+          <BulkCardStatusUpdate 
+            selectedIds={selectedCustomerIds} 
+            onUpdateComplete={handleCardStatusUpdateComplete} 
+            contentOnly={true}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk Points Allocation Dialog */}
-      {showBulkPointsAllocation && (
-        <Dialog open={showBulkPointsAllocation} onOpenChange={setShowBulkPointsAllocation}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Allocate Points</DialogTitle>
-              <DialogDescription>
-                Allocate points to {selectedCustomerIds.length} selected customer{selectedCustomerIds.length > 1 ? 's' : ''}.
-              </DialogDescription>
-            </DialogHeader>
-            <BulkPointsAllocation 
-              selectedIds={selectedCustomerIds} 
-              onUpdateComplete={() => {
-                setShowBulkPointsAllocation(false);
+      <Dialog open={showBulkPointsAllocation} onOpenChange={setShowBulkPointsAllocation}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Allocate Points</DialogTitle>
+            <DialogDescription>
+              Allocate points to {selectedCustomerIds.length} selected customer{selectedCustomerIds.length > 1 ? 's' : ''}.
+            </DialogDescription>
+          </DialogHeader>
+          <BulkPointsAllocation 
+            selectedIds={selectedCustomerIds} 
+            onUpdateComplete={() => {
+              setShowBulkPointsAllocation(false);
                 
                 // Enhanced caching strategy with multiple refresh steps
                 console.log('Running enhanced cache refresh after bulk points allocation');

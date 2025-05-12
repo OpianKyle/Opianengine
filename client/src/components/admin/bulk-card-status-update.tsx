@@ -30,6 +30,8 @@ export function BulkCardStatusUpdate({
   disabled = false,
   contentOnly = false,
 }: BulkCardStatusUpdateProps) {
+  // When contentOnly is true, we don't need to manage our own dialog state
+  // as the parent component will handle that
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<CardStatus>("NOT_DELIVERED");
   const { mutate: updateCardStatus, isPending } = useCardStatusMutation();
@@ -72,7 +74,11 @@ export function BulkCardStatusUpdate({
           // Force a manual refresh of the customers data
           forceRefreshCustomersData();
           
-          setOpen(false);
+          // Only manage our own dialog state if we're not in contentOnly mode
+          if (!contentOnly) {
+            setOpen(false);
+          }
+          
           if (onUpdateComplete) {
             onUpdateComplete();
           }
