@@ -7,28 +7,34 @@ interface PageTransitionProps {
   effect?: "fade" | "slide" | "scale" | "flip" | "bounce";
 }
 
-// Fade & Slide effect
+// Fade & Slide effect with extreme motion and blur
 const fadeSlideVariants = {
   initial: {
     opacity: 0,
-    y: 100, // More extreme starting position
-    scale: 0.95, // Add scaling for more dramatic effect
+    y: 180, // Super extreme starting position
+    scale: 0.85, // More dramatic scaling
+    filter: "blur(12px)", // Add blur for dramatic effect
+    rotate: -2, // Subtle rotation
   },
   in: {
     opacity: 1,
     y: 0,
     scale: 1,
+    filter: "blur(0px)",
+    rotate: 0,
     transition: {
-      duration: 1.2, // Longer duration to make it more noticeable
-      ease: [0.43, 0.13, 0.23, 0.96], // Custom easing for more playful feel
+      duration: 1.5, // Even longer duration
+      ease: [0.25, 0.1, 0.25, 1.0], // Smoother easing
     },
   },
   out: {
     opacity: 0,
-    y: -80, // More extreme exit
-    scale: 0.9,
+    y: -120, // More extreme exit
+    scale: 0.8,
+    filter: "blur(8px)",
+    rotate: 1,
     transition: {
-      duration: 0.8, // Longer exit too
+      duration: 1.0, // Longer exit
       ease: [0.43, 0.13, 0.23, 0.96],
     },
   },
@@ -98,27 +104,32 @@ const flipVariants = {
   },
 };
 
-// Bounce effect
+// Super-bounce effect with extreme spring physics
 const bounceVariants = {
   initial: {
     opacity: 0,
-    y: 50,
+    y: 200, // Start from way below for dramatic entrance
+    scale: 0.8,
   },
   in: {
     opacity: 1,
     y: 0,
+    scale: 1,
     transition: {
       type: "spring",
-      stiffness: 300,
-      damping: 15,
-      mass: 1.2,
+      stiffness: 150, // Lower stiffness makes for more bouncy animation
+      damping: 8,     // Lower damping means more oscillation
+      mass: 1.5,      // Higher mass means more momentum
+      bounce: 0.6,    // Add extra bounce
+      duration: 1.2,  // Ensure it has enough time to complete
     },
   },
   out: {
     opacity: 0,
-    y: -50,
+    y: -100, // Exit to the top dramatically
+    scale: 0.9,
     transition: {
-      duration: 0.4,
+      duration: 0.7,
       ease: [0.43, 0.13, 0.23, 0.96],
     },
   },
@@ -170,7 +181,7 @@ export function SectionTransition({
 }: SectionTransitionProps) {
   
   const getInitialPosition = () => {
-    const distance = 50; // Increased for more dramatic effect
+    const distance = 120; // Super dramatic distance
     switch (direction) {
       case "up": return { y: distance, x: 0 };
       case "down": return { y: -distance, x: 0 };
@@ -180,19 +191,21 @@ export function SectionTransition({
     }
   };
   
-  // Scale effect with slight rotation
+  // Scale effect with extreme rotation and pop
   const scaleEffect = {
     initial: {
       opacity: 0,
-      scale: 0.85,
-      rotate: -2,
+      scale: 0.4,  // Start much smaller
+      rotate: -10, // More dramatic rotation
+      y: 30,       // Add some vertical movement
     },
     animate: {
       opacity: 1,
       scale: 1,
       rotate: 0,
+      y: 0,
       transition: {
-        duration: 0.6,
+        duration: 1.2, // Longer duration
         ease: [0.175, 0.885, 0.32, 1.275], // Custom easing (back)
         delay: delay,
       },
@@ -253,19 +266,25 @@ export function SectionTransition({
     },
   };
   
-  // Standard slide effect
+  // Enhanced super-dramatic slide effect
   const slideEffect = {
     initial: {
       opacity: 0,
       ...getInitialPosition(),
+      scale: 0.9, // Add scaling for more impact
+      filter: "blur(10px)", // Add blur for dramatic effect
+      rotate: direction === "left" || direction === "right" ? -3 : 0, // Slight rotation for horizontal slides
     },
     animate: {
       opacity: 1,
       x: 0,
       y: 0,
+      scale: 1,
+      filter: "blur(0px)",
+      rotate: 0,
       transition: {
-        duration: 0.7,
-        ease: [0.43, 0.13, 0.23, 0.96],
+        duration: 1.2, // Much longer for dramatic effect
+        ease: [0.25, 0.1, 0.25, 1.0], // Smoother easing
         delay: delay,
       },
     },
@@ -289,7 +308,7 @@ export function SectionTransition({
     initial: {}, // Required for Variants type
     animate: {
       transition: {
-        staggerChildren: 0.1,
+        staggerChildren: 0.3, // More time between each child for more noticeable staggering
         delayChildren: delay,
       }
     }
@@ -300,7 +319,11 @@ export function SectionTransition({
       className={className}
       initial="initial"
       whileInView="animate"
-      viewport={{ once: false, margin: "-20px", amount: 0.1 }}
+      viewport={{ 
+        once: false, 
+        margin: "-100px", // More aggressive margin to trigger earlier
+        amount: 0.01 // Trigger when even a tiny bit is visible
+      }}
       variants={staggerChildren ? containerAnimation : getEffect()}
     >
       {staggerChildren ? 
