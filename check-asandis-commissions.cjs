@@ -24,7 +24,7 @@ async function checkCommissions() {
   try {
     // First, get the agent information
     const [agentRows] = await connection.execute(
-      'SELECT id, username, email, is_agent FROM users WHERE email = ?',
+      'SELECT id, email, is_agent, first_name, last_name FROM users WHERE email = ?',
       ['asandiswam@opianrewards.com']
     );
     
