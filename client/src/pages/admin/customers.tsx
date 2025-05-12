@@ -1667,7 +1667,6 @@ export default function AdminCustomers() {
             />
           </DialogContent>
         </Dialog>
-      )}
     </div>
   );
 
