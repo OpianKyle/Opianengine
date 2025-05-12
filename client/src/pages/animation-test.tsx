@@ -7,26 +7,29 @@ import { MetaTags } from '@/components/seo/meta-tags';
 
 export default function AnimationTest() {
   const [count, setCount] = useState(0);
+  const [pageEffect, setPageEffect] = useState<"fade" | "slide" | "scale" | "flip" | "bounce">("fade");
   
   const triggerAnimation = () => {
     setCount(count + 1);
   };
   
-  // These animations are intentionally extreme and obvious
+  // These animations are intentionally super extreme and obvious
   const boxVariants = {
     initial: { 
       opacity: 0, 
       scale: 0.1,
-      rotate: -180,
-      y: 200
+      rotate: -360, // Full rotation
+      y: 300,
+      filter: "blur(20px)"
     },
     animate: { 
       opacity: 1, 
       scale: 1,
       rotate: 0,
       y: 0,
+      filter: "blur(0px)",
       transition: { 
-        duration: 1.5,
+        duration: 2.0, // Super long duration
         ease: "easeOut"
       }
     }
@@ -43,11 +46,53 @@ export default function AnimationTest() {
   };
 
   return (
-    <div className="container mx-auto py-10">
-      <MetaTags title="Animation Test Page | OPIAN Rewards" />
-      <h1 className="text-4xl font-bold mb-6 text-center">Animation Test Page</h1>
-      
-      <div className="grid gap-8">
+    <PageTransition effect={pageEffect}>
+      <div className="container mx-auto py-10">
+        <MetaTags title="Animation Test Page | OPIAN Rewards" />
+        <h1 className="text-4xl font-bold mb-6 text-center">Animation Test Page</h1>
+        
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Test Page Transitions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4">Click any button to see the entire page transition with that effect:</p>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => setPageEffect("fade")}
+                variant={pageEffect === "fade" ? "default" : "outline"}
+              >
+                Fade Effect
+              </Button>
+              <Button
+                onClick={() => setPageEffect("slide")}
+                variant={pageEffect === "slide" ? "default" : "outline"}
+              >
+                Slide Effect
+              </Button>
+              <Button
+                onClick={() => setPageEffect("scale")}
+                variant={pageEffect === "scale" ? "default" : "outline"}
+              >
+                Scale Effect
+              </Button>
+              <Button
+                onClick={() => setPageEffect("flip")}
+                variant={pageEffect === "flip" ? "default" : "outline"}
+              >
+                Flip Effect
+              </Button>
+              <Button
+                onClick={() => setPageEffect("bounce")}
+                variant={pageEffect === "bounce" ? "default" : "outline"}
+              >
+                Bounce Effect
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <div className="grid gap-8">
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>Continuous Pulse Animation</CardTitle>
@@ -162,6 +207,7 @@ export default function AnimationTest() {
           </Card>
         </SectionTransition>
       </div>
-    </div>
+      </div>
+    </PageTransition>
   );
 }
