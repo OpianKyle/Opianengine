@@ -562,41 +562,54 @@ export default function HomePage() {
       {/* Value Proposition Section */}
       <section className="py-20 relative overflow-hidden text-foreground dark:text-white">
         <div className="container mx-auto px-4 relative z-10">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-foreground dark:text-white">
-            What If Your Card Paid You Back?
-          </h2>
+          <SectionTransition
+            effect="slide"
+            direction="up"
+            delay={0.2}
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-foreground dark:text-white">
+              What If Your Card Paid You Back?
+            </h2>
+          </SectionTransition>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
-                <CreditCard className="h-8 w-8 text-[#43EB3E]" />
+          <SectionTransition 
+            effect="slide" 
+            direction="up"
+            delay={0.4}
+            staggerChildren={true}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+              <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
+                  <CreditCard className="h-8 w-8 text-[#43EB3E]" />
+                </div>
+                <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Cash Back on Everything</h3>
+                <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                  Shopping, dining, paying bills—earn cash every time you swipe.
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Cash Back on Everything</h3>
-              <p className="text-[rgb(8,42,90)] dark:text-gray-300">
-                Shopping, dining, paying bills—earn cash every time you swipe.
-              </p>
-            </div>
-            
-            <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
-                <Gift className="h-8 w-8 text-[#43EB3E]" />
+              
+              <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
+                  <Gift className="h-8 w-8 text-[#43EB3E]" />
+                </div>
+                <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Build Your Own Reward Stack</h3>
+                <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                  Combine the power of our Rewards System with your current rewards cards to create Double Rewards in your pocket!
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Build Your Own Reward Stack</h3>
-              <p className="text-[rgb(8,42,90)] dark:text-gray-300">
-                Combine the power of our Rewards System with your current rewards cards to create Double Rewards in your pocket!
-              </p>
-            </div>
-            
-            <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
-                <Users className="h-8 w-8 text-[#43EB3E]" />
+              
+              <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
+                  <Users className="h-8 w-8 text-[#43EB3E]" />
+                </div>
+                <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Make Your Money Work for You</h3>
+                <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                  With the help of our Financial Partners, make smarter financial planning decisions to Save and Earn extra money!
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Make Your Money Work for You</h3>
-              <p className="text-[rgb(8,42,90)] dark:text-gray-300">
-                With the help of our Financial Partners, make smarter financial planning decisions to Save and Earn extra money!
-              </p>
             </div>
-          </div>
+          </SectionTransition>
         </div>
         
         {/* Background decorations with blue base and green overlay */}
