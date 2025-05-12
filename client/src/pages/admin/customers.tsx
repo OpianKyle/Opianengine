@@ -618,7 +618,9 @@ export default function AdminCustomers() {
   // Pagination component to be reused at top and bottom
   const PaginationControls = ({ totalItems }: { totalItems: number }) => (
     <div className="text-sm text-muted-foreground">
-      Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalItems)} of {totalItems} customers
+      <span className="hidden sm:inline">Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalItems)} of</span>
+      <span className="sm:hidden">Page {page}/{Math.ceil(totalItems / limit)}</span>
+      <span className="sm:inline"> {totalItems} customers</span>
     </div>
   );
   
@@ -627,14 +629,15 @@ export default function AdminCustomers() {
     <div className="flex items-center space-x-2">
       <Button
         variant="outline"
-        size="sm"
+        size="icon"
+        className="w-8 h-8"
         onClick={() => setPage(p => Math.max(1, p - 1))}
         disabled={page === 1 || isCustomersLoading}
       >
         <ChevronLeft className="h-4 w-4" />
         <span className="sr-only">Previous Page</span>
       </Button>
-      <div className="flex items-center">
+      <div className="hidden sm:flex items-center">
         <span className="text-sm font-medium mr-2">Page</span>
         <Input
           type="number"
@@ -653,7 +656,8 @@ export default function AdminCustomers() {
       </div>
       <Button
         variant="outline"
-        size="sm"
+        size="icon"
+        className="w-8 h-8"
         onClick={() => setPage(p => Math.min(Math.ceil(pagination.totalItems / limit), p + 1))}
         disabled={page === Math.ceil(pagination.totalItems / limit) || isCustomersLoading}
       >
@@ -665,26 +669,30 @@ export default function AdminCustomers() {
 
   return (
     <div className="space-y-6 flex flex-col" style={{ height: 'calc(100vh - 6rem)' }}>
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Customer Management</h1>
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row justify-between gap-4 sm:items-center">
+        <h1 className="text-2xl sm:text-3xl font-bold">Customer Management</h1>
+        <div className="flex flex-wrap gap-2">
           {selectedCustomerIds.length > 0 && (
             <>
               <Button 
                 variant="outline" 
                 className="bg-blue-500 text-white hover:bg-blue-600"
                 onClick={() => setShowCardStatusUpdate(true)}
+                size="sm"
               >
                 <CreditCard className="mr-2 h-4 w-4" />
-                Update Card Status ({selectedCustomerIds.length})
+                <span className="hidden sm:inline">Update Card Status</span>
+                <span className="sm:hidden">Cards</span> ({selectedCustomerIds.length})
               </Button>
               <Button 
                 variant="outline" 
                 className="bg-green-500 text-white hover:bg-green-600"
                 onClick={() => setShowBulkPointsAllocation(true)}
+                size="sm"
               >
                 <TrendingUp className="mr-2 h-4 w-4" />
-                Allocate Points ({selectedCustomerIds.length})
+                <span className="hidden sm:inline">Allocate Points</span>
+                <span className="sm:hidden">Points</span> ({selectedCustomerIds.length})
               </Button>
             </>
           )}
@@ -692,9 +700,11 @@ export default function AdminCustomers() {
             variant="outline"
             onClick={() => exportCustomersMutation.mutate()}
             disabled={exportCustomersMutation.isPending}
+            size="sm"
           >
             <Download className="mr-2 h-4 w-4" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </Button>
           <label className="cursor-pointer">
             <Input
@@ -708,10 +718,11 @@ export default function AdminCustomers() {
                 }
               }}
             />
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild size="sm">
               <span>
                 <Upload className="mr-2 h-4 w-4" />
-                Import CSV
+                <span className="hidden sm:inline">Import CSV</span>
+                <span className="sm:hidden">Import</span>
               </span>
             </Button>
           </label>
@@ -731,18 +742,19 @@ export default function AdminCustomers() {
           </div>
           
           {!isCustomersError && customersResponse && (
-            <div className="flex items-center justify-between mt-2 py-2 border-b">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-2 py-2 border-b gap-3">
               <PaginationControls totalItems={pagination.totalItems} />
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
                 {selectedCustomerIds.length > 0 && (
                   <Button
                     onClick={() => setShowCardStatusUpdate(true)}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-1 sm:gap-2"
                     variant="secondary"
                     size="sm"
                   >
                     <CreditCard className="h-4 w-4" />
-                    Update Card Status ({selectedCustomerIds.length})
+                    <span className="hidden sm:inline">Update Card Status</span>
+                    <span className="sm:hidden">Cards</span> ({selectedCustomerIds.length})
                   </Button>
                 )}
                 <PaginationNavigation />
@@ -783,14 +795,14 @@ export default function AdminCustomers() {
                       />
                     </TableHead>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Package</TableHead>
-                    <TableHead>Tier</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden md:table-cell">Email</TableHead>
+                    <TableHead className="hidden sm:table-cell">Phone</TableHead>
+                    <TableHead className="hidden lg:table-cell">Package</TableHead>
+                    <TableHead className="hidden xl:table-cell">Tier</TableHead>
+                    <TableHead className="hidden md:table-cell">Points</TableHead>
+                    <TableHead className="hidden sm:table-cell">Status</TableHead>
                     <TableHead>Card Status</TableHead>
-                    <TableHead>Assigned Products</TableHead>
+                    <TableHead className="hidden lg:table-cell">Assigned Products</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -831,15 +843,34 @@ export default function AdminCustomers() {
                               aria-label={`Select customer ${customer.firstName} ${customer.lastName}`}
                             />
                           </TableCell>
-                          <TableCell>{customer.firstName} {customer.lastName}</TableCell>
-                          <TableCell>{customer.email}</TableCell>
-                          <TableCell>{customer.phoneNumber}</TableCell>
                           <TableCell>
+                            <div className="font-medium">{customer.firstName} {customer.lastName}</div>
+                            {/* Mobile-only info that will be hidden on larger screens */}
+                            <div className="md:hidden text-xs text-muted-foreground mt-1">
+                              {customer.email}
+                            </div>
+                            <div className="sm:hidden text-xs text-muted-foreground">
+                              {customer.phoneNumber}
+                            </div>
+                            <div className="lg:hidden text-xs mt-1">
+                              <Badge variant="secondary" className="text-[10px]">
+                                {customer.selectedPackage || 'No Package'}
+                              </Badge>
+                            </div>
+                            <div className="md:hidden text-xs text-muted-foreground mt-1">
+                              {typeof customer.points === 'number' 
+                                ? customer.points.toLocaleString() 
+                                : Number(customer.points || 0).toLocaleString()} points
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">{customer.email}</TableCell>
+                          <TableCell className="hidden sm:table-cell">{customer.phoneNumber}</TableCell>
+                          <TableCell className="hidden lg:table-cell">
                             <Badge variant="secondary">
                               {customer.selectedPackage || 'No Package'}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden xl:table-cell">
                             <div className="space-y-1">
                               <Badge className={`${tierInfo.color}`}>
                                 {tierInfo.name}
@@ -851,12 +882,12 @@ export default function AdminCustomers() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             {typeof customer.points === 'number'
                               ? customer.points.toLocaleString()
                               : Number(customer.points || 0).toLocaleString()}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <span className={`px-2 py-1 rounded-full text-xs ${
                               customer.isEnabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}>
@@ -866,7 +897,7 @@ export default function AdminCustomers() {
                           <TableCell>
                             <CardStatusLabel status={customer.cardStatus || "NOT_DELIVERED"} />
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden lg:table-cell">
                             <ScrollArea className="h-[100px]">
                               <div className="space-x-1">
                                 {customer.assignedProducts?.length > 0 ? (
