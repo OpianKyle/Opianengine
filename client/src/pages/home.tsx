@@ -17,7 +17,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/providers/theme-provider";
 import MetaTags from "@/components/seo/meta-tags";
 import { StructuredData } from "@/components/seo/structured-data";
-import { PageTransition, SectionTransition } from "@/components/transitions/page-transition";
 
 // Package prices in ZAR
 const PACKAGE_PRICES = {
@@ -483,48 +482,25 @@ export default function HomePage() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="flex flex-col lg:flex-row items-center">
             <div className="lg:w-1/2 z-10">
-              <SectionTransition 
-                effect="slide" 
-                direction="left" 
-                className="mb-4"
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-foreground dark:text-white">
+                The Card that Works for You
+              </h1>
+              <p className="text-xl mb-6 text-[rgb(8,42,90)] dark:text-white">
+                Make your money go further with Opian Rewards. Earn Rewards when you purchase 
+                and pay accounts with your Opian Rewards Card, and enhance your Rewards when 
+                you make smart financial planning decisions. Reward yourself and effortlessly 
+                put more money in your pocket by doing every day things with Opian Rewards.
+              </p>
+              <Button 
+                onClick={() => navigate("/contact-us")}
+                className="bg-[#43EB3E] hover:bg-[#3ad036] text-black text-lg py-6 px-8 rounded-md"
+                size="lg"
               >
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground dark:text-white">
-                  The Card that Works for You
-                </h1>
-              </SectionTransition>
-              
-              <SectionTransition 
-                effect="fade" 
-                delay={0.2}
-                className="mb-6"
-              >
-                <p className="text-xl text-[rgb(8,42,90)] dark:text-white">
-                  Make your money go further with Opian Rewards. Earn Rewards when you purchase 
-                  and pay accounts with your Opian Rewards Card, and enhance your Rewards when 
-                  you make smart financial planning decisions. Reward yourself and effortlessly 
-                  put more money in your pocket by doing every day things with Opian Rewards.
-                </p>
-              </SectionTransition>
-              <SectionTransition 
-                effect="slide" 
-                direction="up" 
-                delay={0.4}
-              >
-                <Button 
-                  onClick={() => navigate("/contact-us")}
-                  className="bg-[#43EB3E] hover:bg-[#3ad036] text-black text-lg py-6 px-8 rounded-md"
-                  size="lg"
-                >
-                  More Information
-                </Button>
-              </SectionTransition>
+                More Information
+              </Button>
             </div>
             <div className="lg:w-1/2 mt-10 lg:mt-0 flex justify-center lg:justify-end relative z-10">
-              <SectionTransition 
-                effect="scale" 
-                delay={0.6}
-              >
-                <div className="relative w-full max-w-lg overflow-hidden rounded-xl shadow-2xl">
+              <div className="relative w-full max-w-lg overflow-hidden rounded-xl shadow-2xl">
                 <video 
                   autoPlay 
                   loop 
@@ -548,7 +524,6 @@ export default function HomePage() {
                   Your browser does not support the video tag.
                 </video>
               </div>
-              </SectionTransition>
             </div>
           </div>
         </div>
@@ -562,54 +537,41 @@ export default function HomePage() {
       {/* Value Proposition Section */}
       <section className="py-20 relative overflow-hidden text-foreground dark:text-white">
         <div className="container mx-auto px-4 relative z-10">
-          <SectionTransition
-            effect="slide"
-            direction="up"
-            delay={0.2}
-          >
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-foreground dark:text-white">
-              What If Your Card Paid You Back?
-            </h2>
-          </SectionTransition>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-foreground dark:text-white">
+            What If Your Card Paid You Back?
+          </h2>
           
-          <SectionTransition 
-            effect="slide" 
-            direction="up"
-            delay={0.4}
-            staggerChildren={true}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-              <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
-                  <CreditCard className="h-8 w-8 text-[#43EB3E]" />
-                </div>
-                <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Cash Back on Everything</h3>
-                <p className="text-[rgb(8,42,90)] dark:text-gray-300">
-                  Shopping, dining, paying bills—earn cash every time you swipe.
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
+                <CreditCard className="h-8 w-8 text-[#43EB3E]" />
               </div>
-              
-              <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
-                  <Gift className="h-8 w-8 text-[#43EB3E]" />
-                </div>
-                <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Build Your Own Reward Stack</h3>
-                <p className="text-[rgb(8,42,90)] dark:text-gray-300">
-                  Combine the power of our Rewards System with your current rewards cards to create Double Rewards in your pocket!
-                </p>
-              </div>
-              
-              <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
-                  <Users className="h-8 w-8 text-[#43EB3E]" />
-                </div>
-                <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Make Your Money Work for You</h3>
-                <p className="text-[rgb(8,42,90)] dark:text-gray-300">
-                  With the help of our Financial Partners, make smarter financial planning decisions to Save and Earn extra money!
-                </p>
-              </div>
+              <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Cash Back on Everything</h3>
+              <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                Shopping, dining, paying bills—earn cash every time you swipe.
+              </p>
             </div>
-          </SectionTransition>
+            
+            <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
+                <Gift className="h-8 w-8 text-[#43EB3E]" />
+              </div>
+              <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Build Your Own Reward Stack</h3>
+              <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                Combine the power of our Rewards System with your current rewards cards to create Double Rewards in your pocket!
+              </p>
+            </div>
+            
+            <div className="bg-white dark:bg-[#022b5c] rounded-xl p-8 shadow-lg transform transition-transform hover:-translate-y-2 duration-300 border-t-4 border-[#43EB3E]">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-[#01162f] rounded-full flex items-center justify-center mb-6 shadow-md">
+                <Users className="h-8 w-8 text-[#43EB3E]" />
+              </div>
+              <h3 className="text-xl font-bold mb-4 text-foreground dark:text-white">Make Your Money Work for You</h3>
+              <p className="text-[rgb(8,42,90)] dark:text-gray-300">
+                With the help of our Financial Partners, make smarter financial planning decisions to Save and Earn extra money!
+              </p>
+            </div>
+          </div>
         </div>
         
         {/* Background decorations with blue base and green overlay */}
@@ -628,26 +590,16 @@ export default function HomePage() {
           <div className="flex flex-col lg:flex-row gap-12">
             {/* Left side - Text content */}
             <div className="w-full lg:w-1/2">
-              <SectionTransition
-                effect="slide"
-                direction="up"
-                delay={0.2}
-              >
-                <h2 className="text-3xl md:text-4xl font-bold mb-8 text-foreground dark:text-white">
-                  Simple Steps.<br/>Serious Rewards.
-                </h2>
-              </SectionTransition>
-              <SectionTransition
-                effect="fade"
-                delay={0.4}
-              >
-                <div className="text-lg text-[rgb(8,42,90)] dark:text-gray-300 space-y-6">
-                  <p>
-                    Getting started with Opian Rewards is simple and empowering. Every step is designed to help you 
-                    earn more and unlock greater benefits—just by doing what you already do.
-                  </p>
-                  <p>
-                    Our process is straightforward and user-friendly, allowing you to quickly begin earning rewards 
+              <h2 className="text-3xl md:text-4xl font-bold mb-8 text-foreground dark:text-white">
+                Simple Steps.<br/>Serious Rewards.
+              </h2>
+              <div className="text-lg text-[rgb(8,42,90)] dark:text-gray-300 space-y-6">
+                <p>
+                  Getting started with Opian Rewards is simple and empowering. Every step is designed to help you 
+                  earn more and unlock greater benefits—just by doing what you already do.
+                </p>
+                <p>
+                  Our process is straightforward and user-friendly, allowing you to quickly begin earning rewards 
                   on your everyday purchases and bill payments.
                 </p>
                 <p>
@@ -675,15 +627,10 @@ export default function HomePage() {
                   </Button>
                 </div>
               </div>
-              </SectionTransition>
             </div>
             
             {/* Right side - Carousel */}
             <div className="w-full lg:w-1/2 relative mt-10 lg:mt-0">
-              <SectionTransition
-                effect="scale"
-                delay={0.6}
-              >
               <div className="embla relative overflow-hidden rounded-xl shadow-xl">
                 <div className="embla__viewport" ref={emblaRef}>
                   <div className="embla__container flex">
@@ -744,7 +691,6 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
-              </SectionTransition>
             </div>
           </div>
           
@@ -752,11 +698,6 @@ export default function HomePage() {
           <div className="mt-20 mb-16 mx-auto container">
             <div className="flex flex-col md:flex-row">
               {/* Left side - Image with heading overlay - exactly 50% width */}
-              <SectionTransition
-                effect="slide"
-                direction="left"
-                delay={0.2}
-              >
               <div className="w-full md:w-1/2 md:order-0">
                 <div className="relative h-full">
                   {/* Background image covering the entire left section */}
@@ -779,14 +720,8 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              </SectionTransition>
               
               {/* Right side - Content points - exactly 50% width */}
-              <SectionTransition
-                effect="slide"
-                direction="right"
-                delay={0.4}
-              >
               <div className="w-full md:w-1/2 space-y-16 p-4 pl-8 md:order-1 flex flex-col justify-center">
                 <div className="flex items-start w-full">
                   <div className="w-12 h-12 flex-shrink-0 bg-gray-100 dark:bg-[#043375] rounded-full flex items-center justify-center mr-4 shadow-md">
@@ -824,15 +759,11 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              </SectionTransition>
             </div>
           </div>
 
 
-          <SectionTransition
-            effect="fade"
-            delay={0.3}
-          >
+
           <div className="mb-16 mt-20 relative group">
             {/* Particle effects scattered throughout */}
             <div className="w-2 h-2 absolute top-[10%] right-[15%] rounded-full bg-[#43EB3E] opacity-20 
@@ -886,7 +817,6 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </SectionTransition>
         </div>
         
         {/* Background decorations with light/dark mode support */}

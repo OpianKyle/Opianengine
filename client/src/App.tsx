@@ -11,7 +11,6 @@ import ResetPassword from "@/pages/reset-password";
 import ReferralPage from "@/pages/referral"; 
 import HowItWorks from "@/pages/how-it-works";
 import MeetTheTeam from "@/pages/meet-the-team";
-import AnimationTest from "@/pages/animation-test"; // Animation test page
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 // Session timeout functionality has been removed
 // import { useSessionTimeout } from "@/hooks/use-session-timeout";
@@ -24,8 +23,6 @@ import { initGA } from "./lib/analytics";
 import { useAnalytics } from "./hooks/use-analytics";
 import { MetaTags } from "@/components/seo/meta-tags";
 import { WebsiteStructuredData, OrganizationStructuredData } from "@/components/seo/structured-data";
-import { TransitionProvider } from "@/components/transitions/transition-provider";
-import { PageTransition } from "@/components/transitions/page-transition";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -133,212 +130,144 @@ function Router() {
     <Switch>
       {/* Public Routes */}
       <Route path="/">
-        <PageTransition effect="fade">
-          <Home />
-        </PageTransition>
+        <Home />
       </Route>
       <Route path="/login">
-        <PageTransition effect="slide">
-          <LoginPage />
-        </PageTransition>
+        <LoginPage />
       </Route>
       <Route path="/register">
-        <PageTransition effect="scale">
-          <Register />
-        </PageTransition>
+        <Register />
       </Route>
       <Route path="/contact-us">
-        <PageTransition effect="fade">
-          <ContactUsPage />
-        </PageTransition>
+        <ContactUsPage />
       </Route>
       <Route path="/reset-password">
-        <PageTransition effect="slide">
-          <ResetPassword />
-        </PageTransition>
+        <ResetPassword />
       </Route>
       <Route path="/referral/:code">
-        <PageTransition effect="scale">
-          <ReferralPage />
-        </PageTransition>
+        <ReferralPage />
       </Route>
       <Route path="/how-it-works">
-        <PageTransition effect="bounce">
-          <HowItWorks />
-        </PageTransition>
+        <HowItWorks />
       </Route>
       <Route path="/meet-the-team">
-        <PageTransition effect="flip">
-          <MeetTheTeam />
-        </PageTransition>
-      </Route>
-      
-      <Route path="/animation-test">
-        <PageTransition effect="scale">
-          <AnimationTest />
-        </PageTransition>
+        <MeetTheTeam />
       </Route>
 
       {/* Admin Routes */}
       <Route path="/admin">
         <AdminLayout>
-          <PageTransition effect="fade">
-            <ProtectedRoute component={AdminDashboard} admin />
-          </PageTransition>
+          <ProtectedRoute component={AdminDashboard} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/customers">
         <AdminLayout>
-          <PageTransition effect="slide">
-            <ProtectedRoute component={AdminCustomers} admin />
-          </PageTransition>
+          <ProtectedRoute component={AdminCustomers} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/card-status-test">
         <AdminLayout>
-          <PageTransition effect="scale">
-            <ProtectedRoute component={CardStatusTest} admin />
-          </PageTransition>
+          <ProtectedRoute component={CardStatusTest} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/agents">
         <AdminLayout>
-          <PageTransition effect="fade">
-            <ProtectedRoute component={AdminAgents} admin />
-          </PageTransition>
+          <ProtectedRoute component={AdminAgents} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/email-logs">
         <AdminLayout>
-          <PageTransition effect="slide">
-            <ProtectedRoute component={EmailLogs} admin />
-          </PageTransition>
+          <ProtectedRoute component={EmailLogs} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/products">
         <AdminLayout>
-          <PageTransition effect="scale">
-            <ProtectedRoute component={AdminProducts} admin />
-          </PageTransition>
+          <ProtectedRoute component={AdminProducts} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/rewards">
         <AdminLayout>
-          <PageTransition effect="fade">
-            <ProtectedRoute component={AdminRewards} admin />
-          </PageTransition>
+          <ProtectedRoute component={AdminRewards} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/cash-redemptions">
         <AdminLayout>
-          <PageTransition effect="slide">
-            <ProtectedRoute component={CashRedemptions} admin />
-          </PageTransition>
+          <ProtectedRoute component={CashRedemptions} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/manage-users">
         <AdminLayout>
-          <PageTransition effect="scale">
-            <ProtectedRoute component={ManageUsers} admin />
-          </PageTransition>
+          <ProtectedRoute component={ManageUsers} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/logs">
         <AdminLayout>
-          <PageTransition effect="fade">
-            <ProtectedRoute component={AdminLogs} admin />
-          </PageTransition>
+          <ProtectedRoute component={AdminLogs} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/quote-requests">
         <AdminLayout>
-          <PageTransition effect="slide">
-            <ProtectedRoute component={AdminQuoteRequests} admin />
-          </PageTransition>
+          <ProtectedRoute component={AdminQuoteRequests} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/migrations">
         <AdminLayout>
-          <PageTransition effect="scale">
-            <ProtectedRoute component={Migrations} admin />
-          </PageTransition>
+          <ProtectedRoute component={Migrations} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/leads">
         <AdminLayout>
-          <PageTransition effect="fade">
-            <ProtectedRoute component={AdminLeads} admin />
-          </PageTransition>
+          <ProtectedRoute component={AdminLeads} admin />
         </AdminLayout>
       </Route>
 
       {/* Agent Routes */}
       <Route path="/agent">
         <AgentLayout>
-          <PageTransition effect="bounce">
-            <ProtectedRoute component={AgentDashboard} agent />
-          </PageTransition>
+          <ProtectedRoute component={AgentDashboard} agent />
         </AgentLayout>
       </Route>
       <Route path="/agent/customers">
         <AgentLayout>
-          <PageTransition effect="scale">
-            <ProtectedRoute component={AgentCustomers} agent />
-          </PageTransition>
+          <ProtectedRoute component={AgentCustomers} agent />
         </AgentLayout>
       </Route>
       <Route path="/agent/leads">
         <AgentLayout>
-          <PageTransition effect="slide">
-            <ProtectedRoute component={AgentLeads} agent />
-          </PageTransition>
+          <ProtectedRoute component={AgentLeads} agent />
         </AgentLayout>
       </Route>
 
       {/* Customer Routes */}
       <Route path="/dashboard">
         <CustomerLayout>
-          <PageTransition effect="flip">
-            <ProtectedRoute component={CustomerDashboard} />
-          </PageTransition>
+          <ProtectedRoute component={CustomerDashboard} />
         </CustomerLayout>
       </Route>
       <Route path="/rewards">
         <CustomerLayout>
-          <PageTransition effect="bounce">
-            <ProtectedRoute component={CustomerRewards} />
-          </PageTransition>
+          <ProtectedRoute component={CustomerRewards} />
         </CustomerLayout>
       </Route>
       <Route path="/referrals">
         <CustomerLayout>
-          <PageTransition effect="scale">
-            <ProtectedRoute component={ReferralsPage} />
-          </PageTransition>
+          <ProtectedRoute component={ReferralsPage} />
         </CustomerLayout>
       </Route>
       <Route path="/profile">
         <CustomerLayout>
-          <PageTransition effect="slide">
-            <ProtectedRoute component={ProfilePage} />
-          </PageTransition>
+          <ProtectedRoute component={ProfilePage} />
         </CustomerLayout>
       </Route>
       <Route path="/products">
         <CustomerLayout>
-          <PageTransition effect="fade">
-            <ProtectedRoute component={CustomerProducts} />
-          </PageTransition>
+          <ProtectedRoute component={CustomerProducts} />
         </CustomerLayout>
       </Route>
       
       {/* Subscription routes removed as requested */}
 
-      <Route path="*">
-        <PageTransition effect="fade">
-          <NotFound />
-        </PageTransition>
-      </Route>
+      <Route component={NotFound} />
     </Switch>
   );
 }
@@ -363,9 +292,7 @@ function App() {
             <OrganizationStructuredData />
             
             <div className="min-h-screen w-full bg-background transition-colors duration-300">
-              <TransitionProvider transitionEffect="fade">
-                <Router />
-              </TransitionProvider>
+              <Router />
               <Toaster />
             </div>
           </ThemeProvider>
