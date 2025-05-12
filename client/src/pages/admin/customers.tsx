@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CardStatusLabel } from "@/components/admin/card-status-label";
 import { CardStatusDropdown } from "@/components/admin/card-status-dropdown";
 import { BulkCardStatusUpdate } from "@/components/admin/bulk-card-status-update";
+import BulkPointsAllocation from "@/components/admin/bulk-points-allocation";
 import { useCardStatusMutation } from "@/hooks/use-card-status";
 import {
   Accordion,
@@ -668,14 +669,24 @@ export default function AdminCustomers() {
         <h1 className="text-3xl font-bold">Customer Management</h1>
         <div className="flex gap-2">
           {selectedCustomerIds.length > 0 && (
-            <Button 
-              variant="outline" 
-              className="bg-blue-500 text-white hover:bg-blue-600"
-              onClick={() => setShowCardStatusUpdate(true)}
-            >
-              <CreditCard className="mr-2 h-4 w-4" />
-              Update Card Status ({selectedCustomerIds.length})
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                className="bg-blue-500 text-white hover:bg-blue-600"
+                onClick={() => setShowCardStatusUpdate(true)}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Update Card Status ({selectedCustomerIds.length})
+              </Button>
+              <Button 
+                variant="outline" 
+                className="bg-green-500 text-white hover:bg-green-600"
+                onClick={() => setShowBulkPointsAllocation(true)}
+              >
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Allocate Points ({selectedCustomerIds.length})
+              </Button>
+            </>
           )}
           <Button
             variant="outline"
@@ -1634,6 +1645,52 @@ export default function AdminCustomers() {
             <BulkCardStatusUpdate 
               selectedIds={selectedCustomerIds} 
               onUpdateComplete={handleCardStatusUpdateComplete} 
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Bulk Points Allocation Dialog */}
+      {showBulkPointsAllocation && (
+        <Dialog open={showBulkPointsAllocation} onOpenChange={setShowBulkPointsAllocation}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Allocate Points</DialogTitle>
+              <DialogDescription>
+                Allocate points to {selectedCustomerIds.length} selected customer{selectedCustomerIds.length > 1 ? 's' : ''}.
+              </DialogDescription>
+            </DialogHeader>
+            <BulkPointsAllocation 
+              selectedIds={selectedCustomerIds} 
+              onUpdateComplete={() => {
+                setShowBulkPointsAllocation(false);
+                
+                // Enhanced caching strategy with multiple refresh steps
+                console.log('Running enhanced cache refresh after bulk points allocation');
+                
+                // Step 1: First clear the cache completely for all customer queries
+                queryClient.removeQueries({ queryKey: ["/api/admin/customers"] });
+                
+                // Step 2: Then invalidate and force an immediate refetch
+                queryClient.invalidateQueries({ 
+                  queryKey: ["/api/admin/customers"],
+                  refetchType: 'all'
+                });
+                
+                // Step 3: Invalidate the specific page query
+                queryClient.invalidateQueries({ 
+                  queryKey: ["/api/admin/customers", page, limit],
+                  refetchType: 'all'
+                });
+                
+                // Clear selection after successful update
+                setSelectedCustomerIds([]);
+                
+                toast({ 
+                  title: "Success", 
+                  description: `Points allocated to ${selectedCustomerIds.length} customer${selectedCustomerIds.length > 1 ? 's' : ''}`
+                });
+              }} 
             />
           </DialogContent>
         </Dialog>
