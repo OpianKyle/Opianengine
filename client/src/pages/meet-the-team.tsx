@@ -25,6 +25,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useUser } from "@/hooks/use-user";
+import MetaTags from "@/components/seo/meta-tags";
+import { StructuredData } from "@/components/seo/structured-data";
 
 // Define the type for team members
 interface TeamMember {
@@ -117,6 +119,32 @@ export default function TeamPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#01162f] flex flex-col">
+      {/* SEO Optimization */}
+      <MetaTags 
+        title="Meet Our Team - Opian Rewards"
+        description="Meet the dedicated team behind Opian Rewards. Our experienced professionals are committed to providing exceptional service and innovative insurance and rewards solutions."
+        ogType="website"
+      />
+      
+      <StructuredData 
+        type="AboutPage"
+        data={{
+          name: "Meet the Opian Rewards Team",
+          description: "Our team of experienced professionals is dedicated to providing exceptional service",
+          mainEntity: {
+            "@type": "Organization",
+            name: "Opian Rewards",
+            member: teamMembers.map(member => ({
+              "@type": "Person",
+              name: member.name,
+              jobTitle: member.title,
+              description: member.description.substring(0, 150) + "...",
+              image: `https://www.opianrewards.com${member.image}`
+            }))
+          }
+        }}
+      />
+      
       {/* Header */}
       <header className="bg-white dark:bg-[#01162f] text-foreground dark:text-white sticky top-0 z-50">
         <div className="container mx-auto px-4">

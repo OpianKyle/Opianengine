@@ -21,6 +21,8 @@ import ThemeProvider from "@/providers/theme-provider";
 import { useEffect } from "react";
 import { initGA } from "./lib/analytics";
 import { useAnalytics } from "./hooks/use-analytics";
+import { MetaTags } from "@/components/seo/meta-tags";
+import { WebsiteStructuredData, OrganizationStructuredData } from "@/components/seo/structured-data";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -282,6 +284,13 @@ function App() {
       <AuthProvider>
         <ResponsiveProvider>
           <ThemeProvider>
+            {/* Default SEO tags for all pages */}
+            <MetaTags />
+            
+            {/* Structured data for improved search engine visibility */}
+            <WebsiteStructuredData />
+            <OrganizationStructuredData />
+            
             <div className="min-h-screen w-full bg-background transition-colors duration-300">
               <Router />
               <Toaster />

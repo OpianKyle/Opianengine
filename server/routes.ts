@@ -27,6 +27,7 @@ import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
 import { promisify } from "util";
 import { logAdminAction } from './admin-logger';
+import { generateSitemap, scheduleSitemapGeneration } from './sitemap/sitemap-generator';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -5979,6 +5980,21 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       });
     }
   });
+
+  // Sitemap route to serve sitemap.xml for better SEO
+  app.get('/sitemap.xml', async (req, res) => {
+    try {
+      const sitemap = await generateSitemap();
+      res.header('Content-Type', 'application/xml');
+      res.send(sitemap);
+    } catch (error) {
+      console.error('Error serving sitemap:', error);
+      res.status(500).send('Error generating sitemap');
+    }
+  });
+
+  // Initialize sitemap generation on server start and schedule regeneration
+  scheduleSitemapGeneration(24); // Regenerate sitemap once a day
   
   return httpServer;
 }

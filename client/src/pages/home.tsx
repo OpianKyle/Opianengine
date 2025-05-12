@@ -15,6 +15,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/providers/theme-provider";
+import MetaTags from "@/components/seo/meta-tags";
+import { StructuredData } from "@/components/seo/structured-data";
 
 // Package prices in ZAR
 const PACKAGE_PRICES = {
@@ -335,6 +337,29 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* SEO Optimization */}
+      <MetaTags 
+        title="Home - Insurance & Rewards Program"
+        description="Opian Rewards offers exclusive insurance packages with reward points, funeral cover, and financial benefits tailored to your needs. Join our rewards program today!"
+        ogType="website"
+      />
+      
+      <StructuredData 
+        type="WebPage"
+        data={{
+          name: "Opian Rewards - Home",
+          description: "Insurance and rewards program with exclusive benefits and financial protection plans",
+          mainContentOfPage: "Insurance packages with reward points",
+          offers: {
+            "@type": "AggregateOffer",
+            lowPrice: 350,
+            highPrice: 825,
+            priceCurrency: "ZAR",
+            offerCount: 5,
+          }
+        }}
+      />
+      
       {/* Navigation */}
       <header className="bg-white dark:bg-[#01162f] text-foreground dark:text-white sticky top-0 z-50">
         <div className="container mx-auto px-4">

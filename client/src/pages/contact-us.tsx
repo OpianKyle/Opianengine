@@ -4,6 +4,8 @@ import { Loader2 } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import MetaTags from "@/components/seo/meta-tags";
+import { StructuredData } from "@/components/seo/structured-data";
 
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -130,6 +132,29 @@ export default function ContactUsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-gray-100 dark:from-[#01162f] dark:to-[#011d3f] text-foreground dark:text-white transition-colors duration-300">
+      {/* SEO Optimization */}
+      <MetaTags 
+        title="Contact Us - Get Information About Opian Rewards"
+        description="Contact Opian Rewards to learn more about our packages, insurance benefits, and rewards program. Our team is ready to answer your questions."
+        ogType="website"
+      />
+      
+      <StructuredData 
+        type="Organization"
+        data={{
+          name: "Opian Rewards",
+          description: "Insurance benefits and rewards program",
+          url: "https://www.opianrewards.com",
+          contactPoint: {
+            "@type": "ContactPoint",
+            telephone: "+27-11-592-1060",
+            contactType: "customer service",
+            areaServed: "ZA",
+            availableLanguage: "English"
+          }
+        }}
+      />
+      
       {/* Header with logo */}
       <header className="py-6 border-b border-gray-200 dark:border-[#022b5c] bg-white dark:bg-[#01162f] shadow-sm transition-colors duration-300">
         <div className="container mx-auto px-4 flex justify-between items-center">

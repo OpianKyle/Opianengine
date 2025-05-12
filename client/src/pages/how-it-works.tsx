@@ -5,6 +5,8 @@ import { Loader2, CheckCircle2, Users, CreditCard, Upload, ShoppingCart, BarChar
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/providers/theme-provider";
+import MetaTags from "@/components/seo/meta-tags";
+import { StructuredData } from "@/components/seo/structured-data";
 
 export default function HowItWorksPage() {
   const { user, isLoading } = useUser();
@@ -66,6 +68,44 @@ export default function HowItWorksPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* SEO Optimization */}
+      <MetaTags 
+        title="How It Works - Getting Started with Opian Rewards"
+        description="Learn how to get started with Opian Rewards in 6 simple steps. Complete your signup, activate your card, and start earning rewards today!"
+        ogType="article"
+      />
+      
+      <StructuredData 
+        type="HowTo"
+        data={{
+          name: "How to Get Started with Opian Rewards",
+          description: "Follow these steps to join Opian Rewards program and start enjoying benefits",
+          totalTime: "PT30M", // ISO 8601 duration format - 30 minutes
+          step: [
+            {
+              "@type": "HowToStep",
+              name: "Complete Signup Form",
+              text: "After you complete and send the sign-up form, an agent will call you to explain the benefits of the product."
+            },
+            {
+              "@type": "HowToStep",
+              name: "Select your Product",
+              text: "We offer 5 Rewards Products with increasing lifestyle benefits, offering great value for your money."
+            },
+            {
+              "@type": "HowToStep",
+              name: "Activate your Card",
+              text: "You will receive your rewards card via courier. Our customer service agent will call you to help activate your card."
+            },
+            {
+              "@type": "HowToStep",
+              name: "Load your Card",
+              text: "Deposit, EFT or Transfer your monthly spending money into your brand new Opian Rewards Card."
+            }
+          ]
+        }}
+      />
+      
       {/* Navigation */}
       <header className="bg-white dark:bg-[#01162f] text-foreground dark:text-white sticky top-0 z-50">
         <div className="container mx-auto px-4">
