@@ -1645,6 +1645,7 @@ export default function AdminCustomers() {
             <BulkCardStatusUpdate 
               selectedIds={selectedCustomerIds} 
               onUpdateComplete={handleCardStatusUpdateComplete} 
+              contentOnly={true}
             />
           </DialogContent>
         </Dialog>

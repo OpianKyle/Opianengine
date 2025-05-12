@@ -20,20 +20,20 @@ interface BulkCardStatusUpdateProps {
   selectedIds: number[];
   onUpdateComplete?: () => void;
   disabled?: boolean;
+  // If true, the component will render only its contents without a dialog wrapper
+  contentOnly?: boolean;
 }
 
 export function BulkCardStatusUpdate({
   selectedIds,
   onUpdateComplete,
   disabled = false,
+  contentOnly = false,
 }: BulkCardStatusUpdateProps) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<CardStatus>("NOT_DELIVERED");
   const { mutate: updateCardStatus, isPending } = useCardStatusMutation();
   const queryClient = useQueryClient();
-  
-  // Check if we're being rendered directly within a customers page dialog
-  const isStandalone = typeof window !== 'undefined' && window.location.pathname.includes('/admin/customers');
   
   // This function will manually refetch the customers data
   const forceRefreshCustomersData = () => {
@@ -81,35 +81,38 @@ export function BulkCardStatusUpdate({
     );
   };
 
-  // If we're embedded in the customers page, just render the content directly
-  if (isStandalone) {
-    return (
-      <div className="w-full">
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Card Status</h4>
-            <CardStatusDropdown value={status} onChange={setStatus} />
-          </div>
+  // The content to be rendered either standalone or within a dialog
+  const content = (
+    <>
+      <div className="grid gap-4 py-4">
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Card Status</h4>
+          <CardStatusDropdown value={status} onChange={setStatus} />
         </div>
-        <DialogFooter className="px-0">
-          <Button
-            type="submit"
-            onClick={handleUpdateStatus}
-            disabled={isPending}
-            className="w-full md:w-auto"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Updating...
-              </>
-            ) : (
-              "Update Status"
-            )}
-          </Button>
-        </DialogFooter>
       </div>
-    );
+      <DialogFooter className={contentOnly ? "px-0" : ""}>
+        <Button
+          type="submit"
+          onClick={handleUpdateStatus}
+          disabled={isPending}
+          className={contentOnly ? "w-full md:w-auto" : ""}
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Updating...
+            </>
+          ) : (
+            "Update Status"
+          )}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+  
+  // If contentOnly is true, just return the content without a dialog wrapper
+  if (contentOnly) {
+    return <div className="w-full">{content}</div>;
   }
   
   // Otherwise, render with its own dialog wrapper
@@ -136,28 +139,7 @@ export function BulkCardStatusUpdate({
             Update the card status for {selectedIds.length} selected customer{selectedIds.length !== 1 ? "s" : ""}.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Card Status</h4>
-            <CardStatusDropdown value={status} onChange={setStatus} />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button
-            type="submit"
-            onClick={handleUpdateStatus}
-            disabled={isPending}
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Updating...
-              </>
-            ) : (
-              "Update Status"
-            )}
-          </Button>
-        </DialogFooter>
+        {content}
       </DialogContent>
     </Dialog>
   );
