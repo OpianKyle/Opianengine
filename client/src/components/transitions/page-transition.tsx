@@ -11,76 +11,88 @@ interface PageTransitionProps {
 const fadeSlideVariants = {
   initial: {
     opacity: 0,
-    y: 60,
+    y: 100, // More extreme starting position
+    scale: 0.95, // Add scaling for more dramatic effect
   },
   in: {
     opacity: 1,
     y: 0,
+    scale: 1,
     transition: {
-      duration: 0.8,
+      duration: 1.2, // Longer duration to make it more noticeable
       ease: [0.43, 0.13, 0.23, 0.96], // Custom easing for more playful feel
     },
   },
   out: {
     opacity: 0,
-    y: -50,
+    y: -80, // More extreme exit
+    scale: 0.9,
     transition: {
-      duration: 0.6,
+      duration: 0.8, // Longer exit too
       ease: [0.43, 0.13, 0.23, 0.96],
     },
   },
 };
 
-// Scale effect with slight rotation
+// Scale effect with extreme rotation and scaling
 const scaleVariants = {
   initial: {
     opacity: 0,
-    scale: 0.85,
-    rotate: -3,
+    scale: 0.5, // Much smaller initial scale
+    rotate: -10, // More extreme rotation
+    x: -30,    // Add some horizontal movement too
   },
   in: {
     opacity: 1,
     scale: 1,
     rotate: 0,
+    x: 0,
     transition: {
-      duration: 0.8,
+      duration: 1.5, // Much longer animation
       ease: [0.175, 0.885, 0.32, 1.275], // Custom easing (back)
     },
   },
   out: {
     opacity: 0,
-    scale: 0.9,
-    rotate: 2,
+    scale: 0.8,
+    rotate: 5, // More extreme exit rotation
+    x: 30,    // Exit to the other side
     transition: {
-      duration: 0.6,
+      duration: 0.8,
       ease: [0.6, -0.05, 0.01, 0.99],
     },
   },
 };
 
-// 3D flip effect
+// 3D flip effect with much more dramatic rotation
 const flipVariants = {
   initial: {
     opacity: 0,
-    rotateX: 25,
+    rotateX: 90, // Full 90 degree flip
+    rotateY: 45, // Add Y rotation for more 3D effect
     perspective: 1000,
-    y: 50,
+    y: 80, // Coming from much further down
+    scale: 0.7, // Also add scaling
   },
   in: {
     opacity: 1,
     rotateX: 0,
+    rotateY: 0,
     y: 0,
+    scale: 1,
     transition: {
-      duration: 0.8,
+      duration: 1.6, // Much longer for dramatic effect
       ease: [0.19, 1.0, 0.22, 1.0], // Custom easing
     },
   },
   out: {
     opacity: 0,
-    rotateX: -20,
-    y: -40,
+    rotateX: -45, // More extreme exit
+    rotateY: -20, 
+    y: -60,
+    scale: 0.8,
     transition: {
-      duration: 0.6,
+      duration: 0.8,
       ease: [0.19, 1.0, 0.22, 1.0],
     },
   },
