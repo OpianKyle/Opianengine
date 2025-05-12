@@ -886,6 +886,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </SectionTransition>
         </div>
         
         {/* Background decorations with light/dark mode support */}
