@@ -668,7 +668,7 @@ export default function AdminCustomers() {
   );
 
   return (
-    <div className="space-y-6 flex flex-col" style={{ height: 'calc(100vh - 6rem)' }}>
+    <div className="space-y-6 flex flex-col h-full overflow-hidden">
       <div className="flex flex-col sm:flex-row justify-between gap-4 sm:items-center">
         <h1 className="text-2xl sm:text-3xl font-bold">Customer Management</h1>
         <div className="flex flex-wrap gap-2">
@@ -762,7 +762,7 @@ export default function AdminCustomers() {
             </div>
           )}
         </CardHeader>
-        <CardContent className="pt-0 pb-0 flex-1 flex flex-col">
+        <CardContent className="pt-0 pb-0 flex-1 overflow-hidden flex flex-col">
           {isCustomersError ? (
             <div className="flex flex-col items-center justify-center py-10 text-destructive">
               <p className="text-center mb-4">Failed to load customers</p>
@@ -774,8 +774,8 @@ export default function AdminCustomers() {
               </Button>
             </div>
           ) : (
-            <div className="flex-1 min-h-0 overflow-auto">
-              <Table>
+            <div className="flex-1 overflow-auto">
+              <Table className="min-w-full">
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
                     <TableHead className="w-[50px]">
