@@ -680,6 +680,10 @@ export default function HomePage() {
             
             {/* Right side - Carousel */}
             <div className="w-full lg:w-1/2 relative mt-10 lg:mt-0">
+              <SectionTransition
+                effect="scale"
+                delay={0.6}
+              >
               <div className="embla relative overflow-hidden rounded-xl shadow-xl">
                 <div className="embla__viewport" ref={emblaRef}>
                   <div className="embla__container flex">
@@ -740,6 +744,7 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
+              </SectionTransition>
             </div>
           </div>
           
@@ -747,6 +752,11 @@ export default function HomePage() {
           <div className="mt-20 mb-16 mx-auto container">
             <div className="flex flex-col md:flex-row">
               {/* Left side - Image with heading overlay - exactly 50% width */}
+              <SectionTransition
+                effect="slide"
+                direction="left"
+                delay={0.2}
+              >
               <div className="w-full md:w-1/2 md:order-0">
                 <div className="relative h-full">
                   {/* Background image covering the entire left section */}
