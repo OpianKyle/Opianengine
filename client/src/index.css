@@ -204,4 +204,34 @@
   .dark .border-\[#022b5c\] {
     @apply border-border;
   }
+  
+  /* Page transition styles */
+  .page-transition-container {
+    @apply overflow-x-hidden relative;
+  }
+  
+  /* Animation utility classes */
+  .hover-lift {
+    @apply transition-transform duration-300 ease-out hover:-translate-y-1;
+  }
+  
+  .hover-scale {
+    @apply transition-transform duration-300 ease-out hover:scale-105;
+  }
+  
+  .hover-glow {
+    @apply transition-all duration-300 ease-out hover:shadow-lg hover:shadow-primary/10;
+  }
+  
+  .animated-gradient {
+    @apply relative overflow-hidden;
+    background-size: 200% 200%;
+    animation: gradientShift 8s ease infinite;
+  }
+  
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
 }

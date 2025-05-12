@@ -23,6 +23,8 @@ import { initGA } from "./lib/analytics";
 import { useAnalytics } from "./hooks/use-analytics";
 import { MetaTags } from "@/components/seo/meta-tags";
 import { WebsiteStructuredData, OrganizationStructuredData } from "@/components/seo/structured-data";
+import { TransitionProvider } from "@/components/transitions/transition-provider";
+import { PageTransition } from "@/components/transitions/page-transition";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -292,7 +294,9 @@ function App() {
             <OrganizationStructuredData />
             
             <div className="min-h-screen w-full bg-background transition-colors duration-300">
-              <Router />
+              <TransitionProvider>
+                <Router />
+              </TransitionProvider>
               <Toaster />
             </div>
           </ThemeProvider>
