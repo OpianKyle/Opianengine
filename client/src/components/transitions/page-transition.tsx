@@ -11,21 +11,21 @@ interface PageTransitionProps {
 const fadeSlideVariants = {
   initial: {
     opacity: 0,
-    y: 30,
+    y: 60,
   },
   in: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.5,
+      duration: 0.8,
       ease: [0.43, 0.13, 0.23, 0.96], // Custom easing for more playful feel
     },
   },
   out: {
     opacity: 0,
-    y: -30,
+    y: -50,
     transition: {
-      duration: 0.4,
+      duration: 0.6,
       ease: [0.43, 0.13, 0.23, 0.96],
     },
   },
@@ -35,24 +35,24 @@ const fadeSlideVariants = {
 const scaleVariants = {
   initial: {
     opacity: 0,
-    scale: 0.94,
-    rotate: -1,
+    scale: 0.85,
+    rotate: -3,
   },
   in: {
     opacity: 1,
     scale: 1,
     rotate: 0,
     transition: {
-      duration: 0.5,
+      duration: 0.8,
       ease: [0.175, 0.885, 0.32, 1.275], // Custom easing (back)
     },
   },
   out: {
     opacity: 0,
-    scale: 0.96,
-    rotate: 1,
+    scale: 0.9,
+    rotate: 2,
     transition: {
-      duration: 0.4,
+      duration: 0.6,
       ease: [0.6, -0.05, 0.01, 0.99],
     },
   },
@@ -62,25 +62,25 @@ const scaleVariants = {
 const flipVariants = {
   initial: {
     opacity: 0,
-    rotateX: 15,
+    rotateX: 25,
     perspective: 1000,
-    y: 30,
+    y: 50,
   },
   in: {
     opacity: 1,
     rotateX: 0,
     y: 0,
     transition: {
-      duration: 0.6,
+      duration: 0.8,
       ease: [0.19, 1.0, 0.22, 1.0], // Custom easing
     },
   },
   out: {
     opacity: 0,
-    rotateX: -15,
-    y: -30,
+    rotateX: -20,
+    y: -40,
     transition: {
-      duration: 0.5,
+      duration: 0.6,
       ease: [0.19, 1.0, 0.22, 1.0],
     },
   },
@@ -252,7 +252,7 @@ export function SectionTransition({
       x: 0,
       y: 0,
       transition: {
-        duration: 0.5,
+        duration: 0.7,
         ease: [0.43, 0.13, 0.23, 0.96],
         delay: delay,
       },
@@ -288,7 +288,7 @@ export function SectionTransition({
       className={className}
       initial="initial"
       whileInView="animate"
-      viewport={{ once: true, margin: "-100px", amount: 0.2 }}
+      viewport={{ once: false, margin: "-20px", amount: 0.1 }}
       variants={staggerChildren ? containerAnimation : getEffect()}
     >
       {staggerChildren ? 
