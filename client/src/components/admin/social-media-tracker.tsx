@@ -354,40 +354,86 @@ const SocialMediaTracker: React.FC = () => {
       .sort((a, b) => b.sessions - a.sessions)
       .slice(0, 10);
     
+    // Calculate total for percentages
+    const totalSessions = sortedData.reduce((sum, source) => sum + source.sessions, 0);
+    
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Top Traffic Sources</CardTitle>
-          <CardDescription>Top 10 sources of all traffic</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={sortedData}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                <XAxis type="number" />
-                <YAxis 
-                  dataKey="source" 
-                  type="category" 
-                  tick={{ fontSize: 12 }}
-                  width={120}
-                />
-                <Tooltip />
-                <Bar 
-                  dataKey="sessions" 
-                  name="Sessions" 
-                  fill="#011D3D"
-                  radius={[0, 4, 4, 0]} 
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        {/* Traffic Sources Table */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Top Traffic Sources</CardTitle>
+            <CardDescription>Top 10 sources of all traffic</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Traffic Source</TableHead>
+                  <TableHead className="text-right">Sessions</TableHead>
+                  <TableHead className="text-right">% of Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedData.map((source, index) => {
+                  const percentage = totalSessions 
+                    ? ((source.sessions / totalSessions) * 100).toFixed(1) 
+                    : '0.0';
+                    
+                  return (
+                    <TableRow key={`source-${index}`}>
+                      <TableCell className="font-medium">{source.source}</TableCell>
+                      <TableCell className="text-right">{source.sessions}</TableCell>
+                      <TableCell className="text-right">{percentage}%</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {/* Total Row */}
+                <TableRow className="bg-muted/50">
+                  <TableCell className="font-semibold">Total</TableCell>
+                  <TableCell className="text-right font-semibold">{totalSessions}</TableCell>
+                  <TableCell className="text-right font-semibold">100%</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        
+        {/* Visual Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Traffic Sources Visualization</CardTitle>
+            <CardDescription>Visual breakdown of traffic by source</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={sortedData}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                  <XAxis type="number" />
+                  <YAxis 
+                    dataKey="source" 
+                    type="category" 
+                    tick={{ fontSize: 12 }}
+                    width={120}
+                  />
+                  <Tooltip />
+                  <Bar 
+                    dataKey="sessions" 
+                    name="Sessions" 
+                    fill="#011D3D"
+                    radius={[0, 4, 4, 0]} 
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   };
   
