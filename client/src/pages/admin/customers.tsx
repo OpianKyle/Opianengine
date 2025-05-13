@@ -112,6 +112,7 @@ const getPointsMultiplier = (points: number, type: 'premium' | 'card' | 'pos'): 
 };
 
 const AssignProductsDialog = ({ customer, onClose }: { customer: any; onClose: () => void }) => {
+  const { toast } = useToast();
   const { data: availableProducts = [] } = useQuery({
     queryKey: ["/api/admin/products/available"],
     queryFn: async () => {

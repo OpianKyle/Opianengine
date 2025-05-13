@@ -416,6 +416,9 @@ export async function getTrafficSources(days: number = 30, limit: number = 10) {
     };
   }
   
+  // At this point, TypeScript should know client is a BetaAnalyticsDataClient
+  const analyticsClient: BetaAnalyticsDataClient = client;
+  
   // Get GA4 property ID from environment variable or use the default
   const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
   // Formatted property ID required by the Google Analytics Data API
@@ -425,7 +428,7 @@ export async function getTrafficSources(days: number = 30, limit: number = 10) {
 
   try {
     // Run the traffic sources report
-    const [sourcesReport] = await client.runReport({
+    const [sourcesReport] = await analyticsClient.runReport({
       property: formattedPropertyId,
       dateRanges: [
         {
@@ -455,7 +458,7 @@ export async function getTrafficSources(days: number = 30, limit: number = 10) {
     });
 
     // Format the source data
-    const results = (sourcesReport.rows || []).map((row) => {
+    const results = (sourcesReport.rows || []).map((row: any) => {
       const source = row.dimensionValues?.[0]?.value || 'Unknown';
       const sessions = parseInt(row.metricValues?.[0]?.value || '0', 10);
       
