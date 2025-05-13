@@ -1,23 +1,70 @@
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
+import { JWT } from 'google-auth-library';
 
-// Create a client for fetching analytics data
-const analyticsDataClient = new BetaAnalyticsDataClient({
-  credentials: {
-    client_email: process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_ANALYTICS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  },
-});
+// Create a client with service account credentials
+const createGAClient = () => {
+  try {
+    // Check for required environment variables
+    if (!process.env.GOOGLE_ANALYTICS_PRIVATE_KEY || !process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL) {
+      console.error('Missing required Google Analytics credentials in environment variables');
+      return null;
+    }
 
-// Your Google Analytics 4 property ID
-const propertyId = '418254539'; // This should match your G-GPVTEJ3641 ID's numeric property ID
+    // Fixing private key format (environment variables can escape newlines)
+    const privateKey = process.env.GOOGLE_ANALYTICS_PRIVATE_KEY.replace(/\\n/g, '\n');
+
+    // Create a JWT auth client
+    const auth = new JWT({
+      email: process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL,
+      key: privateKey,
+      scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+    });
+
+    // Create the Analytics Data client
+    const analyticsDataClient = new BetaAnalyticsDataClient({ auth });
+    return analyticsDataClient;
+  } catch (error) {
+    console.error('Error creating Google Analytics client:', error);
+    return null;
+  }
+};
 
 /**
- * Fetches social media referral data from Google Analytics
- * @param days Number of days to look back (default: 30)
+ * Get social media traffic data from Google Analytics
+ * @param days Number of days to look back
+ * @returns Object with social media traffic data
  */
-export async function getSocialTrafficData(days = 30) {
+export async function getSocialMediaTraffic(days: number = 30) {
+  const client = createGAClient();
+  
+  if (!client) {
+    return { error: 'Google Analytics client could not be initialized' };
+  }
+  
+  // Google Analytics property ID 
+  const propertyId = process.env.VITE_GA_MEASUREMENT_ID?.replace('G-', '') || '';
+
+  if (!propertyId) {
+    return { error: 'Google Analytics property ID not configured' };
+  }
+
   try {
-    const [response] = await analyticsDataClient.runReport({
+    // Colors for different social networks
+    const socialNetworkColors: Record<string, string> = {
+      'Facebook': '#1877F2',
+      'Instagram': '#E1306C',
+      'Twitter': '#1DA1F2', 
+      'LinkedIn': '#0077B5',
+      'Pinterest': '#E60023',
+      'YouTube': '#FF0000',
+      'Reddit': '#FF4500',
+      'TikTok': '#000000',
+      'WhatsApp': '#25D366',
+      'Other': '#808080'
+    };
+
+    // Run the social source report
+    const [socialReport] = await client.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [
         {
@@ -35,77 +82,133 @@ export async function getSocialTrafficData(days = 30) {
           name: 'sessions',
         },
         {
-          name: 'activeUsers',
+          name: 'totalUsers',
         },
       ],
       dimensionFilter: {
         filter: {
-          fieldName: 'sessionSource',
+          fieldName: 'sessionMedium',
           stringFilter: {
-            matchType: 'CONTAINS',
-            value: '',
-            caseSensitive: false,
+            value: 'social',
+            matchType: 'EXACT',
           },
         },
       },
     });
 
-    // Process response into social media sources
-    const socialNetworks = [
-      { id: 'facebook', name: 'Facebook', pattern: /facebook|fb\.com|m\.facebook/, color: '#1877F2' },
-      { id: 'instagram', name: 'Instagram', pattern: /instagram|l\.instagram/, color: '#E4405F' },
-      { id: 'twitter', name: 'Twitter/X', pattern: /twitter|t\.co|x\.com/, color: '#1DA1F2' },
-      { id: 'linkedin', name: 'LinkedIn', pattern: /linkedin|lnkd\.in/, color: '#0A66C2' },
-      { id: 'youtube', name: 'YouTube', pattern: /youtube|youtu\.be/, color: '#FF0000' },
-      { id: 'tiktok', name: 'TikTok', pattern: /tiktok/, color: '#000000' },
-      { id: 'pinterest', name: 'Pinterest', pattern: /pinterest/, color: '#BD081C' },
-      { id: 'reddit', name: 'Reddit', pattern: /reddit/, color: '#FF4500' },
-    ];
+    // Get totals for all traffic for comparison
+    const [totalReport] = await client.runReport({
+      property: `properties/${propertyId}`,
+      dateRanges: [
+        {
+          startDate: `${days}daysAgo`,
+          endDate: 'today',
+        },
+      ],
+      metrics: [
+        {
+          name: 'sessions',
+        },
+        {
+          name: 'totalUsers',
+        },
+      ],
+    });
 
-    const results = socialNetworks.map(network => {
-      const matchingRows = response.rows?.filter(row => 
-        network.pattern.test(row.dimensionValues?.[0].value?.toLowerCase() || '')
-      ) || [];
+    // Format the social network data
+    const results = (socialReport.rows || []).map((row, index) => {
+      const sourceName = row.dimensionValues?.[0]?.value || 'Unknown';
+      const sessions = parseInt(row.metricValues?.[0]?.value || '0', 10);
+      const users = parseInt(row.metricValues?.[1]?.value || '0', 10);
       
-      const sessions = matchingRows.reduce((sum, row) => 
-        sum + parseInt(row.metricValues?.[0].value || '0'), 0);
-      
-      const users = matchingRows.reduce((sum, row) => 
-        sum + parseInt(row.metricValues?.[1].value || '0'), 0);
+      // Determine which social network this is
+      let network = 'Other';
+      if (sourceName.toLowerCase().includes('facebook') || sourceName.toLowerCase().includes('fb.com')) {
+        network = 'Facebook';
+      } else if (sourceName.toLowerCase().includes('instagram') || sourceName.toLowerCase().includes('ig')) {
+        network = 'Instagram';
+      } else if (sourceName.toLowerCase().includes('twitter') || sourceName.toLowerCase().includes('t.co') || sourceName.toLowerCase().includes('x.com')) {
+        network = 'Twitter';
+      } else if (sourceName.toLowerCase().includes('linkedin')) {
+        network = 'LinkedIn';
+      } else if (sourceName.toLowerCase().includes('pinterest')) {
+        network = 'Pinterest';
+      } else if (sourceName.toLowerCase().includes('youtube') || sourceName.toLowerCase().includes('youtu.be')) {
+        network = 'YouTube';
+      } else if (sourceName.toLowerCase().includes('reddit')) {
+        network = 'Reddit';
+      } else if (sourceName.toLowerCase().includes('tiktok')) {
+        network = 'TikTok';
+      } else if (sourceName.toLowerCase().includes('whatsapp')) {
+        network = 'WhatsApp';
+      }
       
       return {
-        id: network.id,
-        name: network.name,
+        id: `social-${index}`,
+        name: network,
+        source: sourceName,
         sessions,
         users,
-        color: network.color,
+        color: socialNetworkColors[network] || '#808080',
       };
     });
 
-    // Add a total for all social networks
-    const totalSessions = results.reduce((sum, item) => sum + item.sessions, 0);
-    const totalUsers = results.reduce((sum, item) => sum + item.users, 0);
+    // Group by network name (combining multiple sources for the same network)
+    const networkMap = new Map();
+    results.forEach(item => {
+      if (networkMap.has(item.name)) {
+        const existing = networkMap.get(item.name);
+        existing.sessions += item.sessions;
+        existing.users += item.users;
+      } else {
+        networkMap.set(item.name, { ...item });
+      }
+    });
+
+    // Get the totals from the total report
+    const totalSessions = parseInt(totalReport.rows?.[0]?.metricValues?.[0]?.value || '0', 10);
+    const totalUsers = parseInt(totalReport.rows?.[0]?.metricValues?.[1]?.value || '0', 10);
 
     return {
-      results: results.filter(r => r.sessions > 0), // Only show networks with traffic
-      total: { sessions: totalSessions, users: totalUsers }
+      results: Array.from(networkMap.values()).sort((a, b) => b.sessions - a.sessions),
+      total: {
+        sessions: totalSessions,
+        users: totalUsers,
+      }
     };
   } catch (error) {
-    console.error('Error fetching Google Analytics data:', error);
+    console.error('Error fetching social media traffic from Google Analytics:', error);
     return { 
-      results: [], 
-      total: { sessions: 0, users: 0 },
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: 'Error fetching social media traffic data',
+      details: (error as Error).message,
+      results: [],
+      total: { sessions: 0, users: 0 }
     };
   }
 }
 
 /**
- * Fetches device type breakdown for visitors
+ * Get device type breakdown from Google Analytics
+ * @param days Number of days to look back
+ * @returns Array with device type data
  */
-export async function getDeviceTypeData(days = 30) {
+export async function getDeviceTypes(days: number = 30) {
+  const client = createGAClient();
+  
+  if (!client) {
+    return { error: 'Google Analytics client could not be initialized' };
+  }
+  
+  // Google Analytics property ID 
+  const propertyId = process.env.VITE_GA_MEASUREMENT_ID?.replace('G-', '') || '';
+
+  if (!propertyId) {
+    return { error: 'Google Analytics property ID not configured' };
+  }
+
   try {
-    const [response] = await analyticsDataClient.runReport({
+    // Run the device type report
+    const [deviceReport] = await client.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [
         {
@@ -125,25 +228,50 @@ export async function getDeviceTypeData(days = 30) {
       ],
     });
 
-    // Format the response
-    const deviceData = response.rows?.map(row => ({
-      device: row.dimensionValues?.[0].value || 'unknown',
-      sessions: parseInt(row.metricValues?.[0].value || '0'),
-    })) || [];
+    // Format the device data
+    const results = (deviceReport.rows || []).map((row) => {
+      const device = row.dimensionValues?.[0]?.value || 'Unknown';
+      const sessions = parseInt(row.metricValues?.[0]?.value || '0', 10);
+      
+      return {
+        device,
+        sessions,
+      };
+    });
 
-    return deviceData;
+    return results;
   } catch (error) {
-    console.error('Error fetching device type data:', error);
-    return [];
+    console.error('Error fetching device types from Google Analytics:', error);
+    return { 
+      error: 'Error fetching device type data',
+      details: (error as Error).message
+    };
   }
 }
 
 /**
- * Fetches traffic source data (shows all referral sources)
+ * Get top traffic sources from Google Analytics
+ * @param days Number of days to look back
+ * @param limit Maximum number of sources to return
+ * @returns Array with traffic source data
  */
-export async function getTrafficSourceData(days = 30, limit = 10) {
+export async function getTrafficSources(days: number = 30, limit: number = 10) {
+  const client = createGAClient();
+  
+  if (!client) {
+    return { error: 'Google Analytics client could not be initialized' };
+  }
+  
+  // Google Analytics property ID 
+  const propertyId = process.env.VITE_GA_MEASUREMENT_ID?.replace('G-', '') || '';
+
+  if (!propertyId) {
+    return { error: 'Google Analytics property ID not configured' };
+  }
+
   try {
-    const [response] = await analyticsDataClient.runReport({
+    // Run the traffic sources report
+    const [sourcesReport] = await client.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [
         {
@@ -172,15 +300,23 @@ export async function getTrafficSourceData(days = 30, limit = 10) {
       limit,
     });
 
-    // Format the response
-    const sourceData = response.rows?.map(row => ({
-      source: row.dimensionValues?.[0].value || 'direct',
-      sessions: parseInt(row.metricValues?.[0].value || '0'),
-    })) || [];
+    // Format the source data
+    const results = (sourcesReport.rows || []).map((row) => {
+      const source = row.dimensionValues?.[0]?.value || 'Unknown';
+      const sessions = parseInt(row.metricValues?.[0]?.value || '0', 10);
+      
+      return {
+        source,
+        sessions,
+      };
+    });
 
-    return sourceData;
+    return results;
   } catch (error) {
-    console.error('Error fetching traffic source data:', error);
-    return [];
+    console.error('Error fetching traffic sources from Google Analytics:', error);
+    return { 
+      error: 'Error fetching traffic source data',
+      details: (error as Error).message
+    };
   }
 }
