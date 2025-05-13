@@ -1,103 +1,87 @@
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
-import { JWT } from 'google-auth-library';
+import { GoogleAuth } from 'google-auth-library';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
 
-// Create a client with service account credentials
+// Get the directory path for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Path to the Google Analytics credentials file
+const credentialsPath = path.join(__dirname, '../credentials/google-analytics-key.json');
+
+// Create a client with service account credentials from JSON file
 const createGAClient = async () => {
   try {
-    // Check for required environment variables
-    if (!process.env.GOOGLE_ANALYTICS_PRIVATE_KEY || !process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL) {
-      console.error('Missing required Google Analytics credentials in environment variables');
-      return null;
-    }
-
+    // Check if measurement ID is available
     if (!process.env.VITE_GA_MEASUREMENT_ID) {
       console.error('Missing Google Analytics Measurement ID (VITE_GA_MEASUREMENT_ID)');
       return null;
     }
 
-    // Debug information to help diagnose issues
-    console.log('GA Credentials check:', {
-      hasPrivateKey: !!process.env.GOOGLE_ANALYTICS_PRIVATE_KEY,
-      hasClientEmail: !!process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL,
-      clientEmailStart: process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL?.substring(0, 8) + '...',
-      privateKeyLength: process.env.GOOGLE_ANALYTICS_PRIVATE_KEY?.length,
-      measurementId: process.env.VITE_GA_MEASUREMENT_ID
-    });
-
-    // Fix private key format (Replit environment variables can escape newlines)
-    let privateKey = process.env.GOOGLE_ANALYTICS_PRIVATE_KEY;
-    
-    // Handle different formats of private key from environment variables
-    if (privateKey.includes('\\n')) {
-      privateKey = privateKey.replace(/\\n/g, '\n');
-    }
-    
-    // If the key doesn't start with BEGIN PRIVATE KEY, it's likely not formatted correctly
-    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
-      console.error('Private key appears to be malformed, missing BEGIN PRIVATE KEY');
+    // Check if credentials file exists
+    if (!fs.existsSync(credentialsPath)) {
+      console.error(`Google Analytics credentials file not found at ${credentialsPath}`);
       return null;
     }
 
-    // Create a JWT auth client with proper error handling
-    const auth = new JWT({
-      email: process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL,
-      key: privateKey,
-      scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
-    });
+    console.log(`Using Google Analytics credentials from ${credentialsPath}`);
+    console.log(`Using Measurement ID: ${process.env.VITE_GA_MEASUREMENT_ID}`);
 
-    // Test the authentication before proceeding
+    // Create the Google Analytics client using the credentials file
     try {
-      // Attempt to get a token to verify authentication works
-      await auth.authorize();
-      console.log('Google Analytics authentication successful');
-    } catch (authError) {
-      console.error('Google Analytics authentication failed:', authError);
-      return null;
-    }
+      // Create authentication client from service account file
+      const auth = new GoogleAuth({
+        keyFile: credentialsPath,
+        scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+      });
 
-    // Parse the measurement ID to get property ID
-    let propertyId = '';
-    if (process.env.VITE_GA_MEASUREMENT_ID) {
-      propertyId = process.env.VITE_GA_MEASUREMENT_ID.replace(/^G-/, '');
+      console.log('Google Auth client created successfully');
+      
+      // Get the property ID from the measurement ID
+      const propertyId = process.env.VITE_GA_MEASUREMENT_ID.replace(/^G-/, '');
       console.log(`Using Google Analytics property ID: ${propertyId}`);
-    } else {
-      console.error('Missing Google Analytics measurement ID (VITE_GA_MEASUREMENT_ID)');
-      return null;
-    }
-    
-    // Create the Analytics Data client with the JWT auth
-    const analyticsDataClient = new BetaAnalyticsDataClient({ 
-      auth,
-      projectId: propertyId
-    });
-    
-    console.log('Successfully created Google Analytics client');
-    
-    // Verify the client can connect to the API
-    try {
-      // Make a simple test request to verify connectivity
-      const testRequest = {
-        property: `properties/${propertyId}`,
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
-        metrics: [{ name: 'sessions' }],
-      };
+
+      // Create the Analytics Data client
+      const analyticsDataClient = new BetaAnalyticsDataClient({
+        auth,
+        projectId: propertyId,
+      });
       
-      await analyticsDataClient.runReport(testRequest);
-      console.log('Successfully connected to Google Analytics API');
-    } catch (apiError) {
-      console.error('Error connecting to Google Analytics API:', apiError);
-      console.error('API Error code:', apiError.code);
-      console.error('API Error details:', apiError.details);
-      
-      // Check for permission issues
-      if (apiError.message && apiError.message.includes('permission')) {
-        console.error('Permission denied: Make sure the service account has access to the GA4 property');
+      console.log('Successfully created Google Analytics client');
+
+      // Verify the client can connect to the API
+      try {
+        // Make a simple test request to verify connectivity
+        const testRequest = {
+          property: `properties/${propertyId}`,
+          dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+          metrics: [{ name: 'sessions' }],
+        };
+        
+        await analyticsDataClient.runReport(testRequest);
+        console.log('Successfully connected to Google Analytics API');
+        
+        return analyticsDataClient;
+      } catch (apiError: any) {
+        console.error('Error connecting to Google Analytics API:', apiError?.message || 'Unknown error');
+        
+        if (apiError?.code) {
+          console.error('API Error code:', apiError.code);
+        }
+        
+        // Check for permission issues
+        if (apiError?.message && typeof apiError.message === 'string' && apiError.message.includes('permission')) {
+          console.error('Permission denied: Make sure the service account has access to the GA4 property');
+        }
+        
+        return null;
       }
-      
+    } catch (clientError) {
+      console.error('Failed to create Google Analytics client:', clientError);
       return null;
     }
-    
-    return analyticsDataClient;
   } catch (error) {
     console.error('Error creating Google Analytics client:', error);
     return null;
