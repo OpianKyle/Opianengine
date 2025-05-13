@@ -1705,6 +1705,7 @@ export default function AdminCustomers() {
           </DialogContent>
         </Dialog>
     </div>
+    </>
   );
 
   function handleCardStatusUpdateComplete() {
@@ -1740,9 +1741,11 @@ export default function AdminCustomers() {
     // Clear selection after successful update
     setSelectedCustomerIds([]);
     
-    toast({ 
-      title: "Success", 
-      description: `Card status updated for ${selectedCustomerIds.length} customer${selectedCustomerIds.length > 1 ? 's' : ''}`
-    });
+    if (toast) {
+      toast({ 
+        title: "Success", 
+        description: `Card status updated for ${selectedCustomerIds.length} customer${selectedCustomerIds.length > 1 ? 's' : ''}`
+      });
+    }
   }
 }
