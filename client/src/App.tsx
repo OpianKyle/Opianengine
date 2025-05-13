@@ -279,6 +279,16 @@ function App() {
     console.log('Google Analytics initialized');
   }, []);
 
+  // Force light mode on app initialization
+  useEffect(() => {
+    // Force light mode at the document level regardless of system preference
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+    
+    // Also set in localStorage to persist the setting
+    localStorage.setItem('opian-theme', 'light');
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -291,7 +301,7 @@ function App() {
             <WebsiteStructuredData />
             <OrganizationStructuredData />
             
-            <div className="min-h-screen w-full bg-background transition-colors duration-300">
+            <div className="min-h-screen w-full bg-background transition-colors duration-300 light">
               <Router />
               <Toaster />
             </div>
