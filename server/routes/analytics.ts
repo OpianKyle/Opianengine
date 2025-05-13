@@ -1,11 +1,11 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { getSocialTrafficData, getDeviceTypeData, getTrafficSourceData } from '../analytics/google-analytics';
-import { getUserFromTokenOrSession } from '../utils/auth';
+import { getUserFromTokenOrSession } from '../auth';
 
 const router = Router();
 
 // Middleware to ensure user is admin
-const requireAdmin = async (req, res, next) => {
+const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
   const user = await getUserFromTokenOrSession(req);
   if (!user) {
     return res.status(401).json({ error: 'Unauthorized' });

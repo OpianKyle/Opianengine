@@ -22,6 +22,7 @@ import { setupCardStatusRoutes } from './routes/card-status';
 import { leadsRouter } from './routes/leads';
 import { contactRouter } from './routes/contact';
 import adminToolsRouter from './routes/admin-tools';
+import analyticsRouter from './routes/analytics';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
@@ -1150,6 +1151,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/leads', leadsRouter);
   app.use('/api/contact-submit', contactRouter);
   app.use('/api/admin/tools', adminToolsRouter);
+  app.use('/api/analytics', analyticsRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
