@@ -1,0 +1,149 @@
+Making GET request to /api/analytics/device-types?days=30 with options: {method: 'GET', headers: {…}, credentials: 'include', bodyLength: 0, token: 'missing'}
+queryClient.ts:318 Making GET request to /api/analytics/social-traffic?days=30 with options: {method: 'GET', headers: {…}, credentials: 'include', bodyLength: 0, token: 'missing'}
+queryClient.ts:318 Making GET request to /api/analytics/traffic-sources?days=30&limit=10 with options: {method: 'GET', headers: {…}, credentials: 'include', bodyLength: 0, token: 'missing'}
+queryClient.ts:326 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/analytics/traffic-sources?days=30&limit=10 500 (Internal Server Error)
+apiRequest @ queryClient.ts:326
+queryFn @ social-media-tracker.tsx:77
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:515
+Promise.catch
+run @ @tanstack_react-query.js?v=d7d0c2e8:498
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:2011
+refetch @ @tanstack_react-query.js?v=d7d0c2e8:2001
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:749
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1112
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1111
+batch @ @tanstack_react-query.js?v=d7d0c2e8:583
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:1110
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1601
+await in (anonymous)
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:313
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:312
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:299
+listener @ @tanstack_react-query.js?v=d7d0c2e8:270Understand this error
+social-media-tracker.tsx:84 Traffic sources API error: Error: Google Analytics client could not be initialized
+    at apiRequest (queryClient.ts:338:11)
+    at async queryFn (social-media-tracker.tsx:77:21)
+queryFn @ social-media-tracker.tsx:84
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:515
+Promise.catch
+run @ @tanstack_react-query.js?v=d7d0c2e8:498
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:2011
+refetch @ @tanstack_react-query.js?v=d7d0c2e8:2001
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:749
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1112
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1111
+batch @ @tanstack_react-query.js?v=d7d0c2e8:583
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:1110
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1601
+await in (anonymous)
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:313
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:312
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:299
+listener @ @tanstack_react-query.js?v=d7d0c2e8:270Understand this error
+queryClient.ts:326 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/analytics/device-types?days=30 500 (Internal Server Error)
+apiRequest @ queryClient.ts:326
+queryFn @ social-media-tracker.tsx:60
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:515
+Promise.catch
+run @ @tanstack_react-query.js?v=d7d0c2e8:498
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:2011
+refetch @ @tanstack_react-query.js?v=d7d0c2e8:2001
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:749
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1112
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1111
+batch @ @tanstack_react-query.js?v=d7d0c2e8:583
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:1110
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1601
+await in (anonymous)
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:313
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:312
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:299
+listener @ @tanstack_react-query.js?v=d7d0c2e8:270Understand this error
+social-media-tracker.tsx:67 Device types API error: Error: Google Analytics client could not be initialized
+    at apiRequest (queryClient.ts:338:11)
+    at async queryFn (social-media-tracker.tsx:60:21)
+queryFn @ social-media-tracker.tsx:67
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:515
+Promise.catch
+run @ @tanstack_react-query.js?v=d7d0c2e8:498
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:2011
+refetch @ @tanstack_react-query.js?v=d7d0c2e8:2001
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:749
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1112
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1111
+batch @ @tanstack_react-query.js?v=d7d0c2e8:583
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:1110
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1601
+await in (anonymous)
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:313
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:312
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:299
+listener @ @tanstack_react-query.js?v=d7d0c2e8:270Understand this error
+queryClient.ts:326 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/analytics/social-traffic?days=30 500 (Internal Server Error)
+apiRequest @ queryClient.ts:326
+queryFn @ social-media-tracker.tsx:43
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:515
+Promise.catch
+run @ @tanstack_react-query.js?v=d7d0c2e8:498
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:2011
+refetch @ @tanstack_react-query.js?v=d7d0c2e8:2001
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:749
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1112
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1111
+batch @ @tanstack_react-query.js?v=d7d0c2e8:583
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:1110
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:1601
+await in (anonymous)
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:313
+onFocus @ @tanstack_react-query.js?v=d7d0c2e8:312
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:299
+listener @ @tanstack_react-query.js?v=d7d0c2e8:270Understand this error
+social-media-tracker.tsx:50 Social traffic API error: Error: Google Analytics client could not be initialized
+    at apiRequest (queryClient.ts:338:11)
+    at async queryFn (social-media-tracker.tsx:43:21)

@@ -14,22 +14,31 @@ const credentialsPath = path.join(__dirname, '../credentials/google-analytics-ke
 // Create a client with service account credentials from JSON file
 const createGAClient = async () => {
   try {
-    // Check if measurement ID is available
-    if (!process.env.VITE_GA_MEASUREMENT_ID) {
-      console.error('Missing Google Analytics Measurement ID (VITE_GA_MEASUREMENT_ID)');
-      return null;
-    }
-
     // Check if credentials file exists
     if (!fs.existsSync(credentialsPath)) {
-      console.error(`Google Analytics credentials file not found at ${credentialsPath}`);
-      return null;
+      console.error(`SETUP ERROR: Google Analytics credentials file not found at ${credentialsPath}`);
+      return {
+        error: 'missing_credentials_file',
+        message: `Google Analytics credentials file not found at ${credentialsPath}`
+      };
+    }
+
+    // Read the service account email from credentials for better error messages
+    let serviceAccountEmail = '';
+    try {
+      const credentialsContent = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+      serviceAccountEmail = credentialsContent.client_email;
+      console.log(`Using Google Analytics service account: ${serviceAccountEmail}`);
+    } catch (readError) {
+      console.error('Failed to read service account email from credentials file:', readError);
     }
 
     console.log(`Using Google Analytics credentials from ${credentialsPath}`);
-    console.log(`Using Measurement ID: ${process.env.VITE_GA_MEASUREMENT_ID}`);
+    
+    // Get GA4 property ID from environment variable or use the default
+    const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Default property ID from project
+    console.log(`Using Google Analytics property ID: ${propertyId}`);
 
-    // Create the Google Analytics client using the credentials file
     try {
       // Create authentication client from service account file
       const auth = new GoogleAuth({
@@ -38,16 +47,6 @@ const createGAClient = async () => {
       });
 
       console.log('Google Auth client created successfully');
-      
-      // We need the numeric property ID, not the measurement ID
-      // The format is typically: properties/123456789
-      // For GA4, you need to use the format "properties/123456789"
-      const measurementId = process.env.VITE_GA_MEASUREMENT_ID;
-      console.log(`Using Google Analytics Measurement ID: ${measurementId}`);
-      
-      // Get GA4 property ID from environment variable or use a fallback
-      const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Fallback to a default property ID
-      console.log(`Using Google Analytics property ID: ${propertyId}`);
 
       // Create the Analytics Data client
       const analyticsDataClient = new BetaAnalyticsDataClient({
@@ -55,11 +54,11 @@ const createGAClient = async () => {
         projectId: propertyId,
       });
       
-      console.log('Successfully created Google Analytics client');
+      console.log('Google Analytics client initialized, testing connection...');
 
       // Verify the client can connect to the API
       try {
-        // Prepare the property ID in the required format - it should be: properties/XXXXX
+        // Prepare the property ID in the required format
         const formattedPropertyId = `properties/${propertyId}`;
         console.log(`Using formatted property ID: ${formattedPropertyId}`);
         
@@ -71,30 +70,63 @@ const createGAClient = async () => {
         };
         
         await analyticsDataClient.runReport(testRequest);
-        console.log('Successfully connected to Google Analytics API');
+        console.log('✓ Successfully connected to Google Analytics API');
         
         return analyticsDataClient;
       } catch (apiError: any) {
-        console.error('Error connecting to Google Analytics API:', apiError?.message || 'Unknown error');
+        console.error('Google Analytics API Connection Error:', apiError?.message || 'Unknown error');
         
         if (apiError?.code) {
           console.error('API Error code:', apiError.code);
         }
         
-        // Check for permission issues
-        if (apiError?.message && typeof apiError.message === 'string' && apiError.message.includes('permission')) {
-          console.error('Permission denied: Make sure the service account has access to the GA4 property');
+        // Specific error handling based on error types
+        if (apiError?.message && typeof apiError.message === 'string') {
+          // Permission error
+          if (apiError.message.includes('permission')) {
+            const errorDetail = `SERVICE ACCOUNT PERMISSION DENIED: The service account ${serviceAccountEmail} does not have permission to access Google Analytics property ${propertyId}. Please add this service account as a user in your Google Analytics property with Viewer permissions.`;
+            console.error(errorDetail);
+            
+            return {
+              error: 'permission_denied',
+              message: errorDetail,
+              serviceAccount: serviceAccountEmail,
+              propertyId
+            };
+          }
+          
+          // Property not found
+          if (apiError.message.includes('not found')) {
+            const errorDetail = `PROPERTY NOT FOUND: The Google Analytics property ${propertyId} was not found. Please verify the property ID is correct.`;
+            console.error(errorDetail);
+            
+            return {
+              error: 'property_not_found',
+              message: errorDetail,
+              propertyId
+            };
+          }
         }
         
-        return null;
+        return {
+          error: 'api_connection_failed',
+          message: apiError?.message || 'Failed to connect to Google Analytics API',
+          code: apiError?.code
+        };
       }
-    } catch (clientError) {
+    } catch (clientError: any) {
       console.error('Failed to create Google Analytics client:', clientError);
-      return null;
+      return {
+        error: 'client_creation_failed',
+        message: clientError?.message || 'Failed to create Google Analytics client'
+      };
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating Google Analytics client:', error);
-    return null;
+    return {
+      error: 'initialization_error',
+      message: error?.message || 'Unknown error initializing Google Analytics client'
+    };
   }
 };
 
