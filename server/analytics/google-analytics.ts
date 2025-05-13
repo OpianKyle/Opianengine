@@ -330,7 +330,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
           source: network,
           sessions: 0,
           users: 0,
-          color: socialNetworkColors[network],
+          color: getNetworkColor(network),
         });
       }
     });
@@ -364,7 +364,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
       source: network,
       sessions: 0,
       users: 0,
-      color: socialNetworkColors[network],
+      color: getNetworkColor(network),
     }));
     
     return { 
