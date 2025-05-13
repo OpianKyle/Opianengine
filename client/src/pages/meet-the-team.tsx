@@ -564,9 +564,9 @@ export default function TeamPage() {
             />
           </div>
           
-          <div className="flex flex-col lg:flex-row justify-between mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
             {/* Left column - Contact Information */}
-            <div className="lg:w-1/4 mb-8 lg:mb-0">
+            <div className="md:col-span-2 lg:col-span-1">
               <h3 className="font-semibold mb-4">Contact Information</h3>
               <p className="flex items-center mb-2">
                 <Phone className="h-4 w-4 mr-2 flex-shrink-0" />
@@ -583,8 +583,8 @@ export default function TeamPage() {
             </div>
             
             {/* Middle columns - Package/Resources/Legal */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:w-2/4">
-              <div className="text-center">
+            <div className="lg:col-span-2 grid grid-cols-3 gap-4">
+              <div>
                 <h3 className="text-lg font-semibold mb-4">Packages</h3>
                 <ul className="space-y-2">
                   <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
@@ -594,7 +594,7 @@ export default function TeamPage() {
                   <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
                 </ul>
               </div>
-              <div className="text-center">
+              <div>
                 <h3 className="text-lg font-semibold mb-4">Resources</h3>
                 <ul className="space-y-2">
                   <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Help Center</a></li>
@@ -603,7 +603,7 @@ export default function TeamPage() {
                   <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Contact</a></li>
                 </ul>
               </div>
-              <div className="text-center">
+              <div>
                 <h3 className="text-lg font-semibold mb-4">Legal</h3>
                 <ul className="space-y-2">
                   <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
@@ -614,7 +614,7 @@ export default function TeamPage() {
             </div>
             
             {/* Right column - Legal Information */}
-            <div className="lg:w-1/4">
+            <div className="md:col-span-2 lg:col-span-1">
               <h3 className="font-semibold mb-4">Legal Information</h3>
               <p className="mb-2 text-sm">Opian Rewards (Pty) Ltd is a Juristic Representative of Opian Financial Services (Pty) Ltd</p>
               <p className="mb-2 text-sm">Company Registration Number: 2021/411623/07</p>
