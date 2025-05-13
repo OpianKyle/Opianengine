@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTheme } from "@/providers/theme-provider";
 import { useLocation, Link } from "wouter";
 import { 
@@ -27,6 +27,8 @@ import {
 import { useUser } from "@/hooks/use-user";
 import MetaTags from "@/components/seo/meta-tags";
 import { StructuredData } from "@/components/seo/structured-data";
+import { useAnalytics } from "@/hooks/use-analytics";
+import { trackEvent } from "@/lib/analytics";
 
 // Define the type for team members
 interface TeamMember {
@@ -42,6 +44,14 @@ export default function TeamPage() {
   const { theme } = useTheme();
   const [location, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Track page views
+  useAnalytics();
+  
+  // Track page visit
+  useEffect(() => {
+    trackEvent('page_view', 'engagement', 'meet_the_team');
+  }, []);
   
   // Team member data
   const teamMembers: TeamMember[] = [

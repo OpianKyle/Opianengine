@@ -7,6 +7,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/providers/theme-provider";
 import MetaTags from "@/components/seo/meta-tags";
 import { StructuredData } from "@/components/seo/structured-data";
+import { useAnalytics } from "@/hooks/use-analytics";
+import { trackEvent } from "@/lib/analytics";
 
 export default function HowItWorksPage() {
   const { user, isLoading } = useUser();
@@ -14,9 +16,15 @@ export default function HowItWorksPage() {
   const [, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
+  // Track page views
+  useAnalytics();
+  
   useEffect(() => {
     // Scroll to top on mount
     window.scrollTo(0, 0);
+    
+    // Track page visit
+    trackEvent('page_view', 'engagement', 'how_it_works');
   }, []);
 
   if (isLoading) {

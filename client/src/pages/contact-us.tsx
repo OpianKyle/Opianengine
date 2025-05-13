@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import MetaTags from "@/components/seo/meta-tags";
 import { StructuredData } from "@/components/seo/structured-data";
+import { useAnalytics } from "@/hooks/use-analytics";
+import { trackEvent } from "@/lib/analytics";
 
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
