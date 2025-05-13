@@ -475,7 +475,7 @@ export function formatRegistrationEmail(
     Thank you for joining us on your journey to grow, save, and earn through Opian Rewards. Here, every financial decision is an Opportunity—whether it's reducing costs, earning rewards, or building long-term wealth.
 
     Your Next Steps:
-    1. Sign in: Visit our platform at www.opian.co.za and log in using your credentials:
+    1. Sign in: Visit our platform at www.opianrewards.com and log in using your credentials:
        Username: ${email}
        Password: ${tempPassword}
     2. Secure your account: Change your password to something strong and unique.
@@ -522,7 +522,7 @@ export function formatRegistrationEmail(
         <div style="background-color: rgba(255,255,255,0.05); padding: 20px; border-radius: 5px; color: white; margin: 20px 0;">
           <h3 style="color: #43EB3E; margin-top: 0;">Your Next Steps:</h3>
           <ol style="line-height: 1.8;">
-            <li><strong>Sign in:</strong> Visit our platform at <a href="https://www.opian.co.za" style="color: #43EB3E; text-decoration: underline; font-weight: bold;">www.opian.co.za</a> and log in using your credentials:
+            <li><strong>Sign in:</strong> Visit our platform at <a href="https://www.opianrewards.com" style="color: #43EB3E; text-decoration: underline; font-weight: bold;">www.opianrewards.com</a> and log in using your credentials:
               <div style="background: rgba(255,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 3px;">
                 <span style="color: #43EB3E;">Username:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">${email}</span><br>
                 <span style="color: #43EB3E;">Password:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">${tempPassword}</span>
