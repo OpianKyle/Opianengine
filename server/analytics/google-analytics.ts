@@ -195,6 +195,19 @@ export async function getSocialMediaTraffic(days: number = 30) {
       'WhatsApp': '#25D366',
       'Other': '#808080'
     };
+    
+    // Default social networks to ensure they all appear even with 0 traffic
+    const defaultSocialNetworks = [
+      'Facebook', 
+      'Instagram', 
+      'Twitter', 
+      'LinkedIn', 
+      'Pinterest', 
+      'YouTube', 
+      'Reddit', 
+      'TikTok',
+      'WhatsApp'
+    ];
 
     // Run the social source report
     const [socialReport] = await analyticsClient.runReport({
@@ -302,6 +315,20 @@ export async function getSocialMediaTraffic(days: number = 30) {
     const totalSessions = parseInt(totalReport.rows?.[0]?.metricValues?.[0]?.value || '0', 10);
     const totalUsers = parseInt(totalReport.rows?.[0]?.metricValues?.[1]?.value || '0', 10);
 
+    // Ensure all default networks are included, even with 0 traffic
+    defaultSocialNetworks.forEach((network, index) => {
+      if (!networkMap.has(network)) {
+        networkMap.set(network, {
+          id: `social-default-${index}`,
+          name: network,
+          source: network,
+          sessions: 0,
+          users: 0,
+          color: socialNetworkColors[network],
+        });
+      }
+    });
+    
     return {
       results: Array.from(networkMap.values()).sort((a, b) => b.sessions - a.sessions),
       total: {
