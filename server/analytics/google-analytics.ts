@@ -11,8 +11,18 @@ const __dirname = path.dirname(__filename);
 // Path to the Google Analytics credentials file
 const credentialsPath = path.join(__dirname, './opianrewards-459707-8efa68d16b95.json');
 
+// Define error types for the Google Analytics client
+type GAClientError = {
+  error: string;
+  message: string;
+  serviceAccount?: string;
+  propertyId?: string;
+  code?: string;
+};
+
 // Create a client with service account credentials from JSON file
-const createGAClient = async () => {
+// Returns either a valid BetaAnalyticsDataClient or an error object
+const createGAClient = async (): Promise<BetaAnalyticsDataClient | GAClientError | null> => {
   try {
     console.log(`Attempting to use Google Analytics credentials file at: ${credentialsPath}`);
     
@@ -40,7 +50,10 @@ const createGAClient = async () => {
     
     // Get GA4 property ID from environment variable or use the default
     const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Default property ID from project
-    console.log(`Using Google Analytics property ID: ${propertyId}`);
+    
+    // Formatted property ID required by the Google Analytics Data API
+    const formattedPropertyId = `properties/${propertyId}`;
+    console.log(`Using Google Analytics property ID: ${propertyId} (formatted as ${formattedPropertyId})`);
 
     try {
       // Create authentication client from service account file
@@ -61,10 +74,6 @@ const createGAClient = async () => {
 
       // Verify the client can connect to the API
       try {
-        // Prepare the property ID in the required format
-        const formattedPropertyId = `properties/${propertyId}`;
-        console.log(`Using formatted property ID: ${formattedPropertyId}`);
-        
         // Make a simple test request to verify connectivity
         const testRequest = {
           property: formattedPropertyId,
@@ -150,12 +159,26 @@ export async function getSocialMediaTraffic(days: number = 30) {
     };
   }
   
-  // Use the numeric property ID (from env or fallback)
-  const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Fallback to a default property ID
+  // Check if client is an error object (returned when there's an issue connecting to GA)
+  if ('error' in client) {
+    console.error(`Google Analytics client error in getSocialMediaTraffic: ${client.error} - ${client.message}`);
+    return { 
+      error: client.error,
+      details: client.message || 'Unknown error with Google Analytics client',
+      results: [],
+      total: { sessions: 0, users: 0 } 
+    };
+  }
+  
+  // At this point, TypeScript should know client is a BetaAnalyticsDataClient
+  const analyticsClient: BetaAnalyticsDataClient = client;
+  
+  // Get GA4 property ID from environment variable or use the default
+  const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
+  // Formatted property ID required by the Google Analytics Data API
   const formattedPropertyId = `properties/${propertyId}`;
   
-  console.log(`Using Google Analytics property ID: ${propertyId}`);
-  console.log(`Making Google Analytics API request for property: ${formattedPropertyId}`);
+  console.log(`Using Google Analytics property ID: ${propertyId} (formatted as ${formattedPropertyId})`);
   console.log(`Time range: ${days} days ago to today`);
 
   try {
@@ -174,7 +197,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
     };
 
     // Run the social source report
-    const [socialReport] = await client.runReport({
+    const [socialReport] = await analyticsClient.runReport({
       property: formattedPropertyId,
       dateRanges: [
         {
@@ -207,7 +230,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
     });
 
     // Get totals for all traffic for comparison
-    const [totalReport] = await client.runReport({
+    const [totalReport] = await analyticsClient.runReport({
       property: formattedPropertyId,
       dateRanges: [
         {
@@ -226,7 +249,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
     });
 
     // Format the social network data
-    const results = (socialReport.rows || []).map((row, index) => {
+    const results = (socialReport.rows || []).map((row: any, index: number) => {
       const sourceName = row.dimensionValues?.[0]?.value || 'Unknown';
       const sessions = parseInt(row.metricValues?.[0]?.value || '0', 10);
       const users = parseInt(row.metricValues?.[1]?.value || '0', 10);
@@ -309,16 +332,28 @@ export async function getDeviceTypes(days: number = 30) {
     return { error: 'Google Analytics client could not be initialized' };
   }
   
-  // Use the numeric property ID (from env or fallback)
-  const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Fallback to a default property ID
+  // Check if client is an error object (returned when there's an issue connecting to GA)
+  if ('error' in client) {
+    console.error(`Google Analytics client error in getDeviceTypes: ${client.error} - ${client.message}`);
+    return { 
+      error: client.error,
+      details: client.message || 'Unknown error with Google Analytics client'
+    };
+  }
+  
+  // At this point, TypeScript should know client is a BetaAnalyticsDataClient
+  const analyticsClient: BetaAnalyticsDataClient = client;
+  
+  // Get GA4 property ID from environment variable or use the default
+  const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
+  // Formatted property ID required by the Google Analytics Data API
   const formattedPropertyId = `properties/${propertyId}`;
   
-  console.log(`Using Google Analytics property ID: ${propertyId}`);
-  console.log(`Making Google Analytics API request for property: ${formattedPropertyId}`);
+  console.log(`Using Google Analytics property ID: ${propertyId} (formatted as ${formattedPropertyId})`);
 
   try {
     // Run the device type report
-    const [deviceReport] = await client.runReport({
+    const [deviceReport] = await analyticsClient.runReport({
       property: formattedPropertyId,
       dateRanges: [
         {
@@ -339,7 +374,7 @@ export async function getDeviceTypes(days: number = 30) {
     });
 
     // Format the device data
-    const results = (deviceReport.rows || []).map((row) => {
+    const results = (deviceReport.rows || []).map((row: any) => {
       const device = row.dimensionValues?.[0]?.value || 'Unknown';
       const sessions = parseInt(row.metricValues?.[0]?.value || '0', 10);
       
@@ -372,12 +407,21 @@ export async function getTrafficSources(days: number = 30, limit: number = 10) {
     return { error: 'Google Analytics client could not be initialized' };
   }
   
-  // Use the numeric property ID (from env or fallback)
-  const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Fallback to a default property ID
+  // Check if client is an error object (returned when there's an issue connecting to GA)
+  if ('error' in client) {
+    console.error(`Google Analytics client error in getTrafficSources: ${client.error} - ${client.message}`);
+    return { 
+      error: client.error,
+      details: client.message || 'Unknown error with Google Analytics client'
+    };
+  }
+  
+  // Get GA4 property ID from environment variable or use the default
+  const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
+  // Formatted property ID required by the Google Analytics Data API
   const formattedPropertyId = `properties/${propertyId}`;
   
-  console.log(`Using Google Analytics property ID: ${propertyId}`);
-  console.log(`Making Google Analytics API request for property: ${formattedPropertyId}`);
+  console.log(`Using Google Analytics property ID: ${propertyId} (formatted as ${formattedPropertyId})`);
 
   try {
     // Run the traffic sources report
