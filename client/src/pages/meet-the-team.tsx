@@ -551,7 +551,7 @@ export default function TeamPage() {
       {/* Footer */}
       <footer className="bg-gray-100 dark:bg-[#01162f] text-gray-600 dark:text-gray-300 py-12">
         <div className="container mx-auto px-4">
-          <div className="flex justify-start mb-8">
+          <div className="flex justify-center w-full mb-8">
             <img 
               src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
               alt="OPIAN Rewards" 
