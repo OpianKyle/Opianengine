@@ -148,8 +148,8 @@ export default function TeamPage() {
       {/* Header */}
       <header className="bg-white dark:bg-[#01162f] text-foreground dark:text-white sticky top-0 z-50">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-center md:justify-between py-4">
-            <div className="flex items-center justify-center w-full md:w-auto mb-4 md:mb-0">
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center">
               <img 
                 src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
                 alt="OPIAN Rewards" 
@@ -200,12 +200,12 @@ export default function TeamPage() {
             </div>
             
             {/* Mobile buttons */}
-            <div className="flex lg:hidden items-center justify-center space-x-3 w-full">
+            <div className="flex lg:hidden items-center space-x-3">
               <ThemeToggle />
               <Button 
                 variant="ghost" 
                 size="sm"
-                className="text-[#43EB3E] p-1"
+                className="ml-auto text-[#43EB3E] p-1"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
