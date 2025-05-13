@@ -56,7 +56,14 @@ const createGAClient = async () => {
     }
 
     // Parse the measurement ID to get property ID
-    const propertyId = process.env.VITE_GA_MEASUREMENT_ID.replace('G-', '');
+    let propertyId = '';
+    if (process.env.VITE_GA_MEASUREMENT_ID) {
+      propertyId = process.env.VITE_GA_MEASUREMENT_ID.replace(/^G-/, '');
+      console.log(`Using Google Analytics property ID: ${propertyId}`);
+    } else {
+      console.error('Missing Google Analytics measurement ID (VITE_GA_MEASUREMENT_ID)');
+      return null;
+    }
     
     // Create the Analytics Data client with the JWT auth
     const analyticsDataClient = new BetaAnalyticsDataClient({ 
@@ -115,7 +122,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
   }
   
   // Google Analytics property ID 
-  const propertyId = process.env.VITE_GA_MEASUREMENT_ID?.replace('G-', '') || '';
+  const propertyId = process.env.VITE_GA_MEASUREMENT_ID?.replace(/^G-/, '') || '';
 
   if (!propertyId) {
     console.error('Google Analytics property ID not configured');
@@ -125,6 +132,9 @@ export async function getSocialMediaTraffic(days: number = 30) {
       total: { sessions: 0, users: 0 } 
     };
   }
+  
+  console.log(`Making Google Analytics API request for property: ${propertyId}`);
+  
   
   console.log(`Attempting to fetch Google Analytics data for property ID: ${propertyId}`);
   console.log(`Time range: ${days} days ago to today`);
@@ -274,7 +284,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
  * @returns Array with device type data
  */
 export async function getDeviceTypes(days: number = 30) {
-  const client = createGAClient();
+  const client = await createGAClient();
   
   if (!client) {
     return { error: 'Google Analytics client could not be initialized' };
@@ -337,7 +347,7 @@ export async function getDeviceTypes(days: number = 30) {
  * @returns Array with traffic source data
  */
 export async function getTrafficSources(days: number = 30, limit: number = 10) {
-  const client = createGAClient();
+  const client = await createGAClient();
   
   if (!client) {
     return { error: 'Google Analytics client could not be initialized' };
