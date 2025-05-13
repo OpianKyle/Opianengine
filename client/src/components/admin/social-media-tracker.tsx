@@ -5,10 +5,11 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Loader2, TrendingUp, Users, BarChart2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Loader2, TrendingUp, Users, BarChart2, AlertTriangle, RefreshCw, Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { saveAs } from 'file-saver';
 
 type SocialTrafficData = {
   results: Array<{
@@ -33,6 +34,59 @@ type DeviceType = {
 type TrafficSource = {
   source: string;
   sessions: number;
+};
+
+// Type definition for items we'll export
+type ExportItem = {
+  name?: string;
+  source?: string;
+  device?: string;
+  sessions: number;
+  users?: number;
+  percentage?: number;
+  color?: string;
+};
+
+// Helper function to convert array data to CSV format
+const convertToCSV = (data: ExportItem[], headers: string[]) => {
+  if (!data || data.length === 0) return '';
+  
+  // Create the CSV header row
+  const headerRow = headers.join(',');
+  
+  // Create the data rows
+  const dataRows = data.map(item => {
+    return headers.map(header => {
+      // Handle special case for header mappings
+      let value = '';
+      
+      switch (header) {
+        case 'Network':
+          value = item.name || item.source || item.device || '';
+          break;
+        case 'Sessions':
+          value = item.sessions || 0;
+          break;
+        case 'Users':
+          value = item.users || 0;
+          break;
+        case 'Percentage':
+          // This will be calculated on export
+          value = '';
+          break;
+        default:
+          // For any other headers, try to get the value from the item
+          value = item[header.toLowerCase()] || '';
+      }
+      
+      // Quote strings containing commas
+      const stringValue = String(value);
+      return stringValue.includes(',') ? `"${stringValue}"` : stringValue;
+    }).join(',');
+  });
+  
+  // Combine header and data rows
+  return [headerRow, ...dataRows].join('\n');
 };
 
 const SocialMediaTracker: React.FC = () => {
@@ -541,6 +595,80 @@ const SocialMediaTracker: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['/api/analytics/device-types'] });
     queryClient.invalidateQueries({ queryKey: ['/api/analytics/traffic-sources'] });
   };
+  
+  // Function to export social media data to CSV
+  const exportSocialData = () => {
+    if (!socialData || !socialData.results || socialData.results.length === 0) return;
+    
+    const totalSessions = socialData.total.sessions;
+    
+    // Add percentage calculations to data
+    const exportData = socialData.results.map(item => ({
+      ...item,
+      percentage: totalSessions ? Number(((item.sessions / totalSessions) * 100).toFixed(1)) : 0
+    }));
+    
+    // Define headers for CSV
+    const headers = ['Network', 'Sessions', 'Users', 'Percentage'];
+    
+    // Convert data to CSV
+    const csvContent = convertToCSV(exportData, headers);
+    
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    saveAs(blob, `social-media-traffic-${timeRange}-days.csv`);
+  };
+  
+  // Function to export device data to CSV
+  const exportDeviceData = () => {
+    if (!deviceData || deviceData.length === 0) return;
+    
+    const totalSessions = deviceData.reduce((sum, device) => sum + device.sessions, 0);
+    
+    // Add percentage calculations to data
+    const exportData = deviceData.map(item => ({
+      ...item,
+      percentage: totalSessions ? Number(((item.sessions / totalSessions) * 100).toFixed(1)) : 0
+    }));
+    
+    // Define headers for CSV
+    const headers = ['Network', 'Sessions', 'Percentage'];
+    
+    // Convert data to CSV
+    const csvContent = convertToCSV(exportData, headers);
+    
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    saveAs(blob, `device-types-${timeRange}-days.csv`);
+  };
+  
+  // Function to export traffic sources data to CSV
+  const exportSourcesData = () => {
+    if (!sourceData || sourceData.length === 0) return;
+    
+    // Sort and limit to top 10
+    const sortedData = [...sourceData]
+      .sort((a, b) => b.sessions - a.sessions)
+      .slice(0, 10);
+    
+    const totalSessions = sortedData.reduce((sum, source) => sum + source.sessions, 0);
+    
+    // Add percentage calculations to data
+    const exportData = sortedData.map(item => ({
+      ...item,
+      percentage: totalSessions ? Number(((item.sessions / totalSessions) * 100).toFixed(1)) : 0
+    }));
+    
+    // Define headers for CSV
+    const headers = ['Network', 'Sessions', 'Percentage'];
+    
+    // Convert data to CSV
+    const csvContent = convertToCSV(exportData, headers);
+    
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    saveAs(blob, `traffic-sources-${timeRange}-days.csv`);
+  };
 
   return (
     <div className="space-y-6">
@@ -589,14 +717,50 @@ const SocialMediaTracker: React.FC = () => {
         </TabsList>
         
         <TabsContent value="social" className="space-y-4">
+          <div className="flex justify-end mb-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={exportSocialData}
+              disabled={!socialData || !socialData.results || socialData.results.length === 0}
+              className="flex items-center"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
           {renderSocialChart()}
         </TabsContent>
         
         <TabsContent value="devices">
+          <div className="flex justify-end mb-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={exportDeviceData}
+              disabled={!deviceData || deviceData.length === 0}
+              className="flex items-center"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
           {renderDeviceChart()}
         </TabsContent>
         
         <TabsContent value="sources">
+          <div className="flex justify-end mb-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={exportSourcesData}
+              disabled={!sourceData || sourceData.length === 0}
+              className="flex items-center"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
           {renderSourcesChart()}
         </TabsContent>
       </Tabs>
