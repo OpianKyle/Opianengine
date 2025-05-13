@@ -5,12 +5,11 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Loader2, TrendingUp, Users, BarChart2, AlertTriangle, RefreshCw, Download, Globe, Monitor, Smartphone, Tablet } from 'lucide-react';
+import { Loader2, TrendingUp, Users, BarChart2, AlertTriangle, RefreshCw, Download, Globe, Monitor, Smartphone, Tablet, Facebook, Twitter, Instagram, Linkedin, Youtube, Search, MessagesSquare, ArrowUpDown, MessageCircle, Share2, Mail } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { saveAs } from 'file-saver';
-import { FaFacebook, FaTwitter, FaInstagram, FaPinterest, FaLinkedin, FaYoutube, FaGoogle, FaReddit, FaTiktok, FaMedium } from 'react-icons/fa';
 
 type SocialTrafficData = {
   results: Array<{
@@ -80,16 +79,17 @@ const DEVICE_COLORS = {
 const getSourceIcon = (source: string) => {
   const sourceLower = source.toLowerCase();
   
-  if (sourceLower.includes('facebook')) return <FaFacebook className="text-[#1877F2]" />;
-  if (sourceLower.includes('twitter') || sourceLower.includes('x.com')) return <FaTwitter className="text-[#1DA1F2]" />;
-  if (sourceLower.includes('instagram')) return <FaInstagram className="text-[#E4405F]" />;
-  if (sourceLower.includes('linkedin')) return <FaLinkedin className="text-[#0A66C2]" />;
-  if (sourceLower.includes('pinterest')) return <FaPinterest className="text-[#BD081C]" />;
-  if (sourceLower.includes('youtube')) return <FaYoutube className="text-[#FF0000]" />;
-  if (sourceLower.includes('google')) return <FaGoogle className="text-[#4285F4]" />;
-  if (sourceLower.includes('reddit')) return <FaReddit className="text-[#FF4500]" />;
-  if (sourceLower.includes('tiktok')) return <FaTiktok className="text-black" />;
-  if (sourceLower.includes('medium')) return <FaMedium className="text-[#00AB6C]" />;
+  if (sourceLower.includes('facebook')) return <Facebook className="text-[#1877F2]" />;
+  if (sourceLower.includes('twitter') || sourceLower.includes('x.com')) return <Twitter className="text-[#1DA1F2]" />;
+  if (sourceLower.includes('instagram')) return <Instagram className="text-[#E4405F]" />;
+  if (sourceLower.includes('linkedin')) return <Linkedin className="text-[#0A66C2]" />;
+  if (sourceLower.includes('pinterest')) return <Share2 className="text-[#BD081C]" />;
+  if (sourceLower.includes('youtube')) return <Youtube className="text-[#FF0000]" />;
+  if (sourceLower.includes('google')) return <Search className="text-[#4285F4]" />;
+  if (sourceLower.includes('reddit')) return <MessageCircle className="text-[#FF4500]" />;
+  if (sourceLower.includes('medium')) return <MessagesSquare className="text-[#00AB6C]" />;
+  if (sourceLower.includes('email') || sourceLower.includes('mail')) return <Mail className="text-[#8B5CF6]" />;
+  if (sourceLower.includes('direct')) return <ArrowUpDown className="text-[#6B7280]" />;
   
   // Default icon for other sources
   return <Globe className="text-gray-500" />;
@@ -267,9 +267,11 @@ const SocialMediaTracker: React.FC = () => {
                   return (
                     <TableRow key={network.id}>
                       <TableCell>
-                        <div className="flex items-center">
-                          <div className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: network.color }}></div>
-                          {network.name}
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block w-6 h-6 flex items-center justify-center">
+                            {getSourceIcon(network.name)}
+                          </span>
+                          <span>{network.name}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-medium">{network.sessions}</TableCell>
@@ -415,10 +417,11 @@ const SocialMediaTracker: React.FC = () => {
                   return (
                     <TableRow key={`device-row-${index}`}>
                       <TableCell>
-                        <div className="flex items-center">
-                          {/* @ts-ignore */}
-                          <div className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: device.color }}></div>
-                          {device.device}
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block w-6 h-6 flex items-center justify-center">
+                            {getDeviceIcon(device.device)}
+                          </span>
+                          <span>{device.device}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-medium">{device.sessions}</TableCell>
