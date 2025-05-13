@@ -49,7 +49,7 @@ const createGAClient = async (): Promise<BetaAnalyticsDataClient | GAClientError
     console.log(`Using Google Analytics credentials from ${credentialsPath}`);
     
     // Get GA4 property ID from environment variable or use the default
-    const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Default property ID from project
+    const propertyId = process.env.GA_PROPERTY_ID || '488980111'; // Default property ID from project
     
     // Formatted property ID required by the Google Analytics Data API
     const formattedPropertyId = `properties/${propertyId}`;
@@ -174,7 +174,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
   const analyticsClient: BetaAnalyticsDataClient = client;
   
   // Get GA4 property ID from environment variable or use the default
-  const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
+  const propertyId = process.env.GA_PROPERTY_ID || '488980111'; 
   // Formatted property ID required by the Google Analytics Data API
   const formattedPropertyId = `properties/${propertyId}`;
   
