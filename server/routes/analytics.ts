@@ -36,10 +36,32 @@ router.get('/social-traffic', requireAdmin, async (req, res) => {
     const data = await getSocialMediaTraffic(days);
     
     if (data.error) {
+      // Create default results for error case too
+      const defaultSocialNetworks = [
+        'Facebook', 
+        'Instagram', 
+        'Twitter', 
+        'LinkedIn', 
+        'Pinterest', 
+        'YouTube', 
+        'Reddit', 
+        'TikTok',
+        'WhatsApp'
+      ];
+      
+      const defaultResults = defaultSocialNetworks.map((network, index) => ({
+        id: `social-default-${index}`,
+        name: network,
+        source: network,
+        sessions: 0,
+        users: 0,
+        color: getSocialNetworkColor(network),
+      }));
+      
       return res.status(500).json({ 
         error: data.error,
         details: data.details || 'Unknown error',
-        results: [],
+        results: defaultResults,
         total: { sessions: 0, users: 0 }
       });
     }
@@ -47,14 +69,54 @@ router.get('/social-traffic', requireAdmin, async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error('Error fetching social media traffic:', error);
+    // Create default social platform data
+    const defaultSocialNetworks = [
+      'Facebook', 
+      'Instagram', 
+      'Twitter', 
+      'LinkedIn', 
+      'Pinterest', 
+      'YouTube', 
+      'Reddit', 
+      'TikTok',
+      'WhatsApp'
+    ];
+    
+    const defaultResults = defaultSocialNetworks.map((network, index) => ({
+      id: `social-default-${index}`,
+      name: network,
+      source: network,
+      sessions: 0,
+      users: 0,
+      color: getSocialNetworkColor(network),
+    }));
+    
     res.status(500).json({ 
       error: 'Failed to fetch social media traffic data',
       details: (error as Error).message,
-      results: [],
+      results: defaultResults,
       total: { sessions: 0, users: 0 }
     });
   }
 });
+
+// Helper function to get color for social networks
+function getSocialNetworkColor(network: string): string {
+  const colorMap: Record<string, string> = {
+    'Facebook': '#1877F2',
+    'Instagram': '#E1306C',
+    'Twitter': '#1DA1F2', 
+    'LinkedIn': '#0077B5',
+    'Pinterest': '#E60023',
+    'YouTube': '#FF0000',
+    'Reddit': '#FF4500',
+    'TikTok': '#000000',
+    'WhatsApp': '#25D366',
+    'Other': '#808080'
+  };
+  
+  return colorMap[network] || '#808080';
+}
 
 // Get device types data
 router.get('/device-types', requireAdmin, async (req, res) => {

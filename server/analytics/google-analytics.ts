@@ -338,10 +338,33 @@ export async function getSocialMediaTraffic(days: number = 30) {
     };
   } catch (error) {
     console.error('Error fetching social media traffic from Google Analytics:', error);
+    
+    // Create default results with 0 values for all networks even when there's an error
+    const defaultNetworks = [
+      'Facebook', 
+      'Instagram', 
+      'Twitter', 
+      'LinkedIn', 
+      'Pinterest', 
+      'YouTube', 
+      'Reddit', 
+      'TikTok',
+      'WhatsApp'
+    ];
+    
+    const defaultResults = defaultNetworks.map((network, index) => ({
+      id: `social-default-${index}`,
+      name: network,
+      source: network,
+      sessions: 0,
+      users: 0,
+      color: socialNetworkColors[network],
+    }));
+    
     return { 
       error: 'Error fetching social media traffic data',
       details: (error as Error).message,
-      results: [],
+      results: defaultResults,
       total: { sessions: 0, users: 0 }
     };
   }
