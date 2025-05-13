@@ -8,6 +8,8 @@ import { Users, ShoppingBag, TrendingUp, Award } from 'lucide-react';
 import { formatTransactionType } from "@/lib/utils";
 import { getQueryFn } from "@/lib/queryClient";
 import AnimatedMetric from "@/components/shared/animated-metric";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SocialMediaTracker from "@/components/admin/social-media-tracker";
 
 interface DashboardStats {
   totalCustomers: number;
@@ -140,80 +142,93 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-bold text-[#1b75bc]">Analytics Dashboard</h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {dashboardStats.map((stat, index) => (
-          <AnimatedMetric
-            key={stat.title}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            description={stat.description}
-            isLoading={isLoading}
-            delay={100 + (index * 150)} // Stagger the animations
-            colorScheme={
-              index === 0 ? 'primary' :
-              index === 1 ? 'success' :
-              index === 2 ? 'warning' :
-              'default'
-            }
-          />
-        ))}
-      </div>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="social">Social Media Traffic</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {dashboardStats.map((stat, index) => (
+              <AnimatedMetric
+                key={stat.title}
+                title={stat.title}
+                value={stat.value}
+                icon={stat.icon}
+                description={stat.description}
+                isLoading={isLoading}
+                delay={100 + (index * 150)} // Stagger the animations
+                colorScheme={
+                  index === 0 ? 'primary' :
+                  index === 1 ? 'success' :
+                  index === 2 ? 'warning' :
+                  'default'
+                }
+              />
+            ))}
+          </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="border-b border-border/40">
-            <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Points Transaction History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats?.recentTransactions || []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line 
-                    type="monotone" 
-                    dataKey="points" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader className="border-b border-border/40">
+                <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Points Transaction History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={stats?.recentTransactions || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line 
+                        type="monotone" 
+                        dataKey="points" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="border-b border-border/40">
-            <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Transaction Types Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {pieChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader className="border-b border-border/40">
+                <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Transaction Types Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="social">
+          <SocialMediaTracker />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
