@@ -363,8 +363,8 @@ export default function HomePage() {
       {/* Navigation */}
       <header className="bg-white dark:bg-[#01162f] text-foreground dark:text-white sticky top-0 z-50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center">
+          <div className="flex flex-col md:flex-row items-center justify-center md:justify-between py-4">
+            <div className="flex items-center justify-center w-full md:w-auto mb-4 md:mb-0">
               <img
                 src={theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'}
                 alt="OPIAN Rewards"
@@ -378,7 +378,7 @@ export default function HomePage() {
             </div>
             
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex space-x-8">
+            <nav className="hidden lg:flex space-x-8 justify-center">
               <a href="#" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Home</a>
               <a href="/how-it-works" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">How It Works</a>
               <a href="/meet-the-team" className="text-foreground dark:text-white hover:text-[#43EB3E] transition-colors">Meet The Team</a>
@@ -386,7 +386,7 @@ export default function HomePage() {
             </nav>
             
             {/* Desktop buttons */}
-            <div className="hidden lg:flex items-center space-x-4">
+            <div className="hidden lg:flex items-center space-x-4 justify-center">
               <ThemeToggle />
               <Button 
                 variant="outline" 
@@ -404,12 +404,12 @@ export default function HomePage() {
             </div>
             
             {/* Mobile buttons */}
-            <div className="flex lg:hidden items-center space-x-3">
+            <div className="flex lg:hidden items-center justify-center space-x-3 w-full">
               <ThemeToggle />
               <Button 
                 variant="ghost" 
                 size="sm"
-                className="ml-auto text-[#43EB3E] p-1"
+                className="text-[#43EB3E] p-1"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
