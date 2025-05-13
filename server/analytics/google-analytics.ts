@@ -2,7 +2,7 @@ import { BetaAnalyticsDataClient } from '@google-analytics/data';
 import { JWT } from 'google-auth-library';
 
 // Create a client with service account credentials
-const createGAClient = () => {
+const createGAClient = async () => {
   try {
     // Check for required environment variables
     if (!process.env.GOOGLE_ANALYTICS_PRIVATE_KEY || !process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL) {
@@ -10,18 +10,86 @@ const createGAClient = () => {
       return null;
     }
 
-    // Fixing private key format (environment variables can escape newlines)
-    const privateKey = process.env.GOOGLE_ANALYTICS_PRIVATE_KEY.replace(/\\n/g, '\n');
+    if (!process.env.VITE_GA_MEASUREMENT_ID) {
+      console.error('Missing Google Analytics Measurement ID (VITE_GA_MEASUREMENT_ID)');
+      return null;
+    }
 
-    // Create a JWT auth client
+    // Debug information to help diagnose issues
+    console.log('GA Credentials check:', {
+      hasPrivateKey: !!process.env.GOOGLE_ANALYTICS_PRIVATE_KEY,
+      hasClientEmail: !!process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL,
+      clientEmailStart: process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL?.substring(0, 8) + '...',
+      privateKeyLength: process.env.GOOGLE_ANALYTICS_PRIVATE_KEY?.length,
+      measurementId: process.env.VITE_GA_MEASUREMENT_ID
+    });
+
+    // Fix private key format (Replit environment variables can escape newlines)
+    let privateKey = process.env.GOOGLE_ANALYTICS_PRIVATE_KEY;
+    
+    // Handle different formats of private key from environment variables
+    if (privateKey.includes('\\n')) {
+      privateKey = privateKey.replace(/\\n/g, '\n');
+    }
+    
+    // If the key doesn't start with BEGIN PRIVATE KEY, it's likely not formatted correctly
+    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+      console.error('Private key appears to be malformed, missing BEGIN PRIVATE KEY');
+      return null;
+    }
+
+    // Create a JWT auth client with proper error handling
     const auth = new JWT({
       email: process.env.GOOGLE_ANALYTICS_CLIENT_EMAIL,
       key: privateKey,
       scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
     });
 
-    // Create the Analytics Data client
-    const analyticsDataClient = new BetaAnalyticsDataClient({ auth });
+    // Test the authentication before proceeding
+    try {
+      // Attempt to get a token to verify authentication works
+      await auth.authorize();
+      console.log('Google Analytics authentication successful');
+    } catch (authError) {
+      console.error('Google Analytics authentication failed:', authError);
+      return null;
+    }
+
+    // Parse the measurement ID to get property ID
+    const propertyId = process.env.VITE_GA_MEASUREMENT_ID.replace('G-', '');
+    
+    // Create the Analytics Data client with the JWT auth
+    const analyticsDataClient = new BetaAnalyticsDataClient({ 
+      auth,
+      projectId: propertyId
+    });
+    
+    console.log('Successfully created Google Analytics client');
+    
+    // Verify the client can connect to the API
+    try {
+      // Make a simple test request to verify connectivity
+      const testRequest = {
+        property: `properties/${propertyId}`,
+        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+        metrics: [{ name: 'sessions' }],
+      };
+      
+      await analyticsDataClient.runReport(testRequest);
+      console.log('Successfully connected to Google Analytics API');
+    } catch (apiError) {
+      console.error('Error connecting to Google Analytics API:', apiError);
+      console.error('API Error code:', apiError.code);
+      console.error('API Error details:', apiError.details);
+      
+      // Check for permission issues
+      if (apiError.message && apiError.message.includes('permission')) {
+        console.error('Permission denied: Make sure the service account has access to the GA4 property');
+      }
+      
+      return null;
+    }
+    
     return analyticsDataClient;
   } catch (error) {
     console.error('Error creating Google Analytics client:', error);
@@ -35,18 +103,31 @@ const createGAClient = () => {
  * @returns Object with social media traffic data
  */
 export async function getSocialMediaTraffic(days: number = 30) {
-  const client = createGAClient();
+  const client = await createGAClient();
   
   if (!client) {
-    return { error: 'Google Analytics client could not be initialized' };
+    console.error('Failed to create Google Analytics client in getSocialMediaTraffic');
+    return { 
+      error: 'Google Analytics client could not be initialized',
+      results: [],
+      total: { sessions: 0, users: 0 } 
+    };
   }
   
   // Google Analytics property ID 
   const propertyId = process.env.VITE_GA_MEASUREMENT_ID?.replace('G-', '') || '';
 
   if (!propertyId) {
-    return { error: 'Google Analytics property ID not configured' };
+    console.error('Google Analytics property ID not configured');
+    return { 
+      error: 'Google Analytics property ID not configured',
+      results: [],
+      total: { sessions: 0, users: 0 } 
+    };
   }
+  
+  console.log(`Attempting to fetch Google Analytics data for property ID: ${propertyId}`);
+  console.log(`Time range: ${days} days ago to today`);
 
   try {
     // Colors for different social networks

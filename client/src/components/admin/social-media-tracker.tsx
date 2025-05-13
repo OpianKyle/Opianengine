@@ -329,8 +329,22 @@ const SocialMediaTracker: React.FC = () => {
       <Card className="mt-6">
         <CardContent className="pt-6">
           <div className="flex flex-col items-center justify-center py-10">
-            <p className="text-red-500 mb-2">Error loading analytics data</p>
-            <p className="text-sm text-muted-foreground">{socialData?.error || "Check your Google Analytics API configuration"}</p>
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <AlertTriangle className="h-8 w-8 text-red-500" />
+            </div>
+            <p className="text-red-500 text-lg font-semibold mb-2">Error loading analytics data</p>
+            <p className="text-sm text-muted-foreground text-center mb-4">
+              {socialData?.error || "Unable to access Google Analytics data"}
+            </p>
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-md max-w-lg text-sm">
+              <p className="font-medium text-amber-800 mb-2">Troubleshooting steps:</p>
+              <ol className="text-amber-700 space-y-2 list-decimal pl-4">
+                <li>Verify that your Google Analytics account is properly configured</li>
+                <li>Ensure the service account has access to the Google Analytics property</li>
+                <li>Check that the GOOGLE_ANALYTICS_PRIVATE_KEY and GOOGLE_ANALYTICS_CLIENT_EMAIL are correctly set</li>
+                <li>Confirm that the VITE_GA_MEASUREMENT_ID is a valid Google Analytics 4 property ID</li>
+              </ol>
+            </div>
           </div>
         </CardContent>
       </Card>
