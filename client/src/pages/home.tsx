@@ -420,38 +420,38 @@ export default function HomePage() {
           {/* Mobile Navigation - Dropdown */}
           {mobileMenuOpen && (
             <div className="lg:hidden py-4 px-2 space-y-3 bg-white dark:bg-[#01162f] border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top">
-              <nav className="flex flex-col space-y-3">
+              <nav className="flex flex-col space-y-3 items-center text-center">
                 <a 
                   href="#" 
-                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors w-full text-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Home
                 </a>
                 <a 
                   href="/how-it-works" 
-                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors w-full text-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   How It Works
                 </a>
                 <a 
                   href="/meet-the-team" 
-                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors w-full text-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Meet The Team
                 </a>
                 <a 
                   href="#" 
-                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
+                  className="text-foreground dark:text-white hover:text-[#43EB3E] px-2 py-1.5 rounded-md hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors w-full text-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   FAQ
                 </a>
               </nav>
               
-              <div className="flex space-x-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <div className="flex space-x-2 pt-2 border-t border-gray-100 dark:border-gray-800 justify-center">
                 <Button 
                   variant="outline" 
                   className="flex-1 bg-transparent border border-[#43EB3E] text-[#43EB3E] hover:bg-[#43EB3E] hover:text-black transition-all duration-300"
