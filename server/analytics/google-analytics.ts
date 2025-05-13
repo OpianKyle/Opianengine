@@ -9,14 +9,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Path to the Google Analytics credentials file
-const credentialsPath = path.join(__dirname, '../credentials/google-analytics-key.json');
+const credentialsPath = path.join(__dirname, './opianrewards-459707-8efa68d16b95.json');
 
 // Create a client with service account credentials from JSON file
 const createGAClient = async () => {
   try {
+    console.log(`Attempting to use Google Analytics credentials file at: ${credentialsPath}`);
+    
     // Check if credentials file exists
     if (!fs.existsSync(credentialsPath)) {
       console.error(`SETUP ERROR: Google Analytics credentials file not found at ${credentialsPath}`);
+      console.error('Please ensure the opianrewards-459707-8efa68d16b95.json file is in the server/analytics/ directory');
       return {
         error: 'missing_credentials_file',
         message: `Google Analytics credentials file not found at ${credentialsPath}`
