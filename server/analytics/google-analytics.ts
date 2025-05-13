@@ -4,6 +4,24 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
+// Helper function to get color for social networks
+function getNetworkColor(network: string): string {
+  const colorMap: Record<string, string> = {
+    'Facebook': '#1877F2',
+    'Instagram': '#E1306C',
+    'Twitter': '#1DA1F2', 
+    'LinkedIn': '#0077B5',
+    'Pinterest': '#E60023',
+    'YouTube': '#FF0000',
+    'Reddit': '#FF4500',
+    'TikTok': '#000000',
+    'WhatsApp': '#25D366',
+    'Other': '#808080'
+  };
+  
+  return colorMap[network] || '#808080';
+}
+
 // Get the directory path for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -182,19 +200,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
   console.log(`Time range: ${days} days ago to today`);
 
   try {
-    // Colors for different social networks
-    const socialNetworkColors: Record<string, string> = {
-      'Facebook': '#1877F2',
-      'Instagram': '#E1306C',
-      'Twitter': '#1DA1F2', 
-      'LinkedIn': '#0077B5',
-      'Pinterest': '#E60023',
-      'YouTube': '#FF0000',
-      'Reddit': '#FF4500',
-      'TikTok': '#000000',
-      'WhatsApp': '#25D366',
-      'Other': '#808080'
-    };
+    // Using the getNetworkColor function to get colors for different social networks
     
     // Default social networks to ensure they all appear even with 0 traffic
     const defaultSocialNetworks = [
@@ -295,7 +301,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
         source: sourceName,
         sessions,
         users,
-        color: socialNetworkColors[network] || '#808080',
+        color: getNetworkColor(network),
       };
     });
 
