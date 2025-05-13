@@ -523,7 +523,14 @@ const SocialMediaTracker: React.FC = () => {
                     
                   return (
                     <TableRow key={`source-${index}`}>
-                      <TableCell className="font-medium">{source.source}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block w-6 h-6 flex items-center justify-center">
+                            {getSourceIcon(source.source)}
+                          </span>
+                          <span className="font-medium">{source.source}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">{source.sessions}</TableCell>
                       <TableCell className="text-right">{percentage}%</TableCell>
                     </TableRow>
