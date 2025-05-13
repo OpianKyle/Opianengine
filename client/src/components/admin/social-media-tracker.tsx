@@ -39,24 +39,51 @@ const SocialMediaTracker: React.FC = () => {
   const { data: socialData, isLoading: socialLoading, error: socialError } = useQuery<SocialTrafficData>({
     queryKey: ['/api/analytics/social-traffic', timeRange],
     queryFn: async () => {
-      const res = await apiRequest('GET', `/api/analytics/social-traffic?days=${timeRange}`);
-      return await res.json();
+      try {
+        const res = await apiRequest('GET', `/api/analytics/social-traffic?days=${timeRange}`);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `API request failed with status: ${res.status}`);
+        }
+        return await res.json();
+      } catch (err) {
+        console.error('Social traffic API error:', err);
+        throw err;
+      }
     },
   });
   
   const { data: deviceData, isLoading: deviceLoading } = useQuery<DeviceType[]>({
     queryKey: ['/api/analytics/device-types', timeRange],
     queryFn: async () => {
-      const res = await apiRequest('GET', `/api/analytics/device-types?days=${timeRange}`);
-      return await res.json();
+      try {
+        const res = await apiRequest('GET', `/api/analytics/device-types?days=${timeRange}`);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `API request failed with status: ${res.status}`);
+        }
+        return await res.json();
+      } catch (err) {
+        console.error('Device types API error:', err);
+        throw err;
+      }
     },
   });
   
   const { data: sourceData, isLoading: sourceLoading } = useQuery<TrafficSource[]>({
     queryKey: ['/api/analytics/traffic-sources', timeRange],
     queryFn: async () => {
-      const res = await apiRequest('GET', `/api/analytics/traffic-sources?days=${timeRange}&limit=10`);
-      return await res.json();
+      try {
+        const res = await apiRequest('GET', `/api/analytics/traffic-sources?days=${timeRange}&limit=10`);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `API request failed with status: ${res.status}`);
+        }
+        return await res.json();
+      } catch (err) {
+        console.error('Traffic sources API error:', err);
+        throw err;
+      }
     },
   });
   
