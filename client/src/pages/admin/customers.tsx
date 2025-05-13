@@ -669,10 +669,15 @@ export default function AdminCustomers() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between gap-4 sm:items-center">
-        <h1 className="text-2xl sm:text-3xl font-bold">Customer Management</h1>
-        <div className="flex flex-wrap gap-2">
+    <>
+      <AdminSEO 
+        title="Customer Management" 
+        description="OPIAN Rewards customer management system - Track and manage customer data, points, and account status"
+      />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between gap-4 sm:items-center">
+          <h1 className="text-2xl sm:text-3xl font-bold">Customer Management</h1>
+          <div className="flex flex-wrap gap-2">
           {selectedCustomerIds.length > 0 && (
             <>
               <Button 

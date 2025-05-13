@@ -799,5 +799,6 @@ export default function AdminLeads() {
         </Dialog>
       )}
     </div>
+    </>
   );
 }
