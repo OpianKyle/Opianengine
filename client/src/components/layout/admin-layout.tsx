@@ -23,6 +23,9 @@ import { prefetchAdminData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/providers/theme-provider";
+import { useAnalytics } from "@/hooks/use-analytics";
+import { initGA } from "@/lib/analytics";
+import { Helmet } from "react-helmet";
 
 // Helper function for section determination
 const getSectionFromHref = (href: string): 'dashboard' | 'users' | 'agents' | 'products' | 'rewards' | 'quotes' | 'redemptions' | 'logs' | 'leads' | 'all' => {
@@ -45,6 +48,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasPrefetched, setHasPrefetched] = useState(false);
+  
+  // Use analytics hook to track page views in admin area
+  useAnalytics();
+  
+  // Initialize Google Analytics
+  useEffect(() => {
+    initGA();
+  }, []);
 
   // Prefetch section-specific data when the layout is first loaded
   useEffect(() => {

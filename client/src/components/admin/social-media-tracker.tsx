@@ -366,10 +366,16 @@ const SocialMediaTracker: React.FC = () => {
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-md max-w-lg text-sm">
               <p className="font-medium text-amber-800 mb-2">Troubleshooting steps:</p>
               <ol className="text-amber-700 space-y-2 list-decimal pl-4">
+                <li className="font-medium">Add the Google service account to your GA4 property:
+                  <div className="mt-1 p-2 bg-white rounded border border-amber-100">
+                    <p className="break-all font-mono text-xs">social-tracker@opianrewards-459707.iam.gserviceaccount.com</p>
+                    <p className="text-xs mt-1">Go to: GA4 Admin → Access Management → Add → Add users</p>
+                    <p className="text-xs mt-1">Give it "Editor" permissions</p>
+                  </div>
+                </li>
                 <li>Verify that your Google Analytics account is properly configured</li>
-                <li>Ensure the service account has access to the Google Analytics property</li>
-                <li>Check that the GOOGLE_ANALYTICS_PRIVATE_KEY and GOOGLE_ANALYTICS_CLIENT_EMAIL are correctly set</li>
-                <li>Confirm that the VITE_GA_MEASUREMENT_ID is a valid Google Analytics 4 property ID</li>
+                <li>Check that your credentials file is properly set up in the server</li>
+                <li>Confirm that the GA_PROPERTY_ID is set to your numeric property ID</li>
               </ol>
             </div>
           </div>

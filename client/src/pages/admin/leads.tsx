@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { AdminSEO } from "@/components/admin/admin-seo";
 import {
   Card,
   CardContent,
@@ -380,20 +381,25 @@ export default function AdminLeads() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold">Lead Management</h1>
-        
-        <Button 
-          variant="outline" 
-          className="ml-auto" 
-          onClick={exportLeadsToCSV}
-          disabled={!data?.items?.length}
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
-      </div>
+    <>
+      <AdminSEO 
+        title="Lead Management" 
+        description="OPIAN Rewards lead management system - Track and manage potential customer leads"
+      />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1 className="text-3xl font-bold">Lead Management</h1>
+          
+          <Button 
+            variant="outline" 
+            className="ml-auto" 
+            onClick={exportLeadsToCSV}
+            disabled={!data?.items?.length}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
 
       {/* Filters */}
       <Card>

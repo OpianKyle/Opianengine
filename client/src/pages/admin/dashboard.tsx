@@ -10,6 +10,7 @@ import { getQueryFn } from "@/lib/queryClient";
 import AnimatedMetric from "@/components/shared/animated-metric";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SocialMediaTracker from "@/components/admin/social-media-tracker";
+import { AdminSEO } from "@/components/admin/admin-seo";
 
 interface DashboardStats {
   totalCustomers: number;
@@ -28,67 +29,24 @@ interface DashboardStats {
   }>;
 }
 
+// Chart colors
+const CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
+
 export default function AdminDashboard() {
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/dashboard/stats"],
     queryFn: getQueryFn({ on401: "throw" }),
   });
+  
+  // Get current time of day for greeting
+  const currentDate = new Date();
+  const timeOfDay = currentDate.getHours() < 12 
+    ? 'morning' 
+    : currentDate.getHours() < 17 
+      ? 'afternoon' 
+      : 'evening';
 
-  // Skeleton UI rendering
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <div className="h-6 w-48 bg-muted rounded animate-pulse"></div>
-          <div className="h-9 w-64 bg-muted rounded animate-pulse"></div>
-        </div>
-        
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={`stat-skeleton-${i}`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="h-4 w-24 bg-muted rounded animate-pulse"></div>
-                <div className="h-4 w-4 bg-muted rounded-full animate-pulse"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-7 w-16 bg-muted rounded animate-pulse mb-2"></div>
-                <div className="h-3 w-32 bg-muted rounded animate-pulse"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <div className="h-5 w-48 bg-muted rounded animate-pulse"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] bg-muted/30 rounded flex items-center justify-center">
-                <div className="h-40 w-40 rounded-full bg-muted animate-pulse"></div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <div className="h-5 w-48 bg-muted rounded animate-pulse"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] bg-muted/30 rounded flex items-center justify-center">
-                <div className="h-40 w-40 rounded-full bg-muted animate-pulse"></div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div>Error loading dashboard: {error.message}</div>;
-  }
-
+  // Create dashboard stat cards data
   const dashboardStats = [
     {
       title: "Total Customers",
@@ -116,7 +74,7 @@ export default function AdminDashboard() {
     },
   ];
 
-  // Group transactions by type
+  // Process data for pie chart - group transactions by type
   const transactionsByType = (stats?.recentTransactions || []).reduce((acc, t) => {
     acc[t.type] = (acc[t.type] || 0) + 1;
     return acc;
@@ -127,108 +85,183 @@ export default function AdminDashboard() {
     value,
   }));
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
-
-  // Get current date
-  const currentDate = new Date();
-  const timeOfDay = currentDate.getHours() < 12 ? 'morning' : currentDate.getHours() < 17 ? 'afternoon' : 'evening';
-
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold text-muted-foreground">
-          Good {timeOfDay},
-        </h2>
-        <h1 className="text-3xl font-bold text-[#1b75bc]">Analytics Dashboard</h1>
-      </div>
-
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="social">Social Media Traffic</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-6">
+  // Skeleton UI rendering
+  if (isLoading) {
+    return (
+      <>
+        <AdminSEO 
+          title="Dashboard" 
+          description="OPIAN Rewards administrative dashboard - Overview of customers, points, and recent transactions"
+        />
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <div className="h-6 w-48 bg-muted rounded animate-pulse"></div>
+            <div className="h-9 w-64 bg-muted rounded animate-pulse"></div>
+          </div>
+          
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {dashboardStats.map((stat, index) => (
-              <AnimatedMetric
-                key={stat.title}
-                title={stat.title}
-                value={stat.value}
-                icon={stat.icon}
-                description={stat.description}
-                isLoading={isLoading}
-                delay={100 + (index * 150)} // Stagger the animations
-                colorScheme={
-                  index === 0 ? 'primary' :
-                  index === 1 ? 'success' :
-                  index === 2 ? 'warning' :
-                  'default'
-                }
-              />
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={`stat-skeleton-${i}`}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="h-4 w-24 bg-muted rounded animate-pulse"></div>
+                  <div className="h-4 w-4 bg-muted rounded-full animate-pulse"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-7 w-16 bg-muted rounded animate-pulse mb-2"></div>
+                  <div className="h-3 w-32 bg-muted rounded animate-pulse"></div>
+                </CardContent>
+              </Card>
             ))}
           </div>
-
+          
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
-              <CardHeader className="border-b border-border/40">
-                <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Points Transaction History</CardTitle>
+              <CardHeader>
+                <div className="h-5 w-48 bg-muted rounded animate-pulse"></div>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={stats?.recentTransactions || []}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line 
-                        type="monotone" 
-                        dataKey="points" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={2}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div className="h-[300px] bg-muted/30 rounded flex items-center justify-center">
+                  <div className="h-40 w-40 rounded-full bg-muted animate-pulse"></div>
                 </div>
               </CardContent>
             </Card>
-
+            
             <Card>
-              <CardHeader className="border-b border-border/40">
-                <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Transaction Types Distribution</CardTitle>
+              <CardHeader>
+                <div className="h-5 w-48 bg-muted rounded animate-pulse"></div>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="h-[300px] bg-muted/30 rounded flex items-center justify-center">
+                  <div className="h-40 w-40 rounded-full bg-muted animate-pulse"></div>
                 </div>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="social">
-          <SocialMediaTracker />
-        </TabsContent>
-      </Tabs>
-    </div>
+        </div>
+      </>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <>
+        <AdminSEO 
+          title="Dashboard Error" 
+          description="An error occurred loading the OPIAN Rewards dashboard"
+        />
+        <div className="p-8 text-center">
+          <h2 className="text-2xl font-bold text-red-500 mb-4">Error Loading Dashboard</h2>
+          <p className="text-muted-foreground">{error.message}</p>
+        </div>
+      </>
+    );
+  }
+
+  // Main dashboard UI
+  return (
+    <>
+      <AdminSEO 
+        title="Dashboard" 
+        description="OPIAN Rewards administrative dashboard - Overview of customers, points, and recent transactions"
+      />
+      
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold text-muted-foreground">
+            Good {timeOfDay},
+          </h2>
+          <h1 className="text-3xl font-bold text-[#1b75bc]">Analytics Dashboard</h1>
+        </div>
+
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="social">Social Media Traffic</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {dashboardStats.map((stat, index) => (
+                <AnimatedMetric
+                  key={stat.title}
+                  title={stat.title}
+                  value={stat.value}
+                  icon={stat.icon}
+                  description={stat.description}
+                  isLoading={isLoading}
+                  delay={100 + (index * 150)} // Stagger the animations
+                  colorScheme={
+                    index === 0 ? 'primary' :
+                    index === 1 ? 'success' :
+                    index === 2 ? 'warning' :
+                    'default'
+                  }
+                />
+              ))}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader className="border-b border-border/40">
+                  <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Points Transaction History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={stats?.recentTransactions || []}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip />
+                        <Line 
+                          type="monotone" 
+                          dataKey="points" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={2}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="border-b border-border/40">
+                  <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Transaction Types Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieChartData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {pieChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="social">
+            <SocialMediaTracker />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </>
   );
 }
