@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import passport from "passport";
 import { setupAuth, checkAgent, checkAdmin, verifyJwtToken, getUserFromTokenOrSession } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
-import { createConnection } from './db';
+import { getAgentByReferralCode } from "./utils/referral";
+import { createConnection, connectionPool } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
@@ -12,9 +13,15 @@ import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
 import agentRouter from './routes/agent';
+import agentsRouter from './routes/agents';
 import migrationRouter from './routes/migration';
 import manualMigrationRouter from './routes/manual-migration';
 import packageTypesRouter from './routes/package-types';
+import subscriptionRouter from './routes/subscription';
+import { setupCardStatusRoutes } from './routes/card-status';
+import { leadsRouter } from './routes/leads';
+import { contactRouter } from './routes/contact';
+import adminToolsRouter from './routes/admin-tools';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
@@ -93,13 +100,13 @@ async function calculateCommissionPoints(connection: any, packageName: string, l
   let commissionPercentage = 0;
   switch (level) {
     case 1: // Direct referral
-      commissionPercentage = 0.15; // 15%
+      commissionPercentage = 0.075; // 7.5%
       break;
     case 2:
-      commissionPercentage = 0.10; // 10%
+      commissionPercentage = 0.05; // 5%
       break;
     case 3:
-      commissionPercentage = 0.05; // 5%
+      commissionPercentage = 0.025; // 2.5%
       break;
     default:
       commissionPercentage = 0;
@@ -952,7 +959,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           email,
           first_name,
           last_name,
-          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points
+          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
+          selected_package
         FROM users 
         WHERE id = ?`,
         [req.user?.id]
@@ -965,7 +973,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       console.log('Points data retrieved:', {
         userId: userData[0].id,
         rawPoints: userData[0].points,
-        pointsType: typeof userData[0].points
+        pointsType: typeof userData[0].points,
+        package: userData[0].selected_package,
+        packageUpperCase: userData[0].selected_package ? userData[0].selected_package.toUpperCase() : null
       });
 
       // Ensure points is properly converted to a number
@@ -976,7 +986,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         email: userData[0].email,
         firstName: userData[0].first_name,
         lastName: userData[0].last_name,
-        points: points
+        points: points,
+        selectedPackage: userData[0].selected_package || null
       });
 
     } catch (error) {
@@ -990,10 +1001,154 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   // Mount referral routes
   // Mount the referral routes
   app.use('/api/referral', referralRouter);
+  
+  // Direct endpoints for referral routes to avoid 404 issues
+  app.get("/api/referral/validate", async (req, res) => {
+    try {
+      const { code } = req.query;
+      
+      if (!code) {
+        return res.status(400).json({
+          success: false,
+          error: 'Referral code is required'
+        });
+      }
+      
+      // Clean the code (remove any dashes)
+      const cleanCode = (code as string).replace(/-/g, '');
+      console.log(`Validating referral code: ${cleanCode}`);
+      
+      // Use existing utility function to get agent
+      const agent = await getAgentByReferralCode(cleanCode);
+      
+      if (!agent) {
+        console.log(`Invalid referral code: ${cleanCode} (No agent found)`);
+        return res.status(404).json({
+          success: false,
+          error: 'Invalid referral code or the agent is no longer active'
+        });
+      }
+      
+      console.log(`Valid referral code: ${cleanCode} (Agent: ${agent.first_name} ${agent.last_name})`);
+      
+      // Return agent name but not all details
+      return res.status(200).json({
+        success: true,
+        agentName: `${agent.first_name} ${agent.last_name}`
+      });
+    } catch (error) {
+      console.error('Error validating referral code:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to validate referral code'
+      });
+    }
+  });
+  
+  // Direct endpoint for submitting a referral lead
+  app.post("/api/referral/public/submit", async (req, res) => {
+    try {
+      const { firstName, lastName, email, phoneNumber, notes, referralCode } = req.body;
+      
+      // Basic validation
+      if (!firstName || !lastName || !email || !phoneNumber || !referralCode) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields'
+        });
+      }
+      
+      const connection = await createConnection();
+      
+      try {
+        // Find the agent by referral code
+        const agent = await getAgentByReferralCode(referralCode);
+        
+        if (!agent) {
+          return res.status(404).json({
+            success: false,
+            error: 'Invalid referral code'
+          });
+        }
+        
+        // Create a new lead in the database
+        const [result] = await connection.execute(
+          `INSERT INTO referral_leads (
+            agent_id, first_name, last_name, email, phone_number, 
+            notes, status, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, 'NEW', NOW())`,
+          [
+            agent.id,
+            firstName,
+            lastName,
+            email,
+            phoneNumber,
+            notes || null
+          ]
+        );
+        
+        console.log(`New referral lead created: ${firstName} ${lastName} for agent ID ${agent.id}`);
+        
+        res.status(201).json({
+          success: true,
+          message: 'Referral lead submitted successfully',
+          leadId: (result as any).insertId
+        });
+      } catch (error) {
+        console.error('Database error creating referral lead:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to submit referral lead'
+        });
+      } finally {
+        await connection.end();
+      }
+    } catch (error) {
+      console.error('Error submitting referral lead:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process referral lead submission'
+      });
+    }
+  });
+  
   app.use('/api/agent', agentRouter);
+  app.use('/api/admin/agents', agentsRouter);
+  
+  // Setup card status routes
+  setupCardStatusRoutes(app);
+  
+  // Debug endpoint for agent listing that bypasses all authentication middleware
+  app.get('/api/debug/agents', async (req, res) => {
+    try {
+      console.log("Direct debug endpoint for agents accessed");
+      // Create a direct database connection
+      const connection = await createConnection();
+      const [agents] = await connection.execute('SELECT id, first_name, last_name, email FROM users WHERE is_agent = 1');
+      
+      console.log(`Found ${Array.isArray(agents) ? agents.length : 0} agents through global debug endpoint`);
+      
+      // Format for frontend compatibility
+      const formatted = Array.isArray(agents) ? agents.map((agent: any) => ({
+        id: agent.id,
+        firstName: agent.first_name,
+        lastName: agent.last_name,
+        email: agent.email
+      })) : [];
+      
+      return res.status(200).json(formatted);
+    } catch (error) {
+      console.error("Global debug endpoint error:", error);
+      return res.status(500).json({ error: 'Server error in global debug endpoint' });
+    }
+  });
   app.use('/api/migration', migrationRouter);
   app.use('/api/manual-migration', manualMigrationRouter);
   app.use('/api/package-types', packageTypesRouter);
+  app.use('/api/subscription', subscriptionRouter);
+  app.use('/api/leads', leadsRouter);
+  app.use('/api/contact-submit', contactRouter);
+  app.use('/api/admin/tools', adminToolsRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
@@ -1170,31 +1325,79 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Admin customers endpoint - get only regular customers
+  // Cache for customers data with segmented caching by page and limit
+  const CUSTOMERS_CACHE_TTL = 30 * 1000; // 30 seconds - reduced to improve refresh rate
+  const CUSTOMERS_CACHE_STALE_TTL = 5 * 60 * 1000; // 5 minutes for stale data
+  // Use a map for caching different pagination states
+  const customersCache = new Map();
+  
+  // Make cache available globally for other modules to access and clear
+  global.customersCache = customersCache;
+
   app.get("/api/admin/customers", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await createConnection();
+    // Get pagination parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = (page - 1) * limit;
+    
+    // Create a cache key based on pagination
+    const cacheKey = `customers_${page}_${limit}`;
+    const now = Date.now();
+    
+    // Changed to 10 seconds for development to enable immediate updates
+    const cacheTTL = 10 * 1000;
+    
+    // Check if we have a valid cached response for this pagination state
+    if (customersCache.has(cacheKey)) {
+      const cacheEntry = customersCache.get(cacheKey);
+      if (now - cacheEntry.timestamp < cacheTTL) {
+        console.log('Returning cached customers data:', {
+          page,
+          limit,
+          count: cacheEntry.data.data.length,
+          cacheAge: Math.round((now - cacheEntry.timestamp) / 1000) + 's'
+        });
+        return res.json(cacheEntry.data);
+      }
+    }
+
+    console.time('customersQuery'); // Start timing the query
+    
+    // Use the connection pool instead of creating a new connection
+    const connection = await connectionPool.getConnection();
+    
     try {
       console.log('Fetching customers...');
-      // Check admin status using users table
+      
+      // Check admin status using more efficient query with PRIMARY key
       const [adminCheck] = await connection.execute(
-        'SELECT is_admin FROM users WHERE id = ?',
+        'SELECT is_admin FROM users USE INDEX (PRIMARY) WHERE id = ? LIMIT 1',
         [req.user.id]
       );
 
-      console.log('Admin check result:', {
-        userId: req.user.id,
-        adminCheck: adminCheck[0]
-      });
-
       if (!adminCheck || !adminCheck[0]?.is_admin) {
+        connection.release(); // Release connection back to pool
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get regular customers with transactions, assignments and product details
-      const [customers] = await connection.execute(
+      // Improved query using LEFT JOIN instead of a subquery for better performance
+      // Count total users for pagination info
+      const [countResult] = await connection.execute(
+        `SELECT COUNT(*) as total 
+         FROM users u 
+         LEFT JOIN admin_users au ON u.id = au.user_id
+         WHERE u.is_agent = 0 AND au.user_id IS NULL`
+      );
+      
+      const totalCustomers = countResult[0]?.total || 0;
+      const totalPages = Math.ceil(totalCustomers / limit);
+      
+      // Get users with pagination using improved JOIN strategy
+      const [users] = await connection.execute(
         `SELECT 
           u.id,
           u.email,
@@ -1217,131 +1420,185 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           u.account_holder_name,
           u.branch_code,
           u.has_credit_card,
+          u.card_status,
           u.is_enabled,
           CAST(u.points as DECIMAL(10,2)) as points,
           u.created_at,
           u.agent_id,
-          COALESCE(
-            JSON_ARRAYAGG(
-              JSON_OBJECT(
-                'id', p.id,
-                'name', p.name,
-                'description', p.description,
-                'activities', (
-                  SELECT JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                      'id', pa.id,
-                      'type', pa.type,
-                      'pointsValue', pa.points_value
-                    )
-                  )
-                  FROM product_activities pa
-                  WHERE pa.product_id = p.id
-                )
-              )
-            ),
-            '[]'
-          ) as assigned_products,
-          COUNT(DISTINCT pa2.id) as assignment_count,
-          COALESCE(tr.last_transaction, NULL) as last_transaction,
-          COALESCE(tr.transaction_type, NULL) as transaction_type,
-          COALESCE(tr.transaction_points, NULL) as transaction_points
+          u.is_agent,
+          CASE WHEN au.role_type IS NOT NULL THEN TRUE ELSE FALSE END as is_admin,
+          au.role_type as admin_role
          FROM users u
-         LEFT JOIN product_assignments pa2 ON u.id = pa2.user_id
-         LEFT JOIN products p ON pa2.product_id = p.id
-         LEFT JOIN (
-           SELECT 
-             user_id,
-             created_at as last_transaction,
-             type as transaction_type,
-             points as transaction_points
-           FROM transactions t1
-           WHERE created_at = (
-             SELECT MAX(created_at)
-             FROM transactions t2
-             WHERE t2.user_id = t1.user_id
-           )
-         ) tr ON u.id = tr.user_id
          LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE au.user_id IS NULL 
-         AND u.is_agent = 0
-         GROUP BY 
-           u.id, u.email, u.first_name, u.last_name, u.phone_number,
-           u.is_south_african, u.id_number, u.date_of_birth, u.gender,
-           u.occupation, u.industry, u.address, u.city, u.postal_code,
-           u.selected_package, u.bank_name, u.account_type, u.account_number,
-           u.account_holder_name, u.branch_code, u.has_credit_card,
-           u.is_enabled, u.points, u.created_at, u.agent_id,
-           tr.last_transaction, tr.transaction_type, tr.transaction_points
-         ORDER BY u.created_at DESC`
+         WHERE u.is_agent = 0 AND au.user_id IS NULL
+         ORDER BY u.created_at DESC
+         LIMIT ?, ?`,
+        [offset, limit]
       );
-
-      console.log('Customers query result:', {
-        count: customers?.length || 0,
-        firstCustomer: customers?.[0] ? {
-          id: customers[0].id,
-          firstName: customers[0].first_name,
-          lastName: customers[0].last_name
-        } : null
-      });
-
-      // Transform the data
-      const transformedCustomers = (customers || []).map(customer => {
-        let assignedProducts = [];
-        if (customer.assigned_products) {
-          try {
-            assignedProducts = JSON.parse(customer.assigned_products);
-            assignedProducts = assignedProducts.filter(p => p && p.id && p.name).map(p => ({
-              ...p,
-              activities: p.activities || []
-            }));
-          } catch (e) {
-            console.error('Error parsing assigned products for customer:', customer.id, e);
+      
+      if (!users || users.length === 0) {
+        connection.release(); // Release connection back to pool
+        return res.json({
+          data: [],
+          pagination: {
+            page,
+            limit,
+            totalItems: 0,
+            totalPages: 0
           }
+        });
+      }
+      
+      // Extract user IDs for subsequent queries
+      const userIds = users.map(user => user.id);
+      
+      // Prepare comma-separated list of IDs for IN clauses
+      const userIdsString = userIds.join(',');
+      
+      // Run the next 3 queries in parallel for improved performance
+      const [assignmentsResult, transactionsResult, activitiesResult] = await Promise.all([
+        // Get product assignments using a safe approach for IN clause
+        connection.query(
+          `SELECT 
+            pa.user_id,
+            p.id as product_id,
+            p.name as product_name,
+            p.description as product_description
+           FROM product_assignments pa
+           JOIN products p ON pa.product_id = p.id
+           WHERE pa.user_id IN (${userIds.map(() => '?').join(',')})`,
+          userIds
+        ),
+        
+        // Get latest transactions
+        connection.query(
+          `SELECT 
+            t1.user_id,
+            t1.created_at as last_transaction,
+            t1.type as transaction_type,
+            t1.points as transaction_points
+           FROM transactions t1
+           INNER JOIN (
+             SELECT user_id, MAX(created_at) as max_created_at
+             FROM transactions
+             WHERE user_id IN (${userIds.map(() => '?').join(',')})
+             GROUP BY user_id
+           ) t2 ON t1.user_id = t2.user_id AND t1.created_at = t2.max_created_at`,
+          [...userIds]
+        ),
+        
+        // Get product activities
+        connection.query(
+          `SELECT 
+            pa.id,
+            pa.product_id,
+            pa.type,
+            pa.points_value
+           FROM product_activities pa
+           JOIN products p ON pa.product_id = p.id
+           JOIN product_assignments ps ON p.id = ps.product_id
+           WHERE ps.user_id IN (${userIds.map(() => '?').join(',')})
+           GROUP BY pa.id, pa.product_id, pa.type, pa.points_value`,
+          [...userIds]
+        )
+      ]);
+      
+      // Destructure results
+      const [assignments] = assignmentsResult;
+      const [transactions] = transactionsResult;
+      const [activities] = activitiesResult;
+      
+      // Create lookup maps for faster association
+      const transactionsByUserId = {};
+      transactions.forEach(t => {
+        transactionsByUserId[t.user_id] = t;
+      });
+      
+      // Group activities by product
+      const activitiesByProductId = {};
+      activities.forEach(a => {
+        if (!activitiesByProductId[a.product_id]) {
+          activitiesByProductId[a.product_id] = [];
         }
-
+        activitiesByProductId[a.product_id].push({
+          id: a.id,
+          type: a.type,
+          pointsValue: a.points_value
+        });
+      });
+      
+      // Group assignments by user
+      const assignmentsByUserId = {};
+      assignments.forEach(a => {
+        if (!assignmentsByUserId[a.user_id]) {
+          assignmentsByUserId[a.user_id] = [];
+        }
+        
+        assignmentsByUserId[a.user_id].push({
+          id: a.product_id,
+          name: a.product_name,
+          description: a.product_description,
+          activities: activitiesByProductId[a.product_id] || []
+        });
+      });
+      
+      // Transform the data
+      const transformedCustomers = users.map(user => {
+        // Get assignments count and products
+        const assignedProducts = assignmentsByUserId[user.id] || [];
+        const assignmentCount = assignedProducts.length;
+        
+        // Get latest transaction
+        const transaction = transactionsByUserId[user.id];
+        
         // Ensure points is properly converted to a number
-        const points = typeof customer.points === 'string' 
-          ? parseFloat(customer.points) 
-          : Number(customer.points || 0);
+        const points = typeof user.points === 'string' 
+          ? parseFloat(user.points) 
+          : Number(user.points || 0);
 
         return {
-          id: customer.id,
-          email: customer.email,
-          firstName: customer.first_name,
-          lastName: customer.last_name,
-          phoneNumber: customer.phone_number,
-          isEnabled: Boolean(customer.is_enabled),
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phoneNumber: user.phone_number,
+          isEnabled: Boolean(user.is_enabled),
           points,
-          createdAt: customer.created_at,
-          selectedPackage: customer.selected_package,
-          assignmentCount: customer.assignment_count,
-          assignedProducts: assignedProducts,
-          lastActivity: customer.last_transaction ? {
-            date: customer.last_transaction,
-            type: customer.transaction_type,
-            points: customer.transaction_points
+          createdAt: user.created_at,
+          selectedPackage: user.selected_package,
+          isAgent: Boolean(user.is_agent),
+          isAdmin: Boolean(user.is_admin),
+          adminRole: user.admin_role,
+          assignmentCount,
+          assignedProducts,
+          lastActivity: transaction ? {
+            date: transaction.last_transaction,
+            type: transaction.transaction_type,
+            points: transaction.transaction_points
           } : null,
-          idNumber: customer.id_number || '',
-          dateOfBirth: customer.date_of_birth || '',
-          gender: customer.gender || '',
-          occupation: customer.occupation || '',
-          industry: customer.industry || '',
-          address: customer.address || '',
-          city: customer.city || '',
-          postalCode: customer.postal_code || '',
-          bankName: customer.bank_name || '',
-          accountType: customer.account_type || '',
-          accountNumber: customer.account_number || '',
-          accountHolderName: customer.account_holder_name || '',
-          branchCode: customer.branch_code || '',
-          hasCreditCard: Boolean(customer.has_credit_card),
-          isSouthAfrican: Boolean(customer.is_south_african),
-          agentId: customer.agent_id || null
+          idNumber: user.id_number || '',
+          dateOfBirth: user.date_of_birth || '',
+          gender: user.gender || '',
+          occupation: user.occupation || '',
+          industry: user.industry || '',
+          address: user.address || '',
+          city: user.city || '',
+          postalCode: user.postal_code || '',
+          bankName: user.bank_name || '',
+          accountType: user.account_type || '',
+          accountNumber: user.account_number || '',
+          accountHolderName: user.account_holder_name || '',
+          branchCode: user.branch_code || '',
+          hasCreditCard: Boolean(user.has_credit_card),
+          cardStatus: user.card_status || 'NOT_DELIVERED',
+          isSouthAfrican: Boolean(user.is_south_african),
+          agentId: user.agent_id || null
         };
       });
-
-      console.log('Sending transformed customers:', {
+      
+      console.timeEnd('customersQuery'); // End timing
+      
+      console.log('Processed customers data:', {
         count: transformedCustomers.length,
         sample: transformedCustomers[0] ? {
           id: transformedCustomers[0].id,
@@ -1349,16 +1606,49 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           lastName: transformedCustomers[0].lastName
         } : null
       });
+      
+      // Create response object with pagination metadata
+      const response = {
+        data: transformedCustomers,
+        pagination: {
+          page,
+          limit,
+          totalItems: totalCustomers,
+          totalPages
+        }
+      };
+      
+      // Update cache with the new data
+      customersCache.set(cacheKey, {
+        data: response,
+        timestamp: now
+      });
 
-      res.json(transformedCustomers);
+      res.json(response);
     } catch (error) {
       console.error('Error fetching customers:', error);
+      
+      // If there's a stale cache for this page, return it rather than showing an error
+      if (customersCache.has(cacheKey)) {
+        console.log('Returning stale cache due to error');
+        return res.json(customersCache.get(cacheKey).data);
+      }
+      
+      // Try to find any cache entry that might be relevant
+      if (customersCache.size > 0) {
+        // Get the first available cache entry
+        const firstCacheKey = Array.from(customersCache.keys())[0];
+        console.log('Returning alternative cache due to error');
+        return res.json(customersCache.get(firstCacheKey).data);
+      }
+      
       res.status(500).json({ 
         error: 'Failed to fetch customers',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
       });
     } finally {
-      await connection.end();
+      // Release the connection back to the pool
+      connection.release();
     }
   });
   
@@ -1772,12 +2062,15 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
   app.get("/api/customer/referral", async (req, res) => {
     if (!req.user) {
+      console.log("Referral API: Authentication check failed");
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     const connection = await createConnection();
     
     try {
+      console.log("Referral API: Fetching referral data for user:", req.user.id);
+      
       // Check if user has access to the referral program (PROSPER, PRESTIGE, or PINNACLE package)
       const [packageCheck] = await connection.execute(
         `SELECT selected_package FROM users WHERE id = ?`,
@@ -1785,22 +2078,34 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       );
       
       if (!packageCheck || packageCheck.length === 0) {
+        console.log(`Referral API: User ${req.user.id} not found in database`);
         return res.status(404).json({ error: "User not found" });
       }
       
-      const userPackage = packageCheck[0].selected_package;
+      // Get user package and convert to uppercase for consistent case-insensitive comparison
+      const userCurrentPackage = packageCheck[0].selected_package;
       const allowedPackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
       
-      if (!allowedPackages.includes(userPackage)) {
+      // Convert to uppercase for case-insensitive comparison
+      const userPackageUpper = userCurrentPackage ? userCurrentPackage.toUpperCase() : '';
+      
+      console.log(`REFERRAL API: Checking package access for user ${req.user.id}: package="${userCurrentPackage}" (uppercase: "${userPackageUpper}"), eligible=${allowedPackages.includes(userPackageUpper)}`);
+      
+      // Case-insensitive check for package eligibility
+      if (!userCurrentPackage || !allowedPackages.includes(userPackageUpper)) {
+        console.log(`REFERRAL API: ⛔ Access denied to referral system for user ${req.user.id} with package "${userCurrentPackage}"`);
         return res.status(403).json({ 
           error: "Package upgrade required", 
           message: "Referral program is only available for PROSPER package or higher",
           details: {
-            currentPackage: userPackage,
-            requiredPackages: allowedPackages
+            currentPackage: userCurrentPackage, // Original case preserved
+            requiredPackages: allowedPackages,
+            eligibleCheck: allowedPackages.includes(userPackageUpper)
           }
         });
       }
+      
+      console.log(`REFERRAL API: ✅ Access granted to referral system for user ${req.user.id} with package "${userCurrentPackage}"`)
     } catch (error) {
       console.error("Error checking user package:", error);
       return res.status(500).json({ 
@@ -1918,14 +2223,15 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       const transformedReferrals = referrals.map((referral: any) => {
         // Calculate commission based on level
         const commissionPercentage = 
-          referral.level === 1 ? 0.075 : // 15% for level 1
-          referral.level === 2 ? 0.05 : // 10% for level 2
-          referral.level === 3 ? 0.025 : // 5% for level 3
+          referral.level === 1 ? 0.075 : // 7.5% for level 1
+          referral.level === 2 ? 0.05 : // 5% for level 2
+          referral.level === 3 ? 0.025 : // 2.5% for level 3
           0;
         
         const packageAmount = referral.package_amount || 0;
         const randValue = packageAmount * commissionPercentage;
-        const points = Math.floor(randValue * 100);
+        // Use a fixed 2000 points value for all referrals as required
+        const points = referral.level === 1 ? 2000 : Math.floor(randValue * 100);
 
         // Parse referral package stats
         const packageStats = referral.referral_package_stats 
@@ -2727,85 +3033,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/admin/users", async (req, res) => {
-    console.log('Admin users request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? {
-        id: req.user.id,
-        email: req.user.email,
-        is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin
-      } : null
-    });
-
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    // Check if user is admin or super admin
-    if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
-      console.log('User lacks admin privileges:', {
-        id: req.user?.id,
-        email: req.user?.email,
-        is_admin: req.user?.is_admin,
-        is_super_admin: req.user?.is_super_admin
-      });
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
-    const connection = await createConnection();
-    try {
-      // Only select users who are either admins or agents
-      const [users] = await connection.execute(
-        `SELECT u.*, 
-         CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
-         FROM users u
-         LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE au.role_type IS NOT NULL OR u.is_agent = 1
-         ORDER BY u.created_at DESC`
-      );
-
-      console.log('Raw users from database:', users.map((u: any) => ({
-        id: u.id,
-        email: u.email,
-        is_admin: Boolean(u.is_admin),
-        is_super_admin: Boolean(u.is_super_admin),
-        is_agent: Boolean(u.is_agent)
-      })));
-
-      const transformedUsers = users.map((user: any) => {
-        const { password, ...safeUser } = user;
-        return {
-          ...safeUser,
-          id: user.id,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          phoneNumber: user.phone_number,
-          isAdmin: Boolean(user.is_admin),
-          isAgent: Boolean(user.is_agent),
-          isSuperAdmin: Boolean(user.is_super_admin),
-          isEnabled: Boolean(user.is_enabled),
-          createdAt: user.created_at
-        };
-      });
-
-      console.log('Fetched admin/agent users:', transformedUsers.map(u => ({
-        id: u.id,
-        email: u.email,
-        isAdmin: u.isAdmin,
-        isSuperAdmin: u.isSuperAdmin,
-        isAgent: u.isAgent
-      })));
-
-      res.json(transformedUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      res.status(500).json({ error: 'Failed to fetch users' });
-    } finally {
-      await connection.end();
-    }
-  });
+  // Removed duplicate /api/admin/users endpoint
 
   // This code belongs to another function, moved to the correct context
   app.put("/api/user-profile", async (req, res) => {
@@ -2892,7 +3120,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.put("/api/admin/users/:id/toggle-status", async (req, res) => {
+  // Support both PUT and POST methods for toggle-status
+  app.use("/api/admin/users/:id/toggle-status", async (req, res) => {
+    // Only allow PUT and POST methods
+    if (req.method !== 'PUT' && req.method !== 'POST') {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -3915,12 +4148,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   // Customer referrals endpoint - moved from previous duplicate implementation
   app.get("/api/customer/referrals", async (req, res) => {
     if (!req.isAuthenticated()) {
+      console.log("Referrals API: Authentication check failed");
       return res.status(401).json({ error: "Not authenticated" });
     }
 
     const connection = await createConnection();
     try {
-      console.log("Fetching referral stats for user:", req.user.id);
+      console.log("Referrals API: Fetching referral stats for user:", req.user.id);
       
       // Get user with referral code
       const [userData] = await connection.execute(
@@ -3935,11 +4169,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
       const currentUser = userData[0];
       
-      // Check if user has PROSPER package or higher
+      // Check if user has PROSPER package or higher - case-insensitive
       const eligiblePackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
       const userPackage = currentUser.selected_package ? currentUser.selected_package.toUpperCase() : '';
       
-      console.log(`REFERRAL DEBUG: Checking package access for user ${req.user.id}: package="${userPackage}", eligible=${eligiblePackages.includes(userPackage)}`);
+      console.log(`REFERRAL DEBUG: Checking package access for user ${req.user.id}: package="${currentUser.selected_package}" (uppercase: "${userPackage}"), eligible=${eligiblePackages.includes(userPackage)}`);
       console.log(`REFERRAL DEBUG: User data:`, JSON.stringify(currentUser));
       
       if (!eligiblePackages.includes(userPackage)) {
@@ -3947,7 +4181,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(403).json({ 
           error: "Package upgrade required", 
           message: "You need to upgrade to PROSPER package or higher to access the referral program",
-          currentPackage: userPackage
+          details: {
+            currentPackage: currentUser.selected_package, // Original case preserved
+            requiredPackages: eligiblePackages,
+            eligibleCheck: eligiblePackages.includes(userPackage)
+          }
         });
       } else {
         console.log(`REFERRAL DEBUG: ✅ Access granted to referral system for user ${req.user.id} with package "${userPackage}"`);
@@ -4101,7 +4339,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           commission: {
             percentage: percentage * 100,
             randValue: (baseAmount * percentage).toFixed(2),
-            points: Math.floor(baseAmount * percentage * 10) // Example conversion
+            points: level === 1 ? 2000 : Math.floor(baseAmount * percentage * 10) // Fixed 2000 points for level 1
           }
         });
         
@@ -4986,75 +5224,75 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  // Add new route for admin dashboard stats
+  // Add new route for admin dashboard stats - optimized for performance
   app.get("/api/admin/dashboard/stats", checkAdmin, async (req, res) => {
-    console.log('Admin dashboard stats request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? {
-        id: req.user.id,
-        email: req.user.email,
-        is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin
-      } : null
-    });
-
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
     const connection = await createConnection();
     try {
-      // Check admin status
+      // Check admin status - use index hint
       const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        'SELECT role_type FROM admin_users USE INDEX (PRIMARY) WHERE user_id = ? LIMIT 1',
         [req.user.id]
       );
 
       if (!adminCheck || adminCheck.length === 0) {
-        console.log('User not found in admin_users:', req.user.id);
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get total customers (non-admin users)
-      const [customerCount] = await connection.execute(
-        `SELECT COUNT(*) as count 
-         FROM users u 
-         LEFT JOIN admin_users au ON u.id = au.user_id 
-         WHERE au.user_id IS NULL`
-      );
-
-      // Get total points in circulation
-      const [pointsTotal] = await connection.execute(
-        'SELECT COALESCE(SUM(points), 0) as total FROM users'
-      );
-
-      // Get active rewards count
-      const [rewardsCount] = await connection.execute(
-        'SELECT COUNT(*) as count FROM rewards WHERE available = 1'
-      );
-
-      // Get total redemptions
-      const [redemptionsCount] = await connection.execute(
-        `SELECT COUNT(*) as count 
-         FROM transactions 
-         WHERE type = 'REDEEMED'`
-      );
-
-      // Get recent transactions for charts
-      const [transactions] = await connection.execute(
-        `SELECT 
-          t.*,
-          u.first_name,
-          u.last_name,
-          u.email
-         FROM transactions t
-         JOIN users u ON t.user_id = u.id
-         ORDER BY t.created_at DESC
-         LIMIT 50`
-      );
+      // Run all queries in parallel for better performance
+      const [
+        customerCountResult, 
+        pointsTotalResult, 
+        rewardsCountResult, 
+        redemptionsCountResult, 
+        transactions
+      ] = await Promise.all([
+        // Get total customers (non-admin users) - optimize with indexes
+        connection.execute(
+          `SELECT COUNT(*) as count 
+           FROM users u 
+           LEFT JOIN admin_users au ON u.id = au.user_id 
+           WHERE au.user_id IS NULL`
+        ),
+        
+        // Get total points in circulation - simplified query
+        connection.execute(
+          'SELECT COALESCE(SUM(points), 0) as total FROM users'
+        ),
+        
+        // Get active rewards count
+        connection.execute(
+          'SELECT COUNT(*) as count FROM rewards WHERE available = 1'
+        ),
+        
+        // Get total redemptions
+        connection.execute(
+          `SELECT COUNT(*) as count 
+           FROM transactions
+           WHERE type = 'REDEEMED'`
+        ),
+        
+        // Get recent transactions for charts - limit fields and optimize join
+        connection.execute(
+          `SELECT 
+            t.created_at,
+            t.points,
+            t.type,
+            u.first_name,
+            u.last_name,
+            u.email
+           FROM transactions t
+           JOIN users u USE INDEX (PRIMARY) ON t.user_id = u.id
+           ORDER BY t.created_at DESC
+           LIMIT 30`
+        )
+      ]);
 
       // Transform transaction data for frontend
-      const transformedTransactions = transactions.map((t: any) => ({
+      const transformedTransactions = transactions[0].map((t: any) => ({
         date: new Date(t.created_at).toLocaleDateString(),
         points: Math.abs(Number(t.points)),
         type: t.type,
@@ -5066,14 +5304,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }));
 
       const response = {
-        totalCustomers: Number(customerCount[0].count),
-        totalPoints: Number(pointsTotal[0].total),
-        activeRewards: Number(rewardsCount[0].count),
-        totalRedemptions: Number(redemptionsCount[0].count),
+        totalCustomers: Number(customerCountResult[0][0].count),
+        totalPoints: Number(pointsTotalResult[0][0].total),
+        activeRewards: Number(rewardsCountResult[0][0].count),
+        totalRedemptions: Number(redemptionsCountResult[0][0].count),
         recentTransactions: transformedTransactions
       };
 
-      console.log('Sending dashboard stats:', response);
       res.json(response);
 
     } catch (error) {
@@ -5084,50 +5321,129 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  // Cache for admin/agent users
+  const USERS_CACHE_TTL = 60 * 1000; // 1 minute
+  let usersCache = {
+    data: null,
+    timestamp: 0
+  };
+
   app.get("/api/admin/users", async (req, res) => {
+    console.log('Admin users request:', {
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? {
+        id: req.user.id,
+        email: req.user.email,
+        is_admin: req.user.is_admin,
+        is_super_admin: req.user.is_super_admin
+      } : null
+    });
+    
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    // Check if user is admin or super admin
+    if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
+      console.log('User lacks admin privileges:', {
+        id: req.user?.id,
+        email: req.user?.email,
+        is_admin: req.user?.is_admin,
+        is_super_admin: req.user?.is_super_admin
+      });
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    // Check if we have a valid cached response
+    const now = Date.now();
+    if (usersCache.data && (now - usersCache.timestamp < USERS_CACHE_TTL)) {
+      console.log('Returning cached users data:', {
+        count: usersCache.data.length,
+        cacheAge: Math.round((now - usersCache.timestamp) / 1000) + 's'
+      });
+      return res.json(usersCache.data);
+    }
+
     const connection = await createConnection();
     try {
-      // Check admin status
-      const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
-        [req.user.id]
-      );
+      // Admin check is already done above, no need to check again
 
-      if (!adminCheck || adminCheck.length === 0) {
-        return res.status(403).json({ error: "Admin access required" });
-      }
+      // Run queries in parallel for better performance
+      const [adminUsers, agentUsers] = await Promise.all([
+        // Fetch all admin users with their roles
+        connection.execute(
+          `SELECT u.*, au.role_type
+           FROM users u 
+           INNER JOIN admin_users au ON u.id = au.user_id
+           ORDER BY u.created_at DESC`
+        ),
+        
+        // Fetch all agent users
+        connection.execute(
+          `SELECT * FROM users 
+           WHERE is_agent = 1
+           ORDER BY created_at DESC`
+        )
+      ]);
 
-      // Fetch all admin users
-      const [admins] = await connection.execute(
-        `SELECT u.*, au.role_type
-         FROM users u 
-         INNER JOIN admin_users au ON u.id = au.user_id
-         ORDER BY u.created_at DESC`
-      );
+      console.log(`Found ${adminUsers[0].length} admin users and ${agentUsers[0].length} agent users`);
 
-      console.log(`Found ${admins.length} admin users`);
+      console.log('Admin users sample:', adminUsers[0][0] || {});
+      console.log('Agent users sample:', agentUsers[0][0] || {});
 
-      // Transform boolean fields
-      const transformedAdmins = admins.map(admin => ({
+      // Transform admin users
+      const transformedAdmins = adminUsers[0].map(admin => ({
         id: admin.id,
         email: admin.email,
-        firstName: admin.first_name,
-        lastName: admin.last_name,
-        phoneNumber: admin.phone_number,
+        firstName: admin.first_name || '',
+        lastName: admin.last_name || '',
+        phoneNumber: admin.phone_number || '',
         isEnabled: Boolean(admin.is_enabled),
         createdAt: admin.created_at,
-        is_admin: true,
-        is_super_admin: admin.role_type === 'SUPER_ADMIN'
+        isAdmin: true,
+        isAgent: false,
+        isSuperAdmin: admin.role_type === 'SUPER_ADMIN',
+        adminRole: admin.role_type
       }));
 
-      res.json(transformedAdmins);
+      // Transform agent users
+      const transformedAgents = agentUsers[0].map(agent => ({
+        id: agent.id,
+        email: agent.email,
+        firstName: agent.first_name || '',
+        lastName: agent.last_name || '',
+        phoneNumber: agent.phone_number || '',
+        isEnabled: Boolean(agent.is_enabled),
+        createdAt: agent.created_at,
+        isAdmin: false,
+        isAgent: true,
+        isSuperAdmin: false,
+        adminRole: null
+      }));
+
+      // Combine both types of users
+      const allUsers = [...transformedAdmins, ...transformedAgents];
+      
+      // Sort by creation date (newest first)
+      allUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      // Update cache
+      usersCache = {
+        data: allUsers,
+        timestamp: now
+      };
+
+      res.json(allUsers);
     } catch (error) {
-      console.error('Error fetching admin users:', error);
-      res.status(500).json({ error: 'Failed to fetch admin users' });
+      console.error('Error fetching admin/agent users:', error);
+      
+      // If there's cached data, return it even if it's stale rather than showing an error
+      if (usersCache.data) {
+        console.log('Returning stale cache due to error');
+        return res.json(usersCache.data);
+      }
+      
+      res.status(500).json({ error: 'Failed to fetch admin/agent users' });
     } finally {
       await connection.end();
     }

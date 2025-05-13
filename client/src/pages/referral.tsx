@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User, Mail, Phone, MessageSquare } from 'lucide-react';
 
 export default function ReferralPage() {
   const { code } = useParams();
@@ -42,8 +42,8 @@ export default function ReferralPage() {
             description: 'The referral code is invalid or expired.',
             variant: 'destructive'
           });
-          // Redirect to home after a delay
-          setTimeout(() => navigate('/'), 3000);
+          // Immediate redirect without delay
+          navigate('/');
         }
       } catch (error) {
         console.error('Error validating referral code:', error);
@@ -52,8 +52,8 @@ export default function ReferralPage() {
           description: 'Failed to validate referral code. Please try again later.',
           variant: 'destructive'
         });
-        // Redirect to home after a delay
-        setTimeout(() => navigate('/'), 3000);
+        // Immediate redirect without delay
+        navigate('/');
       }
     }
     
@@ -82,8 +82,8 @@ export default function ReferralPage() {
       
       if (response.ok && data.success) {
         toast({
-          title: 'Success!',
-          description: 'Your information has been submitted. The agent will contact you soon.',
+          title: 'Thanks for your interest!',
+          description: `Your details have been sent to ${agentName}, who will contact you shortly to discuss our services and complete your registration.`,
           variant: 'default'
         });
         
@@ -97,8 +97,8 @@ export default function ReferralPage() {
           referralCode: code
         });
         
-        // Redirect to home after a delay
-        setTimeout(() => navigate('/'), 5000);
+        // Immediate redirect without delay
+        navigate('/');
       } else {
         toast({
           title: 'Submission Failed',
@@ -140,14 +140,26 @@ export default function ReferralPage() {
         <CardHeader className="bg-primary text-primary-foreground rounded-t-lg">
           <CardTitle className="text-xl md:text-2xl">You've been referred by {agentName}</CardTitle>
           <CardDescription className="text-primary-foreground/80">
-            Please fill out this form to get started with your free consultation
+            Share your contact details to learn more about OPIAN Rewards
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4 pt-6">
+            <div className="bg-blue-50 text-blue-800 p-4 rounded-md mb-4 text-sm">
+              <p className="mb-2 font-medium">How it works:</p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Enter your contact information below</li>
+                <li>{agentName} will contact you to discuss our services</li>
+                <li>Complete your full registration with {agentName}'s assistance</li>
+                <li>Start enjoying the benefits of OPIAN Rewards!</li>
+              </ol>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="firstName" className="flex items-center gap-2">
+                  <User className="h-4 w-4" /> First Name
+                </Label>
                 <Input
                   id="firstName"
                   name="firstName"
@@ -158,7 +170,9 @@ export default function ReferralPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="lastName" className="flex items-center gap-2">
+                  <User className="h-4 w-4" /> Last Name
+                </Label>
                 <Input
                   id="lastName"
                   name="lastName"
@@ -171,7 +185,9 @@ export default function ReferralPage() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email" className="flex items-center gap-2">
+                <Mail className="h-4 w-4" /> Email Address
+              </Label>
               <Input
                 id="email"
                 name="email"
@@ -184,7 +200,9 @@ export default function ReferralPage() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Label htmlFor="phoneNumber" className="flex items-center gap-2">
+                <Phone className="h-4 w-4" /> Phone Number
+              </Label>
               <Input
                 id="phoneNumber"
                 name="phoneNumber"
@@ -196,7 +214,9 @@ export default function ReferralPage() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="notes">Additional Notes (Optional)</Label>
+              <Label htmlFor="notes" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" /> Additional Notes (Optional)
+              </Label>
               <Textarea
                 id="notes"
                 name="notes"
@@ -210,7 +230,7 @@ export default function ReferralPage() {
           <CardFooter className="flex flex-col space-y-4">
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-[#43EB3E] hover:bg-[#3ad036] text-black" 
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -221,7 +241,7 @@ export default function ReferralPage() {
               ) : 'Submit Information'}
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              By submitting this form, you agree to be contacted by one of our agents regarding our products and services.
+              By submitting this form, you agree to be contacted by {agentName} regarding OPIAN Rewards products and services.
             </p>
           </CardFooter>
         </form>

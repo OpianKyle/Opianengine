@@ -9,13 +9,212 @@ type FetchOptions = {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 5 * 1000, // 5 seconds - reduced for development to see updates faster
+      gcTime: 15 * 60 * 1000, // 15 minutes - how long inactive data remains in cache (renamed from cacheTime)
       retry: 1,
       retryDelay: 1000,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true, // Enable refetch when window regains focus
+      refetchOnMount: true, // Enable automatic refetching when component mounts
+      refetchOnReconnect: 'always', // Always refetch on network reconnection
     },
   },
 });
+
+// Constants for API endpoints we want to prefetch
+// Grouped by page to allow more targeted prefetching 
+export const AGENT_API_ENDPOINTS = {
+  all: [
+    '/api/leads',
+    '/api/agent/customers', 
+    '/api/referral/agent/commissions',
+    '/api/agent/statistics'
+  ],
+  dashboard: [
+    '/api/agent/statistics',
+    '/api/referral/agent/commissions'
+  ],
+  customers: [
+    '/api/agent/customers'
+  ],
+  leads: [
+    '/api/leads'
+  ]
+};
+
+export const CUSTOMER_API_ENDPOINTS = {
+  all: [
+    '/api/profile',
+    '/api/rewards',
+    '/api/products',
+    '/api/transactions',
+    '/api/statistics',
+    '/api/referral'
+    // '/api/subscription' - removed as requested
+  ],
+  dashboard: [
+    '/api/profile',
+    '/api/statistics',
+    '/api/transactions'
+  ],
+  products: [
+    '/api/products'
+  ],
+  rewards: [
+    '/api/rewards'
+  ],
+  referral: [
+    '/api/referral'
+  ]
+  // subscription section removed as requested
+};
+
+export const ADMIN_API_ENDPOINTS = {
+  all: [
+    '/api/admin/users',
+    '/api/admin/statistics',
+    '/api/admin/agents',
+    '/api/admin/rewards',
+    '/api/admin/products',
+    '/api/admin/logs',
+    '/api/admin/quote-requests',
+    '/api/admin/redemptions',
+    '/api/leads'
+  ],
+  dashboard: [
+    '/api/admin/statistics',
+    '/api/admin/users'
+  ],
+  users: [
+    '/api/admin/users'
+  ],
+  agents: [
+    '/api/admin/agents'
+  ],
+  products: [
+    '/api/admin/products'
+  ],
+  rewards: [
+    '/api/admin/rewards'
+  ],
+  quotes: [
+    '/api/admin/quote-requests'
+  ],
+  redemptions: [
+    '/api/admin/redemptions'
+  ],
+  logs: [
+    '/api/admin/logs'
+  ],
+  leads: [
+    '/api/leads'
+  ]
+};
+
+/**
+ * Prefetches key API data for the agent dashboard
+ * @param token JWT token for authenticated requests
+ * @param section Optional section name to prefetch only specific endpoints
+ */
+export const prefetchAgentData = async (token?: string, section?: 'dashboard' | 'customers' | 'leads' | 'all') => {
+  // If section is specified, prefetch only that section's endpoints
+  const endpointKey = section || 'all';
+  const endpoints = AGENT_API_ENDPOINTS[endpointKey];
+  
+  await prefetchData(endpoints, token, `agent${section && section !== 'all' ? `-${section}` : ''}`);
+};
+
+/**
+ * Prefetches key API data for the customer dashboard
+ * @param token JWT token for authenticated requests
+ * @param section Optional section name to prefetch only specific endpoints
+ */
+export const prefetchCustomerData = async (token?: string, section?: 'dashboard' | 'products' | 'rewards' | 'referral' | 'all') => {
+  // If section is specified, prefetch only that section's endpoints
+  // Handle any possible string value for backward compatibility
+  const validSections = ['dashboard', 'products', 'rewards', 'referral', 'all'] as const;
+  const endpointKey = (section && validSections.includes(section as any)) 
+    ? section
+    : 'all';
+  const endpoints = CUSTOMER_API_ENDPOINTS[endpointKey as keyof typeof CUSTOMER_API_ENDPOINTS];
+  
+  await prefetchData(endpoints, token, `customer${section && section !== 'all' ? `-${section}` : ''}`);
+};
+
+/**
+ * Prefetches key API data for the admin dashboard
+ * @param token JWT token for authenticated requests
+ * @param section Optional section name to prefetch only specific endpoints
+ */
+export const prefetchAdminData = async (token?: string, section?: 'dashboard' | 'users' | 'agents' | 'products' | 'rewards' | 'quotes' | 'redemptions' | 'logs' | 'leads' | 'all') => {
+  // If section is specified, prefetch only that section's endpoints
+  const endpointKey = section || 'all';
+  const endpoints = ADMIN_API_ENDPOINTS[endpointKey];
+  
+  await prefetchData(endpoints, token, `admin${section && section !== 'all' ? `-${section}` : ''}`);
+};
+
+/**
+ * Generic data prefetching function for any role
+ * @param endpoints Array of API endpoints to prefetch
+ * @param token JWT token for authenticated requests
+ * @param role Role name for logging purposes
+ */
+const prefetchData = async (endpoints: Array<string>, token?: string, role: string = 'user') => {
+  // Create headers with authorization token if available
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Set up fetch options
+  const options = {
+    headers,
+    credentials: 'include' as RequestCredentials,
+  };
+
+  // Prefetch all key data endpoints
+  const prefetchPromises = endpoints.map(endpoint => {
+    return queryClient.prefetchQuery({
+      queryKey: [endpoint, token],
+      queryFn: async () => {
+        try {
+          // Add a cache-busting parameter to avoid browser caching
+          const cacheBuster = new Date().getTime();
+          const url = endpoint.includes('?') 
+            ? `${endpoint}&_t=${cacheBuster}` 
+            : `${endpoint}?_t=${cacheBuster}`;
+          
+          console.log(`Prefetching: ${url}`);
+          const response = await fetch(url, {
+            ...options,
+            // Use priority hints for faster loading
+            priority: 'high',
+          });
+          
+          if (!response.ok) {
+            // Silently fail for prefetches - we don't want to show error toasts for background fetches
+            console.warn(`Failed to prefetch ${endpoint}: ${response.status}`);
+            return null;
+          }
+          return response.json();
+        } catch (error) {
+          console.warn(`Error prefetching ${endpoint}:`, error);
+          return null;
+        }
+      },
+      staleTime: 10 * 60 * 1000, // 10 minutes - match the global setting
+      gcTime: 15 * 60 * 1000 // 15 minutes - how long to keep inactive cache (renamed from cacheTime in newer versions)
+    });
+  });
+
+  // Wait for all prefetches to complete
+  await Promise.all(prefetchPromises);
+  console.log(`✅ Prefetched ${role} data for instant access`);
+};
 
 export function getQueryFn({ on401 = 'throw', headers = {}, method = 'GET' }: FetchOptions = {}) {
   return async ({ queryKey }: { queryKey: (string | object)[] }) => {
@@ -109,12 +308,20 @@ export async function apiRequest(
   const options: RequestInit = {
     method,
     headers,
-    credentials: 'include',  // Still include credentials for session cookies
+    credentials: 'include',  // Always include credentials for session cookies
   };
 
   if (data !== undefined && method !== 'GET') {
     options.body = JSON.stringify(data);
   }
+  
+  console.log(`Making ${method} request to ${url} with options:`, {
+    method,
+    headers,
+    credentials: 'include',
+    bodyLength: options.body ? JSON.stringify(options.body).length : 0,
+    token: token ? 'present' : 'missing'
+  });
 
   const response = await fetch(url, options);
   

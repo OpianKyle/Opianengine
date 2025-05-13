@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Package as PackageIcon, Users } from "lucide-react";
+import { AlertCircle, Copy, Package as PackageIcon, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -25,13 +25,13 @@ interface ReferralInfo {
       count: number;
       totalReferrals: number;
       referralsByPackage: {
-        BEGINNER: number;
-        NOVICE: number;
-        ACTIVE: number;
-        PROFESSIONAL: number;
-        EXPERT: number;
+        OPPORTUNITY: number;
+        MOMENTUM: number;
+        PROSPER: number;
+        PRESTIGE: number;
+        PINNACLE: number;
       };
-      referralFee: {
+      commission: {
         percentage: number;
         baseAmount: number;
       };
@@ -45,8 +45,10 @@ interface ReferralInfo {
       email: string;
       selectedPackage: string;
       createdAt: string;
+      level: number;
       directReferralCount: number;
-      referralFee: {
+      referralPackageStats: any[];
+      commission: {
         percentage: number;
         randValue: string;
         points: number;
@@ -55,7 +57,11 @@ interface ReferralInfo {
   };
 }
 
-export default function ReferralSection() {
+interface ReferralSectionProps {
+  className?: string;
+}
+
+export default function ReferralSection({ className }: ReferralSectionProps) {
   const [copied, setCopied] = useState(false);
   const [packageUpgradeRequired, setPackageUpgradeRequired] = useState(false);
   const [userPackage, setUserPackage] = useState<string>("");
@@ -75,11 +81,33 @@ export default function ReferralSection() {
         console.error('Package restriction error:', errorData);
         
         if (errorData.details && errorData.details.currentPackage) {
+          // Store user package with original case
           setUserPackage(errorData.details.currentPackage);
         }
         
-        setPackageUpgradeRequired(true);
-        throw new Error("Package upgrade required");
+        // Make sure the package upgrade message only shows for users without the right package
+        // Check this here in case the server sent 403 but package is actually eligible
+        const currentPackage = errorData.details?.currentPackage || "";
+        const requiredPackages = errorData.details?.requiredPackages || ['PROSPER', 'PRESTIGE', 'PINNACLE'];
+        const eligibilityCheck = errorData.details?.eligibleCheck;
+        
+        // Use the server's eligibility check result if available, otherwise check locally
+        const isPackageEligible = eligibilityCheck !== undefined 
+          ? eligibilityCheck 
+          : (currentPackage && requiredPackages.includes(currentPackage.toUpperCase()));
+        
+        console.log(`Package verification: "${currentPackage}" => eligible: ${isPackageEligible}`, errorData.details);
+        
+        if (!isPackageEligible) {
+          setPackageUpgradeRequired(true);
+          // Store user package with original case
+          setUserPackage(currentPackage);
+          throw new Error("Package upgrade required");
+        } else {
+          console.log('Package should be eligible but got 403:', currentPackage);
+          // User has the right package but still got 403, try to continue
+          throw new Error("Failed to access referral program despite having eligible package");
+        }
       }
       
       if (!response.ok) {
@@ -105,7 +133,7 @@ export default function ReferralSection() {
   console.log('Current referral info:', referralInfo);
 
   const referralLink = referralInfo?.referralCode
-    ? `${window.location.origin}/?ref=${referralInfo.referralCode}`
+    ? `${window.location.origin}/referral/${referralInfo.referralCode}`
     : '';
 
   const shareText = "Join me on OPIAN Rewards and get 2,000 bonus points! Use my referral link:";
@@ -141,11 +169,11 @@ export default function ReferralSection() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Refer & Earn Points</CardTitle>
+      <Card className={className || "shadow-sm"}>
+        <CardHeader className="border-b border-border/40">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-6">
           <div className="space-y-2">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-10" />
@@ -157,39 +185,42 @@ export default function ReferralSection() {
 
   if (packageUpgradeRequired) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+      <Card className={className || "shadow-sm"}>
+        <CardHeader className="border-b border-border/40 pb-1 pt-3 md:pb-2 md:pt-4">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold flex items-center gap-1 md:gap-2 text-base md:text-lg">
+            <Users className="h-4 w-4 md:h-5 md:w-5" />
             <span>Refer & Earn Points</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="border border-[#43EB3E]/30 rounded-lg overflow-hidden">
-              <div className="bg-[#43EB3E]/5 p-4 border-b border-[#43EB3E]/20">
-                <h3 className="text-[#43EB3E] font-medium flex items-center gap-2">
-                  <PackageIcon className="h-5 w-5 text-[#43EB3E]" />
+        <CardContent className="p-3 md:p-6">
+          <div className="space-y-3 md:space-y-4">
+            <div className="border border-blue-400/30 rounded-lg overflow-hidden">
+              <div className="bg-blue-500/10 p-2 md:p-4 border-b border-blue-400/20">
+                <h3 className="text-white font-semibold flex items-center gap-1 md:gap-2 text-sm md:text-base">
+                  <PackageIcon className="h-4 w-4 md:h-5 md:w-5 text-white" />
                   Package Upgrade Required
                 </h3>
               </div>
-              <div className="p-4 space-y-3">
-                <p>
+              <div className="p-3 md:p-4 space-y-2 md:space-y-3 text-white">
+                <p className="text-sm md:text-base">
                   The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm md:text-base">
                   Your current package: <strong>{userPackage || "OPPORTUNITY"}</strong>
                 </p>
-                <div className="bg-[#43EB3E]/5 p-3 rounded-md border border-[#43EB3E]/20">
-                  <h4 className="text-[#43EB3E] text-sm font-medium mb-2">Why upgrade?</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
-                    <li>Earn referral fees from your direct referrals</li>
-                    <li>Earn additional rewards from your referral network</li> 
+                <p className="text-xs md:text-sm text-blue-100">
+                  Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package.
+                </p>
+                <div className="bg-black/50 p-2 md:p-4 rounded-md border border-blue-400/30">
+                  <h4 className="text-white font-semibold text-sm md:text-base mb-1 md:mb-2">Why upgrade?</h4>
+                  <ul className="text-white text-xs md:text-sm space-y-1 md:space-y-2 list-disc pl-4 md:pl-5">
+                    <li>Earn 7.5% referral fee from your direct referrals</li>
+                    <li>Get 2000 points per successful referral</li> 
                     <li>Access exclusive PROSPER-level benefits</li>
                   </ul>
                 </div>
-                <div className="flex justify-center mt-4">
-                  <Button className="bg-[#43EB3E] hover:bg-[#43EB3E]/80 text-black">
+                <div className="flex justify-center mt-2 md:mt-4">
+                  <Button className="h-8 md:h-10 text-xs md:text-sm bg-blue-500 hover:bg-blue-600 text-white">
                     Upgrade to PROSPER Package
                   </Button>
                 </div>
@@ -203,101 +234,102 @@ export default function ReferralSection() {
   
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Refer & Earn Points</CardTitle>
+      <Card className={className || "shadow-sm"}>
+        <CardHeader className="border-b border-border/40">
+          <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive">
-            Failed to load referral information. Please try again later.
-          </p>
+        <CardContent className="space-y-4 p-6">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            <p className="text-sm">
+              Failed to load referral information. Please try again later.
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Refer & Earn Points</CardTitle>
+    <Card className={className || "shadow-sm"}>
+      <CardHeader className="border-b border-border/40">
+        <CardTitle className="text-primary-700 dark:text-primary-300 font-semibold">Refer & Earn Points</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-6">
         <div className="text-sm text-muted-foreground">
-          Share your referral link with friends. When they register, you'll earn 2,500 points!
+          Share your referral link with friends. When they register, you'll earn 2,000 points!
         </div>
-        <div className="bg-[rgba(255,255,255,0.05)] p-5 rounded-lg my-5">
-          <h3 className="text-[#43EB3E] mt-0">Your Referral Rewards</h3>
-          <ul className="list-none pl-0 my-2.5">
-            <li className="my-1.5">• Level 1: 7.5% referral fee + 2000 points per direct referral</li>
-            <li className="my-1.5">• Level 2: 5% referral fee from your referrals' referrals</li>
-            <li className="my-1.5">• Level 3: 2.5% referral fee from level 3 referrals</li>
+        <div className="bg-[rgba(0,0,0,0.5)] p-3 md:p-5 rounded-lg my-3 md:my-5">
+          <h3 className="text-white font-semibold text-base md:text-lg mt-0">Your Referral Rewards</h3>
+          <ul className="list-none pl-0 my-2">
+            <li className="my-1 md:my-1.5 text-white text-sm md:text-base">• Level 1: 7.5% referral fee + 2000 points per direct referral</li>
           </ul>
         </div>
         {referralLink && (
           <>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2">
               <Input
                 value={referralLink}
                 readOnly
-                className="font-mono text-sm"
+                className="font-mono text-xs md:text-sm h-8 md:h-10"
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={copyToClipboard}
-                className={copied ? "text-green-500" : ""}
+                className={`h-8 w-8 md:h-10 md:w-10 ${copied ? "text-green-500" : ""}`}
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
             </div>
-            <div className="flex gap-2 justify-center">
+            <div className="flex gap-1 md:gap-2 justify-center flex-wrap mt-2">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.twitter, '_blank')}
-                className="text-[#1DA1F2] hover:text-[#1DA1F2]/80"
+                className="h-8 w-8 md:h-10 md:w-10 text-[#1DA1F2] hover:text-[#1DA1F2]/80"
               >
-                <TwitterIcon className="h-4 w-4" />
+                <TwitterIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.facebook, '_blank')}
-                className="text-[#4267B2] hover:text-[#4267B2]/80"
+                className="h-8 w-8 md:h-10 md:w-10 text-[#4267B2] hover:text-[#4267B2]/80"
               >
-                <FacebookIcon className="h-4 w-4" />
+                <FacebookIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.linkedin, '_blank')}
-                className="text-[#0077B5] hover:text-[#0077B5]/80"
+                className="h-8 w-8 md:h-10 md:w-10 text-[#0077B5] hover:text-[#0077B5]/80"
               >
-                <LinkedInIcon className="h-4 w-4" />
+                <LinkedInIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.whatsapp, '_blank')}
-                className="text-[#25D366] hover:text-[#25D366]/80"
+                className="h-8 w-8 md:h-10 md:w-10 text-[#25D366] hover:text-[#25D366]/80"
               >
-                <WhatsAppIcon className="h-4 w-4" />
+                <WhatsAppIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.telegram, '_blank')}
-                className="text-[#0088cc] hover:text-[#0088cc]/80"
+                className="h-8 w-8 md:h-10 md:w-10 text-[#0088cc] hover:text-[#0088cc]/80"
               >
-                <TelegramIcon className="h-4 w-4" />
+                <TelegramIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => window.open(socialShareUrls.email, '_blank')}
-                className="text-gray-600 hover:text-gray-800"
+                className="h-8 w-8 md:h-10 md:w-10 text-gray-600 hover:text-gray-800"
               >
-                <EmailIcon className="h-4 w-4" />
+                <EmailIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Button>
             </div>
           </>
@@ -305,26 +337,6 @@ export default function ReferralSection() {
         {referralInfo && referralInfo.referralCount > 0 && (
           <div className="text-sm">
             <span className="font-medium">{referralInfo.referralCount}</span> successful referrals
-          </div>
-        )}
-        {referralInfo && referralInfo.referralsByLevel && referralInfo.referralsByLevel[1] && referralInfo.referralsByLevel[1].length > 0 && (
-          <div className="space-y-2">
-            <div className="text-sm font-medium">Recent Referrals</div>
-            <div className="space-y-2">
-              {referralInfo && referralInfo.referralsByLevel && referralInfo.referralsByLevel[1] && referralInfo.referralsByLevel[1].map((referral) => (
-                <div
-                  key={referral.id}
-                  className="text-sm p-2 bg-muted rounded-lg flex justify-between items-center"
-                >
-                  <div>
-                    <span className="font-medium">{referral.firstName} {referral.lastName}</span>
-                    <span className="text-muted-foreground"> joined on </span>
-                    <span>{new Date(referral.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <Badge variant="outline">+{referral.referralFee.points} points</Badge>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </CardContent>

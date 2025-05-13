@@ -1,0 +1,45 @@
+contact-us.tsx:94 
+            
+            
+           POST https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/leads 500 (Internal Server Error)
+onContactSubmit @ contact-us.tsx:94
+(anonymous) @ chunk-BW5TH624.js?v=9cec4a7d:1675
+await in (anonymous)
+callCallback2 @ chunk-276SZO74.js?v=9cec4a7d:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=9cec4a7d:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=9cec4a7d:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=9cec4a7d:3736
+executeDispatch @ chunk-276SZO74.js?v=9cec4a7d:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=9cec4a7d:7034
+processDispatchQueue @ chunk-276SZO74.js?v=9cec4a7d:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=9cec4a7d:7051
+(anonymous) @ chunk-276SZO74.js?v=9cec4a7d:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=9cec4a7d:18913
+batchedUpdates @ chunk-276SZO74.js?v=9cec4a7d:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=9cec4a7d:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=9cec4a7d:5478
+dispatchEvent @ chunk-276SZO74.js?v=9cec4a7d:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=9cec4a7d:5449Understand this error
+contact-us.tsx:120 Error submitting contact form: Error: Failed to submit contact information
+    at onContactSubmit (contact-us.tsx:104:15)
+    at async chunk-BW5TH624.js?v=9cec4a7d:1675:9
+onContactSubmit @ contact-us.tsx:120
+await in onContactSubmit
+(anonymous) @ chunk-BW5TH624.js?v=9cec4a7d:1675
+await in (anonymous)
+callCallback2 @ chunk-276SZO74.js?v=9cec4a7d:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=9cec4a7d:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=9cec4a7d:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=9cec4a7d:3736
+executeDispatch @ chunk-276SZO74.js?v=9cec4a7d:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=9cec4a7d:7034
+processDispatchQueue @ chunk-276SZO74.js?v=9cec4a7d:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=9cec4a7d:7051
+(anonymous) @ chunk-276SZO74.js?v=9cec4a7d:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=9cec4a7d:18913
+batchedUpdates @ chunk-276SZO74.js?v=9cec4a7d:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=9cec4a7d:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=9cec4a7d:5478
+dispatchEvent @ chunk-276SZO74.js?v=9cec4a7d:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=9cec4a7d:5449Understand this error
+use-toast.ts:16 Toast: destructive {title: 'Submission failed', description: 'Failed to submit contact information'}

@@ -4,16 +4,20 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import Login from "@/pages/login";
+import LoginPage from "@/pages/login-page"; // Updated login page
 import Register from "@/pages/register";
+import ContactUsPage from "@/pages/contact-us"; // New contact us page
 import ResetPassword from "@/pages/reset-password";
-import ReferralPage from "@/pages/referral"; // Import the referral form page
+import ReferralPage from "@/pages/referral"; 
+import HowItWorks from "@/pages/how-it-works";
+import MeetTheTeam from "@/pages/meet-the-team";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 // Session timeout functionality has been removed
 // import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ResponsiveProvider } from "@/hooks/use-mobile";
+import ThemeProvider from "@/providers/theme-provider";
 
 // Admin pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -28,6 +32,8 @@ import AdminQuoteRequests from "@/pages/admin/quote-requests";
 import AdminAgents from "@/pages/admin/agents";
 import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
 import Migrations from "@/pages/admin/migrations"; // Added import for Migrations
+import AdminLeads from "@/pages/admin/leads"; // Added import for Leads management
+import CardStatusTest from "@/pages/admin/card-status-test"; // Added import for card status test page
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -36,6 +42,7 @@ import CustomerLayout from "@/components/layout/customer-layout";
 import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
+import SubscriptionPage from "@/pages/customer/subscription"; // Import subscription page
 
 // Agent pages
 import AgentDashboard from "@/pages/agent";
@@ -56,7 +63,7 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
   }
 
   if (!user) {
-    console.log('No user found, redirecting to login');
+    console.log('No user found, redirecting to login page');
     return <Redirect to="/login" />;
   }
 
@@ -87,16 +94,21 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
 
   // Redirect users to their appropriate dashboards if they try to access routes not for their role
   if (!admin && !agent && user) {
+    // Only redirect if they're accessing a route that's not for their role
     if (Boolean(user.is_admin) || Boolean(user.is_super_admin)) {
       const currentPath = window.location.pathname;
-      if (!currentPath.startsWith('/admin')) {
-        console.log('Admin user accessing non-admin route, redirecting to admin dashboard');
+      // Only redirect admin users if they're trying to access agent routes
+      // Allow admins to access customer routes
+      if (currentPath.startsWith('/agent')) {
+        console.log('Admin user accessing agent route, redirecting to admin dashboard');
         return <Redirect to="/admin" />;
       }
     } else if (Boolean(user.is_agent)) {
       const currentPath = window.location.pathname;
-      if (!currentPath.startsWith('/agent')) {
-        console.log('Agent user accessing non-agent route, redirecting to agent dashboard');
+      // Only redirect agent users if they're trying to access admin routes
+      // Allow agents to access customer routes
+      if (currentPath.startsWith('/admin')) {
+        console.log('Agent user accessing admin route, redirecting to agent dashboard');
         return <Redirect to="/agent" />;
       }
     }
@@ -109,20 +121,29 @@ function Router() {
   return (
     <Switch>
       {/* Public Routes */}
-      <Route path="/" >
+      <Route path="/">
         <Home />
       </Route>
       <Route path="/login">
-        <Login />
+        <LoginPage />
       </Route>
       <Route path="/register">
         <Register />
+      </Route>
+      <Route path="/contact-us">
+        <ContactUsPage />
       </Route>
       <Route path="/reset-password">
         <ResetPassword />
       </Route>
       <Route path="/referral/:code">
         <ReferralPage />
+      </Route>
+      <Route path="/how-it-works">
+        <HowItWorks />
+      </Route>
+      <Route path="/meet-the-team">
+        <MeetTheTeam />
       </Route>
 
       {/* Admin Routes */}
@@ -134,6 +155,11 @@ function Router() {
       <Route path="/admin/customers">
         <AdminLayout>
           <ProtectedRoute component={AdminCustomers} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/card-status-test">
+        <AdminLayout>
+          <ProtectedRoute component={CardStatusTest} admin />
         </AdminLayout>
       </Route>
       <Route path="/admin/agents">
@@ -181,6 +207,11 @@ function Router() {
           <ProtectedRoute component={Migrations} admin />
         </AdminLayout>
       </Route>
+      <Route path="/admin/leads">
+        <AdminLayout>
+          <ProtectedRoute component={AdminLeads} admin />
+        </AdminLayout>
+      </Route>
 
       {/* Agent Routes */}
       <Route path="/agent">
@@ -225,6 +256,8 @@ function Router() {
           <ProtectedRoute component={CustomerProducts} />
         </CustomerLayout>
       </Route>
+      
+      {/* Subscription routes removed as requested */}
 
       <Route component={NotFound} />
     </Switch>
@@ -236,10 +269,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ResponsiveProvider>
-          <div className="min-h-screen w-full bg-background">
-            <Router />
-            <Toaster />
-          </div>
+          <ThemeProvider>
+            <div className="min-h-screen w-full bg-background transition-colors duration-300">
+              <Router />
+              <Toaster />
+            </div>
+          </ThemeProvider>
         </ResponsiveProvider>
       </AuthProvider>
     </QueryClientProvider>

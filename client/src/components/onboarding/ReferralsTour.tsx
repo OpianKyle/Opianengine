@@ -1,0 +1,334 @@
+// @ts-nocheck - Disable type checking for custom styling
+import React, { useEffect } from "react";
+import Joyride, { STATUS, Step, CallBackProps, Placement } from "react-joyride";
+import { Button } from "@/components/ui/button";
+import { useOnboarding } from "@/contexts/OnboardingContext";
+
+// Define styles explicitly with proper TypeScript typings to match the site's blue and green theme on dark background
+const joyrideStyles = {
+  options: {
+    backgroundColor: "#011d3d", // Dark blue background
+    borderRadius: "8px",
+    overlayColor: "rgba(0, 0, 0, 0.7)",
+    primaryColor: "#43EB3E", // OPIAN green for primary actions
+    spotlightShadow: "0 0 15px rgba(67, 235, 62, 0.5), 0 0 8px rgba(27, 117, 188, 0.5)",
+    textColor: "#ffffff", // White text for dark background
+    width: 400,
+    zIndex: 10000,
+    arrowColor: "#011d3d", // Match the tooltip background
+  },
+  overlay: {
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    mixBlendMode: "normal" as const, // Use const assertion for string literals
+  },
+  spotlight: {
+    backgroundColor: "transparent",
+    borderRadius: 8,
+    boxShadow: '0 0 0 999vw rgba(0, 0, 0, 0.85), 0 0 15px rgba(67, 235, 62, 0.5), 0 0 8px rgba(27, 117, 188, 0.5)',
+  },
+  tooltip: {
+    backgroundColor: "#011d3d", // Dark blue background matching site theme
+    borderRadius: "8px",
+    color: "#ffffff", // White text for contrast
+    fontSize: "15px",
+    padding: "28px 26px", // Increased padding for better spacing
+    border: "2px solid #1b75bc",
+    borderTop: "4px solid #43EB3E", // Green top border for emphasis
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+  },
+  tooltipContent: {
+    padding: "5px 0",
+    fontSize: "15px",
+    lineHeight: "1.5",
+    color: "#ffffff", // Ensure content text is white for readability
+    paddingRight: "10px", // Add space to account for close button
+  },
+  tooltipFooter: {
+    alignItems: "center",
+    display: "flex",
+    justifyContent: "flex-end",
+    marginTop: "15px",
+  },
+  tooltipTitle: {
+    color: "#43EB3E", // Green for headings stands out on dark background
+    fontSize: "18px",
+    fontWeight: "bold",
+    borderBottom: "1px solid #1b75bc", // Blue border
+    paddingBottom: "8px",
+    marginBottom: "15px", // More space after the title
+  },
+  buttonNext: {
+    backgroundColor: "#43EB3E", // Green for the primary action button
+    borderRadius: "4px",
+    color: "#011d3d", // Dark text for contrast on green
+    fontWeight: "normal", // Less bold text
+    padding: "8px 16px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    cursor: "pointer", // Make sure cursor indicates it's clickable
+  },
+  buttonBack: {
+    marginRight: "10px",
+    color: "#43EB3E", // Green for better visibility on dark background
+    fontWeight: "normal", // Less bold text
+    cursor: "pointer", // Make sure cursor indicates it's clickable
+  },
+  buttonSkip: {
+    color: "#43EB3E", // Green for better visibility on dark background
+    fontWeight: "normal", // Less bold text
+    cursor: "pointer", // Make sure cursor indicates it's clickable
+  },
+  buttonClose: {
+    color: "#43EB3E", // Green cross
+    fontSize: "12px", // Even smaller cross to fit properly in circle
+    fontWeight: "normal", // Less bold text
+    backgroundColor: "#1b75bc", // Solid blue background
+    borderRadius: "50%", // Circular background
+    width: "22px",
+    height: "22px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "1px solid #43EB3E", // Green border
+    padding: 0, // Remove padding
+    boxShadow: "0 0 4px rgba(67, 235, 62, 0.5)", // Subtle green glow
+    // Ensure the button is properly clickable by removing margin positioning
+    position: "absolute", // Use absolute positioning 
+    top: "-11px", // Position from top
+    right: "-11px", // Position from right
+    lineHeight: "12px", // Adjusted to match font size
+    textAlign: "center", // Center the X horizontally
+    zIndex: 10, // Ensure it's above other elements
+    cursor: "pointer", // Make sure cursor indicates it's clickable
+  },
+};
+
+// Tour steps configuration
+const tourSteps: Step[] = [
+  {
+    target: '.referral-header',
+    content: 'Welcome to the referral program! Here you can manage your referrals and earn rewards.',
+    disableBeacon: true,
+    placement: 'bottom' as Placement,
+    spotlightPadding: 15,
+    disableOverlayClose: false,
+    offset: 20,
+  },
+  {
+    target: '.referral-rewards-info',
+    content: 'This section explains how the referral program works. You can earn points and commissions from different tiers of referrals.',
+    disableBeacon: true,
+    placement: 'bottom' as Placement,
+    spotlightPadding: 15,
+    offset: 20,
+  },
+  {
+    target: '.referral-link-section',
+    content: 'Share your unique referral link with friends and family. Every time someone signs up using your link, you\'ll earn rewards!',
+    disableBeacon: true,
+    placement: 'bottom' as Placement,
+    spotlightPadding: 15,
+    offset: 20,
+  },
+  {
+    target: '.social-share-buttons',
+    content: 'Use these buttons to quickly share your referral link on social media and via email.',
+    disableBeacon: true,
+    placement: 'bottom' as Placement,
+    spotlightPadding: 10,
+    offset: 20,
+  },
+  {
+    target: '.referral-stats',
+    content: 'Track your referral performance here. See how many people you\'ve referred and the total points earned.',
+    disableBeacon: true,
+    placement: 'bottom' as Placement,
+    spotlightPadding: 15,
+    offset: 20,
+  },
+  {
+    target: '.referral-badges',
+    content: 'Earn badges as you refer more people! Each badge represents a milestone in your referral journey.',
+    disableBeacon: true,
+    placement: 'bottom' as Placement,
+    spotlightPadding: 15,
+    offset: 20,
+  },
+];
+
+interface ReferralsTourProps {
+  onComplete?: () => void;
+}
+
+const ReferralsTour: React.FC<ReferralsTourProps> = ({ onComplete }) => {
+  // Use the centralized OnboardingContext for managing tour state
+  const { 
+    showTour, 
+    stepIndex, 
+    setStepIndex, 
+    startTour, 
+    endTour, 
+    isFirstVisit 
+  } = useOnboarding();
+
+  // We need to use a ref to track if we've already started the tour
+  // to prevent multiple starts from the auto-start feature
+  const hasAutoStarted = React.useRef(false);
+  
+  // Start the tour automatically on the first visit after a small delay
+  // to ensure all components are loaded
+  useEffect(() => {
+    if (isFirstVisit && !hasAutoStarted.current && !showTour) {
+      console.log('ReferralsTour: First visit detected, preparing to start tour...');
+      hasAutoStarted.current = true;
+      
+      const timer = setTimeout(() => {
+        console.log('ReferralsTour: Starting tour now (auto)');
+        startTour();
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isFirstVisit, startTour, showTour]);
+  
+  // Debug the current tour state for troubleshooting
+  useEffect(() => {
+    console.log('ReferralsTour state:', { showTour, stepIndex, isFirstVisit, hasAutoStarted: hasAutoStarted.current });
+  }, [showTour, stepIndex, isFirstVisit]);
+
+  // Custom endTour handler to call the onComplete callback if provided
+  const handleEndTour = () => {
+    endTour();
+    if (onComplete) {
+      onComplete();
+    }
+  };
+
+  // Handle tour events with improved debugging and smoother transitions
+  const handleJoyrideCallback = (data: CallBackProps) => {
+    const { action, index, status, type, lifecycle, step } = data;
+    
+    console.log('Referrals tour callback:', { action, index, status, type, lifecycle });
+    
+    // Immediately handle close action regardless of context
+    if (action === 'close') {
+      console.log('Close button clicked, ending tour immediately');
+      handleEndTour();
+      return;
+    }
+    
+    // Handle different tour events
+    if (type === 'step:before') {
+      // Preparing to show a step
+      console.log('Preparing referrals step:', index);
+      
+      // Make sure target is visible by scrolling to it if needed
+      if (step && step.target) {
+        try {
+          const targetElement = document.querySelector(step.target as string);
+          if (targetElement) {
+            // Custom scroll positioning for all elements with extra space
+            window.scrollTo({
+              top: Math.max(0, targetElement.getBoundingClientRect().top + window.scrollY - 250),
+              behavior: 'smooth'
+            });
+          }
+        } catch (err) {
+          console.error('Error scrolling to target:', err);
+        }
+      }
+    }
+    
+    // Update step index for navigation
+    if (type === 'step:after') {
+      if (action === 'next') {
+        const nextIndex = index + 1;
+        console.log('Moving to next step:', nextIndex);
+        setStepIndex(nextIndex);
+      } else if (action === 'prev' || action === 'back') {
+        // Only go back if we're not already at the first step
+        if (index > 0) {
+          const prevIndex = index - 1;
+          console.log('Moving to previous step:', prevIndex);
+          setStepIndex(prevIndex);
+        } else {
+          // If we're at the first step, just maintain the current step
+          console.log('Already at first step, maintaining current position');
+          setStepIndex(0);
+        }
+      }
+    }
+    
+    // Handle tour end
+    if (type === 'tour:end') {
+      console.log('Tour ended by tour:end event');
+      handleEndTour();
+    }
+    
+    // End tour when finished or skipped
+    // Do a string comparison instead of using the STATUS enum to avoid TypeScript errors
+    if (status === 'finished' || status === 'skipped') {
+      console.log('Referrals tour ended with status:', status);
+      handleEndTour();
+    }
+  };
+  
+  // Tour restart button to show in the dashboard with green styling
+  const TourButton = () => (
+    <Button
+      onClick={startTour}
+      className="tour-guide-button bg-[#43EB3E] hover:bg-[#43EB3E]/80 text-[#011d3d] font-medium border border-[#1b75bc] shadow-sm"
+    >
+      Start Referrals Tour
+    </Button>
+  );
+
+  return (
+    <>
+      {/* Only show tour button when tour is not running */}
+      {!showTour && !isFirstVisit && (
+        <div className="flex justify-end mb-4">
+          <TourButton />
+        </div>
+      )}
+      <Joyride
+        steps={tourSteps}
+        run={showTour}
+        continuous={true}
+        scrollToFirstStep={true}
+        // @ts-ignore - scrollToSteps exists in react-joyride but isn't in the types
+        scrollToSteps={true}
+        scrollOffset={80}
+        scrollDuration={300}
+        showProgress={true}
+        showSkipButton={true}
+        spotlightClicks={true}
+        disableOverlayClose={true}
+        disableCloseOnEsc={true}
+        hideCloseButton={false}
+        callback={handleJoyrideCallback}
+        stepIndex={stepIndex}
+        // @ts-ignore - We need to bypass TypeScript for the custom styles
+        styles={joyrideStyles as any}
+        debug={true}
+        floaterProps={{ 
+          disableAnimation: false,
+          styles: {
+            arrow: {
+              length: 8,
+              spread: 12,
+            }
+          }
+        }}
+        locale={{
+          back: 'Back',
+          close: 'Close',
+          last: 'Finish',
+          next: 'Next',
+          skip: 'Skip Tour',
+        }}
+      />
+    </>
+  );
+};
+
+export default ReferralsTour;

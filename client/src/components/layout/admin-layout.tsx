@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -9,7 +9,6 @@ import {
   Package,
   Gift,
   DollarSign,
-  UserCog,
   ScrollText,
   FileText,
   LogOut,
@@ -17,14 +16,48 @@ import {
   X,
   UserPlus,
   UserCheck,
-  Mail, // Added import for Mail icon
-  RefreshCw, // Added import for RefreshCw icon for migrations
+  Mail,
+  RefreshCw,
 } from "lucide-react";
+import { prefetchAdminData } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "@/providers/theme-provider";
+
+// Helper function for section determination
+const getSectionFromHref = (href: string): 'dashboard' | 'users' | 'agents' | 'products' | 'rewards' | 'quotes' | 'redemptions' | 'logs' | 'leads' | 'all' => {
+  if (href === '/admin') return 'dashboard';
+  if (href === '/admin/manage-users') return 'users';
+  if (href === '/admin/agents') return 'agents';
+  if (href === '/admin/customers') return 'users';
+  if (href === '/admin/leads') return 'leads';
+  if (href === '/admin/products') return 'products';
+  if (href === '/admin/quote-requests') return 'quotes';
+  if (href === '/admin/rewards') return 'rewards';
+  if (href === '/admin/cash-redemptions') return 'redemptions';
+  if (href === '/admin/logs' || href === '/admin/email-logs') return 'logs';
+  return 'all';
+};
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { logoutMutation } = useUser();
+  const { token } = useAuth();
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasPrefetched, setHasPrefetched] = useState(false);
+
+  // Prefetch section-specific data when the layout is first loaded
+  useEffect(() => {
+    if (!hasPrefetched && token) {
+      // Get the current section based on the URL
+      const currentSection = getSectionFromHref(location);
+      console.log(`🚀 Initial prefetching for admin section: ${currentSection}`);
+      
+      // Prefetch data for the current section
+      prefetchAdminData(token, currentSection);
+      setHasPrefetched(true);
+    }
+  }, [token, hasPrefetched, location]);
 
   const handleLogout = async () => {
     try {
@@ -41,6 +74,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "User Management", href: "/admin/manage-users", icon: <UserPlus className="h-4 w-4 mr-2" /> },
     { label: "Agents", href: "/admin/agents", icon: <UserCheck className="h-4 w-4 mr-2" /> },
     { label: "Customers", href: "/admin/customers", icon: <Users className="h-4 w-4 mr-2" /> },
+    { label: "Leads", href: "/admin/leads", icon: <Users className="h-4 w-4 mr-2" /> },
     { label: "Products", href: "/admin/products", icon: <Package className="h-4 w-4 mr-2" /> },
     { label: "Quote Requests", href: "/admin/quote-requests", icon: <FileText className="h-4 w-4 mr-2" /> },
     { label: "Rewards", href: "/admin/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
@@ -50,16 +84,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "Email Logs", href: "/admin/email-logs", icon: <Mail className="h-4 w-4 mr-2" /> },
   ];
 
+  // Handle navigation and prefetch data for the next section
+  const handleNavigation = (href: string) => {
+    // Determine which section we're navigating to
+    const section = getSectionFromHref(href);
+    
+    // Only navigate if not already on the page
+    if (href !== location) {
+      // Immediately prefetch data before navigation to ensure fast loading
+      if (token) {
+        console.log(`🚀 Navigation prefetching for ${href} (${section})`);
+        prefetchAdminData(token, section);
+      }
+      
+      // Then navigate
+      navigate(href);
+      setSidebarOpen(false);
+    }
+  };
+
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed top-4 right-6 z-50 lg:hidden h-10 w-10 bg-background shadow-md"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
+      {/* Theme Toggle and Mobile Menu */}
+      <div className="fixed top-4 right-6 z-50 flex items-center gap-2">
+        <ThemeToggle />
+        <Button
+          variant="outline"
+          size="icon"
+          className="lg:hidden h-10 w-10 bg-background shadow-md"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </Button>
+      </div>
 
       {sidebarOpen && (
         <div
@@ -76,10 +133,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}>
         <div className="flex flex-col h-full">
           <div className="p-4 md:p-6 border-b">
-            <img
-              src="/opian-logo-white.png"
+            <img 
+              src={useTheme().theme === 'dark' ? '/opian-logo-white.png' : '/opian-rewards-logo(R).png'} 
               alt="OPIAN Rewards"
-              className="h-8 md:h-12 w-auto object-contain mx-auto dark:invert"
+              className="h-8 md:h-12 w-auto object-contain mx-auto"
               onError={(e) => {
                 const img = e.target as HTMLImageElement;
                 img.onerror = null;
@@ -97,9 +154,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   key={item.href}
                   variant={location === item.href ? "secondary" : "ghost"}
                   className="w-full justify-start text-sm md:text-base capitalize"
-                  onClick={() => {
-                    navigate(item.href);
-                    setSidebarOpen(false);
+                  onClick={() => handleNavigation(item.href)}
+                  onMouseEnter={() => {
+                    // Start prefetching data when hovering over navigation items
+                    if (token && item.href !== location) {
+                      const section = getSectionFromHref(item.href);
+                      console.log(`👆 Hover prefetching for ${item.href} (${section})`);
+                      prefetchAdminData(token, section);
+                    }
                   }}
                 >
                   {item.icon}
@@ -113,9 +175,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               variant="outline"
               className="w-full text-sm md:text-base"
               onClick={handleLogout}
-              disabled={logoutMutation.isLoading}
+              disabled={logoutMutation.isPending}
             >
-              {logoutMutation.isLoading ? (
+              {logoutMutation.isPending ? (
                 <>Loading...</>
               ) : (
                 <>

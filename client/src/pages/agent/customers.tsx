@@ -132,7 +132,7 @@ export default function AgentCustomers() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">My Customers</h1>
+        <h1 className="text-3xl font-bold text-foreground">My Customers</h1>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
           Create Customer
@@ -156,7 +156,34 @@ export default function AgentCustomers() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-4">Loading customers...</div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Package</TableHead>
+                  <TableHead>Points</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array(5).fill(0).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    <TableCell><div className="h-5 w-32 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell><div className="h-5 w-40 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell><div className="h-5 w-24 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell><div className="h-5 w-20 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell><div className="h-5 w-12 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell><div className="h-5 w-16 bg-muted rounded animate-pulse"></div></TableCell>
+                    <TableCell className="text-right">
+                      <div className="h-5 w-8 bg-muted rounded animate-pulse ml-auto"></div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
             <Table>
               <TableHeader>

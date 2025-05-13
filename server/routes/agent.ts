@@ -1,11 +1,23 @@
 import { Router } from 'express';
 import { createConnection } from '../db';
 import { generateReferralCode } from '../utils/referral';
-import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification } from '../utils/emailService';
+import { sendEmail, formatRegistrationEmail, sendAdminRegistrationNotification, generateRandomPassword } from '../utils/emailService';
 import { queryCache } from '../utils/query-cache';
 import { checkAgent } from '../auth';
+import { scrypt, randomBytes } from 'crypto';
+import { promisify } from 'util';
 
 const router = Router();
+
+// Create local scrypt promisification
+const scryptAsync = promisify(scrypt);
+
+// Local implementation of hashPassword that matches auth.ts implementation
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString('hex');
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
 // Apply checkAgent middleware to all routes in this router
 router.use(checkAgent);
@@ -128,7 +140,7 @@ router.post('/customers/create', async (req: any, res) => {
       gender, idNumber, occupation, industry, addressLine1,
       suburb, postalCode, selectedPackage, bankName,
       accountType, accountNumber, accountHolderName,
-      branchCode, isSouthAfrican, hasCreditCard
+      branchCode, isSouthAfrican, hasCreditCard, leadId
     } = req.body;
 
     // Check for existing user
@@ -144,8 +156,11 @@ router.post('/customers/create', async (req: any, res) => {
     // Generate a unique referral code
     const referralCode = await generateUniqueReferralCode(connection);
 
-    // Generate a temporary password
-    const defaultPassword = '$2b$10$KwHVaHkVt5J3YmHj0GsYOeoI2G1G8VO1RnYkl5tD5OXOxC3v9hOkS'; // hashed '123456'
+    // Generate a random password
+    const plainPassword = generateRandomPassword(12);
+    
+    // Use our local implementation of hashPassword
+    const hashedPassword = await hashPassword(plainPassword);
 
     // Calculate initial points based on package
     let initialPoints = 0;
@@ -192,7 +207,7 @@ router.post('/customers/create', async (req: any, res) => {
 
       const insertParams = [
         email,
-        defaultPassword,
+        hashedPassword,
         firstName,
         lastName,
         mobileNumber,
@@ -250,8 +265,8 @@ router.post('/customers/create', async (req: any, res) => {
         if (tableCheck[0].count > 0) {
           console.log('Adding customer to agent_commissions table');
           
-          // Calculate commission (7.5% for sign-up)
-          const commissionPercentage = 7.5; // 7.5%
+          // Calculate commission (30% for sign-up)
+          const commissionPercentage = 30; // 30%
           const commissionAmount = packagePrice * commissionPercentage / 100;
           
           // Insert into agent_commissions
@@ -285,11 +300,25 @@ router.post('/customers/create', async (req: any, res) => {
         // Continue the process even if commission record fails
       }
 
+      // Update lead status if this customer was created from a lead
+      if (leadId) {
+        try {
+          console.log(`Updating lead ID ${leadId} to status 'converted'`);
+          await connection.execute(
+            'UPDATE leads SET status = ?, updated_at = NOW() WHERE id = ? AND assigned_agent_id = ?',
+            ['converted', leadId, req.user.id]
+          );
+        } catch (leadError) {
+          console.error('Error updating lead status:', leadError);
+          // Continue process even if lead update fails
+        }
+      }
+
       await connection.commit();
 
       // Send welcome email
       try {
-        const { text, html } = formatRegistrationEmail(firstName, email);
+        const { text, html } = formatRegistrationEmail(firstName, email, plainPassword);
         await sendEmail({
           to: email,
           subject: "Welcome to OPIAN Rewards!",
@@ -309,8 +338,9 @@ router.post('/customers/create', async (req: any, res) => {
             idNumber,
             occupation,
             industry,
-            addressLine1,
-            suburb,
+            // Map the address fields correctly
+            address: addressLine1,
+            city: suburb,
             postalCode,
             selectedPackage: normalizedPackage,
             bankName,
@@ -321,9 +351,16 @@ router.post('/customers/create', async (req: any, res) => {
             isSouthAfrican,
             hasCreditCard,
             createdAt: new Date().toISOString(),
-            mandateAccepted: true,
-            agentId: req.user.id
+            mandate_accepted: true,  // Use the correct field name (mandate_accepted instead of mandateAccepted)
+            agentId: req.user.id,
+            agentName: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim()
           };
+          
+          console.log('Sending admin notification with data:', JSON.stringify({
+            address: customerData.address,
+            city: customerData.city,
+            mandate_accepted: customerData.mandate_accepted
+          }));
           
           await sendAdminRegistrationNotification(customerData);
         } catch (adminEmailError) {
@@ -341,7 +378,7 @@ router.post('/customers/create', async (req: any, res) => {
         points: initialPoints,
         selectedPackage: normalizedPackage,
         packagePrice,
-        temporaryPassword: '123456',
+        temporaryPassword: plainPassword,
         agentId: req.user.id,
         isEnabled: true,
         mandateAccepted: true,

@@ -22,6 +22,31 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// Helper functions for package pricing and commission calculations
+const getPackagePrice = (packageName: string | null): number => {
+  if (!packageName) return 0;
+  
+  const packagePrices: Record<string, number> = {
+    'OPPORTUNITY': 350,
+    'MOMENTUM': 450,
+    'PROSPER': 550,
+    'PRESTIGE': 695,
+    'PINNACLE': 825
+  };
+  
+  return packagePrices[packageName.toUpperCase()] || 0;
+};
+
+const calculateCommission = (packageName: string | null): number => {
+  if (!packageName) return 0;
+  
+  // Calculate 30% of package price as the commission
+  const packagePrice = getPackagePrice(packageName);
+  const commission = packagePrice * 0.3;
+  // Return with 2 decimal places
+  return Math.round(commission * 100) / 100;
+};
+
 export default function AdminAgents() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
@@ -174,6 +199,7 @@ export default function AdminAgents() {
                   <TableHead>Total Customers</TableHead>
                   <TableHead>Today's Sign-ups</TableHead>
                   <TableHead>Points Managed</TableHead>
+                  <TableHead>Potential Commissions</TableHead>
                   <TableHead>Join Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Performance</TableHead>
@@ -188,6 +214,7 @@ export default function AdminAgents() {
                     <TableCell>{agent.totalCustomers}</TableCell>
                     <TableCell>{agent.todaySignups}</TableCell>
                     <TableCell>{(agent.totalCustomerPoints || 0).toLocaleString()}</TableCell>
+                    <TableCell>R{parseFloat(agent.potentialCommissions || 0).toFixed(2)}</TableCell>
                     <TableCell>{new Date(agent.joinDate).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <Badge
@@ -233,14 +260,15 @@ export default function AdminAgents() {
       </Card>
 
       <Dialog open={!!selectedAgentId} onOpenChange={() => setSelectedAgentId(null)}>
-        <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white">
-          <DialogHeader className="mb-4">
+        <DialogContent className="max-w-[95vw] md:max-w-[90vw] max-h-[85vh] bg-[#011d3d] border-[#022b5c] text-white">
+          <DialogHeader className="mb-4 sticky top-0 z-10 bg-[#011d3d] pt-6">
             <DialogTitle className="text-xl font-semibold text-white">
               {selectedAgent?.firstName} {selectedAgent?.lastName}'s Customers
             </DialogTitle>
-            <p className="text-sm text-gray-300">
-              Total Customers: {agentCustomers?.length || 0}
-            </p>
+            <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-300">
+              <p>Total Customers: {agentCustomers?.length || 0}</p>
+              <p>Potential Commissions: R{parseFloat(selectedAgent?.potentialCommissions || 0).toFixed(2)}</p>
+            </div>
           </DialogHeader>
 
           {isLoadingCustomers ? (
@@ -248,38 +276,48 @@ export default function AdminAgents() {
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
             </div>
           ) : (
-            <div className="relative">
-              <Table>
-                <TableHeader>
+            <div className="relative overflow-auto max-h-[60vh]">
+              <Table className="w-full table-fixed">
+                <TableHeader className="sticky top-0 z-10 bg-[#011d3d]">
                   <TableRow className="border-[#022b5c]">
-                    <TableHead className="text-gray-300">Name</TableHead>
-                    <TableHead className="text-gray-300">Email</TableHead>
-                    <TableHead className="text-gray-300">Package</TableHead>
-                    <TableHead className="text-gray-300">Points</TableHead>
-                    <TableHead className="text-gray-300">Status</TableHead>
-                    <TableHead className="text-gray-300">Created At</TableHead>
+                    <TableHead className="text-gray-300 w-[15%]">Name</TableHead>
+                    <TableHead className="text-gray-300 w-[20%]">Email</TableHead>
+                    <TableHead className="text-gray-300 w-[10%]">Package</TableHead>
+                    <TableHead className="text-gray-300 w-[10%]">Points</TableHead>
+                    <TableHead className="text-gray-300 w-[10%]">Price</TableHead>
+                    <TableHead className="text-gray-300 w-[12%]">Commission</TableHead>
+                    <TableHead className="text-gray-300 w-[10%]">Status</TableHead>
+                    <TableHead className="text-gray-300 w-[13%]">Created At</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {agentCustomers?.map((customer: any) => (
                     <TableRow key={customer.id} className="border-[#022b5c] hover:bg-[#022b5c]/50">
-                      <TableCell className="text-white">{customer.firstName} {customer.lastName}</TableCell>
-                      <TableCell className="text-white">{customer.email}</TableCell>
+                      <TableCell className="text-white text-sm whitespace-normal">{customer.firstName} {customer.lastName}</TableCell>
+                      <TableCell className="text-white text-sm whitespace-normal">{customer.email}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="border-[#022b5c] text-white">
+                        <Badge variant="outline" className="border-[#022b5c] text-white text-xs whitespace-normal">
                           {customer.selectedPackage || 'None'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-white">{customer.points?.toLocaleString() || 0}</TableCell>
+                      <TableCell className="text-white text-sm whitespace-normal">{customer.points?.toLocaleString() || 0}</TableCell>
+                      <TableCell className="text-white text-sm whitespace-normal">
+                        R{getPackagePrice(customer.selectedPackage)?.toFixed(2) || "0.00"}
+                      </TableCell>
+                      <TableCell className="text-white text-sm whitespace-normal">
+                        {customer.commissionAmount 
+                          ? `R${customer.commissionAmount.toFixed(2)}` 
+                          : `R${calculateCommission(customer.selectedPackage)?.toFixed(2) || "0.00"}`}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant={customer.isEnabled ? "default" : "destructive"}
-                          className={customer.isEnabled ? "bg-green-600 hover:bg-green-700" : ""}
+                          className={`text-xs ${customer.isEnabled ? "bg-green-600 hover:bg-green-700" : ""}`}
                         >
                           {customer.isEnabled ? "Active" : "Disabled"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-gray-300">
+                      <TableCell className="text-gray-300 text-sm whitespace-normal">
                         {new Date(customer.createdAt).toLocaleDateString()}
                       </TableCell>
                     </TableRow>

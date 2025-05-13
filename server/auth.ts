@@ -8,6 +8,61 @@ import { createConnection } from './db';
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 
+// Export the processReferralPoints function for use in other modules
+export async function processReferralPoints(connection: any, userId: number, referralCode: string, selectedPackage: string) {
+  console.log(`Processing referral points for: userId=${userId}, referralCode=${referralCode}, package=${selectedPackage}`);
+  
+  if (!referralCode) {
+    console.log('No referral code provided, skipping referral points processing');
+    return;
+  }
+
+  // Clean up referral code by removing any dashes or spaces
+  const cleanReferralCode = referralCode.replace(/[-\s]/g, '');
+  console.log(`Using cleaned referral code: ${cleanReferralCode}`);
+
+  const [referrer] = await connection.execute(
+    'SELECT id, email, points FROM users WHERE referral_code = ?',
+    [cleanReferralCode]
+  );
+
+  if (!Array.isArray(referrer) || referrer.length === 0) {
+    console.log(`No referrer found with code: ${cleanReferralCode}`);
+    return;
+  }
+
+  const referrerId = referrer[0].id;
+  const referrerEmail = referrer[0].email;
+  const currentPoints = referrer[0].points || 0;
+  const referralBonus = 2000; // Fixed referral bonus points - 2000 points per referral
+  
+  console.log(`Found referrer: id=${referrerId}, email=${referrerEmail}, currentPoints=${currentPoints}`);
+
+  // Add points to referrer
+  await connection.execute(
+    'UPDATE users SET points = points + ? WHERE id = ?',
+    [referralBonus, referrerId]
+  );
+  
+  console.log(`Updated referrer ${referrerId} points from ${currentPoints} to ${currentPoints + referralBonus}`);
+
+  // Record referral transaction
+  await connection.execute(
+    `INSERT INTO transactions (
+      user_id, points, type, description, status, created_at
+    ) VALUES (?, ?, ?, ?, ?, NOW())`,
+    [
+      referrerId,
+      referralBonus,
+      'REFERRAL_BONUS',
+      `Referral bonus for new ${selectedPackage} package signup - 2000 points`,
+      'PROCESSED'
+    ]
+  );
+  
+  console.log(`Created referral transaction record for referrer ${referrerId} with ${referralBonus} points`);
+}
+
 const scryptAsync = promisify(scrypt);
 
 const crypto = {
@@ -322,7 +377,7 @@ export function setupAuth(app: Express) {
 
   // Keep existing imports and configurations...
 
-  // Add helper function for validating referral code
+  // Helper function for validating referral code within setupAuth scope
   async function validateReferralCode(connection: any, referralCode: string): Promise<boolean> {
     if (!referralCode) return true;
     const [referrer] = await connection.execute(
@@ -332,42 +387,7 @@ export function setupAuth(app: Express) {
     return Array.isArray(referrer) && referrer.length > 0;
   }
 
-  // Add helper function for processing referral points
-  async function processReferralPoints(connection: any, userId: number, referralCode: string, selectedPackage: string) {
-    if (!referralCode) return;
-
-    const [referrer] = await connection.execute(
-      'SELECT id FROM users WHERE referral_code = ?',
-      [referralCode]
-    );
-
-    if (!Array.isArray(referrer) || referrer.length === 0) return;
-
-    const referrerId = referrer[0].id;
-    const referralBonus = 2000; // Fixed referral bonus points
-
-    // Add points to referrer
-    await connection.execute(
-      'UPDATE users SET points = points + ? WHERE id = ?',
-      [referralBonus, referrerId]
-    );
-
-    // Record referral transaction
-    await connection.execute(
-      `INSERT INTO transactions (
-        user_id, points, type, description, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, NOW())`,
-      [
-        referrerId,
-        referralBonus,
-        'REFERRAL_BONUS',
-        `Referral bonus for new ${selectedPackage} package signup - 2000 points`,
-        'PROCESSED'
-      ]
-    );
-  }
-
-
+  // Setup registration endpoint
   app.post("/api/register", async (req, res) => {
     const connection = await createConnection();
     try {
@@ -378,11 +398,31 @@ export function setupAuth(app: Express) {
       });
 
       // Validate referral code if provided
+      let referrerAgent = null;
       if (req.body.referralCode) {
-        const isValidReferral = await validateReferralCode(connection, req.body.referralCode);
-        if (!isValidReferral) {
+        try {
+          // Look up the referrer to validate and potentially get agent info
+          const [referrerResult] = await connection.execute(
+            'SELECT id, first_name, last_name, is_agent FROM users WHERE referral_code = ? AND is_enabled = 1',
+            [req.body.referralCode]
+          );
+          
+          if (!Array.isArray(referrerResult) || referrerResult.length === 0) {
+            return res.status(400).json({
+              error: "Invalid referral code"
+            });
+          }
+          
+          // Store the referrer information for later use
+          referrerAgent = referrerResult[0];
+          console.log('Found referrer for code:', req.body.referralCode, {
+            referrerId: referrerAgent.id,
+            isAgent: Boolean(referrerAgent.is_agent)
+          });
+        } catch (error) {
+          console.error('Error validating referral code:', error);
           return res.status(400).json({
-            error: "Invalid referral code"
+            error: "Failed to validate referral code"
           });
         }
       }
@@ -573,7 +613,7 @@ export function setupAuth(app: Express) {
               });
               console.log('Welcome email sent successfully to:', req.body.email);
 
-              // Send admin notification
+              // Send admin notification with agent info if available
               await sendAdminRegistrationNotification({
                 firstName: req.body.firstName,
                 lastName: req.body.lastName,
@@ -596,7 +636,11 @@ export function setupAuth(app: Express) {
                 accountType: req.body.accountType,
                 accountNumber: req.body.accountNumber,
                 accountHolderName: req.body.accountHolderName,
-                branchCode: req.body.branchCode
+                branchCode: req.body.branchCode,
+                // Include agent information if referrer is an agent
+                agentId: referrerAgent && referrerAgent.is_agent ? referrerAgent.id : null,
+                agentName: referrerAgent && referrerAgent.is_agent ? 
+                  `${referrerAgent.first_name} ${referrerAgent.last_name}` : null
               });
               console.log('Admin notification sent successfully');
             } catch (emailError) {
@@ -965,6 +1009,35 @@ export async function checkAgent(req: Request, res: Response, next: NextFunction
     next();
   } catch (error) {
     console.error('Error in agent check:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+/**
+ * Middleware to check if the user is authenticated
+ * A simpler version of checkAdmin/checkAgent that only verifies authentication
+ */
+export async function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+  try {
+    console.log('Running authentication middleware');
+
+    // Get user from token or session
+    const user = await getUserFromTokenOrSession(req);
+    if (!user) {
+      console.log('User not authenticated via session or token');
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    console.log('Authentication passed for user:', {
+      userId: user.id,
+      email: user.email
+    });
+    
+    // Attach user to request object for later use
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Error in authentication middleware:', error);
     res.status(500).json({ error: "Internal server error" });
   }
 }

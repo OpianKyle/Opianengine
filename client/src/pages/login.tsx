@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
+import { useTheme } from "@/providers/theme-provider";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const { loginMutation, user, isLoading } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (user) {
@@ -94,9 +96,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center">
           <img
-            src="/opian-logo-white.png"
+            src={theme === 'light' ? "/opian-rewards-logo(R).png" : "/opian-logo-white.png"}
             alt="OPIAN Rewards"
-            className="h-12 w-auto dark:invert"
+            className="h-12 w-auto"
             onError={(e) => {
               const img = e.target as HTMLImageElement;
               img.onerror = null;

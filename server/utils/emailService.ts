@@ -14,14 +14,32 @@ const createTransporter = () => {
   // Determine if connection should be secure
   const secure = process.env.SMTP_SECURE === 'true' || port === 465;
   
-  // For debugging
-  console.log('Email transporter configuration:', {
+  // For complete debugging
+  console.log('============ EMAIL TRANSPORTER DEBUG ============');
+  console.log('SMTP_HOST env var:', process.env.SMTP_HOST || 'Not set');
+  console.log('SMTP_PORT env var:', process.env.SMTP_PORT || 'Not set');
+  console.log('SMTP_USER env var:', process.env.SMTP_USER || 'Not set');
+  console.log('SMTP_PASSWORD env var:', process.env.SMTP_PASSWORD ? 'Set (hidden)' : 'Not set');
+  console.log('SMTP_SECURE env var:', process.env.SMTP_SECURE || 'Not set');
+  
+  console.log('Effective email transporter configuration:', {
     host,
     port,
     secure,
     user,
     passProvided: pass ? 'Yes' : 'No'
   });
+  
+  console.log('Creating transporter with the above config...');
+  
+  // If we're missing essential configuration, log a warning
+  if (!host || !user || !pass) {
+    console.error('WARNING: Missing essential SMTP configuration:');
+    if (!host) console.error('- SMTP_HOST is not set');
+    if (!user) console.error('- SMTP_USER is not set');
+    if (!pass) console.error('- SMTP_PASSWORD is not set');
+    console.error('Email sending will likely fail. Please check environment variables.');
+  }
   
   return nodemailer.createTransport({
     host,
@@ -35,8 +53,8 @@ const createTransporter = () => {
       // Do not fail on invalid certs
       rejectUnauthorized: false
     },
-    debug: process.env.NODE_ENV !== 'production',
-    logger: process.env.NODE_ENV !== 'production'
+    debug: true, // Enable debugging always
+    logger: true  // Enable SMTP traffic logging always
   });
 };
 
@@ -407,13 +425,48 @@ function getSignatureHTML(): string {
   `;
 }
 
+/**
+ * Generates a random password with mixed characters
+ * @param length Length of the password to generate (default: 10)
+ * @returns A random password string
+ */
+export function generateRandomPassword(length: number = 10): string {
+  const lowerChars = 'abcdefghijklmnopqrstuvwxyz';
+  const upperChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const numbers = '0123456789';
+  const specialChars = '!@#$%^&*()-_=+';
+  
+  const allChars = lowerChars + upperChars + numbers + specialChars;
+  
+  let password = '';
+  
+  // Ensure at least one character from each category
+  password += lowerChars.charAt(Math.floor(Math.random() * lowerChars.length));
+  password += upperChars.charAt(Math.floor(Math.random() * upperChars.length));
+  password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  password += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
+  
+  // Fill the rest with random characters
+  for (let i = 4; i < length; i++) {
+    password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+  }
+  
+  // Shuffle the password characters
+  return password.split('').sort(() => 0.5 - Math.random()).join('');
+}
+
 export function formatRegistrationEmail(
   firstName: string,
-  email: string
+  email: string,
+  password?: string
 ): { text: string; html: string } {
   // Use Replit domain for images (they actually work)
   const signatureImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/lance.png";
   const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
+  
+  // Use provided password or default to "12345678" for backward compatibility
+  const tempPassword = password || "12345678";
+  
   const text = `
     Dear ${firstName},
 
@@ -424,7 +477,7 @@ export function formatRegistrationEmail(
     Your Next Steps:
     1. Sign in: Visit our platform at www.opian.co.za and log in using your credentials:
        Username: ${email}
-       Password: 12345678
+       Password: ${tempPassword}
     2. Secure your account: Change your password to something strong and unique.
     3. Activate your rewards: Start engaging on the Opian journey with referral, financial product engagement and merchant rewards and unlock great benefits!
     4. Earn as you go: Every interaction brings you closer to bigger rewards and exclusive perks. We will guide you on your journey all the way, so expect regular communication from us.
@@ -472,7 +525,7 @@ export function formatRegistrationEmail(
             <li><strong>Sign in:</strong> Visit our platform at <a href="https://www.opian.co.za" style="color: #43EB3E; text-decoration: underline; font-weight: bold;">www.opian.co.za</a> and log in using your credentials:
               <div style="background: rgba(255,255,255,0.1); padding: 15px; margin: 10px 0; border-radius: 3px;">
                 <span style="color: #43EB3E;">Username:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">${email}</span><br>
-                <span style="color: #43EB3E;">Password:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">12345678</span>
+                <span style="color: #43EB3E;">Password:</span> <span style="color: white !important; mso-color-alt: white; -webkit-text-fill-color: white;">${tempPassword}</span>
               </div>
             </li>
             <li><strong>Secure your account:</strong> Change your password to something strong and unique.</li>
@@ -647,6 +700,8 @@ export function formatNewCustomerAdminEmail(
     accountHolderName?: string;
     branchCode?: string;
     mandate_accepted?: boolean;
+    agentId?: number;
+    agentName?: string;
   }
 ): { text: string; html: string } {
   // Debug log to verify mandate_accepted is passed correctly
@@ -655,10 +710,17 @@ export function formatNewCustomerAdminEmail(
   // Use Replit domain for images (they actually work)
   const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
   
+  // Format agent information if available
+  const agentInfo = customerData.agentId 
+    ? `Agent Information:
+    Agent ID: ${customerData.agentId}
+    Agent Name: ${customerData.agentName || 'Not available'}`
+    : '';
+  
   const text = `
     New Customer Registration
 
-    Personal Details:
+    ${agentInfo ? agentInfo + '\n\n' : ''}Personal Details:
     First Name: ${customerData.firstName}
     Last Name: ${customerData.lastName}
     Email: ${customerData.email}
@@ -704,6 +766,14 @@ export function formatNewCustomerAdminEmail(
       <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
         <h2 style="color: white; margin-top: 0;">Admin Notification</h2>
         <h1 style="color: #43EB3E;">New Customer Registration</h1>
+
+        ${customerData.agentId ? `
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Agent Information</h3>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Agent ID:</strong> ${customerData.agentId}</p>
+          ${customerData.agentName ? `<p style="margin: 10px 0;"><strong style="color: #43EB3E;">Agent Name:</strong> ${customerData.agentName}</p>` : ''}
+        </div>
+        ` : ''}
 
         <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
           <h3 style="color: #43EB3E; margin-top: 0;">Personal Details</h3>
@@ -939,6 +1009,14 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
           <p>Registration Date: ${new Date().toLocaleDateString()}</p>
         </div>
 
+        ${customerData.agentId ? `
+        <div class="section">
+          <h2>Agent Information</h2>
+          <p><strong>Agent ID:</strong> ${customerData.agentId}</p>
+          ${customerData.agentName ? `<p><strong>Agent Name:</strong> ${customerData.agentName}</p>` : ''}
+        </div>
+        ` : ''}
+
         <div class="section">
           <h2>Personal Details</h2>
           <div class="row">
@@ -1074,6 +1152,122 @@ export async function sendAdminRegistrationNotification(customerData: any): Prom
     });
   } catch (error) {
     console.error('Failed to send admin notification:', error);
+    return false;
+  }
+}
+
+/**
+ * Format email for new lead notification
+ */
+export function formatNewLeadEmail(
+  leadData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    mobileNumber: string;
+    selectedPackage?: string;
+    referralCode?: string;
+    notes?: string;
+  }
+): { text: string; html: string } {
+  // Use Replit domain for images
+  const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo-white.png";
+  
+  const text = `
+    New Lead Notification
+    
+    A new lead has been submitted to the Opian Rewards platform.
+    
+    Lead Details:
+    First Name: ${leadData.firstName}
+    Last Name: ${leadData.lastName}
+    Email: ${leadData.email}
+    Mobile Number: ${leadData.mobileNumber}
+    ${leadData.selectedPackage ? `Selected Package: ${leadData.selectedPackage}` : ''}
+    ${leadData.referralCode ? `Referral Code: ${leadData.referralCode}` : ''}
+    ${leadData.notes ? `Notes: ${leadData.notes}` : ''}
+    
+    Please log in to the Opian Rewards Admin Portal to view and manage this lead.
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #011d3d; padding: 40px 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="${logoImageUrl}" alt="Opian Rewards Logo" style="max-width: 200px;">
+      </div>
+
+      <div style="background-color: #011d3d; padding: 30px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; margin: 20px 0; color: white;">
+        <h2 style="color: white; margin-top: 0;">Lead Notification</h2>
+        <h1 style="color: #43EB3E;">New Lead Submitted</h1>
+        
+        <p style="color: white; line-height: 1.6;">
+          A new lead has been submitted to the Opian Rewards platform.
+        </p>
+
+        <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="color: #43EB3E; margin-top: 0;">Lead Details</h3>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">First Name:</strong> ${leadData.firstName}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Last Name:</strong> ${leadData.lastName}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Email:</strong> ${leadData.email}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Mobile Number:</strong> ${leadData.mobileNumber}</p>
+          ${leadData.selectedPackage ? `<p style="margin: 10px 0;"><strong style="color: #43EB3E;">Selected Package:</strong> ${leadData.selectedPackage}</p>` : ''}
+          ${leadData.referralCode ? `<p style="margin: 10px 0;"><strong style="color: #43EB3E;">Referral Code:</strong> ${leadData.referralCode}</p>` : ''}
+          ${leadData.notes ? `<p style="margin: 10px 0;"><strong style="color: #43EB3E;">Notes:</strong> ${leadData.notes}</p>` : ''}
+        </div>
+
+        <p style="color: white; line-height: 1.6; text-align: center; margin-top: 30px;">
+          <a href="https://www.opianrewards.com/admin/leads" style="display: inline-block; background-color: #43EB3E; color: #011d3d; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            View Lead in Admin Portal
+          </a>
+        </p>
+      </div>
+
+      <div style="color: rgba(255,255,255,0.7); font-size: 12px; line-height: 1.6; margin-top: 30px; text-align: center;">
+        <p>Opian Financial Services (Pty) Ltd | Company Registration Number: 2018/584168/07 | FSP No: 50974</p>
+      </div>
+    </div>
+  `;
+
+  return { text, html };
+}
+
+/**
+ * Send an email notification about a new lead to the specified email address
+ */
+export async function sendLeadNotificationEmail(leadData: any): Promise<boolean> {
+  try {
+    console.log('=========== LEAD NOTIFICATION EMAIL DEBUG =============');
+    console.log('Sending lead notification email with data:', JSON.stringify(leadData, null, 2));
+    
+    const { text, html } = formatNewLeadEmail(leadData);
+    console.log('Lead email text content generated successfully');
+    
+    // Add debugging for email environment variables
+    console.log('SMTP_PASSWORD available:', process.env.SMTP_PASSWORD ? 'Yes (length: ' + process.env.SMTP_PASSWORD.length + ')' : 'No');
+    console.log('SMTP_HOST available:', process.env.SMTP_HOST || 'No');
+    console.log('SMTP_USER available:', process.env.SMTP_USER || 'No');
+    
+    console.log('Attempting to send email to jamiek@opianfsgroup.com...');
+    
+    // If we're missing any required SMTP settings, use a different notification approach
+    if (!process.env.SMTP_PASSWORD) {
+      console.error('SMTP_PASSWORD missing - emails cannot be sent without password');
+      
+      // Still go through the sending process for debugging but expect it to fail
+      console.warn('Will attempt to send anyway to diagnose exact failure point');
+    }
+
+    return await sendEmail({
+      to: 'jamiek@opianfsgroup.com', // Jamie's email address
+      subject: 'New Lead Notification - Opian Rewards',
+      text,
+      html,
+      emailType: 'LEAD_NOTIFICATION',
+      templateData: leadData
+    });
+  } catch (error) {
+    console.error('Critical error in sendLeadNotificationEmail:', error);
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
     return false;
   }
 }

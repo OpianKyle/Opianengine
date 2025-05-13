@@ -4,8 +4,75 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Custom animations for horizontal bounce effect */
+  .animate-bounce-x {
+    animation: bounce-right 1s infinite;
+  }
+  
+  .animate-bounce-x-reverse {
+    animation: bounce-left 1s infinite;
+  }
+  
+  @keyframes bounce-right {
+    0%, 100% {
+      transform: translateX(0);
+      animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% {
+      transform: translateX(25%);
+      animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+  
+  @keyframes bounce-left {
+    0%, 100% {
+      transform: translateX(0);
+      animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+    50% {
+      transform: translateX(-25%);
+      animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+}
+
 @layer base {
   :root {
+    /* Light theme colors */
+    --background: 214 30% 95%;  /* Light blue-gray */
+    --foreground: 214 96% 8%;   /* Dark blue text (almost black) */
+
+    --primary: 214 96% 8%;     /* #01152b */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 142 84% 58%;  /* #43EB3E */
+    --secondary-foreground: 214 96% 8%;
+
+    --card: 214 30% 92%;      /* Slightly darker than background */
+    --card-foreground: 214 96% 8%;
+
+    --popover: 214 30% 92%;
+    --popover-foreground: 214 96% 8%;
+
+    --muted: 214 30% 85%;
+    --muted-foreground: 214 96% 25%;
+
+    --accent: 142 84% 58%;
+    --accent-foreground: 214 96% 8%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 30% 80%;
+    --input: 214 30% 80%;
+    --ring: 142 84% 58%;
+
+    --e-global-color-be70a18: #43EB3E;
+    --e-global-color-8608cda: #01152b;
+  }
+
+  .dark {
     --background: 214 96% 8%;  /* #01152b */
     --foreground: 0 0% 100%;   /* White text */
 
@@ -33,9 +100,6 @@
     --border: 214 96% 15%;
     --input: 214 96% 15%;
     --ring: 142 84% 58%;
-
-    --e-global-color-be70a18: #43EB3E;
-    --e-global-color-8608cda: #01152b;
   }
   
   * {
@@ -53,6 +117,52 @@
 }
 
 /* Custom scrollbar styles for modals */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* Light theme scrollbar */
+:root::-webkit-scrollbar-track {
+  background: rgba(214, 225, 239, 0.6);
+  border-radius: 4px;
+}
+
+:root::-webkit-scrollbar-thumb {
+  background: #43EB3E;
+  border-radius: 4px;
+}
+
+:root::-webkit-scrollbar-thumb:hover {
+  background: #2dd129;
+}
+
+/* Dark theme scrollbar */
+.dark::-webkit-scrollbar-track {
+  background: rgba(1, 29, 61, 0.6);
+  border-radius: 4px;
+}
+
+.dark::-webkit-scrollbar-thumb {
+  background: #43EB3E;
+  border-radius: 4px;
+}
+
+.dark::-webkit-scrollbar-thumb:hover {
+  background: #2dd129;
+}
+
+/* For Firefox */
+:root {
+  scrollbar-width: thin;
+  scrollbar-color: #43EB3E rgba(214, 225, 239, 0.6);
+}
+
+.dark {
+  scrollbar-width: thin;
+  scrollbar-color: #43EB3E rgba(1, 29, 61, 0.6);
+}
+
+/* Legacy support for elements with explicit bg color */
 .bg-\[#011d3d\]::-webkit-scrollbar {
   width: 8px;
 }
@@ -71,7 +181,6 @@
   background: #2dd129;
 }
 
-/* For Firefox */
 .bg-\[#011d3d\] {
   scrollbar-width: thin;
   scrollbar-color: #43EB3E rgba(1, 29, 61, 0.6);
@@ -82,7 +191,17 @@
     @apply bg-gradient-to-r from-[var(--e-global-color-be70a18)] to-[var(--e-global-color-8608cda)] text-white hover:opacity-90 transition-opacity;
   }
   
+  /* Updated card styles for both themes */
   .card {
-    @apply bg-[#011d3d] border-[#022b5c] shadow-lg;
+    @apply bg-card border-border shadow-lg transition-colors duration-300;
+  }
+
+  /* Explicit dark mode styles for cards with hardcoded colors */
+  .dark .bg-\[#011d3d\] {
+    @apply bg-card;
+  }
+  
+  .dark .border-\[#022b5c\] {
+    @apply border-border;
   }
 }

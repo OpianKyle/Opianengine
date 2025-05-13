@@ -3,16 +3,17 @@ import mysql from 'mysql2/promise';
 import { checkAdmin } from '../auth';
 import { logAdminAction } from '../admin-logger';
 import { stringify } from 'csv-stringify/sync';
+// Import will be dynamically loaded in the route handler
 
 const router = Router();
 
 // MariaDB connection pool
 const pool = mysql.createPool({
-  host: 'dedi1350.jnb1.host-h.net',
-  user: 'admin',
-  password: '8E33U976qa800F',
-  database: 'opianrewards',
-  port: 3306,
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'opian',
+  port: parseInt(process.env.DB_PORT || '3306'),
   ssl: {
     rejectUnauthorized: false
   },
@@ -176,7 +177,15 @@ router.get('/agents/stats', async (req: any, res) => {
         a.email, a.is_enabled as isEnabled, a.created_at as joinDate,
         COUNT(c.id) as totalCustomers,
         SUM(CASE WHEN DATE(c.created_at) = ? THEN 1 ELSE 0 END) as todaySignups,
-        SUM(c.points) as totalCustomerPoints
+        SUM(c.points) as totalCustomerPoints,
+        CAST(
+          (
+            SELECT 
+              COALESCE(SUM(ac.commission_amount), 0) 
+            FROM agent_commissions ac 
+            WHERE ac.agent_id = a.id
+          ) AS DECIMAL(10,2)
+        ) as potentialCommissions
        FROM users a
        LEFT JOIN users c ON c.agent_id = a.id
        WHERE a.is_agent = 1
@@ -261,14 +270,20 @@ router.get('/agents/:id/customers', async (req: any, res) => {
             )
           ),
           '[]'
-        ) as products
+        ) as products,
+        (
+          SELECT 
+            COALESCE(SUM(ac.commission_amount), 0) 
+          FROM agent_commissions ac 
+          WHERE ac.customer_id = u.id AND ac.agent_id = ?
+        ) as commissionAmount
        FROM users u
        LEFT JOIN product_assignments pa ON u.id = pa.user_id
        LEFT JOIN products p ON pa.product_id = p.id
        WHERE u.agent_id = ?
        GROUP BY u.id
        ORDER BY u.created_at DESC`,
-      [req.params.id]
+      [req.params.id, req.params.id]
     );
 
     const transformedCustomers = (customers as any).map((customer: any) => ({
@@ -281,7 +296,8 @@ router.get('/agents/:id/customers', async (req: any, res) => {
       points: customer.points,
       createdAt: customer.created_at,
       isEnabled: Boolean(customer.is_enabled),
-      products: JSON.parse(customer.products)
+      products: JSON.parse(customer.products),
+      commissionAmount: parseFloat(customer.commissionAmount || 0)
     }));
 
     console.log('Found customers for agent:', {
@@ -394,6 +410,54 @@ router.get('/customers/export', async (req: any, res) => {
     res.status(500).json({ error: 'Failed to export customers' });
   } finally {
     connection.release();
+  }
+});
+
+/**
+ * Process monthly renewals - creates RENEWAL commission records for all active customers
+ * This endpoint should be called on the first of each month
+ * It can also be triggered manually by an admin if needed
+ */
+router.post('/process-monthly-renewals', async (req: any, res) => {
+  try {
+    console.log('Admin triggered monthly renewal processing:', {
+      adminId: req.user.id,
+      adminEmail: req.user.email,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Log this admin action
+    await logAdminAction({
+      adminId: req.user.id,
+      actionType: 'PROCESS_RENEWALS' as any, // Force type as PROCESS_RENEWALS is a valid action
+      details: `Admin ${req.user.email} manually triggered monthly renewal processing`
+    });
+    
+    // Dynamically import the script to avoid ESM/CommonJS issues
+    const { processMonthlyRenewals } = await import('../../scripts/process-monthly-renewals.js');
+    
+    // Process renewals using the script
+    const results = await processMonthlyRenewals();
+    
+    // Log results
+    console.log('Monthly renewal processing completed:', results);
+    
+    // Return results to the client
+    res.json({
+      success: results.success,
+      message: results.success 
+        ? `Successfully processed ${results.renewalsCreated} renewal commissions for ${results.customersProcessed} customers` 
+        : results.message || 'Failed to process monthly renewals',
+      timestamp: new Date().toISOString(),
+      details: results
+    });
+  } catch (error) {
+    console.error('Error processing monthly renewals:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to process monthly renewals',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 

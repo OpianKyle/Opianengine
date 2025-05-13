@@ -1,41 +1,52 @@
-const mysql = require('mysql2/promise');
-require('dotenv').config();
+/**
+ * Run Commission Migration Script
+ * 
+ * This script imports and runs the update-commission-percentage.js script
+ * to update all existing commission records to use the correct 30% rate.
+ */
 
-// Import migrations
-const { up } = require('../migrations/0005_update_commission_package_types');
+import updateCommissionPercentages from './update-commission-percentage.js';
 
-// Create connection and run migration
 async function runMigration() {
-  console.log('Starting commission migration script...');
-  
-  // Create connection
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT || 3306
-  });
+  console.log('Starting commission percentage migration...');
   
   try {
-    console.log('Connected to database');
+    const results = await updateCommissionPercentages();
     
-    // Run the migration
-    console.log('Running up migration...');
-    await up(connection);
+    console.log('Migration completed successfully!');
+    console.log('Summary:');
+    console.log(`- Records found: ${results.recordsFound}`);
+    console.log(`- Records updated: ${results.recordsUpdated}`);
     
-    console.log('Migration completed successfully');
+    if (results.errors.length > 0) {
+      console.log('Errors encountered:');
+      results.errors.forEach((error, index) => {
+        console.log(`  ${index + 1}. ${error}`);
+      });
+    }
+    
+    return results;
   } catch (error) {
     console.error('Migration failed:', error);
-  } finally {
-    // Close connection
-    await connection.end();
-    console.log('Database connection closed');
+    return { 
+      recordsFound: 0, 
+      recordsUpdated: 0, 
+      errors: [error.message || 'Unknown error'] 
+    };
   }
 }
 
-// Run the migration
-runMigration().catch(err => {
-  console.error('Failed to run migration:', err);
-  process.exit(1);
-});
+// Self-invocation for direct execution (ES modules)
+if (import.meta.url === import.meta.resolve('./run-commission-migration.js')) {
+  runMigration()
+    .then(() => {
+      console.log('Migration script completed');
+      process.exit(0);
+    })
+    .catch(error => {
+      console.error('Migration script failed:', error);
+      process.exit(1);
+    });
+}
+
+export default runMigration;

@@ -26,6 +26,14 @@ export interface User {
   points: number;
   referral_code: string | null;
   referred_by: string | null;
+  // Subscription-related fields - no longer in use but kept for backward compatibility
+  // selectedPackage?: string;
+  // subscription_status?: string;
+  // subscription_start_date?: string;
+  // subscription_end_date?: string;
+  // paystack_customer_code?: string;
+  // paystack_subscription_code?: string;
+  // paystack_email_token?: string;
 }
 
 // Login credentials type
@@ -47,7 +55,7 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
   mobileNumber: string;
-  selectedPackage?: string;
+  // selectedPackage?: string; // No longer used but kept for compatibility
   referralCode?: string;
   signature?: string;
   isSouthAfrican?: boolean;
@@ -73,16 +81,18 @@ interface AuthContextType {
   isLoading: boolean;
   error: Error | null;
   token: string | null;
+  isAuthenticated: boolean;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<User, Error, RegisterData>;
+  refreshUser: () => Promise<void>;
 }
 
 // Create the auth context
 const AuthContext = createContext<AuthContextType | null>(null);
 
 // Helper to get stored token
-function getStoredToken(): string | null {
+export function getStoredToken(): string | null {
   try {
     return localStorage.getItem(AUTH_TOKEN_KEY);
   } catch (error) {
@@ -255,20 +265,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAgent: normalizedUser.is_agent 
       });
       
-      // Use a defer pattern to avoid React state update during render
-      setTimeout(() => {
-        // Use React router for a smooth transition (no page reload)
-        if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
-          console.log('Redirecting to admin dashboard');
-          setLocation('/admin');
-        } else if (normalizedUser.is_agent) {
-          console.log('Redirecting to agent dashboard');
-          setLocation('/agent'); 
-        } else {
-          console.log('Redirecting to customer dashboard');
-          setLocation('/dashboard');
-        }
-      }, 0);
+      // Immediate navigation without setTimeout to prevent timeouts
+      // Use React router for a smooth transition (no page reload)
+      if (normalizedUser.is_admin || normalizedUser.is_super_admin) {
+        console.log('Redirecting to admin dashboard');
+        setLocation('/admin');
+      } else if (normalizedUser.is_agent) {
+        console.log('Redirecting to agent dashboard');
+        setLocation('/agent'); 
+      } else {
+        console.log('Redirecting to customer dashboard');
+        setLocation('/dashboard');
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -325,11 +333,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSettled: () => {
       setIsTransitioning(false);
-      // Use setTimeout to avoid React state update during render
-      setTimeout(() => {
-        // Navigate to home without a page reload
-        setLocation('/');
-      }, 0);
+      // Immediate navigation without setTimeout
+      setLocation('/');
     }
   });
 
@@ -389,10 +394,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Your account has been created",
       });
 
-      // Redirect to the appropriate dashboard
-      setTimeout(() => {
-        setLocation('/');
-      }, 0);
+      // Immediate navigation without setTimeout
+      setLocation('/');
     },
     onError: (error: Error) => {
       toast({
@@ -406,15 +409,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  // Function to refresh user data
+  const refreshUser = useCallback(async () => {
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await userQuery.refetch();
+    } catch (error) {
+      console.error("Error refreshing user data:", error);
+    }
+  }, [queryClient, userQuery]);
+
   // Create the context value
   const authContextValue: AuthContextType = {
     user: userQuery.data || null,
     isLoading: userQuery.isLoading,
     error: userQuery.error as Error | null,
     token,
+    isAuthenticated: !!userQuery.data,
     loginMutation,
     logoutMutation,
     registerMutation,
+    refreshUser
   };
 
   return (

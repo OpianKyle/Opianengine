@@ -1,6 +1,9 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { useLocation, useRoute } from 'wouter';
-import { useAuth } from '@/hooks/use-auth';
+/**
+ * TIMEOUT FUNCTIONALITY REMOVED
+ * 
+ * This hook was causing registration timeouts and has been completely disabled.
+ * The registration process was timing out when agents were signing up customers.
+ */
 
 interface SessionTimeoutOptions {
   timeoutMinutes?: number;
@@ -10,93 +13,14 @@ interface SessionTimeoutOptions {
 }
 
 /**
- * Hook to handle session timeout
- * Logs user out after specified period of inactivity
+ * Empty stub hook that maintains the API but doesn't implement timeouts
+ * This prevents registration timeouts when agents are signing up customers
  */
-export function useSessionTimeout({
-  timeoutMinutes = 30,
-  warningBeforeMinutes = 5,
-  onWarning,
-  ignoredPaths = ['/auth', '/register']
-}: SessionTimeoutOptions = {}) {
-  const { user, logoutMutation } = useAuth();
-  const [location] = useLocation();
-  const timeoutRef = useRef<number | null>(null);
-  const warningTimeoutRef = useRef<number | null>(null);
-  
-  // Convert minutes to milliseconds
-  const timeoutMs = timeoutMinutes * 60 * 1000;
-  const warningMs = (timeoutMinutes - warningBeforeMinutes) * 60 * 1000;
-  
-  // Check if current path should ignore session timeout
-  const shouldIgnoreTimeout = ignoredPaths.some(path => location.startsWith(path));
-
-  // Function to reset timers
-  const resetTimer = useCallback(() => {
-    if (shouldIgnoreTimeout || !user) return;
-    
-    // Clear any existing timeouts
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    
-    if (warningTimeoutRef.current) {
-      window.clearTimeout(warningTimeoutRef.current);
-      warningTimeoutRef.current = null;
-    }
-    
-    // Set warning timer
-    warningTimeoutRef.current = window.setTimeout(() => {
-      if (onWarning) onWarning();
-    }, warningMs);
-    
-    // Set logout timer
-    timeoutRef.current = window.setTimeout(() => {
-      console.log('Session timed out after inactivity');
-      logoutMutation.mutate();
-    }, timeoutMs);
-  }, [timeoutMs, warningMs, onWarning, user, logoutMutation, shouldIgnoreTimeout]);
-  
-  // Setup event listeners for user activity
-  useEffect(() => {
-    if (shouldIgnoreTimeout || !user) return;
-    
-    const activityEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
-    
-    // Reset timer on user activity
-    const handleActivity = () => {
-      resetTimer();
-    };
-    
-    // Add event listeners
-    activityEvents.forEach(event => {
-      window.addEventListener(event, handleActivity);
-    });
-    
-    // Initial timer setup
-    resetTimer();
-    
-    // Cleanup
-    return () => {
-      activityEvents.forEach(event => {
-        window.removeEventListener(event, handleActivity);
-      });
-      
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-      }
-      
-      if (warningTimeoutRef.current) {
-        window.clearTimeout(warningTimeoutRef.current);
-      }
-    };
-  }, [resetTimer, user, shouldIgnoreTimeout]);
-  
-  // Reset timer when user or location changes
-  useEffect(() => {
-    resetTimer();
-  }, [user, location, resetTimer]);
+export function useSessionTimeout(_options: SessionTimeoutOptions = {}) {
+  // This function does nothing - all timeout functionality has been removed
+  const resetTimer = () => {
+    // No-op function
+  };
   
   return {
     resetTimer,

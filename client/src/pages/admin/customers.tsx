@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,15 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail } from "lucide-react";
+import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail, ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import cn from 'classnames';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CardStatusLabel } from "@/components/admin/card-status-label";
+import { CardStatusDropdown } from "@/components/admin/card-status-dropdown";
+import { BulkCardStatusUpdate } from "@/components/admin/bulk-card-status-update";
+import { useCardStatusMutation } from "@/hooks/use-card-status";
 import {
   Accordion,
   AccordionContent,
@@ -259,36 +264,61 @@ export default function AdminCustomers() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [pointsDialogOpen, setPointsDialogOpen] = useState(false);
   const [showAssignProducts, setShowAssignProducts] = useState(false);
-  const { data: customers } = useQuery({
-    queryKey: ["/api/admin/customers"],
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
+  const [showCardStatusUpdate, setShowCardStatusUpdate] = useState(false);
+  
+  const { data: customersResponse, isLoading: isCustomersLoading, isError: isCustomersError, error: customersError } = useQuery({
+    queryKey: ["/api/admin/customers", page, limit],
     queryFn: async () => {
-      const response = await fetch("/api/admin/customers", {
+      console.time('customersQuery');
+      // Add cache-busting query parameter to avoid browser cache
+      const cacheBuster = new Date().getTime();
+      const response = await fetch(`/api/admin/customers?page=${page}&limit=${limit}&_t=${cacheBuster}`, {
         credentials: 'include'
       });
       if (!response.ok) {
         throw new Error("Failed to fetch customers");
       }
-      return response.json();
-    }
+      const data = await response.json();
+      console.timeEnd('customersQuery');
+      return data;
+    },
+    staleTime: 5 * 1000, // 5 seconds instead of 1 minute - so data becomes stale quickly
+    refetchInterval: 10 * 1000, // Refetch every 10 seconds regardless of window focus
+    refetchIntervalInBackground: true, // Continue refetching even when the browser tab is not focused
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    retryDelay: 1000
   });
+  
+  // Extract data and pagination info
+  const customers = customersResponse?.data || [];
+  const pagination = customersResponse?.pagination || { page: 1, limit: 50, totalItems: 0, totalPages: 1 };
 
-  const { data: products } = useQuery({
+  const { data: products, isLoading: isProductsLoading } = useQuery({
     queryKey: ["/api/products"],
     queryFn: async () => {
+      console.time('productsQuery');
       const response = await fetch("/api/products", {
         credentials: 'include'
       });
       if (!response.ok) {
         throw new Error("Failed to fetch products");
       }
-      return response.json();
+      const data = await response.json();
+      console.timeEnd('productsQuery');
+      return data;
     },
     select: (data) => {
       return data?.map((product: any) => ({
         ...product,
         activities: product.activities || []
       }));
-    }
+    },
+    staleTime: 1000 * 60 * 3, // 3 minutes
+    retryDelay: 1000
   });
 
   const { toast } = useToast();
@@ -364,7 +394,7 @@ export default function AdminCustomers() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit] });
       toast({ title: "Success", description: "User details updated successfully" });
       editDetailsForm.reset();
       setEditDialogOpen(false);
@@ -389,7 +419,7 @@ export default function AdminCustomers() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit] });
       toast({ title: "Success", description: "User status updated successfully" });
     },
     onError: (error: Error) => {
@@ -490,7 +520,7 @@ export default function AdminCustomers() {
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit] });
       toast({
         title: "Import Complete",
         description: `Successfully imported ${data.success} customers. ${data.failed} failed.`
@@ -541,7 +571,7 @@ export default function AdminCustomers() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/logs"] });
       toast({ title: "Success", description: "Points assigned successfully" });
       pointsForm.reset();
@@ -582,12 +612,70 @@ export default function AdminCustomers() {
       points: 0,
     },
   });
+  
+  // Pagination component to be reused at top and bottom
+  const PaginationControls = ({ totalItems }: { totalItems: number }) => (
+    <div className="text-sm text-muted-foreground">
+      Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalItems)} of {totalItems} customers
+    </div>
+  );
+  
+  // Pagination navigation component
+  const PaginationNavigation = () => (
+    <div className="flex items-center space-x-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setPage(p => Math.max(1, p - 1))}
+        disabled={page === 1 || isCustomersLoading}
+      >
+        <ChevronLeft className="h-4 w-4" />
+        <span className="sr-only">Previous Page</span>
+      </Button>
+      <div className="flex items-center">
+        <span className="text-sm font-medium mr-2">Page</span>
+        <Input
+          type="number"
+          min={1}
+          max={Math.ceil(pagination.totalItems / limit)}
+          value={page}
+          onChange={(e) => {
+            const value = parseInt(e.target.value);
+            if (value && value > 0 && value <= Math.ceil(pagination.totalItems / limit)) {
+              setPage(value);
+            }
+          }}
+          className="w-16 h-8"
+        />
+        <span className="text-sm font-medium mx-2">of {Math.ceil(pagination.totalItems / limit)}</span>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setPage(p => Math.min(Math.ceil(pagination.totalItems / limit), p + 1))}
+        disabled={page === Math.ceil(pagination.totalItems / limit) || isCustomersLoading}
+      >
+        <ChevronRight className="h-4 w-4" />
+        <span className="sr-only">Next Page</span>
+      </Button>
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex flex-col" style={{ height: 'calc(100vh - 6rem)' }}>
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Customer Management</h1>
         <div className="flex gap-2">
+          {selectedCustomerIds.length > 0 && (
+            <Button 
+              variant="outline" 
+              className="bg-blue-500 text-white hover:bg-blue-600"
+              onClick={() => setShowCardStatusUpdate(true)}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Update Card Status ({selectedCustomerIds.length})
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => exportCustomersMutation.mutate()}
@@ -616,263 +704,375 @@ export default function AdminCustomers() {
             </Button>
           </label>
         </div>
+        
+        <Dialog open={showCardStatusUpdate} onOpenChange={setShowCardStatusUpdate}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Update Card Status</DialogTitle>
+              <DialogDescription>
+                Change the card status for {selectedCustomerIds.length} selected customer(s).
+              </DialogDescription>
+            </DialogHeader>
+            
+            <BulkCardStatusUpdate 
+              selectedIds={selectedCustomerIds} 
+              onUpdateComplete={() => {
+                setShowCardStatusUpdate(false);
+                setSelectedCustomerIds([]);
+              }}
+            />
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCardStatusUpdate(false)}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Customers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Package</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead>Points</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Assigned Products</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers?.map((customer: any) => {
-                const tierInfo = getTierInfo(customer.points);
-                return (
-                  <TableRow
-                    key={customer.id}
-                    className={cn(
-                      !customer.isEnabled && "opacity-60 bg-muted/50"
-                    )}
+      <Card className="flex-1 flex flex-col">
+        <CardHeader className="pb-4 flex-shrink-0">
+          <div className="flex flex-row items-center justify-between">
+            <CardTitle>All Customers</CardTitle>
+            {isCustomersLoading && (
+              <div className="flex items-center text-muted-foreground text-sm">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading customers data...
+              </div>
+            )}
+          </div>
+          
+          {!isCustomersError && customersResponse && (
+            <div className="flex items-center justify-between mt-2 py-2 border-b">
+              <PaginationControls totalItems={pagination.totalItems} />
+              <div className="flex items-center gap-4">
+                {selectedCustomerIds.length > 0 && (
+                  <Button
+                    onClick={() => setShowCardStatusUpdate(true)}
+                    className="flex items-center gap-2"
+                    variant="secondary"
+                    size="sm"
                   >
-                    <TableCell>{customer.firstName} {customer.lastName}</TableCell>
-                    <TableCell>{customer.email}</TableCell>
-                    <TableCell>{customer.phoneNumber}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {customer.selectedPackage || 'No Package'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Badge className={`${tierInfo.color}`}>
-                          {tierInfo.name}
-                        </Badge>
-                        {tierInfo.nextTier && (
-                          <p className="text-xs text-muted-foreground">
-                            {tierInfo.nextTier.pointsNeeded.toLocaleString()} points to {tierInfo.nextTier.name}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {typeof customer.points === 'number'
-                        ? customer.points.toLocaleString()
-                        : Number(customer.points || 0).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        customer.isEnabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {customer.isEnabled ? 'Active' : 'Disabled'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <ScrollArea className="h-[100px]">
-                        <div className="space-x-1">
-                          {customer.assignedProducts?.length > 0 ? (
-                            customer.assignedProducts.map((product: any) => (
-                              <Badge
-                                key={product.id}
-                                variant="secondary"
-                                className="cursor-pointer hover:bg-destructive/20"
-                                onClick={() => {
-                                  if (confirm('Are you sure you want to unassign this product?')) {
-                                    unassignProductMutation.mutate({
-                                      productId: product.id,
-                                      userId: customer.id
-                                    });
-                                  }
-                                }}
-                              >
-                                {product.name} ×
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">No products assigned</span>
+                    <CreditCard className="h-4 w-4" />
+                    Update Card Status ({selectedCustomerIds.length})
+                  </Button>
+                )}
+                <PaginationNavigation />
+              </div>
+            </div>
+          )}
+        </CardHeader>
+        <CardContent className="pt-0 pb-0 flex-1 flex flex-col">
+          {isCustomersError ? (
+            <div className="flex flex-col items-center justify-center py-10 text-destructive">
+              <p className="text-center mb-4">Failed to load customers</p>
+              <Button 
+                variant="outline" 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit] })}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0 overflow-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox 
+                        checked={
+                          customers.length > 0 && 
+                          selectedCustomerIds.length === customers.length
+                        }
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedCustomerIds(customers.map(c => c.id));
+                          } else {
+                            setSelectedCustomerIds([]);
+                          }
+                        }}
+                        aria-label="Select all customers"
+                      />
+                    </TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Package</TableHead>
+                    <TableHead>Tier</TableHead>
+                    <TableHead>Points</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Card Status</TableHead>
+                    <TableHead>Assigned Products</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isCustomersLoading && !customers.length ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="h-24 text-center">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground mt-2">Loading customer data...</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : !customers.length ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="h-24 text-center">
+                        No customers found.
+                      </TableCell>
+                    </TableRow>
+                  ) : 
+                    customers.map((customer: any) => {
+                      const tierInfo = getTierInfo(customer.points);
+                      return (
+                        <TableRow
+                          key={customer.id}
+                          className={cn(
+                            !customer.isEnabled && "opacity-60 bg-muted/50"
                           )}
-                        </div>
-                      </ScrollArea>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                            <DialogTrigger asChild>
-                              <DropdownMenuItem onSelect={(e) => {
-                                e.preventDefault();
-                                handleEditUser(customer);
-                              }}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit Details
-                              </DropdownMenuItem>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
-                              <DialogHeader>
-                                <DialogTitle className="text-[#43EB3E]">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
-                              </DialogHeader>
-                              <Form {...editDetailsForm}>
-                                <form onSubmit={editDetailsForm.handleSubmit((data) =>
-                                  updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
-                                )}>
-                                  <div className="grid grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-4 [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
-                                    <div className="col-span-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Personal Information</h3>
-                                    </div>
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="selectedPackage"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Package</FormLabel>
-                                          <FormControl>
-                                            <select
-                                              {...field}
-                                              className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
-                                            >
-                                              <option value="OPPORTUNITY">OPPORTUNITY</option>
-                                              <option value="MOMENTUM">MOMENTUM</option>
-                                              <option value="PROSPER">PROSPER</option>
-                                              <option value="PRESTIGE">PRESTIGE</option>
-                                              <option value="PINNACLE">PINNACLE</option>
-                                            </select>
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="firstName"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">First Name</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="lastName"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Last Name</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="email"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Email</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="phoneNumber"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Phone Number</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="gender"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Gender</FormLabel>
-                                          <FormControl>
-                                            <select
-                                              {...field}
-                                              value={field.value || ""}
-                                              className="w-full p-2 rounded bg-[#022b5c] border-[#043875] text-white"
-                                            >
-                                              <option value="">Select Gender</option>
-                                              {genderEnum.map((gender) => (
-                                                <option key={gender} value={gender}>
-                                                  {gender.charAt(0).toUpperCase() + gender.slice(1)}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="dateOfBirth"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">Date of Birth</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} type="date" className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={editDetailsForm.control}
-                                      name="idNumber"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel className="text-white">ID Number</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
+                        >
+                          <TableCell>
+                            <Checkbox 
+                              checked={selectedCustomerIds.includes(customer.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedCustomerIds(prev => [...prev, customer.id]);
+                                } else {
+                                  setSelectedCustomerIds(prev => prev.filter(id => id !== customer.id));
+                                }
+                              }}
+                              aria-label={`Select customer ${customer.firstName} ${customer.lastName}`}
+                            />
+                          </TableCell>
+                          <TableCell>{customer.firstName} {customer.lastName}</TableCell>
+                          <TableCell>{customer.email}</TableCell>
+                          <TableCell>{customer.phoneNumber}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {customer.selectedPackage || 'No Package'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Badge className={`${tierInfo.color}`}>
+                                {tierInfo.name}
+                              </Badge>
+                              {tierInfo.nextTier && (
+                                <p className="text-xs text-muted-foreground">
+                                  {tierInfo.nextTier.pointsNeeded.toLocaleString()} points to {tierInfo.nextTier.name}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {typeof customer.points === 'number'
+                              ? customer.points.toLocaleString()
+                              : Number(customer.points || 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              customer.isEnabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {customer.isEnabled ? 'Active' : 'Disabled'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <CardStatusLabel status={customer.cardStatus || "NOT_DELIVERED"} />
+                          </TableCell>
+                          <TableCell>
+                            <ScrollArea className="h-[100px]">
+                              <div className="space-x-1">
+                                {customer.assignedProducts?.length > 0 ? (
+                                  customer.assignedProducts.map((product: any) => (
+                                    <Badge
+                                      key={product.id}
+                                      variant="secondary"
+                                      className="cursor-pointer hover:bg-destructive/20"
+                                      onClick={() => {
+                                        if (confirm('Are you sure you want to unassign this product?')) {
+                                          unassignProductMutation.mutate({
+                                            productId: product.id,
+                                            userId: customer.id
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      {product.name} ×
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">No products assigned</span>
+                                )}
+                              </div>
+                            </ScrollArea>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                                  <DialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => {
+                                      e.preventDefault();
+                                      handleEditUser(customer);
+                                    }}>
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Edit Details
+                                    </DropdownMenuItem>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-5xl bg-card border-border text-card-foreground overflow-hidden">
+                                    <DialogHeader>
+                                      <DialogTitle className="text-primary">Edit Details - {customer.firstName} {customer.lastName}</DialogTitle>
+                                    </DialogHeader>
+                                    <Form {...editDetailsForm}>
+                                      <form onSubmit={editDetailsForm.handleSubmit((data) =>
+                                        updateUserDetailsMutation.mutate({ userId: selectedCustomer.id, data })
+                                      )}>
+                                        <div className="grid grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-4 [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-accent/60 [&::-webkit-scrollbar-thumb]:bg-primary [&::-webkit-scrollbar-thumb]:rounded-[4px]">
+                                          <div className="col-span-4">
+                                            <h3 className="text-lg font-semibold mb-2 text-primary">Personal Information</h3>
+                                          </div>
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="selectedPackage"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Package</FormLabel>
+                                                <FormControl>
+                                                  <select
+                                                    {...field}
+                                                    className="w-full p-2 rounded bg-card border-input text-card-foreground"
+                                                  >
+                                                    <option value="OPPORTUNITY">OPPORTUNITY</option>
+                                                    <option value="MOMENTUM">MOMENTUM</option>
+                                                    <option value="PROSPER">PROSPER</option>
+                                                    <option value="PRESTIGE">PRESTIGE</option>
+                                                    <option value="PINNACLE">PINNACLE</option>
+                                                  </select>
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="firstName"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>First Name</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} className="bg-card border-input text-card-foreground" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="lastName"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Last Name</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} className="bg-card border-input text-card-foreground" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="email"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Email</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} className="bg-card border-input text-card-foreground" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="phoneNumber"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Phone Number</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} className="bg-card border-input text-card-foreground" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="gender"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Gender</FormLabel>
+                                                <FormControl>
+                                                  <select
+                                                    {...field}
+                                                    value={field.value || ""}
+                                                    className="w-full p-2 rounded bg-card border-input text-card-foreground"
+                                                  >
+                                                    <option value="">Select Gender</option>
+                                                    {genderEnum.map((gender) => (
+                                                      <option key={gender} value={gender}>
+                                                        {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                                                      </option>
+                                                    ))}
+                                                  </select>
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="dateOfBirth"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Date of Birth</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} type="date" className="bg-card border-input text-card-foreground" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
+                                          <FormField
+                                            control={editDetailsForm.control}
+                                            name="idNumber"
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>ID Number</FormLabel>
+                                                <FormControl>
+                                                  <Input {...field} className="bg-card border-input text-card-foreground" />
+                                                </FormControl>
+                                                <FormMessage />
+                                              </FormItem>
+                                            )}
+                                          />
 
                                     <div className="col-span-4 mt-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Address Information</h3>
+                                      <h3 className="text-lg font-semibold mb-2 text-primary">Address Information</h3>
                                     </div>
                                     <FormField
                                       control={editDetailsForm.control}
                                       name="address"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Address</FormLabel>
+                                          <FormLabel>Address</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -883,9 +1083,9 @@ export default function AdminCustomers() {
                                       name="city"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">City</FormLabel>
+                                          <FormLabel>City</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -896,9 +1096,9 @@ export default function AdminCustomers() {
                                       name="postalCode"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Postal Code</FormLabel>
+                                          <FormLabel>Postal Code</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -909,12 +1109,12 @@ export default function AdminCustomers() {
                                       name="isSouthAfrican"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Is South African</FormLabel>
+                                          <FormLabel>Is South African</FormLabel>
                                           <FormControl>
                                             <Checkbox
                                               checked={field.value}
                                               onCheckedChange={field.onChange}
-                                              className="bg-[#022b5c] border-[#043875]"
+                                              className="bg-card border-input"
                                             />
                                           </FormControl>
                                           <FormMessage />
@@ -923,16 +1123,16 @@ export default function AdminCustomers() {
                                     />
 
                                     <div className="col-span-4 mt-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Employment Information</h3>
+                                      <h3 className="text-lg font-semibold mb-2 text-primary">Employment Information</h3>
                                     </div>
                                     <FormField
                                       control={editDetailsForm.control}
                                       name="industry"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Industry</FormLabel>
+                                          <FormLabel>Industry</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -943,9 +1143,9 @@ export default function AdminCustomers() {
                                       name="occupation"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Occupation</FormLabel>
+                                          <FormLabel>Occupation</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -953,16 +1153,16 @@ export default function AdminCustomers() {
                                     />
 
                                     <div className="col-span-4 mt-4">
-                                      <h3 className="text-lg font-semibold mb-2 text-[#43EB3E]">Banking Information</h3>
+                                      <h3 className="text-lg font-semibold mb-2 text-primary">Banking Information</h3>
                                     </div>
                                     <FormField
                                       control={editDetailsForm.control}
                                       name="bankName"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Bank Name</FormLabel>
+                                          <FormLabel>Bank Name</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -973,9 +1173,9 @@ export default function AdminCustomers() {
                                       name="accountType"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Account Type</FormLabel>
+                                          <FormLabel>Account Type</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -986,9 +1186,9 @@ export default function AdminCustomers() {
                                       name="accountNumber"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Account Number</FormLabel>
+                                          <FormLabel>Account Number</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -999,9 +1199,9 @@ export default function AdminCustomers() {
                                       name="accountHolderName"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Account Holder Name</FormLabel>
+                                          <FormLabel>Account Holder Name</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1012,9 +1212,9 @@ export default function AdminCustomers() {
                                       name="branchCode"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Branch Code</FormLabel>
+                                          <FormLabel>Branch Code</FormLabel>
                                           <FormControl>
-                                            <Input {...field} className="bg-[#022b5c] border-[#043875] text-white" />
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
@@ -1025,12 +1225,12 @@ export default function AdminCustomers() {
                                       name="hasCreditCard"
                                       render={({ field }) => (
                                         <FormItem>
-                                          <FormLabel className="text-white">Has Credit Card</FormLabel>
+                                          <FormLabel>Has Credit Card</FormLabel>
                                           <FormControl>
                                             <Checkbox
                                               checked={field.value}
                                               onCheckedChange={field.onChange}
-                                              className="bg-[#022b5c] border-[#043875]"
+                                              className="bg-card border-input"
                                             />
                                           </FormControl>
                                           <FormMessage />
@@ -1109,9 +1309,9 @@ export default function AdminCustomers() {
                                 Assign Points
                               </DropdownMenuItem>
                             </DialogTrigger>
-                            <DialogContent className="max-w-5xl bg-[#011d3d] border-[#022b5c] text-white [&::-webkit-scrollbar]:w-[8px] [&::-webkit-scrollbar-track]:bg-[rgba(1,29,61,0.6)] [&::-webkit-scrollbar-thumb]:bg-[#43EB3E] [&::-webkit-scrollbar-thumb]:rounded-[4px]">
+                            <DialogContent className="max-w-5xl bg-card border-border text-card-foreground overflow-hidden">
                               <DialogHeader>
-                                <DialogTitle className="text-[#43EB3E]">Assign Points to {customer.firstName}</DialogTitle>
+                                <DialogTitle className="text-primary">Assign Points to {customer.firstName}</DialogTitle>
                                 <div className="flex items-center gap-2 mt-2">
                                   <span className="text-sm text-muted-foreground">Current Tier:</span>
                                   <Badge className={`${getTierInfo(customer.points).color}`}>
@@ -1369,7 +1569,9 @@ export default function AdminCustomers() {
                                           data: {
                                             points: formData.points,
                                             description: formData.description,
-                                            selectedActivities: formData.selectedActivities
+                                            selectedActivities: formData.selectedActivities,
+                                            posPoints: formData.posPoints,
+                                            posBaseValue: formData.posBaseValue
                                           }
                                         });
                                       }}
@@ -1389,8 +1591,91 @@ export default function AdminCustomers() {
               })}
             </TableBody>
           </Table>
+              
+              {/* Pagination Controls */}
+              {pagination.totalItems > 0 && (
+                <div className="py-3 border-t mt-2 flex items-center justify-between sticky bottom-0 bg-card">
+                  <PaginationControls totalItems={pagination.totalItems} />
+                  <div className="flex items-center gap-4">
+                    <PaginationNavigation />
+                    <Select value={limit.toString()} onValueChange={(value) => {
+                      setLimit(parseInt(value));
+                      setPage(1);
+                    }}>
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue placeholder="Per page" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10 per page</SelectItem>
+                        <SelectItem value="25">25 per page</SelectItem>
+                        <SelectItem value="50">50 per page</SelectItem>
+                        <SelectItem value="100">100 per page</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Card Status Update Dialog */}
+      {showCardStatusUpdate && (
+        <Dialog open={showCardStatusUpdate} onOpenChange={setShowCardStatusUpdate}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Update Card Status</DialogTitle>
+              <DialogDescription>
+                Update the card status for {selectedCustomerIds.length} selected customer{selectedCustomerIds.length > 1 ? 's' : ''}.
+              </DialogDescription>
+            </DialogHeader>
+            <BulkCardStatusUpdate 
+              selectedIds={selectedCustomerIds} 
+              onUpdateComplete={handleCardStatusUpdateComplete} 
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
+
+  function handleCardStatusUpdateComplete() {
+    setShowCardStatusUpdate(false);
+    
+    // Enhanced caching strategy with multiple refresh steps
+    console.log('Running enhanced cache refresh from handleCardStatusUpdateComplete');
+    
+    // Step 1: First clear the cache completely for all customer queries
+    queryClient.removeQueries({ queryKey: ["/api/admin/customers"] });
+    
+    // Step 2: Then invalidate and force an immediate refetch
+    queryClient.invalidateQueries({ 
+      queryKey: ["/api/admin/customers"],
+      refetchType: 'all'
+    });
+    
+    // Step 3: Invalidate the specific page query
+    queryClient.invalidateQueries({ 
+      queryKey: ["/api/admin/customers", page, limit],
+      refetchType: 'all'
+    });
+    
+    // Step 4: Schedule a delayed refresh to handle any race conditions
+    setTimeout(() => {
+      console.log('Running delayed cache refresh');
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/admin/customers"],
+        refetchType: 'all'
+      });
+    }, 1000);
+    
+    // Clear selection after successful update
+    setSelectedCustomerIds([]);
+    
+    toast({ 
+      title: "Success", 
+      description: `Card status updated for ${selectedCustomerIds.length} customer${selectedCustomerIds.length > 1 ? 's' : ''}`
+    });
+  }
 }

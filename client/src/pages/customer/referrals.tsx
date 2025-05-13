@@ -18,6 +18,8 @@ import {
   FaGem as PackageIcon
 } from "react-icons/fa6";
 import { PackageIcon as LucidePackageIcon } from "lucide-react";
+import ReferralsTour from "@/components/onboarding/ReferralsTour";
+import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext";
 
 
 interface ReferralStats {
@@ -36,7 +38,7 @@ interface ReferralStats {
           PRESTIGE: number;
           PINNACLE: number;
         };
-        referralFee: {
+        commission: {
           percentage: number;
           baseAmount: number;
         };
@@ -51,8 +53,10 @@ interface ReferralStats {
       email: string;
       selectedPackage: string;
       createdAt: string;
+      level: number;
       directReferralCount: number;
-      referralFee: {
+      referralPackageStats: any[];
+      commission: {
         percentage: number;
         randValue: string;
         points: number;
@@ -89,7 +93,9 @@ const PackageEmblem = ({ type, count, totalReferrals, level }: {
   </div>
 );
 
-export default function ReferralsPage() {
+function ReferralsPageContent() {
+  // Use the onboarding context but only access properties after confirming user is logged in
+  const onboarding = useOnboarding();
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
@@ -114,11 +120,26 @@ export default function ReferralsPage() {
         if (response.status === 403) {
           const errorData = await response.json().catch(() => ({}));
           console.error('Package restriction error:', errorData);
+          
+          // Add package information to the error
+          const userPackage = errorData?.details?.currentPackage || '';
+          const requiredPackages = errorData?.details?.requiredPackages || ['PROSPER', 'PRESTIGE', 'PINNACLE'];
+          
+          console.log(`Package check: User has "${userPackage}" (upper: "${userPackage.toUpperCase()}"), needs one of:`, 
+            requiredPackages.map((p: string) => `"${p}"`).join(', '));
+            
           throw new Error(JSON.stringify({
             status: 403,
             error: "Package upgrade required",
             message: "You need to upgrade to PROSPER package or higher to access the referral program",
-            details: errorData
+            details: {
+              ...errorData,
+              packageInfo: {
+                current: userPackage,
+                currentUpper: userPackage.toUpperCase(),
+                required: requiredPackages
+              }
+            }
           }));
         }
         
@@ -156,7 +177,7 @@ export default function ReferralsPage() {
   });
 
   const referralLink = referralStats?.referralCode
-    ? `${window.location.origin}/?ref=${referralStats.referralCode}`
+    ? `${window.location.origin}/referral/${referralStats.referralCode}`
     : '';
 
   const shareText = "Join me on OPIAN Rewards and get 2,000 bonus points! Use my referral link:";
@@ -194,7 +215,7 @@ export default function ReferralsPage() {
   const calculateLevelCommission = (level: number) => {
     if (!referralStats?.referralsByLevel[level]) return 0;
     return referralStats.referralsByLevel[level].reduce((sum, ref) => {
-      return sum + Number(ref.referralFee.randValue);
+      return sum + Number(ref.commission.randValue);
     }, 0);
   };
 
@@ -255,6 +276,9 @@ export default function ReferralsPage() {
                 <p className="text-foreground">
                   The referral program is available exclusively to customers with the <strong>PROSPER</strong> package or higher.
                 </p>
+                <p className="text-sm text-muted-foreground">
+                  Access is granted to users with any PROSPER, PRESTIGE, or PINNACLE package. If you believe your package should grant you access, please contact support.
+                </p>
                 <div className="bg-[#43EB3E]/5 p-4 rounded-lg border border-[#43EB3E]/20">
                   <h3 className="font-medium text-[#43EB3E] mb-2">Why upgrade?</h3>
                   <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
@@ -293,14 +317,19 @@ export default function ReferralsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">My Referrals</h1>
+      {/* Add ReferralsTour component */}
+      <ReferralsTour />
+      
+      <div className="referral-header">
+        <h1 className="text-3xl font-bold">My Referrals</h1>
+      </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Monthly Referral Fees Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-4 referral-rewards-info">
             <p className="text-sm text-muted-foreground">
               Your referral fee earnings based on your referral network's packages.
             </p>
@@ -369,7 +398,84 @@ export default function ReferralsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      {/* Add a card for sharing referral link - this was missing in the original */}
+      <Card className="referral-link-section">
+        <CardHeader>
+          <CardTitle>Your Referral Link</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Share this unique link with friends and family. When they sign up, you'll earn 2,000 points and ongoing referral fees!
+            </p>
+            <div className="flex items-center gap-3">
+              <Input
+                value={referralLink}
+                readOnly
+                className="font-mono text-sm"
+              />
+              <Button size="sm" onClick={copyToClipboard} disabled={!referralLink}>
+                {copied ? "Copied!" : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+            <div className="social-share-buttons mt-4">
+              <p className="text-sm font-medium mb-2">Share via:</p>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={socialShareUrls.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#1DA1F2] text-white hover:bg-opacity-80"
+                >
+                  <TwitterIcon size={18} />
+                </a>
+                <a
+                  href={socialShareUrls.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#4267B2] text-white hover:bg-opacity-80"
+                >
+                  <FacebookIcon size={18} />
+                </a>
+                <a
+                  href={socialShareUrls.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#0077B5] text-white hover:bg-opacity-80"
+                >
+                  <LinkedInIcon size={18} />
+                </a>
+                <a
+                  href={socialShareUrls.whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#25D366] text-white hover:bg-opacity-80"
+                >
+                  <WhatsAppIcon size={18} />
+                </a>
+                <a
+                  href={socialShareUrls.telegram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-[#0088CC] text-white hover:bg-opacity-80"
+                >
+                  <TelegramIcon size={18} />
+                </a>
+                <a
+                  href={socialShareUrls.email}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-full bg-gray-600 text-white hover:bg-opacity-80"
+                >
+                  <EmailIcon size={18} />
+                </a>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="referral-stats">
         <CardHeader>
           <CardTitle>Your Direct Referrals</CardTitle>
         </CardHeader>
@@ -400,7 +506,7 @@ export default function ReferralsPage() {
                       Package: {referral.selectedPackage || 'None'}
                     </Badge>
                     <Badge className="bg-primary text-white">
-                      Referral Fee: R{referral.referralFee.randValue}
+                      Referral Fee: R{referral.commission.randValue}
                     </Badge>
                   </div>
                 </div>
@@ -441,7 +547,7 @@ export default function ReferralsPage() {
         </Card>
       ))}
 
-      <Card>
+      <Card className="referral-badges">
         <CardHeader>
           <CardTitle>Achievement Badges</CardTitle>
         </CardHeader>
@@ -453,5 +559,14 @@ export default function ReferralsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Export the wrapped component with OnboardingProvider
+export default function ReferralsPage() {
+  return (
+    <OnboardingProvider section="referrals">
+      <ReferralsPageContent />
+    </OnboardingProvider>
   );
 }

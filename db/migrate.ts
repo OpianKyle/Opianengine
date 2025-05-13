@@ -59,6 +59,21 @@ async function runMigration() {
         FOREIGN KEY (signed_up_user_id) REFERENCES users(id) ON DELETE SET NULL
       );`,
       
+      // Check if signed_up_user_id column exists and add it if not (fix for referral system)
+      `SELECT COUNT(*) INTO @col_exists 
+       FROM information_schema.columns 
+       WHERE table_schema = DATABASE() 
+       AND table_name = 'referral_leads' 
+       AND column_name = 'signed_up_user_id';`,
+      
+      `SET @add_column = IF(@col_exists = 0, 
+        'ALTER TABLE referral_leads ADD COLUMN signed_up_user_id INT, ADD CONSTRAINT fk_referral_leads_signed_up_user FOREIGN KEY (signed_up_user_id) REFERENCES users(id) ON DELETE SET NULL', 
+        'SELECT 1');`,
+      
+      `PREPARE add_column_stmt FROM @add_column;`,
+      `EXECUTE add_column_stmt;`,
+      `DEALLOCATE PREPARE add_column_stmt;`,
+      
       // Update transaction type to include COMMISSION
       `ALTER TABLE transactions MODIFY COLUMN type 
        ENUM('REWARD_REDEMPTION', 'PRODUCT_PURCHASE', 'ADMIN_ADJUSTMENT', 'WELCOME_BONUS', 'REFERRAL_BONUS', 'COMMISSION') NOT NULL`,

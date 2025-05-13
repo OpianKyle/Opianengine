@@ -56,9 +56,10 @@ const customerSchema = z.object({
   branchCode: z.string().min(1, "Branch code is required"),
   accountNumber: z.string().min(1, "Account number is required"),
   accountType: z.enum(["SAVINGS", "CURRENT", "CHEQUE", "CREDIT"], { required_error: "Please select an account type" }),
-  mandateAgreement: z.literal(true, {
-    errorMap: () => ({ message: "You must agree to the mandate terms" }),
-  }),
+  mandateAgreement: z.boolean()
+    .refine(val => val === true, {
+      message: "You must agree to the mandate terms"
+    }),
 });
 
 type CustomerFormData = z.infer<typeof customerSchema>;
@@ -111,7 +112,7 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
       branchCode: "",
       accountNumber: "",
       accountType: "SAVINGS",
-      mandateAgreement: false,
+      mandateAgreement: false, // User must check this box before submitting
     }
   });
 
@@ -543,7 +544,9 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel className="text-foreground">
-                          I confirm that the customer has agreed to the above mandate
+                          <div className="space-y-2">
+                            <p>I confirm that the customer has agreed to the above mandate</p>
+                          </div>
                         </FormLabel>
                         <FormMessage />
                       </div>
