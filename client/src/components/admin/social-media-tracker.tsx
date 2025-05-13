@@ -5,11 +5,12 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Loader2, TrendingUp, Users, BarChart2, AlertTriangle, RefreshCw, Download } from 'lucide-react';
+import { Loader2, TrendingUp, Users, BarChart2, AlertTriangle, RefreshCw, Download, Globe, Monitor, Smartphone, Tablet } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { saveAs } from 'file-saver';
+import { FaFacebook, FaTwitter, FaInstagram, FaPinterest, FaLinkedin, FaYoutube, FaGoogle, FaReddit, FaTiktok, FaMedium } from 'react-icons/fa';
 
 type SocialTrafficData = {
   results: Array<{
@@ -45,6 +46,89 @@ type ExportItem = {
   users?: number;
   percentage?: number;
   color?: string;
+};
+
+// Color mapping for different social networks and traffic sources
+const SOCIAL_COLORS = {
+  facebook: '#1877F2',
+  twitter: '#1DA1F2',
+  instagram: '#E4405F',
+  linkedin: '#0A66C2',
+  pinterest: '#BD081C',
+  youtube: '#FF0000',
+  google: '#4285F4',
+  reddit: '#FF4500',
+  tiktok: '#000000',
+  medium: '#00AB6C',
+  direct: '#6B7280',
+  referral: '#2563EB',
+  organic: '#16A34A',
+  email: '#8B5CF6',
+  paid: '#F59E0B',
+  other: '#9CA3AF',
+};
+
+// Device type colors
+const DEVICE_COLORS = {
+  desktop: '#2563EB',
+  mobile: '#16A34A',
+  tablet: '#8B5CF6',
+  other: '#9CA3AF',
+};
+
+// Function to get an appropriate icon for a source
+const getSourceIcon = (source: string) => {
+  const sourceLower = source.toLowerCase();
+  
+  if (sourceLower.includes('facebook')) return <FaFacebook className="text-[#1877F2]" />;
+  if (sourceLower.includes('twitter') || sourceLower.includes('x.com')) return <FaTwitter className="text-[#1DA1F2]" />;
+  if (sourceLower.includes('instagram')) return <FaInstagram className="text-[#E4405F]" />;
+  if (sourceLower.includes('linkedin')) return <FaLinkedin className="text-[#0A66C2]" />;
+  if (sourceLower.includes('pinterest')) return <FaPinterest className="text-[#BD081C]" />;
+  if (sourceLower.includes('youtube')) return <FaYoutube className="text-[#FF0000]" />;
+  if (sourceLower.includes('google')) return <FaGoogle className="text-[#4285F4]" />;
+  if (sourceLower.includes('reddit')) return <FaReddit className="text-[#FF4500]" />;
+  if (sourceLower.includes('tiktok')) return <FaTiktok className="text-black" />;
+  if (sourceLower.includes('medium')) return <FaMedium className="text-[#00AB6C]" />;
+  
+  // Default icon for other sources
+  return <Globe className="text-gray-500" />;
+};
+
+// Function to get device type icon
+const getDeviceIcon = (device: string) => {
+  const deviceLower = device.toLowerCase();
+  
+  if (deviceLower.includes('desktop')) return <Monitor className="text-[#2563EB]" />;
+  if (deviceLower.includes('mobile')) return <Smartphone className="text-[#16A34A]" />;
+  if (deviceLower.includes('tablet')) return <Tablet className="text-[#8B5CF6]" />;
+  
+  // Default icon
+  return <Globe className="text-gray-500" />;
+};
+
+// Function to get a color for a source
+const getSourceColor = (source: string): string => {
+  const sourceLower = source.toLowerCase();
+  
+  if (sourceLower.includes('facebook')) return SOCIAL_COLORS.facebook;
+  if (sourceLower.includes('twitter') || sourceLower.includes('x.com')) return SOCIAL_COLORS.twitter;
+  if (sourceLower.includes('instagram')) return SOCIAL_COLORS.instagram;
+  if (sourceLower.includes('linkedin')) return SOCIAL_COLORS.linkedin;
+  if (sourceLower.includes('pinterest')) return SOCIAL_COLORS.pinterest;
+  if (sourceLower.includes('youtube')) return SOCIAL_COLORS.youtube;
+  if (sourceLower.includes('google')) return SOCIAL_COLORS.google;
+  if (sourceLower.includes('reddit')) return SOCIAL_COLORS.reddit;
+  if (sourceLower.includes('tiktok')) return SOCIAL_COLORS.tiktok;
+  if (sourceLower.includes('medium')) return SOCIAL_COLORS.medium;
+  if (sourceLower.includes('direct')) return SOCIAL_COLORS.direct;
+  if (sourceLower.includes('referral')) return SOCIAL_COLORS.referral;
+  if (sourceLower.includes('organic')) return SOCIAL_COLORS.organic;
+  if (sourceLower.includes('email')) return SOCIAL_COLORS.email;
+  if (sourceLower.includes('paid')) return SOCIAL_COLORS.paid;
+  
+  // Default color for other sources
+  return SOCIAL_COLORS.other;
 };
 
 // Helper function to convert array data to CSV format
