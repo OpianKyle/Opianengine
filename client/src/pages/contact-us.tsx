@@ -59,6 +59,14 @@ export default function ContactUsPage() {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   
+  // Track page views
+  useAnalytics();
+  
+  // Track page visit on component mount
+  useEffect(() => {
+    trackEvent('page_view', 'engagement', 'contact_us');
+  }, []);
+  
   // Get any query parameters
   const searchParams = new URLSearchParams(window.location.search);
   const initialPackage = searchParams.get("package") || "";
@@ -112,6 +120,9 @@ export default function ContactUsPage() {
         title: "Thank you for contacting us!",
         description: "Your information has been submitted. One of our representatives will contact you soon.",
       });
+      
+      // Track successful submission for analytics
+      trackEvent('form_submission', 'conversion', 'contact_form', data.selectedPackage);
 
       // Reset the form
       contactForm.reset();
