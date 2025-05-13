@@ -318,8 +318,25 @@ export async function getSocialMediaTraffic(days: number = 30) {
     });
 
     // Get the totals from the total report
-    const totalSessions = parseInt(totalReport.rows?.[0]?.metricValues?.[0]?.value || '0', 10);
-    const totalUsers = parseInt(totalReport.rows?.[0]?.metricValues?.[1]?.value || '0', 10);
+    let totalSessions = parseInt(totalReport.rows?.[0]?.metricValues?.[0]?.value || '0', 10);
+    let totalUsers = parseInt(totalReport.rows?.[0]?.metricValues?.[1]?.value || '0', 10);
+
+    // But for consistency, recalculate totals from actual values in the map
+    let calculatedTotalSessions = 0;
+    let calculatedTotalUsers = 0;
+    for (const data of networkMap.values()) {
+      calculatedTotalSessions += data.sessions;
+      calculatedTotalUsers += data.users;
+    }
+    
+    // Use the calculated total if it's non-zero, otherwise use the report total
+    // This ensures consistency between the table data and the total displayed
+    if (calculatedTotalSessions > 0) {
+      totalSessions = calculatedTotalSessions;
+    }
+    if (calculatedTotalUsers > 0) {
+      totalUsers = calculatedTotalUsers;
+    }
 
     // Ensure all default networks are included, even with 0 traffic
     defaultSocialNetworks.forEach((network, index) => {
