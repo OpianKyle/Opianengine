@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Loader2, TrendingUp, Users, BarChart2, AlertTriangle } from 'lucide-react';
+import { Loader2, TrendingUp, Users, BarChart2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type SocialTrafficData = {
   results: Array<{
@@ -101,74 +103,125 @@ const SocialMediaTracker: React.FC = () => {
     }
     
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-6">
+        {/* Data Table */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Social Traffic Distribution</CardTitle>
-            <CardDescription>Sessions by social network</CardDescription>
+            <CardTitle className="text-base">Social Traffic Data</CardTitle>
+            <CardDescription>Detailed session data by social network</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Network</TableHead>
+                  <TableHead className="text-right">Sessions</TableHead>
+                  <TableHead className="text-right">Users</TableHead>
+                  <TableHead className="text-right">% of Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {socialData?.results.map((network) => {
+                  const percentage = socialData.total.sessions 
+                    ? ((network.sessions / socialData.total.sessions) * 100).toFixed(1) 
+                    : '0.0';
+                    
+                  return (
+                    <TableRow key={network.id}>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <div className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: network.color }}></div>
+                          {network.name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{network.sessions}</TableCell>
+                      <TableCell className="text-right">{network.users}</TableCell>
+                      <TableCell className="text-right">{percentage}%</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {/* Total Row */}
+                <TableRow className="bg-muted/50">
+                  <TableCell className="font-semibold">Total</TableCell>
+                  <TableCell className="text-right font-semibold">{socialData.total.sessions}</TableCell>
+                  <TableCell className="text-right font-semibold">{socialData.total.users}</TableCell>
+                  <TableCell className="text-right font-semibold">100%</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        
+        {/* Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Social Traffic Distribution</CardTitle>
+              <CardDescription>Sessions by social network</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={socialData?.results}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="sessions"
+                      nameKey="name"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {socialData?.results?.map((entry) => (
+                        <Cell key={entry.id} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value) => [`${value} sessions`, '']}
+                      labelFormatter={(name) => `${name}`}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Social Traffic Comparison</CardTitle>
+              <CardDescription>Total sessions per platform</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
                     data={socialData?.results}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="sessions"
-                    nameKey="name"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
                   >
-                    {socialData?.results?.map((entry) => (
-                      <Cell key={entry.id} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => [`${value} sessions`, '']}
-                    labelFormatter={(name) => `${name}`}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Social Traffic Comparison</CardTitle>
-            <CardDescription>Total sessions per platform</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={socialData?.results}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                  <XAxis type="number" />
-                  <YAxis 
-                    dataKey="name" 
-                    type="category" 
-                    tick={{ fontSize: 12 }}
-                    width={80}
-                  />
-                  <Tooltip />
-                  <Bar 
-                    dataKey="sessions" 
-                    name="Sessions" 
-                    fill="#43EB3E"
-                    radius={[0, 4, 4, 0]} 
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                    <XAxis type="number" />
+                    <YAxis 
+                      dataKey="name" 
+                      type="category" 
+                      tick={{ fontSize: 12 }}
+                      width={80}
+                    />
+                    <Tooltip />
+                    <Bar 
+                      dataKey="sessions" 
+                      name="Sessions" 
+                      fill="#43EB3E"
+                      radius={[0, 4, 4, 0]} 
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   };
@@ -195,42 +248,94 @@ const SocialMediaTracker: React.FC = () => {
       );
     }
     
+    // Calculate total sessions for percentages
+    const totalSessions = deviceData.reduce((sum, device) => sum + device.sessions, 0);
+    
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Device Types</CardTitle>
-          <CardDescription>Sessions by device category</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={formattedDeviceData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={true}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="sessions"
-                  nameKey="device"
-                  label={({ device, percent }) => `${device}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {formattedDeviceData?.map((entry, index) => (
-                    // @ts-ignore
-                    <Cell key={`device-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value) => [`${value} sessions`, '']}
-                  labelFormatter={(name) => `${name}`}
-                />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        {/* Device Data Table */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Device Types</CardTitle>
+            <CardDescription>Sessions by device category</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Device Type</TableHead>
+                  <TableHead className="text-right">Sessions</TableHead>
+                  <TableHead className="text-right">% of Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {formattedDeviceData?.map((device, index) => {
+                  const percentage = totalSessions 
+                    ? ((device.sessions / totalSessions) * 100).toFixed(1) 
+                    : '0.0';
+                    
+                  return (
+                    <TableRow key={`device-row-${index}`}>
+                      <TableCell>
+                        <div className="flex items-center">
+                          {/* @ts-ignore */}
+                          <div className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: device.color }}></div>
+                          {device.device}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{device.sessions}</TableCell>
+                      <TableCell className="text-right">{percentage}%</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {/* Total Row */}
+                <TableRow className="bg-muted/50">
+                  <TableCell className="font-semibold">Total</TableCell>
+                  <TableCell className="text-right font-semibold">{totalSessions}</TableCell>
+                  <TableCell className="text-right font-semibold">100%</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        
+        {/* Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Device Distribution</CardTitle>
+            <CardDescription>Visual breakdown by device type</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={formattedDeviceData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="sessions"
+                    nameKey="device"
+                    label={({ device, percent }) => `${device}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {formattedDeviceData?.map((entry, index) => (
+                      // @ts-ignore
+                      <Cell key={`device-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => [`${value} sessions`, '']}
+                    labelFormatter={(name) => `${name}`}
+                  />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   };
   
@@ -384,27 +489,47 @@ const SocialMediaTracker: React.FC = () => {
     );
   }
   
+  // Function to refresh the data
+  const refreshData = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/analytics/social-traffic'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/analytics/device-types'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/analytics/traffic-sources'] });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Social Media Traffic Analytics</h2>
-        <div className="flex items-center">
-          <span className="mr-2 text-sm text-muted-foreground">Time Range:</span>
-          <Select
-            value={timeRange}
-            onValueChange={(value) => setTimeRange(value)}
+        <div className="flex items-center space-x-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={refreshData}
+            disabled={isLoading}
+            className="flex items-center"
           >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Select range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="180">Last 6 months</SelectItem>
-              <SelectItem value="365">Last year</SelectItem>
-            </SelectContent>
-          </Select>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          
+          <div className="flex items-center">
+            <span className="mr-2 text-sm text-muted-foreground">Time Range:</span>
+            <Select
+              value={timeRange}
+              onValueChange={(value) => setTimeRange(value)}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="180">Last 6 months</SelectItem>
+                <SelectItem value="365">Last year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
       
