@@ -442,9 +442,9 @@ export default function HowItWorksPage() {
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8 text-center lg:text-left">
             {/* Left column - Contact Information */}
-            <div className="md:col-span-2 lg:col-span-1">
+            <div className="md:col-span-2 lg:col-span-1 flex flex-col items-center lg:items-start">
               <h3 className="font-semibold mb-4">Contact Information</h3>
               <p className="flex items-center mb-2">
                 <Phone className="h-4 w-4 mr-2 flex-shrink-0" />
@@ -462,7 +462,7 @@ export default function HowItWorksPage() {
             
             {/* Middle columns - Package/Resources/Legal */}
             <div className="lg:col-span-2 grid grid-cols-3 gap-4">
-              <div>
+              <div className="flex flex-col items-center lg:items-center">
                 <h3 className="text-lg font-semibold mb-4">Packages</h3>
                 <ul className="space-y-2">
                   <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
@@ -472,7 +472,7 @@ export default function HowItWorksPage() {
                   <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
                 </ul>
               </div>
-              <div>
+              <div className="flex flex-col items-center lg:items-center">
                 <h3 className="text-lg font-semibold mb-4">Resources</h3>
                 <ul className="space-y-2">
                   <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Help Center</a></li>
@@ -481,7 +481,7 @@ export default function HowItWorksPage() {
                   <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Contact</a></li>
                 </ul>
               </div>
-              <div>
+              <div className="flex flex-col items-center lg:items-center">
                 <h3 className="text-lg font-semibold mb-4">Legal</h3>
                 <ul className="space-y-2">
                   <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
@@ -492,13 +492,15 @@ export default function HowItWorksPage() {
             </div>
             
             {/* Right column - Legal Information */}
-            <div className="md:col-span-2 lg:col-span-1">
+            <div className="md:col-span-2 lg:col-span-1 flex flex-col items-center lg:items-start">
               <h3 className="font-semibold mb-4">Legal Information</h3>
-              <p className="mb-2 text-sm">Opian Rewards (Pty) Ltd is a Juristic Representative of Opian Financial Services (Pty) Ltd</p>
-              <p className="mb-2 text-sm">Company Registration Number: 2021/411623/07</p>
-              <p className="mb-2 text-sm">Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider</p>
-              <p className="mb-2 text-sm">Company Registration Number: 2018/584168/07</p>
-              <p className="text-sm">FSP No: 50974</p>
+              <div className="text-center lg:text-left w-full max-w-xs">
+                <p className="mb-2 text-sm">Opian Rewards (Pty) Ltd is a Juristic Representative of Opian Financial Services (Pty) Ltd</p>
+                <p className="mb-2 text-sm">Company Registration Number: 2021/411623/07</p>
+                <p className="mb-2 text-sm">Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider</p>
+                <p className="mb-2 text-sm">Company Registration Number: 2018/584168/07</p>
+                <p className="text-sm">FSP No: 50974</p>
+              </div>
             </div>
           </div>
           
