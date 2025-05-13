@@ -1,0 +1,215 @@
+queryClient.ts:326 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/analytics/traffic-sources?days=30&limit=10 500 (Internal Server Error)
+apiRequest @ queryClient.ts:326
+queryFn @ social-media-tracker.tsx:77
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+onSubscribe @ @tanstack_react-query.js?v=d7d0c2e8:1898
+subscribe @ @tanstack_react-query.js?v=d7d0c2e8:24
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:3022
+subscribeToStore @ chunk-276SZO74.js?v=d7d0c2e8:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=d7d0c2e8:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=d7d0c2e8:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=d7d0c2e8:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=d7d0c2e8:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=d7d0c2e8:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=d7d0c2e8:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=d7d0c2e8:19447
+commitRootImpl @ chunk-276SZO74.js?v=d7d0c2e8:19416
+commitRoot @ chunk-276SZO74.js?v=d7d0c2e8:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=d7d0c2e8:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=d7d0c2e8:9119
+(anonymous) @ chunk-276SZO74.js?v=d7d0c2e8:18627Understand this error
+social-media-tracker.tsx:84 Traffic sources API error: Error: Google Analytics client could not be initialized
+    at apiRequest (queryClient.ts:338:11)
+    at async queryFn (social-media-tracker.tsx:77:21)
+queryFn @ social-media-tracker.tsx:84
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+onSubscribe @ @tanstack_react-query.js?v=d7d0c2e8:1898
+subscribe @ @tanstack_react-query.js?v=d7d0c2e8:24
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:3022
+subscribeToStore @ chunk-276SZO74.js?v=d7d0c2e8:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=d7d0c2e8:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=d7d0c2e8:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=d7d0c2e8:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=d7d0c2e8:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=d7d0c2e8:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=d7d0c2e8:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=d7d0c2e8:19447
+commitRootImpl @ chunk-276SZO74.js?v=d7d0c2e8:19416
+commitRoot @ chunk-276SZO74.js?v=d7d0c2e8:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=d7d0c2e8:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=d7d0c2e8:9119
+(anonymous) @ chunk-276SZO74.js?v=d7d0c2e8:18627Understand this error
+queryClient.ts:326 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/analytics/social-traffic?days=30 500 (Internal Server Error)
+apiRequest @ queryClient.ts:326
+queryFn @ social-media-tracker.tsx:43
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:515
+Promise.catch
+run @ @tanstack_react-query.js?v=d7d0c2e8:498
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+onSubscribe @ @tanstack_react-query.js?v=d7d0c2e8:1898
+subscribe @ @tanstack_react-query.js?v=d7d0c2e8:24
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:3022
+subscribeToStore @ chunk-276SZO74.js?v=d7d0c2e8:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=d7d0c2e8:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=d7d0c2e8:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=d7d0c2e8:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=d7d0c2e8:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=d7d0c2e8:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=d7d0c2e8:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=d7d0c2e8:19447
+commitRootImpl @ chunk-276SZO74.js?v=d7d0c2e8:19416
+commitRoot @ chunk-276SZO74.js?v=d7d0c2e8:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=d7d0c2e8:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=d7d0c2e8:9119
+(anonymous) @ chunk-276SZO74.js?v=d7d0c2e8:18627Understand this error
+social-media-tracker.tsx:50 Social traffic API error: Error: Google Analytics client could not be initialized
+    at apiRequest (queryClient.ts:338:11)
+    at async queryFn (social-media-tracker.tsx:43:21)
+queryFn @ social-media-tracker.tsx:50
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:515
+Promise.catch
+run @ @tanstack_react-query.js?v=d7d0c2e8:498
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+onSubscribe @ @tanstack_react-query.js?v=d7d0c2e8:1898
+subscribe @ @tanstack_react-query.js?v=d7d0c2e8:24
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:3022
+subscribeToStore @ chunk-276SZO74.js?v=d7d0c2e8:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=d7d0c2e8:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=d7d0c2e8:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=d7d0c2e8:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=d7d0c2e8:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=d7d0c2e8:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=d7d0c2e8:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=d7d0c2e8:19447
+commitRootImpl @ chunk-276SZO74.js?v=d7d0c2e8:19416
+commitRoot @ chunk-276SZO74.js?v=d7d0c2e8:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=d7d0c2e8:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=d7d0c2e8:9119
+(anonymous) @ chunk-276SZO74.js?v=d7d0c2e8:18627Understand this error
+queryClient.ts:326 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/analytics/device-types?days=30 500 (Internal Server Error)
+apiRequest @ queryClient.ts:326
+queryFn @ social-media-tracker.tsx:60
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:515
+Promise.catch
+run @ @tanstack_react-query.js?v=d7d0c2e8:498
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+onSubscribe @ @tanstack_react-query.js?v=d7d0c2e8:1898
+subscribe @ @tanstack_react-query.js?v=d7d0c2e8:24
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:3022
+subscribeToStore @ chunk-276SZO74.js?v=d7d0c2e8:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=d7d0c2e8:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=d7d0c2e8:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=d7d0c2e8:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=d7d0c2e8:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=d7d0c2e8:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=d7d0c2e8:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=d7d0c2e8:19447
+commitRootImpl @ chunk-276SZO74.js?v=d7d0c2e8:19416
+commitRoot @ chunk-276SZO74.js?v=d7d0c2e8:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=d7d0c2e8:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=d7d0c2e8:9119
+(anonymous) @ chunk-276SZO74.js?v=d7d0c2e8:18627Understand this error
+social-media-tracker.tsx:67 Device types API error: Error: Google Analytics client could not be initialized
+    at apiRequest (queryClient.ts:338:11)
+    at async queryFn (social-media-tracker.tsx:60:21)
+queryFn @ social-media-tracker.tsx:67
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:515
+Promise.catch
+run @ @tanstack_react-query.js?v=d7d0c2e8:498
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+onSubscribe @ @tanstack_react-query.js?v=d7d0c2e8:1898
+subscribe @ @tanstack_react-query.js?v=d7d0c2e8:24
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:3022
+subscribeToStore @ chunk-276SZO74.js?v=d7d0c2e8:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=d7d0c2e8:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=d7d0c2e8:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=d7d0c2e8:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=d7d0c2e8:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=d7d0c2e8:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=d7d0c2e8:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=d7d0c2e8:19447
+commitRootImpl @ chunk-276SZO74.js?v=d7d0c2e8:19416
+commitRoot @ chunk-276SZO74.js?v=d7d0c2e8:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=d7d0c2e8:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=d7d0c2e8:9119
+(anonymous) @ chunk-276SZO74.js?v=d7d0c2e8:18627Understand this error
+queryClient.ts:318 Making GET request to /api/analytics/traffic-sources?days=30&limit=10 with options: {method: 'GET', headers: {…}, credentials: 'include', bodyLength: 0, token: 'missing'}
+queryClient.ts:326 
+            
+            
+           GET https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/api/analytics/traffic-sources?days=30&limit=10 500 (Internal Server Error)
+apiRequest @ queryClient.ts:326
+queryFn @ social-media-tracker.tsx:77
+fetchFn @ @tanstack_react-query.js?v=d7d0c2e8:840
+run @ @tanstack_react-query.js?v=d7d0c2e8:494
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:515
+Promise.catch
+run @ @tanstack_react-query.js?v=d7d0c2e8:498
+start @ @tanstack_react-query.js?v=d7d0c2e8:536
+fetch @ @tanstack_react-query.js?v=d7d0c2e8:926
+executeFetch_fn @ @tanstack_react-query.js?v=d7d0c2e8:2211
+onSubscribe @ @tanstack_react-query.js?v=d7d0c2e8:1898
+subscribe @ @tanstack_react-query.js?v=d7d0c2e8:24
+(anonymous) @ @tanstack_react-query.js?v=d7d0c2e8:3022
+subscribeToStore @ chunk-276SZO74.js?v=d7d0c2e8:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=d7d0c2e8:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=d7d0c2e8:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=d7d0c2e8:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=d7d0c2e8:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=d7d0c2e8:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=d7d0c2e8:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=d7d0c2e8:19447
+commitRootImpl @ chunk-276SZO74.js?v=d7d0c2e8:19416
+commitRoot @ chunk-276SZO74.js?v=d7d0c2e8:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=d7d0c2e8:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=d7d0c2e8:9119
+(anonymous) @ chunk-276SZO74.js?v=d7d0c2e8:18627Understand this error
+social-media-tracker.tsx:84 Traffic sources API error: Error: Google Analytics client could not be initialized
+    at apiRequest (queryClient.ts:338:11)
+    at async queryFn (social-media-tracker.tsx:77:21)

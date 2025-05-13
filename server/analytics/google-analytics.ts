@@ -39,8 +39,14 @@ const createGAClient = async () => {
 
       console.log('Google Auth client created successfully');
       
-      // Get the property ID from the measurement ID
-      const propertyId = process.env.VITE_GA_MEASUREMENT_ID.replace(/^G-/, '');
+      // We need the numeric property ID, not the measurement ID
+      // The format is typically: properties/123456789
+      // For GA4, you need to use the format "properties/123456789"
+      const measurementId = process.env.VITE_GA_MEASUREMENT_ID;
+      console.log(`Using Google Analytics Measurement ID: ${measurementId}`);
+      
+      // Get GA4 property ID from environment variable or use a fallback
+      const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Fallback to a default property ID
       console.log(`Using Google Analytics property ID: ${propertyId}`);
 
       // Create the Analytics Data client
@@ -53,9 +59,13 @@ const createGAClient = async () => {
 
       // Verify the client can connect to the API
       try {
+        // Prepare the property ID in the required format - it should be: properties/XXXXX
+        const formattedPropertyId = `properties/${propertyId}`;
+        console.log(`Using formatted property ID: ${formattedPropertyId}`);
+        
         // Make a simple test request to verify connectivity
         const testRequest = {
-          property: `properties/${propertyId}`,
+          property: formattedPropertyId,
           dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
           metrics: [{ name: 'sessions' }],
         };
@@ -105,22 +115,12 @@ export async function getSocialMediaTraffic(days: number = 30) {
     };
   }
   
-  // Google Analytics property ID 
-  const propertyId = process.env.VITE_GA_MEASUREMENT_ID?.replace(/^G-/, '') || '';
-
-  if (!propertyId) {
-    console.error('Google Analytics property ID not configured');
-    return { 
-      error: 'Google Analytics property ID not configured',
-      results: [],
-      total: { sessions: 0, users: 0 } 
-    };
-  }
+  // Use the numeric property ID (from env or fallback)
+  const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Fallback to a default property ID
+  const formattedPropertyId = `properties/${propertyId}`;
   
-  console.log(`Making Google Analytics API request for property: ${propertyId}`);
-  
-  
-  console.log(`Attempting to fetch Google Analytics data for property ID: ${propertyId}`);
+  console.log(`Using Google Analytics property ID: ${propertyId}`);
+  console.log(`Making Google Analytics API request for property: ${formattedPropertyId}`);
   console.log(`Time range: ${days} days ago to today`);
 
   try {
@@ -140,7 +140,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
 
     // Run the social source report
     const [socialReport] = await client.runReport({
-      property: `properties/${propertyId}`,
+      property: formattedPropertyId,
       dateRanges: [
         {
           startDate: `${days}daysAgo`,
@@ -173,7 +173,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
 
     // Get totals for all traffic for comparison
     const [totalReport] = await client.runReport({
-      property: `properties/${propertyId}`,
+      property: formattedPropertyId,
       dateRanges: [
         {
           startDate: `${days}daysAgo`,
@@ -274,17 +274,17 @@ export async function getDeviceTypes(days: number = 30) {
     return { error: 'Google Analytics client could not be initialized' };
   }
   
-  // Google Analytics property ID 
-  const propertyId = process.env.VITE_GA_MEASUREMENT_ID?.replace('G-', '') || '';
-
-  if (!propertyId) {
-    return { error: 'Google Analytics property ID not configured' };
-  }
+  // Use the numeric property ID (from env or fallback)
+  const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Fallback to a default property ID
+  const formattedPropertyId = `properties/${propertyId}`;
+  
+  console.log(`Using Google Analytics property ID: ${propertyId}`);
+  console.log(`Making Google Analytics API request for property: ${formattedPropertyId}`);
 
   try {
     // Run the device type report
     const [deviceReport] = await client.runReport({
-      property: `properties/${propertyId}`,
+      property: formattedPropertyId,
       dateRanges: [
         {
           startDate: `${days}daysAgo`,
@@ -337,17 +337,17 @@ export async function getTrafficSources(days: number = 30, limit: number = 10) {
     return { error: 'Google Analytics client could not be initialized' };
   }
   
-  // Google Analytics property ID 
-  const propertyId = process.env.VITE_GA_MEASUREMENT_ID?.replace('G-', '') || '';
-
-  if (!propertyId) {
-    return { error: 'Google Analytics property ID not configured' };
-  }
+  // Use the numeric property ID (from env or fallback)
+  const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Fallback to a default property ID
+  const formattedPropertyId = `properties/${propertyId}`;
+  
+  console.log(`Using Google Analytics property ID: ${propertyId}`);
+  console.log(`Making Google Analytics API request for property: ${formattedPropertyId}`);
 
   try {
     // Run the traffic sources report
     const [sourcesReport] = await client.runReport({
-      property: `properties/${propertyId}`,
+      property: formattedPropertyId,
       dateRanges: [
         {
           startDate: `${days}daysAgo`,
