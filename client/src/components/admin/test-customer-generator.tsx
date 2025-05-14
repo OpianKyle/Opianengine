@@ -35,7 +35,10 @@ export function TestCustomerGenerator() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ count, packageType: packageType || undefined })
+        body: JSON.stringify({ 
+          count, 
+          packageType: packageType === 'random' ? undefined : packageType 
+        })
       });
 
       if (!response.ok) {

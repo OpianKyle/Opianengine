@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SocialMediaTracker from "@/components/admin/social-media-tracker";
 import { TestCustomerGenerator } from "@/components/admin/test-customer-generator";
 import { AdminSEO } from "@/components/admin/admin-seo";
+import { useUser } from "@/hooks/use-user";
 
 interface DashboardStats {
   totalCustomers: number;
@@ -34,6 +35,9 @@ interface DashboardStats {
 const CHART_COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
 export default function AdminDashboard() {
+  const { user } = useUser();
+  const isSuperAdmin = user?.is_super_admin || false;
+  
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/dashboard/stats"],
     queryFn: getQueryFn({ on401: "throw" }),
@@ -179,7 +183,7 @@ export default function AdminDashboard() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="social">Social Media Traffic</TabsTrigger>
-            <TabsTrigger value="test-tools">Test Tools</TabsTrigger>
+            {isSuperAdmin && <TabsTrigger value="test-tools">Test Tools</TabsTrigger>}
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
@@ -263,31 +267,33 @@ export default function AdminDashboard() {
             <SocialMediaTracker />
           </TabsContent>
           
-          <TabsContent value="test-tools">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="col-span-1">
-                <TestCustomerGenerator />
+          {isSuperAdmin && (
+            <TabsContent value="test-tools">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="col-span-1">
+                  <TestCustomerGenerator />
+                </div>
+                <div className="col-span-1">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Test Tools Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground mb-4">
+                        These tools help you create test data for demonstration purposes.
+                      </p>
+                      <ul className="list-disc pl-5 space-y-2">
+                        <li>Test customers are created with randomized but realistic data</li>
+                        <li>All test accounts use the password: <code className="bg-muted px-1 py-0.5 rounded">Password123!</code></li>
+                        <li>Each customer has a randomly assigned package and card status</li>
+                        <li>Points balance is randomly generated between 0-10,000</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-              <div className="col-span-1">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Test Tools Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      These tools help you create test data for demonstration purposes.
-                    </p>
-                    <ul className="list-disc pl-5 space-y-2">
-                      <li>Test customers are created with randomized but realistic data</li>
-                      <li>All test accounts use the password: <code className="bg-muted px-1 py-0.5 rounded">Password123!</code></li>
-                      <li>Each customer has a randomly assigned package and card status</li>
-                      <li>Points balance is randomly generated between 0-10,000</li>
-                    </ul>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </>
