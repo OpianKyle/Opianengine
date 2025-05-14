@@ -24,6 +24,7 @@ import { contactRouter } from './routes/contact';
 import { registerTestCustomerRoutes } from './test-customer-routes';
 import adminToolsRouter from './routes/admin-tools';
 import analyticsRouter from './routes/analytics';
+import socialUsersRouter from './routes/social-users';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
@@ -1153,6 +1154,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/contact-submit', contactRouter);
   app.use('/api/admin/tools', adminToolsRouter);
   app.use('/api/analytics', analyticsRouter);
+  app.use('/api/social', socialUsersRouter);
   
   // Register test customer routes
   registerTestCustomerRoutes(app);

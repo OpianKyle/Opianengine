@@ -55,6 +55,10 @@ import AgentLayout from "@/components/layout/agent-layout";
 import AgentCustomers from "@/pages/agent/customers";
 import AgentLeads from "@/pages/agent/leads"; // Import agent referral leads page
 
+// Social user pages
+import SocialDashboard from "@/pages/social/dashboard";
+import { ProtectedSocialRoute } from "@/components/social/protected-social-route";
+
 function ProtectedRoute({ component: Component, admin = false, agent = false, ...rest }: any) {
   const { user, isLoading } = useAuth();
   // Session timeout functionality has been removed to prevent automatic logouts
@@ -266,6 +270,9 @@ function Router() {
       </Route>
       
       {/* Subscription routes removed as requested */}
+
+      {/* Social User Routes */}
+      <ProtectedSocialRoute path="/social" component={SocialDashboard} />
 
       <Route component={NotFound} />
     </Switch>

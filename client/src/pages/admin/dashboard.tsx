@@ -11,6 +11,7 @@ import AnimatedMetric from "@/components/shared/animated-metric";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SocialMediaTracker from "@/components/admin/social-media-tracker";
 import { TestCustomerGenerator } from "@/components/admin/test-customer-generator";
+import SocialUserCreator from "@/components/admin/social-user-creator";
 import { AdminSEO } from "@/components/admin/admin-seo";
 import { useUser } from "@/hooks/use-user";
 
@@ -183,6 +184,7 @@ export default function AdminDashboard() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="social">Social Media Traffic</TabsTrigger>
+            <TabsTrigger value="social-users">Social Users</TabsTrigger>
             {isSuperAdmin && <TabsTrigger value="test-tools">Test Tools</TabsTrigger>}
           </TabsList>
           
@@ -265,6 +267,32 @@ export default function AdminDashboard() {
           
           <TabsContent value="social">
             <SocialMediaTracker />
+          </TabsContent>
+          
+          <TabsContent value="social-users">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="col-span-1">
+                <SocialUserCreator />
+              </div>
+              <div className="col-span-1">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Social Users Management</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground mb-4">
+                      Social users have restricted access to only the social media analytics dashboard.
+                    </p>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li>Create dedicated accounts for marketing team members</li>
+                      <li>Social users can only view the social media traffic tracker</li>
+                      <li>They cannot access any other parts of the admin dashboard</li>
+                      <li>Perfect for team members who only need analytics data</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
           
           {isSuperAdmin && (
