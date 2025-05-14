@@ -9,12 +9,12 @@ export function useSocialAuth() {
   useEffect(() => {
     // If auth state is loaded and user is not social or admin, redirect to login page
     if (!isLoading && user && !user.is_social && !user.is_admin && !user.is_super_admin) {
-      setLocation("/auth");
+      setLocation("/login");
     }
     
     // If auth state is loaded and user is not authenticated, redirect to login page
     if (!isLoading && !user) {
-      setLocation("/auth");
+      setLocation("/login");
     }
   }, [isLoading, user, setLocation]);
 
