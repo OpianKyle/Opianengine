@@ -70,7 +70,6 @@ export default function SocialDashboard() {
                   img.src = '/opian-logo-white.png';
                 }}
               />
-              <h1 className="text-xl font-semibold">Social Media Analytics</h1>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground hidden md:inline">
