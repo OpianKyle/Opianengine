@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { AdminSEO } from "@/components/admin/admin-seo";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail, ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
+import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail, ChevronLeft, ChevronRight, CreditCard, Search, X } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -766,6 +766,29 @@ export default function AdminCustomers() {
                 Loading customers data...
               </div>
             )}
+          </div>
+          {/* Search input */}
+          <div className="mt-4 mb-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, or phone number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Clear search</span>
+                </Button>
+              )}
+            </div>
           </div>
           
           {!isCustomersError && customersResponse && (
