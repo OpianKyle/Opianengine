@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { trackEvent } from "@/lib/analytics";
 import { AdminSEO } from "@/components/admin/admin-seo";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -280,6 +281,11 @@ export default function AdminCustomers() {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
       setPage(1); // Reset to first page on search
+      
+      // Track search in Google Analytics if search has content
+      if (searchQuery.trim()) {
+        trackEvent('search', 'customers', `search_term_${searchQuery}`);
+      }
     }, 500);
     
     return () => clearTimeout(timer);
