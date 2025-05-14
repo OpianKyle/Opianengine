@@ -124,6 +124,7 @@ export const users = mysqlTable("users", {
   isAdmin: boolean("is_admin").default(false).notNull(),
   isAgent: boolean("is_agent").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
+  isSocial: boolean("is_social").default(false).notNull(),
   isEnabled: boolean("is_enabled").default(true).notNull(),
   points: int("points").default(2500).notNull(),
   referralCode: text("referral_code"),

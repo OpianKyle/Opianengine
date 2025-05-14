@@ -346,9 +346,14 @@ export function setupAuth(app: Express) {
           return res.status(500).json({ error: "Login failed" });
         }
 
-        // Generate JWT token
+        // Generate JWT token with updated fields including social
         const token = jwt.sign(
-          { id: user.id, is_admin: user.is_admin, is_super_admin: user.is_super_admin },
+          { 
+            id: user.id, 
+            is_admin: user.is_admin, 
+            is_super_admin: user.is_super_admin, 
+            is_social: user.is_social 
+          },
           process.env.JWT_SECRET!,
           { expiresIn: '24h' }
         );
@@ -979,6 +984,43 @@ export async function checkAdmin(req: Request, res: Response, next: NextFunction
     next();
   } catch (error) {
     console.error('Error in admin check:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// Add checkSocial middleware function
+export async function checkSocial(req: Request, res: Response, next: NextFunction) {
+  try {
+    console.log('Running social user check middleware');
+
+    // Get user from token or session
+    const user = await getUserFromTokenOrSession(req);
+    if (!user) {
+      console.log('User not authenticated via session or token');
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    // Check if user is a social user or has admin rights (admins can also access social dashboards)
+    if (!user.is_social && !user.is_admin && !user.is_super_admin) {
+      console.log('Social access denied for user:', {
+        userId: user.id,
+        isSocial: user.is_social,
+        isAdmin: user.is_admin
+      });
+      return res.status(403).json({ error: "Social dashboard access required" });
+    }
+
+    console.log('Social access granted:', {
+      userId: user.id,
+      isSocial: user.is_social,
+      isAdmin: user.is_admin
+    });
+
+    // Attach user to request object for later use
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Error in social user check:', error);
     res.status(500).json({ error: "Internal server error" });
   }
 }

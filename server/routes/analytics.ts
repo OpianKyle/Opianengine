@@ -1,31 +1,11 @@
 import { Router } from 'express';
 import { getSocialMediaTraffic, getDeviceTypes, getTrafficSources } from '../analytics/google-analytics';
-import { getUserFromTokenOrSession } from '../auth';
+import { getUserFromTokenOrSession, checkSocial } from '../auth';
 
 const router = Router();
 
-// Middleware to check if user is admin
-const requireAdmin = async (req: any, res: any, next: any) => {
-  try {
-    const user = await getUserFromTokenOrSession(req);
-    
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    
-    if (!user.is_admin && !user.is_super_admin) {
-      return res.status(403).json({ error: 'Forbidden - Admin access required' });
-    }
-    
-    next();
-  } catch (error) {
-    console.error('Error in requireAdmin middleware:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
 // Get social media traffic data
-router.get('/social-traffic', requireAdmin, async (req, res) => {
+router.get('/social-traffic', checkSocial, async (req, res) => {
   try {
     const days = req.query.days ? parseInt(req.query.days as string, 10) : 30;
     
@@ -119,7 +99,7 @@ function getSocialNetworkColor(network: string): string {
 }
 
 // Get device types data
-router.get('/device-types', requireAdmin, async (req, res) => {
+router.get('/device-types', checkSocial, async (req, res) => {
   try {
     const days = req.query.days ? parseInt(req.query.days as string, 10) : 30;
     
@@ -144,7 +124,7 @@ router.get('/device-types', requireAdmin, async (req, res) => {
 });
 
 // Get traffic sources data
-router.get('/traffic-sources', requireAdmin, async (req, res) => {
+router.get('/traffic-sources', checkSocial, async (req, res) => {
   try {
     const days = req.query.days ? parseInt(req.query.days as string, 10) : 30;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
