@@ -155,13 +155,13 @@ export async function generateTestCustomers(
           first_name, last_name, email, phone_number, password, 
           address, selected_package, 
           card_status, points, created_at,
-          is_enabled, referral_code
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          is_enabled, referral_code, is_test
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           firstName, lastName, email, mobileNumber, hashedPassword,
           address, selectedPackage, 
           cardStatus, pointsBalance, createdAt,
-          true, referralCode
+          true, referralCode, true
         ]
       );
 

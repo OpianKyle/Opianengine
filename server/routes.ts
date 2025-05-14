@@ -5415,17 +5415,17 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         redemptionsCountResult, 
         transactions
       ] = await Promise.all([
-        // Get total customers (non-admin users) - optimize with indexes
+        // Get total customers (non-admin users and not test users) - optimize with indexes
         connection.execute(
           `SELECT COUNT(*) as count 
            FROM users u 
            LEFT JOIN admin_users au ON u.id = au.user_id 
-           WHERE au.user_id IS NULL`
+           WHERE au.user_id IS NULL AND u.is_test = FALSE`
         ),
         
-        // Get total points in circulation - simplified query
+        // Get total points in circulation (excluding test users) - simplified query
         connection.execute(
-          'SELECT COALESCE(SUM(points), 0) as total FROM users'
+          'SELECT COALESCE(SUM(points), 0) as total FROM users WHERE is_test = FALSE'
         ),
         
         // Get active rewards count
@@ -5440,7 +5440,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
            WHERE type = 'REDEEMED'`
         ),
         
-        // Get recent transactions for charts - limit fields and optimize join
+        // Get recent transactions for charts (excluding test users) - limit fields and optimize join
         connection.execute(
           `SELECT 
             t.created_at,
@@ -5451,6 +5451,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
             u.email
            FROM transactions t
            JOIN users u USE INDEX (PRIMARY) ON t.user_id = u.id
+           WHERE u.is_test = FALSE
            ORDER BY t.created_at DESC
            LIMIT 30`
         )

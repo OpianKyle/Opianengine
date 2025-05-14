@@ -2,10 +2,13 @@
  * Run the migration to add the is_test field to users table
  * This allows for identifying test users and excluding them from statistics
  */
-const mysql = require('mysql2/promise');
-const dotenv = require('dotenv');
-const fs = require('fs');
-const path = require('path');
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 
