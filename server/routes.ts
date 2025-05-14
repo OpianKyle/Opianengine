@@ -6,6 +6,8 @@ import { setupWebSocketServer } from "./websocket";
 import { getAgentByReferralCode } from "./utils/referral";
 import { createConnection, connectionPool } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
+// Import the fixed implementation for test customer generation
+import { generateTestCustomers } from "./generate-test-customers";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
@@ -2955,23 +2957,28 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       if (packageType && !validPackages.includes(packageType)) {
         return res.status(400).json({ error: "Invalid package type" });
       }
-
-      // South African cities for address generation
-      const southAfricanCities = [
-        'Johannesburg', 'Cape Town', 'Durban', 'Pretoria', 'Bloemfontein',
-        'Port Elizabeth', 'East London', 'Kimberley', 'Polokwane', 'Nelspruit',
-        'Pietermaritzburg', 'Rustenburg', 'Potchefstroom', 'George', 'Upington'
-      ];
-
-      // Package options and prices
-      const packages = packageType ? [packageType] : ['OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'];
-      const packagePrices = {
-        'OPPORTUNITY': 350,
-        'MOMENTUM': 450,
-        'PROSPER': 550,
-        'PRESTIGE': 695,
-        'PINNACLE': 825
-      };
+      
+      // Extract any custom name values if provided
+      const { customFirstName, customLastName } = req.body;
+      
+      try {
+        // Call our fixed implementation that uses the correct DB schema
+        await generateTestCustomers(req, res, connection, {
+          numCount,
+          packageType,
+          customFirstName,
+          customLastName
+        });
+        
+        // The function handles the response, so we return here
+        return;
+      } catch (error) {
+        console.error("Error generating test customers:", error);
+        return res.status(500).json({ 
+          error: "Error generating test customers",
+          message: error instanceof Error ? error.message : "Unknown error" 
+        });
+      }
 
       // Card status options
       const cardStatuses = ['PENDING', 'APPROVED', 'RECEIVED', 'ACTIVATED', 'DECLINED'];
