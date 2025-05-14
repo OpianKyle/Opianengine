@@ -16,10 +16,18 @@ const formSchema = z.object({
   first_name: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
   last_name: z.string().min(2, { message: 'Last name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters.' }).regex(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{8,}$/,
-    { message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.' }
-  ),
+  password: z.string()
+    .min(8, { message: 'Password must be at least 8 characters.' })
+    .refine(
+      (password) => {
+        const hasUppercase = /[A-Z]/.test(password);
+        const hasLowercase = /[a-z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+        const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+        return hasUppercase && hasLowercase && hasNumber && hasSpecial;
+      },
+      { message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.' }
+    ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
