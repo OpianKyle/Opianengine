@@ -183,9 +183,14 @@ function generateEmail(firstName: string, lastName: string) {
   return `${firstName.toLowerCase()}.${lastName.toLowerCase()}${randomNum}@${domain}`.replace(/\s/g, "");
 }
 
+// Import the crypto utilities from our auth module for consistent password hashing
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
+
+const scryptAsync = promisify(scrypt);
+
 async function hashPassword(password: string) {
-  const crypto = require('crypto');
-  const salt = crypto.randomBytes(16).toString('hex');
-  const buffer = await require('util').promisify(crypto.scrypt)(password, salt, 64);
-  return `${buffer.toString('hex')}.${salt}`;
+  const salt = randomBytes(16).toString('hex');
+  const buf = await scryptAsync(password, salt, 64) as Buffer;
+  return `${buf.toString('hex')}.${salt}`;
 }
