@@ -72,26 +72,26 @@ export function registerTestCustomerRoutes(app: Express) {
         // Create user
         const hashedPassword = await hashPassword("test123");
         const [userResult] = await connection.execute(
-          // Note: No username column, matching actual schema
-          "INSERT INTO users (email, password, first_name, last_name, phone_number, city, created_at, updated_at, verified, card_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [email, hashedPassword, firstName, lastName, phoneNumber, city, registrationDate, registrationDate, 1, "REQUESTED"]
+          // Note: No username or updated_at column in users table
+          "INSERT INTO users (email, password, first_name, last_name, phone_number, city, created_at, card_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          [email, hashedPassword, firstName, lastName, phoneNumber, city, registrationDate, "REQUESTED"]
         );
         
         // @ts-ignore - TypeScript doesn't recognize insertId property
         const userId = userResult.insertId;
         
-        // Create customer profile
+        // Update user's package type instead of creating a separate customer record (no customers table exists)
         await connection.execute(
-          "INSERT INTO customers (user_id, package_type, registration_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-          [userId, packageType, registrationDate, registrationDate, registrationDate]
+          "UPDATE users SET selected_package = ? WHERE id = ?",
+          [packageType, userId]
         );
         
         // Initialize points balance (random between 0-5000)
         const initialPoints = Math.floor(Math.random() * 5000);
         if (initialPoints > 0) {
           await connection.execute(
-            "INSERT INTO points_transactions (user_id, points, description, transaction_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            [userId, initialPoints, "Initial points balance", registrationDate, registrationDate, registrationDate]
+            "INSERT INTO transactions (user_id, points, type, description, created_at) VALUES (?, ?, ?, ?, ?)",
+            [userId, initialPoints, "ADMIN_ADJUSTMENT", "Initial points balance", registrationDate]
           );
         }
         
