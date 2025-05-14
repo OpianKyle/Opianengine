@@ -6160,6 +6160,183 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  // Admin endpoint to generate test customers
+  app.post("/api/admin/generate-test-customers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    // Check admin status
+    const connection = await createConnection();
+    try {
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { count = 10, packageType } = req.body;
+      
+      // Validate input
+      const numCount = Math.min(Math.max(parseInt(count, 10) || 10, 1), 100);
+      
+      if (isNaN(numCount)) {
+        return res.status(400).json({ error: "Invalid count parameter" });
+      }
+      
+      console.log(`Generating ${numCount} test customers${packageType ? ` with package ${packageType}` : ''}`);
+      
+      // Helper functions for generating test data
+      function getRandomInt(min: number, max: number) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+      
+      function getRandomDate() {
+        const now = new Date();
+        const pastDate = new Date();
+        pastDate.setDate(now.getDate() - getRandomInt(1, 365)); // Random date within past year
+        return pastDate;
+      }
+      
+      function generateMobileNumber() {
+        return `+27${getRandomInt(60, 89)}${getRandomInt(1000000, 9999999)}`;
+      }
+      
+      function generateEmail(firstName: string, lastName: string) {
+        const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com'];
+        const randomDomain = domains[Math.floor(Math.random() * domains.length)];
+        
+        // Clean up name parts for email
+        const cleanFirst = firstName.toLowerCase().replace(/[^a-z]/g, '');
+        const cleanLast = lastName.toLowerCase().replace(/[^a-z]/g, '');
+        
+        // Add a random number to ensure uniqueness
+        const randomNum = Math.floor(Math.random() * 1000);
+        
+        return `${cleanFirst}.${cleanLast}${randomNum}@${randomDomain}`;
+      }
+      
+      async function hashPassword(password: string) {
+        const salt = randomBytes(16).toString("hex");
+        const buf = await scryptAsync(password, salt, 64) as Buffer;
+        return `${buf.toString("hex")}.${salt}`;
+      }
+      
+      // South African cities for address generation
+      const southAfricanCities = [
+        'Johannesburg', 'Cape Town', 'Durban', 'Pretoria', 'Bloemfontein',
+        'Port Elizabeth', 'East London', 'Kimberley', 'Polokwane', 'Nelspruit',
+        'Pietermaritzburg', 'Rustenburg', 'Potchefstroom', 'George', 'Upington'
+      ];
+      
+      // First names and last names for test customers
+      const firstNames = [
+        'John', 'Mary', 'James', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth',
+        'David', 'Susan', 'Richard', 'Jessica', 'Joseph', 'Sarah', 'Thomas', 'Karen', 'Charles', 'Nancy',
+        'Sipho', 'Thandi', 'Mandla', 'Nomsa', 'Thabo', 'Lerato', 'Mpho', 'Nosipho', 'Themba', 'Zanele'
+      ];
+      
+      const lastNames = [
+        'Smith', 'Johnson', 'Williams', 'Jones', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor',
+        'Anderson', 'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson', 'Garcia', 'Martinez', 'Robinson',
+        'Nkosi', 'Ndlovu', 'Khumalo', 'Dlamini', 'Mkhize', 'Mokoena', 'Sithole', 'Molefe', 'Tshabalala', 'Mabaso'
+      ];
+      
+      // Package options and prices
+      const packages = packageType ? [packageType] : ['OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'];
+      const packagePrices: {[key: string]: number} = {
+        'OPPORTUNITY': 350,
+        'MOMENTUM': 450,
+        'PROSPER': 550,
+        'PRESTIGE': 695,
+        'PINNACLE': 825
+      };
+      
+      // Card status options
+      const cardStatuses = ['PENDING', 'APPROVED', 'RECEIVED', 'ACTIVATED', 'DECLINED'];
+      
+      // Log action
+      await connection.execute(
+        "INSERT INTO admin_logs (admin_id, action_type, details) VALUES (?, ?, ?)",
+        [req.user.id, "GENERATE_TEST_CUSTOMERS", `Generated ${numCount} test customers${packageType ? ` with package ${packageType}` : ''}`]
+      );
+
+      await connection.beginTransaction();
+      
+      try {
+        // Track created users
+        const createdUsers: Array<{id: number, name: string, package: string, email: string}> = [];
+        
+        // Generate and insert test customers
+        for (let i = 0; i < numCount; i++) {
+          const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+          const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+          const email = generateEmail(firstName, lastName);
+          const mobileNumber = generateMobileNumber();
+          const selectedPackage = packages[Math.floor(Math.random() * packages.length)];
+          const premiumAmount = packagePrices[selectedPackage];
+          const address = `${getRandomInt(1, 999)} ${['Main', 'Park', 'Church', 'High', 'Oak', 'Pine', 'Cedar', 'Maple'][Math.floor(Math.random() * 8)]} ${['Street', 'Road', 'Avenue', 'Boulevard', 'Lane', 'Drive'][Math.floor(Math.random() * 6)]}, ${southAfricanCities[Math.floor(Math.random() * southAfricanCities.length)]}`;
+          const cardStatus = cardStatuses[Math.floor(Math.random() * cardStatuses.length)];
+          const pointsBalance = getRandomInt(0, 10000);
+          const createdAt = getRandomDate();
+          const username = `${firstName.toLowerCase()}${lastName.toLowerCase()}${getRandomInt(1, 999)}`;
+          
+          // Standard password for test accounts
+          const hashedPassword = await hashPassword('Password123!');
+          
+          // Insert user
+          const [userResult] = await connection.execute(
+            `INSERT INTO users (
+              first_name, last_name, email, phone_number, username, password, 
+              role, address, selected_package, premium_amount, 
+              card_status, points, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              firstName, lastName, email, mobileNumber, username, hashedPassword,
+              'CUSTOMER', address, selectedPackage, premiumAmount,
+              cardStatus, pointsBalance, createdAt
+            ]
+          );
+
+          const userId = userResult.insertId;
+          createdUsers.push({
+            id: userId,
+            name: `${firstName} ${lastName}`,
+            package: selectedPackage,
+            email: email
+          });
+        }
+
+        await connection.commit();
+        
+        res.status(200).json({ 
+          success: true,
+          message: "Test customers created successfully", 
+          count: createdUsers.length,
+          users: createdUsers
+        });
+      } catch (error) {
+        await connection.rollback();
+        console.error('Transaction failed:', error);
+        res.status(500).json({ 
+          error: "Error generating test customers", 
+          details: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      }
+    } catch (error) {
+      console.error("Error generating test customers:", error);
+      res.status(500).json({ 
+        error: "Error generating test customers", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    } finally {
+      await connection.end();
+    }
+  });
+
   // Sitemap route to serve sitemap.xml for better SEO
   app.get('/sitemap.xml', async (req, res) => {
     try {

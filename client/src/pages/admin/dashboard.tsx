@@ -179,6 +179,7 @@ export default function AdminDashboard() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="social">Social Media Traffic</TabsTrigger>
+            <TabsTrigger value="test-tools">Test Tools</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
@@ -260,6 +261,32 @@ export default function AdminDashboard() {
           
           <TabsContent value="social">
             <SocialMediaTracker />
+          </TabsContent>
+          
+          <TabsContent value="test-tools">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="col-span-1">
+                <TestCustomerGenerator />
+              </div>
+              <div className="col-span-1">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Test Tools Information</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground mb-4">
+                      These tools help you create test data for demonstration purposes.
+                    </p>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li>Test customers are created with randomized but realistic data</li>
+                      <li>All test accounts use the password: <code className="bg-muted px-1 py-0.5 rounded">Password123!</code></li>
+                      <li>Each customer has a randomly assigned package and card status</li>
+                      <li>Points balance is randomly generated between 0-10,000</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
