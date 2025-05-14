@@ -12,7 +12,7 @@ dotenv.config();
 // Generate test customers with South African data
 export function registerTestCustomerRoutes(app: Express) {
   app.post("/api/admin/generate-test-customers", checkAdmin, async (req: Request, res: Response) => {
-    const { count = 10 } = req.body;
+    const { count = 10, packageType } = req.body;
     const adminId = req.user?.id;
     
     if (!adminId) {
@@ -66,7 +66,11 @@ export function registerTestCustomerRoutes(app: Express) {
         const email = generateEmail(firstName, lastName);
         const phoneNumber = generatePhoneNumber();
         const city = cities[Math.floor(Math.random() * cities.length)];
-        const packageType = packageTypes[Math.floor(Math.random() * packageTypes.length)];
+        
+        // Use specified package type if provided, otherwise random
+        const selectedPackageType = packageType && packageTypes.includes(packageType) 
+          ? packageType 
+          : packageTypes[Math.floor(Math.random() * packageTypes.length)];
         const registrationDate = getRandomDate();
         
         // Create user
@@ -80,20 +84,39 @@ export function registerTestCustomerRoutes(app: Express) {
         // @ts-ignore - TypeScript doesn't recognize insertId property
         const userId = userResult.insertId;
         
-        // Initialize points balance (random between 0-5000)
-        const initialPoints = Math.floor(Math.random() * 5000);
+        // Set activation points based on package
+        let activationPoints;
+        switch (selectedPackageType) {
+          case "OPPORTUNITY":
+            activationPoints = 2000;
+            break;
+          case "MOMENTUM":
+            activationPoints = 3000;
+            break;
+          case "PROSPER":
+            activationPoints = 4000;
+            break;
+          case "PRESTIGE":
+            activationPoints = 5000;
+            break;
+          case "PINNACLE":
+            activationPoints = 6000;
+            break;
+          default:
+            activationPoints = 2000;
+        }
         
-        // Update user's package type instead of creating a separate customer record (no customers table exists)
+        // Update user's package type and activation points
         await connection.execute(
           "UPDATE users SET selected_package = ?, points = ? WHERE id = ?",
-          [packageType, initialPoints, userId]
+          [selectedPackageType, activationPoints, userId]
         );
-        if (initialPoints > 0) {
-          await connection.execute(
-            "INSERT INTO transactions (user_id, points, type, description, created_at) VALUES (?, ?, ?, ?, ?)",
-            [userId, initialPoints, "ADMIN_ADJUSTMENT", "Initial points balance", registrationDate]
-          );
-        }
+        
+        // Create transaction record for activation points
+        await connection.execute(
+          "INSERT INTO transactions (user_id, points, type, description, created_at) VALUES (?, ?, ?, ?, ?)",
+          [userId, activationPoints, "ACTIVATION_POINTS", `Activation points for ${selectedPackageType} package`, registrationDate]
+        );
         
         customers.push({
           id: userId,
@@ -102,9 +125,9 @@ export function registerTestCustomerRoutes(app: Express) {
           email,
           phoneNumber,
           city,
-          packageType,
+          packageType: selectedPackageType,
           registrationDate,
-          initialPoints
+          points: activationPoints
         });
       }
       
