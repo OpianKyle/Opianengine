@@ -60,7 +60,16 @@ export default function SocialDashboard() {
         <header className="border-b border-border">
           <div className="container mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="OPIAN Rewards" className="h-8" />
+              <img 
+                src="/opian-rewards-logo(R).png" 
+                alt="OPIAN Rewards" 
+                className="h-8"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.onerror = null;
+                  img.src = '/opian-logo-white.png';
+                }}
+              />
               <h1 className="text-xl font-semibold">Social Media Analytics</h1>
             </div>
             <div className="flex items-center gap-4">
