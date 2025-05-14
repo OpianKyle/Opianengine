@@ -62,9 +62,26 @@ router.post('/register-social-user', async (req: Request, res: Response) => {
       // Hash the password with the salt
       const hashedPassword = await hashPassword(userData.password, salt);
       
+      // Generate a unique referral code
+      const referralCode = 'REF' + crypto.randomBytes(4).toString('hex');
+      
       // Insert the new social user
-      const [result] = await connection.query(
-        `INSERT INTO users (
+      console.log('Attempting to insert social user with data:', {
+        firstName: userData.first_name,
+        lastName: userData.last_name,
+        email: userData.email,
+        passwordLength: hashedPassword.length,
+        referralCode,
+        isEnabled: 1,
+        isAdmin: 0,
+        isAgent: 0,
+        isSuperAdmin: 0,
+        isSocial: 1,
+        points: 0,
+        createdAt: new Date()
+      });
+
+      const insertQuery = `INSERT INTO users (
           first_name, 
           last_name, 
           email, 
@@ -75,22 +92,35 @@ router.post('/register-social-user', async (req: Request, res: Response) => {
           is_super_admin,
           is_social,
           points,
-          created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          userData.first_name,
-          userData.last_name,
-          userData.email,
-          hashedPassword,
-          1, // enabled
-          0, // not admin
-          0, // not agent
-          0, // not super admin
-          1, // is social user
-          0, // zero points
-          new Date()
-        ]
-      );
+          created_at,
+          referral_code
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      
+      console.log('SQL Query:', insertQuery);
+      
+      try {
+        const [result] = await connection.query(
+          insertQuery,
+          [
+            userData.first_name,
+            userData.last_name,
+            userData.email,
+            hashedPassword,
+            1, // enabled
+            0, // not admin
+            0, // not agent
+            0, // not super admin
+            1, // is social user
+            0, // zero points
+            new Date(),
+            referralCode // referral code
+          ]
+        );
+        console.log('Insert result:', result);
+      } catch (insertError) {
+        console.error('Database insert error:', insertError);
+        throw new Error(`Database insert error: ${insertError instanceof Error ? insertError.message : String(insertError)}`);
+      }
       
       return res.status(201).json({
         success: true,
@@ -101,8 +131,10 @@ router.post('/register-social-user', async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error('Error creating social user:', error);
+    // Send more detailed error information for debugging
     return res.status(500).json({ 
-      error: 'An error occurred while creating the social user'
+      error: 'An error occurred while creating the social user',
+      details: error instanceof Error ? error.message : String(error)
     });
   }
 });

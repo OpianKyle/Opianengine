@@ -1,8 +1,18 @@
 /**
  * Run the migration to add the social user type to the database
  */
-const mysql = require('mysql2/promise');
-require('dotenv').config();
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+// Set up __dirname equivalent for ES modules
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+
+// Load environment variables
+dotenv.config();
 
 async function main() {
   console.log('Starting migration to add social user type');
