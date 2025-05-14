@@ -1,20 +1,36 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import passport from "passport";
-import { setupAuth, checkAgent, verifyJwtToken } from "./auth";
+import { setupAuth, checkAgent, checkAdmin, verifyJwtToken, getUserFromTokenOrSession } from "./auth";
 import { setupWebSocketServer } from "./websocket"; 
-import { createConnection } from './db';
-import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail } from "./utils/emailService";
+import { getAgentByReferralCode } from "./utils/referral";
+import { createConnection, connectionPool } from './db';
+import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
+// Import the fixed implementation for test customer generation
+import { generateTestCustomers } from "./generate-test-customers";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import referralRouter from './routes/referral';
+import agentRouter from './routes/agent';
+import agentsRouter from './routes/agents';
+import migrationRouter from './routes/migration';
+import manualMigrationRouter from './routes/manual-migration';
+import packageTypesRouter from './routes/package-types';
+import subscriptionRouter from './routes/subscription';
+import { setupCardStatusRoutes } from './routes/card-status';
+import { leadsRouter } from './routes/leads';
+import { contactRouter } from './routes/contact';
+import adminToolsRouter from './routes/admin-tools';
+import analyticsRouter from './routes/analytics';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
+import nodemailer from 'nodemailer';
 import { promisify } from "util";
 import { logAdminAction } from './admin-logger';
+import { generateSitemap, scheduleSitemapGeneration } from './sitemap/sitemap-generator';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -27,6 +43,38 @@ const crypto = {
 
 // Helper function to get package price
 async function getPackagePrice(connection: any, packageName: string): Promise<number> {
+  // Check if table exists and create it if it doesn't
+  try {
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS package_premium_amounts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        package_type VARCHAR(50) NOT NULL UNIQUE,
+        premium_amount DECIMAL(10,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Check if we have data in the table
+    const [checkData] = await connection.execute(
+      `SELECT COUNT(*) as count FROM package_premium_amounts`
+    );
+    
+    // If no data, insert default values
+    if (checkData[0].count === 0) {
+      await connection.execute(`
+        INSERT INTO package_premium_amounts (package_type, premium_amount) VALUES 
+        ('OPPORTUNITY', 350.00),
+        ('MOMENTUM', 450.00),
+        ('PROSPER', 550.00),
+        ('PRESTIGE', 695.00),
+        ('PINNACLE', 825.00)
+      `);
+      console.log('Created package_premium_amounts table with default values');
+    }
+  } catch (error) {
+    console.error('Error setting up package_premium_amounts table:', error);
+  }
+  
   // Get package price from the table
   const [prices] = await connection.execute(
     'SELECT premium_amount FROM package_premium_amounts WHERE package_type = ?',
@@ -56,13 +104,13 @@ async function calculateCommissionPoints(connection: any, packageName: string, l
   let commissionPercentage = 0;
   switch (level) {
     case 1: // Direct referral
-      commissionPercentage = 0.15; // 15%
+      commissionPercentage = 0.075; // 7.5%
       break;
     case 2:
-      commissionPercentage = 0.10; // 10%
+      commissionPercentage = 0.05; // 5%
       break;
     case 3:
-      commissionPercentage = 0.05; // 5%
+      commissionPercentage = 0.025; // 2.5%
       break;
     default:
       commissionPercentage = 0;
@@ -100,175 +148,302 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     next();
   });
 
-
-
-
-  // Registration endpoint with enhanced validation and field handling
-  app.post("/api/register", async (req: Request, res: Response) => {
-    const connection = await createConnection();
+// SMTP Test route - test connection to SMTP server without sending an email
+  app.get("/api/test-smtp", async (req: Request, res: Response) => {
     try {
-      // Debug log for signature data
-      console.log('Registration signature debug:', {
-        signatureType: typeof req.body.signature,
-        signatureValue: req.body.signature?.substring(0, 100),
-        signatureLength: req.body.signature?.length,
-        isBase64: req.body.signature?.match(/^data:image\/[^;]+;base64,/),
-        mandateAccepted: req.body.acceptMandate
-      });
-
-      // Input validation
-      if (!req.body.email || !req.body.password || !req.body.firstName || !req.body.lastName) {
-        return res.status(400).json({ error: "Required fields missing" });
-      }
-
-      // Validate signature format
-      if (!req.body.signature || typeof req.body.signature !== 'string' || !req.body.signature.startsWith('data:image/')) {
-        return res.status(400).json({ error: "Valid signature image data is required" });
-      }
-
-      // Check for existing user
-      const [existingUsers] = await connection.execute(
-        'SELECT id FROM users WHERE email = ?',
-        [req.body.email]
-      );
-
-      if (Array.isArray(existingUsers) && existingUsers.length > 0) {
-        return res.status(400).json({ error: "Email already exists" });
-      }
-
-      // Hash password
-      const hashedPassword = await crypto.hash(req.body.password);
-      const newReferralCode = `REF${randomBytes(4).toString('hex')}`;
-
-      // Calculate initial points
-      let initialPoints = 0;
-      const selectedPackage = req.body.selectedPackage?.toUpperCase();
-      switch (selectedPackage) {
-        case 'OPPORTUNITY': initialPoints = 2500; break;
-        case 'MOMENTUM': initialPoints = 5000; break;
-        case 'PROSPER': initialPoints = 7500; break;
-        case 'PRESTIGE': initialPoints = 10000; break;
-        case 'PINNACLE': initialPoints = 12500; break;
-        default: initialPoints = 2500;
-      }
-
-      await connection.beginTransaction();
-
-      try {
-        // Debug the SQL query parameters
-        const queryParams = [
-          req.body.email,
-          hashedPassword,
-          req.body.firstName,
-          req.body.lastName,
-          req.body.mobileNumber,
-          req.body.isSouthAfrican ? 1 : 0,
-          req.body.idNumber,
-          req.body.dateOfBirth,
-          req.body.gender,
-          req.body.occupation,
-          req.body.industry,
-          req.body.addressLine1,
-          req.body.suburb,
-          req.body.postalCode,
-          selectedPackage,
-          req.body.bankName,
-          req.body.accountType,
-          req.body.accountNumber,
-          req.body.accountHolderName,
-          req.body.branchCode,
-          req.body.hasCreditCard ? 1 : 0,
-          req.body.signature,
-          initialPoints,
-          newReferralCode,
-          req.body.referralCode || null,
-          req.body.acceptMandate ? 1 : 0,
-          new Date()
-        ];
-
-        console.log('Registration insert parameters:', {
-          ...queryParams,
-          password: '[REDACTED]',
-          signatureLength: queryParams[21]?.length || 0,
-          signaturePreview: queryParams[21]?.substring(0, 50) + '...'
-        });
-
-        // Insert user with explicit column names
-        const [userResult] = await connection.execute(
-          `INSERT INTO users (
-            email, password, first_name, last_name, phone_number,
-            is_south_african, id_number, date_of_birth, gender,
-            occupation, industry, address, city, postal_code,
-            selected_package, bank_name, account_type, account_number,
-            account_holder_name, branch_code, has_credit_card,
-            signature, points, referral_code, referred_by,
-            mandate_accepted, mandate_accepted_at, is_enabled,
-            created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
-          queryParams
-        );
-
-        const userId = (userResult as any).insertId;
-
-        // Verify the user data was saved
-        const [savedUser] = await connection.execute(
-          'SELECT id, signature IS NOT NULL as has_signature, CHAR_LENGTH(signature) as signature_length, points, mandate_accepted FROM users WHERE id = ?',
-          [userId]
-        );
-
-        console.log('Saved user verification:', {
-          userId,
-          hasSignature: !!(savedUser as any)[0]?.has_signature,
-          signatureLength: (savedUser as any)[0]?.signature_length,
-          points: (savedUser as any)[0]?.points,
-          mandateAccepted: (savedUser as any)[0]?.mandate_accepted
-        });
-
-        // Record points transaction
-        if (initialPoints > 0) {
-          await connection.execute(
-            `INSERT INTO transactions (
-              user_id, points, type, description, status,
-              created_at
-            ) VALUES (?, ?, ?, ?, ?, NOW())`,
-            [
-              userId,
-              initialPoints,
-              'WELCOME_BONUS',
-              `Initial points allocation for ${selectedPackage} package`,
-              'PROCESSED'
-            ]
-          );
+      // Get SMTP settings with fallbacks
+      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
+      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
+      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
+      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
+      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+      
+      // Create a nodemailer transporter with the SMTP settings
+      console.log('=== SMTP CONNECTION TEST ===');
+      console.log('SMTP_HOST:', host ? 'Set' : 'Not set');
+      console.log('SMTP_PORT:', port);
+      console.log('SMTP_USER:', user ? 'Set' : 'Not set');
+      console.log('SMTP_PASSWORD:', pass ? 'Set (length: ' + (pass.length || 0) + ')' : 'Not set');
+      console.log('SMTP_SECURE:', secure ? 'true' : 'false');
+      
+      const transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure, // true for 465, false for other ports
+        auth: {
+          user,
+          pass
+        },
+        debug: true,
+        logger: true,
+        tls: {
+          rejectUnauthorized: false // Accept all certificates (less secure but useful for testing)
         }
-
-        await connection.commit();
-
-        res.status(201).json({
-          id: userId,
-          email: req.body.email,
-          firstName: req.body.firstName,
-          lastName: req.body.lastName,
-          points: initialPoints,
-          selectedPackage,
-          mandateAccepted: true,
-          hasSignature: true
-        });
-
-      } catch (error) {
-        await connection.rollback();
-        console.error('Registration transaction error:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({ 
-        error: "Registration failed. Please try again.",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
-    } finally {
-      await connection.end();
+
+      console.log('Attempting to verify SMTP connection...');
+      const verificationResult = await transporter.verify();
+      
+      return res.status(200).json({
+        success: true,
+        message: 'SMTP connection verified successfully',
+        details: {
+          verificationResult,
+          smtp: {
+            host: host ? 'Configured (hidden)' : 'Missing',
+            port: port.toString(),
+            user: user ? 'Configured (hidden)' : 'Missing',
+            password: pass ? 'Configured (hidden)' : 'Missing',
+            secure: secure ? 'Yes' : 'No'
+          },
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('SMTP Connection Test Error:', error);
+      // Variables in the catch block lose scope, so let's get our settings again
+      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
+      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
+      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
+      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
+      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+      
+      return res.status(500).json({
+        success: false,
+        message: 'SMTP connection test failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorDetails: error,
+        smtp: {
+          host: host ? 'Configured (hidden)' : 'Missing',
+          port: port.toString(),
+          user: user ? 'Configured (hidden)' : 'Missing',
+          password: pass ? 'Configured (hidden)' : 'Missing',
+          secure: secure ? 'Yes' : 'No'
+        },
+        timestamp: new Date().toISOString()
+      });
     }
   });
+
+  // Email test route (temporary for testing) - UPDATED WITH NEW ENVIRONMENT VARIABLES
+  app.get("/api/test-email", async (req: Request, res: Response) => {
+    try {
+      // Get SMTP settings with fallbacks
+      const host = process.env.SMTP_HOST || process.env.OPIAN_SMTP_HOST;
+      const port = parseInt(process.env.SMTP_PORT || process.env.OPIAN_SMTP_PORT || '587');
+      const user = process.env.SMTP_USER || process.env.OPIAN_SMTP_USER;
+      const pass = process.env.SMTP_PASSWORD || process.env.OPIAN_SMTP_PASSWORD;
+      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+      
+      // Email configuration check
+      console.log('=== EMAIL CONFIG CHECK ===');
+      console.log('SMTP_HOST:', host ? 'Set' : 'Not set');
+      console.log('SMTP_PORT:', port);
+      console.log('SMTP_USER:', user ? 'Set' : 'Not set');
+      console.log('SMTP_PASSWORD:', pass ? 'Set (length: ' + (pass.length || 0) + ')' : 'Not set');
+      console.log('SMTP_SECURE:', secure ? 'true' : 'false');
+      
+      // Use query parameter or default to client services email
+      const testEmail = req.query.email as string || 'clientservices@opianrewards.com';
+      console.log('Recipient email:', testEmail);
+      
+      // Generate test email content with improved logging
+      console.log('Generating test email content...');
+      const { text, html } = formatRegistrationEmail('Test User', 'clientservices@opianrewards.com');
+      
+      console.log('Sending test email using updated transport configuration...');
+      try {
+        // Try to send email with detailed error capturing
+        const result = await sendEmail({
+          to: testEmail,
+          subject: 'Test Email from Opian Rewards',
+          text,
+          html,
+          emailType: 'TEST'
+        });
+        
+        if (result) {
+          console.log('Email sent successfully!');
+          return res.status(200).json({ 
+            success: true,
+            message: 'Test email sent successfully',
+            config: {
+              host: host ? 'Configured' : 'Missing',
+              port: port.toString(),
+              user: user ? 'Configured' : 'Missing',
+              password: pass ? 'Configured' : 'Missing',
+              smtp_secure: secure ? 'Yes' : 'No'
+            },
+            timestamp: new Date().toISOString(),
+            recipient: testEmail
+          });
+        } else {
+          console.error('Email sending returned false');
+          return res.status(500).json({ 
+            success: false,
+            error: 'Failed to send test email',
+            config: {
+              host: host ? 'Configured' : 'Missing',
+              port: port.toString(),
+              user: user ? 'Configured' : 'Missing',
+              password: pass ? 'Configured' : 'Missing',
+              smtp_secure: secure ? 'Yes' : 'No'
+            },
+            timestamp: new Date().toISOString(),
+            recipient: testEmail
+          });
+        }
+      } catch (emailError) {
+        console.error('Detailed email sending error:', emailError);
+        return res.status(500).json({ 
+          success: false,
+          error: 'Failed to send test email', 
+          details: emailError instanceof Error ? emailError.message : 'Unknown error',
+          config: {
+            host: host ? 'Configured' : 'Missing',
+            port: port.toString(),
+            user: user ? 'Configured' : 'Missing',
+            password: pass ? 'Configured' : 'Missing',
+            smtp_secure: secure ? 'Yes' : 'No'
+          },
+          timestamp: new Date().toISOString(),
+          recipient: testEmail
+        });
+      }
+    } catch (error) {
+      console.error('Test email route error:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to process email test',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Test route for admin notification emails with PDF attachment
+  app.post("/api/register-test", async (req: Request, res: Response) => {
+    try {
+      console.log('Received test registration data:', req.body);
+      
+      // Create a structured customer data object from the request body
+      const customerData = {
+        firstName: req.body.first_name,
+        lastName: req.body.last_name,
+        email: req.body.email,
+        mobileNumber: req.body.phone_number,
+        selectedPackage: req.body.selectedPackage,
+        referralCode: req.body.referralCode,
+        signature: req.body.signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        isSouthAfrican: req.body.isSouthAfrican !== undefined ? req.body.isSouthAfrican : true,
+        idNumber: req.body.idNumber,
+        dateOfBirth: req.body.dateOfBirth,
+        gender: req.body.gender,
+        occupation: req.body.occupation,
+        industry: req.body.industry,
+        address: req.body.address,
+        city: req.body.city,
+        postalCode: req.body.postalCode,
+        hasCreditCard: req.body.hasCreditCard,
+        bankName: req.body.bankName,
+        accountType: req.body.accountType,
+        accountNumber: req.body.accountNumber,
+        accountHolderName: req.body.accountHolderName,
+        branchCode: req.body.branchCode,
+        mandate_accepted: req.body.mandate_accepted || false
+      };
+      
+      // Log the admin notification attempt
+      console.log('Sending admin registration notification for test user');
+      
+      // This recipient email must match what's used in sendAdminRegistrationNotification function
+      const adminRecipientEmail = 'clientservices@opianrewards.com';
+      
+      console.log('Using admin recipient email:', adminRecipientEmail);
+      
+      // Send the notification
+      const result = await sendAdminRegistrationNotification(customerData);
+      
+      if (result) {
+        // Create response object with the correct recipient email
+        const responseData = { 
+          success: true, 
+          message: "Test admin notification with PDF attachment sent successfully",
+          recipient: adminRecipientEmail
+        };
+        
+        console.log('Sending response with recipient:', responseData.recipient);
+        
+        // Send the response
+        res.status(200).json(responseData);
+      } else {
+        // Failure response
+        res.status(500).json({ 
+          success: false, 
+          message: "Failed to send test admin notification" 
+        });
+      }
+    } catch (error) {
+      // Error handling
+      console.error("Error sending test admin notification:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Error sending test admin notification", 
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Test endpoint for manually verifying email content with mandate acceptance
+  app.post("/api/register-test-email-html", async (req: Request, res: Response) => {
+    try {
+      console.log('Received email HTML test request');
+      
+      // Create sample customer data with mandate_accepted set to true
+      const customerData = {
+        firstName: req.body.first_name || "Test",
+        lastName: req.body.last_name || "Customer",
+        email: req.body.email || "test@example.com",
+        mobileNumber: req.body.phone_number || "27123456789",
+        selectedPackage: req.body.selectedPackage || "Gold",
+        signature: req.body.signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        isSouthAfrican: req.body.isSouthAfrican !== undefined ? req.body.isSouthAfrican : true,
+        idNumber: req.body.idNumber || "7012345678901",
+        mandate_accepted: req.body.mandate_accepted !== undefined ? req.body.mandate_accepted : true // explicitly set to true for testing
+      };
+      
+      // Generate email content
+      const { text, html } = formatNewCustomerAdminEmail(customerData);
+      
+      // Also generate PDF to check its content
+      console.log('Generating PDF for mandate acceptance test...');
+      const pdfBuffer = await generateRegistrationPDF(customerData);
+      
+      // Return the HTML for inspection
+      res.status(200).json({
+        success: true,
+        message: "Email content generated successfully",
+        mandate_accepted: customerData.mandate_accepted,
+        html: html,
+        text: text,
+        pdf_generated: !!pdfBuffer
+      });
+    } catch (error) {
+      console.error('Error generating email content:', error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate email content",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+
+  /* Registration endpoint functionality moved to auth.ts
+   * The setupAuth function in auth.ts now handles user registration
+   * with proper crypto, database transaction, and signature validation.
+   * See auth.ts for the complete implementation.
+   */
 
   // Login endpoint uses imported passport instance
   // Global error handler
@@ -788,7 +963,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           email,
           first_name,
           last_name,
-          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points
+          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
+          selected_package
         FROM users 
         WHERE id = ?`,
         [req.user?.id]
@@ -801,7 +977,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       console.log('Points data retrieved:', {
         userId: userData[0].id,
         rawPoints: userData[0].points,
-        pointsType: typeof userData[0].points
+        pointsType: typeof userData[0].points,
+        package: userData[0].selected_package,
+        packageUpperCase: userData[0].selected_package ? userData[0].selected_package.toUpperCase() : null
       });
 
       // Ensure points is properly converted to a number
@@ -812,7 +990,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         email: userData[0].email,
         firstName: userData[0].first_name,
         lastName: userData[0].last_name,
-        points: points
+        points: points,
+        selectedPackage: userData[0].selected_package || null
       });
 
     } catch (error) {
@@ -824,7 +1003,157 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Mount referral routes
-  app.use('/api/customer', referralRouter);
+  // Mount the referral routes
+  app.use('/api/referral', referralRouter);
+  
+  // Direct endpoints for referral routes to avoid 404 issues
+  app.get("/api/referral/validate", async (req, res) => {
+    try {
+      const { code } = req.query;
+      
+      if (!code) {
+        return res.status(400).json({
+          success: false,
+          error: 'Referral code is required'
+        });
+      }
+      
+      // Clean the code (remove any dashes)
+      const cleanCode = (code as string).replace(/-/g, '');
+      console.log(`Validating referral code: ${cleanCode}`);
+      
+      // Use existing utility function to get agent
+      const agent = await getAgentByReferralCode(cleanCode);
+      
+      if (!agent) {
+        console.log(`Invalid referral code: ${cleanCode} (No agent found)`);
+        return res.status(404).json({
+          success: false,
+          error: 'Invalid referral code or the agent is no longer active'
+        });
+      }
+      
+      console.log(`Valid referral code: ${cleanCode} (Agent: ${agent.first_name} ${agent.last_name})`);
+      
+      // Return agent name but not all details
+      return res.status(200).json({
+        success: true,
+        agentName: `${agent.first_name} ${agent.last_name}`
+      });
+    } catch (error) {
+      console.error('Error validating referral code:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to validate referral code'
+      });
+    }
+  });
+  
+  // Direct endpoint for submitting a referral lead
+  app.post("/api/referral/public/submit", async (req, res) => {
+    try {
+      const { firstName, lastName, email, phoneNumber, notes, referralCode } = req.body;
+      
+      // Basic validation
+      if (!firstName || !lastName || !email || !phoneNumber || !referralCode) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields'
+        });
+      }
+      
+      const connection = await createConnection();
+      
+      try {
+        // Find the agent by referral code
+        const agent = await getAgentByReferralCode(referralCode);
+        
+        if (!agent) {
+          return res.status(404).json({
+            success: false,
+            error: 'Invalid referral code'
+          });
+        }
+        
+        // Create a new lead in the database
+        const [result] = await connection.execute(
+          `INSERT INTO referral_leads (
+            agent_id, first_name, last_name, email, phone_number, 
+            notes, status, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, 'NEW', NOW())`,
+          [
+            agent.id,
+            firstName,
+            lastName,
+            email,
+            phoneNumber,
+            notes || null
+          ]
+        );
+        
+        console.log(`New referral lead created: ${firstName} ${lastName} for agent ID ${agent.id}`);
+        
+        res.status(201).json({
+          success: true,
+          message: 'Referral lead submitted successfully',
+          leadId: (result as any).insertId
+        });
+      } catch (error) {
+        console.error('Database error creating referral lead:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to submit referral lead'
+        });
+      } finally {
+        await connection.end();
+      }
+    } catch (error) {
+      console.error('Error submitting referral lead:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process referral lead submission'
+      });
+    }
+  });
+  
+  app.use('/api/agent', agentRouter);
+  app.use('/api/admin/agents', agentsRouter);
+  
+  // Setup card status routes
+  setupCardStatusRoutes(app);
+  
+  // Debug endpoint for agent listing that bypasses all authentication middleware
+  app.get('/api/debug/agents', async (req, res) => {
+    try {
+      console.log("Direct debug endpoint for agents accessed");
+      // Create a direct database connection
+      const connection = await createConnection();
+      const [agents] = await connection.execute('SELECT id, first_name, last_name, email FROM users WHERE is_agent = 1');
+      
+      console.log(`Found ${Array.isArray(agents) ? agents.length : 0} agents through global debug endpoint`);
+      
+      // Format for frontend compatibility
+      const formatted = Array.isArray(agents) ? agents.map((agent: any) => ({
+        id: agent.id,
+        firstName: agent.first_name,
+        lastName: agent.last_name,
+        email: agent.email
+      })) : [];
+      
+      return res.status(200).json(formatted);
+    } catch (error) {
+      console.error("Global debug endpoint error:", error);
+      return res.status(500).json({ error: 'Server error in global debug endpoint' });
+    }
+  });
+  app.use('/api/migration', migrationRouter);
+  app.use('/api/manual-migration', manualMigrationRouter);
+  app.use('/api/package-types', packageTypesRouter);
+  app.use('/api/subscription', subscriptionRouter);
+  app.use('/api/leads', leadsRouter);
+  app.use('/api/contact-submit', contactRouter);
+  app.use('/api/admin/tools', adminToolsRouter);
+  app.use('/api/analytics', analyticsRouter);
 
   // Create new agent endpoint
   app.post("/api/admin/agents/create", async (req: Request, res: Response) => {
@@ -922,6 +1251,118 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  // Bulk points allocation endpoint
+  app.post("/api/admin/points/bulk", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { userIds, points, description } = req.body;
+      console.log('Bulk points allocation request:', { userIds, points, description });
+
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ error: "No users selected" });
+      }
+
+      if (!points || isNaN(points)) {
+        return res.status(400).json({ error: "Points must be a number" });
+      }
+
+      if (!description) {
+        return res.status(400).json({ error: "Description is required" });
+      }
+
+      // Begin transaction for bulk operations
+      await connection.beginTransaction();
+
+      try {
+        // Get admin user info for logging
+        const [admins] = await connection.execute(
+          'SELECT id, email, first_name, last_name FROM users WHERE id = ?',
+          [req.user.id]
+        );
+        const admin = admins[0];
+
+        // Process each user
+        const results = [];
+        for (const userId of userIds) {
+          // Get user info
+          const [users] = await connection.execute(
+            'SELECT id, email, first_name, last_name, points FROM users WHERE id = ?',
+            [userId]
+          );
+
+          if (users && users.length > 0) {
+            const user = users[0];
+            
+            // Insert transaction record
+            await connection.execute(
+              `INSERT INTO transactions (user_id, points, type, description)
+               VALUES (?, ?, 'ADMIN_ADJUSTMENT', ?)`,
+              [userId, points, description]
+            );
+
+            // Update user points
+            await connection.execute(
+              'UPDATE users SET points = points + ? WHERE id = ?',
+              [points, userId]
+            );
+
+            // Get updated points
+            const [updatedUsers] = await connection.execute(
+              'SELECT points FROM users WHERE id = ?',
+              [userId]
+            );
+
+            // Log admin action
+            await connection.execute(
+              `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
+               VALUES (?, 'POINT_ADJUSTMENT', ?, ?)`,
+              [req.user.id, userId, `Bulk adjustment - Points: ${points}, Reason: ${description}`]
+            );
+
+            results.push({
+              userId,
+              name: `${user.first_name} ${user.last_name}`,
+              email: user.email,
+              previousPoints: user.points,
+              newPoints: updatedUsers[0].points
+            });
+          }
+        }
+
+        await connection.commit();
+
+        // Return success
+        res.json({
+          success: true,
+          message: `Points allocated to ${results.length} customers successfully`,
+          results
+        });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error allocating bulk points:', error);
+      res.status(500).json({ error: 'Failed to allocate points to multiple customers' });
+    } finally {
+      await connection.end();
+    }
+  });
+
   // Points adjustment endpoint with notifications
   app.post("/api/admin/points/adjust", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -1001,32 +1442,98 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Admin customers endpoint - get only regular customers
+  // Cache for customers data with segmented caching by page and limit
+  const CUSTOMERS_CACHE_TTL = 30 * 1000; // 30 seconds - reduced to improve refresh rate
+  const CUSTOMERS_CACHE_STALE_TTL = 5 * 60 * 1000; // 5 minutes for stale data
+  // Use a map for caching different pagination states
+  const customersCache = new Map();
+  
+  // Make cache available globally for other modules to access and clear
+  global.customersCache = customersCache;
+
   app.get("/api/admin/customers", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const connection = await createConnection();
+    // Get pagination parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = (page - 1) * limit;
+    const search = (req.query.search as string) || '';
+    
+    // Create a cache key based on pagination and search
+    const cacheKey = `customers_${page}_${limit}_${search}`;
+    const now = Date.now();
+    
+    // Changed to 10 seconds for development to enable immediate updates
+    const cacheTTL = 10 * 1000;
+    
+    // Check if we have a valid cached response for this pagination state
+    if (customersCache.has(cacheKey)) {
+      const cacheEntry = customersCache.get(cacheKey);
+      if (now - cacheEntry.timestamp < cacheTTL) {
+        console.log('Returning cached customers data:', {
+          page,
+          limit,
+          count: cacheEntry.data.data.length,
+          cacheAge: Math.round((now - cacheEntry.timestamp) / 1000) + 's'
+        });
+        return res.json(cacheEntry.data);
+      }
+    }
+
+    console.time('customersQuery'); // Start timing the query
+    
+    // Use the connection pool instead of creating a new connection
+    const connection = await connectionPool.getConnection();
+    
     try {
       console.log('Fetching customers...');
-      // Check admin status using users table
+      
+      // Check admin status using more efficient query with PRIMARY key
       const [adminCheck] = await connection.execute(
-        'SELECT is_admin FROM users WHERE id = ?',
+        'SELECT is_admin FROM users USE INDEX (PRIMARY) WHERE id = ? LIMIT 1',
         [req.user.id]
       );
 
-      console.log('Admin check result:', {
-        userId: req.user.id,
-        adminCheck: adminCheck[0]
-      });
-
       if (!adminCheck || !adminCheck[0]?.is_admin) {
+        connection.release(); // Release connection back to pool
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get regular customers with transactions, assignments and product details
-      const [customers] = await connection.execute(
-        `SELECT 
+      // Improved query using LEFT JOIN instead of a subquery for better performance
+      // Count total users for pagination info with search functionality
+      let countQuery = `
+        SELECT COUNT(*) as total 
+        FROM users u 
+        LEFT JOIN admin_users au ON u.id = au.user_id
+        WHERE u.is_agent = 0 AND au.user_id IS NULL`;
+        
+      // Add search condition if search term is provided
+      if (search) {
+        countQuery += ` AND (
+          u.first_name LIKE ? OR 
+          u.last_name LIKE ? OR 
+          u.email LIKE ? OR 
+          u.phone_number LIKE ?
+        )`;
+      }
+      
+      const countParams = search ? 
+        [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`] : 
+        [];
+      
+      const [countResult] = await connection.execute(
+        countQuery,
+        countParams
+      );
+      
+      const totalCustomers = countResult[0]?.total || 0;
+      const totalPages = Math.ceil(totalCustomers / limit);
+      
+      // Get users with pagination using improved JOIN strategy with search functionality
+      let usersQuery = `SELECT 
           u.id,
           u.email,
           u.first_name,
@@ -1048,131 +1555,204 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           u.account_holder_name,
           u.branch_code,
           u.has_credit_card,
+          u.card_status,
           u.is_enabled,
           CAST(u.points as DECIMAL(10,2)) as points,
           u.created_at,
           u.agent_id,
-          COALESCE(
-            JSON_ARRAYAGG(
-              JSON_OBJECT(
-                'id', p.id,
-                'name', p.name,
-                'description', p.description,
-                'activities', (
-                  SELECT JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                      'id', pa.id,
-                      'type', pa.type,
-                      'pointsValue', pa.points_value
-                    )
-                  )
-                  FROM product_activities pa
-                  WHERE pa.product_id = p.id
-                )
-              )
-            ),
-            '[]'
-          ) as assigned_products,
-          COUNT(DISTINCT pa2.id) as assignment_count,
-          COALESCE(tr.last_transaction, NULL) as last_transaction,
-          COALESCE(tr.transaction_type, NULL) as transaction_type,
-          COALESCE(tr.transaction_points, NULL) as transaction_points
+          u.is_agent,
+          CASE WHEN au.role_type IS NOT NULL THEN TRUE ELSE FALSE END as is_admin,
+          au.role_type as admin_role
          FROM users u
-         LEFT JOIN product_assignments pa2 ON u.id = pa2.user_id
-         LEFT JOIN products p ON pa2.product_id = p.id
-         LEFT JOIN (
-           SELECT 
-             user_id,
-             created_at as last_transaction,
-             type as transaction_type,
-             points as transaction_points
-           FROM transactions t1
-           WHERE created_at = (
-             SELECT MAX(created_at)
-             FROM transactions t2
-             WHERE t2.user_id = t1.user_id
-           )
-         ) tr ON u.id = tr.user_id
          LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE au.user_id IS NULL 
-         AND u.is_agent = 0
-         GROUP BY 
-           u.id, u.email, u.first_name, u.last_name, u.phone_number,
-           u.is_south_african, u.id_number, u.date_of_birth, u.gender,
-           u.occupation, u.industry, u.address, u.city, u.postal_code,
-           u.selected_package, u.bank_name, u.account_type, u.account_number,
-           u.account_holder_name, u.branch_code, u.has_credit_card,
-           u.is_enabled, u.points, u.created_at, u.agent_id,
-           tr.last_transaction, tr.transaction_type, tr.transaction_points
-         ORDER BY u.created_at DESC`
+         WHERE u.is_agent = 0 AND au.user_id IS NULL`;
+         
+      // Add search condition if search term is provided
+      if (search) {
+        usersQuery += ` AND (
+          u.first_name LIKE ? OR 
+          u.last_name LIKE ? OR 
+          u.email LIKE ? OR 
+          u.phone_number LIKE ?
+        )`;
+      }
+      
+      // Add ordering and limit
+      usersQuery += ` ORDER BY u.created_at DESC LIMIT ?, ?`;
+      
+      // Prepare query parameters
+      const userQueryParams = search ? 
+        [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, offset, limit] : 
+        [offset, limit];
+      
+      const [users] = await connection.execute(
+        usersQuery,
+        userQueryParams
       );
-
-      console.log('Customers query result:', {
-        count: customers?.length || 0,
-        firstCustomer: customers?.[0] ? {
-          id: customers[0].id,
-          firstName: customers[0].first_name,
-          lastName: customers[0].last_name
-        } : null
-      });
-
-      // Transform the data
-      const transformedCustomers = (customers || []).map(customer => {
-        let assignedProducts = [];
-        if (customer.assigned_products) {
-          try {
-            assignedProducts = JSON.parse(customer.assigned_products);
-            assignedProducts = assignedProducts.filter(p => p && p.id && p.name).map(p => ({
-              ...p,
-              activities: p.activities || []
-            }));
-          } catch (e) {
-            console.error('Error parsing assigned products for customer:', customer.id, e);
+      
+      if (!users || users.length === 0) {
+        connection.release(); // Release connection back to pool
+        return res.json({
+          data: [],
+          pagination: {
+            page,
+            limit,
+            totalItems: 0,
+            totalPages: 0
           }
+        });
+      }
+      
+      // Extract user IDs for subsequent queries
+      const userIds = users.map(user => user.id);
+      
+      // Prepare comma-separated list of IDs for IN clauses
+      const userIdsString = userIds.join(',');
+      
+      // Run the next 3 queries in parallel for improved performance
+      const [assignmentsResult, transactionsResult, activitiesResult] = await Promise.all([
+        // Get product assignments using a safe approach for IN clause
+        connection.query(
+          `SELECT 
+            pa.user_id,
+            p.id as product_id,
+            p.name as product_name,
+            p.description as product_description
+           FROM product_assignments pa
+           JOIN products p ON pa.product_id = p.id
+           WHERE pa.user_id IN (${userIds.map(() => '?').join(',')})`,
+          userIds
+        ),
+        
+        // Get latest transactions
+        connection.query(
+          `SELECT 
+            t1.user_id,
+            t1.created_at as last_transaction,
+            t1.type as transaction_type,
+            t1.points as transaction_points
+           FROM transactions t1
+           INNER JOIN (
+             SELECT user_id, MAX(created_at) as max_created_at
+             FROM transactions
+             WHERE user_id IN (${userIds.map(() => '?').join(',')})
+             GROUP BY user_id
+           ) t2 ON t1.user_id = t2.user_id AND t1.created_at = t2.max_created_at`,
+          [...userIds]
+        ),
+        
+        // Get product activities
+        connection.query(
+          `SELECT 
+            pa.id,
+            pa.product_id,
+            pa.type,
+            pa.points_value
+           FROM product_activities pa
+           JOIN products p ON pa.product_id = p.id
+           JOIN product_assignments ps ON p.id = ps.product_id
+           WHERE ps.user_id IN (${userIds.map(() => '?').join(',')})
+           GROUP BY pa.id, pa.product_id, pa.type, pa.points_value`,
+          [...userIds]
+        )
+      ]);
+      
+      // Destructure results
+      const [assignments] = assignmentsResult;
+      const [transactions] = transactionsResult;
+      const [activities] = activitiesResult;
+      
+      // Create lookup maps for faster association
+      const transactionsByUserId = {};
+      transactions.forEach(t => {
+        transactionsByUserId[t.user_id] = t;
+      });
+      
+      // Group activities by product
+      const activitiesByProductId = {};
+      activities.forEach(a => {
+        if (!activitiesByProductId[a.product_id]) {
+          activitiesByProductId[a.product_id] = [];
         }
-
+        activitiesByProductId[a.product_id].push({
+          id: a.id,
+          type: a.type,
+          pointsValue: a.points_value
+        });
+      });
+      
+      // Group assignments by user
+      const assignmentsByUserId = {};
+      assignments.forEach(a => {
+        if (!assignmentsByUserId[a.user_id]) {
+          assignmentsByUserId[a.user_id] = [];
+        }
+        
+        assignmentsByUserId[a.user_id].push({
+          id: a.product_id,
+          name: a.product_name,
+          description: a.product_description,
+          activities: activitiesByProductId[a.product_id] || []
+        });
+      });
+      
+      // Transform the data
+      const transformedCustomers = users.map(user => {
+        // Get assignments count and products
+        const assignedProducts = assignmentsByUserId[user.id] || [];
+        const assignmentCount = assignedProducts.length;
+        
+        // Get latest transaction
+        const transaction = transactionsByUserId[user.id];
+        
         // Ensure points is properly converted to a number
-        const points = typeof customer.points === 'string' 
-          ? parseFloat(customer.points) 
-          : Number(customer.points || 0);
+        const points = typeof user.points === 'string' 
+          ? parseFloat(user.points) 
+          : Number(user.points || 0);
 
         return {
-          id: customer.id,
-          email: customer.email,
-          firstName: customer.first_name,
-          lastName: customer.last_name,
-          phoneNumber: customer.phone_number,
-          isEnabled: Boolean(customer.is_enabled),
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phoneNumber: user.phone_number,
+          isEnabled: Boolean(user.is_enabled),
           points,
-          createdAt: customer.created_at,
-          selectedPackage: customer.selected_package,
-          assignmentCount: customer.assignment_count,
-          assignedProducts: assignedProducts,
-          lastActivity: customer.last_transaction ? {
-            date: customer.last_transaction,
-            type: customer.transaction_type,
-            points: customer.transaction_points
+          createdAt: user.created_at,
+          selectedPackage: user.selected_package,
+          isAgent: Boolean(user.is_agent),
+          isAdmin: Boolean(user.is_admin),
+          adminRole: user.admin_role,
+          assignmentCount,
+          assignedProducts,
+          lastActivity: transaction ? {
+            date: transaction.last_transaction,
+            type: transaction.transaction_type,
+            points: transaction.transaction_points
           } : null,
-          idNumber: customer.id_number || '',
-          dateOfBirth: customer.date_of_birth || '',
-          gender: customer.gender || '',
-          occupation: customer.occupation || '',
-          industry: customer.industry || '',
-          address: customer.address || '',
-          city: customer.city || '',
-          postalCode: customer.postal_code || '',
-          bankName: customer.bank_name || '',
-          accountType: customer.account_type || '',
-          accountNumber: customer.account_number || '',
-          accountHolderName: customer.account_holder_name || '',
-          branchCode: customer.branch_code || '',
-          hasCreditCard: Boolean(customer.has_credit_card),
-          isSouthAfrican: Boolean(customer.is_south_african),
-          agentId: customer.agent_id || null
+          idNumber: user.id_number || '',
+          dateOfBirth: user.date_of_birth || '',
+          gender: user.gender || '',
+          occupation: user.occupation || '',
+          industry: user.industry || '',
+          address: user.address || '',
+          city: user.city || '',
+          postalCode: user.postal_code || '',
+          bankName: user.bank_name || '',
+          accountType: user.account_type || '',
+          accountNumber: user.account_number || '',
+          accountHolderName: user.account_holder_name || '',
+          branchCode: user.branch_code || '',
+          hasCreditCard: Boolean(user.has_credit_card),
+          cardStatus: user.card_status || 'NOT_DELIVERED',
+          isSouthAfrican: Boolean(user.is_south_african),
+          agentId: user.agent_id || null
         };
       });
-
-      console.log('Sending transformed customers:', {
+      
+      console.timeEnd('customersQuery'); // End timing
+      
+      console.log('Processed customers data:', {
         count: transformedCustomers.length,
         sample: transformedCustomers[0] ? {
           id: transformedCustomers[0].id,
@@ -1180,12 +1760,112 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           lastName: transformedCustomers[0].lastName
         } : null
       });
+      
+      // Create response object with pagination metadata
+      const response = {
+        data: transformedCustomers,
+        pagination: {
+          page,
+          limit,
+          totalItems: totalCustomers,
+          totalPages
+        }
+      };
+      
+      // Update cache with the new data
+      customersCache.set(cacheKey, {
+        data: response,
+        timestamp: now
+      });
 
-      res.json(transformedCustomers);
+      res.json(response);
     } catch (error) {
       console.error('Error fetching customers:', error);
+      
+      // If there's a stale cache for this page, return it rather than showing an error
+      if (customersCache.has(cacheKey)) {
+        console.log('Returning stale cache due to error');
+        return res.json(customersCache.get(cacheKey).data);
+      }
+      
+      // Try to find any cache entry that might be relevant
+      if (customersCache.size > 0) {
+        // Get the first available cache entry
+        const firstCacheKey = Array.from(customersCache.keys())[0];
+        console.log('Returning alternative cache due to error');
+        return res.json(customersCache.get(firstCacheKey).data);
+      }
+      
       res.status(500).json({ 
         error: 'Failed to fetch customers',
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+      });
+    } finally {
+      // Release the connection back to the pool
+      connection.release();
+    }
+  });
+  
+  // Send fund card follow-up email to a customer
+  app.post("/api/admin/customers/:id/send-fund-card-email", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const { id } = req.params;
+    const connection = await createConnection();
+
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT is_admin FROM users WHERE id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || !adminCheck[0]?.is_admin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      // Get customer details
+      const [customers] = await connection.execute(
+        'SELECT * FROM users WHERE id = ? AND is_admin = 0 AND is_agent = 0',
+        [id]
+      );
+
+      if (!customers || !customers.length) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      const customer = customers[0];
+
+      // Log admin action
+      await logAdminAction({
+        adminId: req.user.id,
+        actionType: "ADMIN_MESSAGE",
+        targetUserId: parseInt(id),
+        details: `Sent fund card follow-up email to ${customer.first_name} ${customer.last_name} (${customer.email})`
+      });
+
+      // Send the fund card email
+      const emailResult = await sendEmail({
+        to: customer.email,
+        subject: "Next STEP: Fund your Opian Rewards card!",
+        ...formatFundCardEmail(customer.first_name),
+        emailType: 'FUND_CARD_FOLLOWUP'
+      });
+
+      if (emailResult) {
+        res.json({ 
+          success: true, 
+          message: `Fund card email has been sent successfully to ${customer.email}` 
+        });
+      } else {
+        res.status(500).json({ error: "Failed to send email" });
+      }
+    } catch (error) {
+      console.error("Error sending fund card email:", error);
+      res.status(500).json({ 
+        error: "Failed to send fund card email",
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     } finally {
@@ -1536,10 +2216,57 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
   app.get("/api/customer/referral", async (req, res) => {
     if (!req.user) {
+      console.log("Referral API: Authentication check failed");
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     const connection = await createConnection();
+    
+    try {
+      console.log("Referral API: Fetching referral data for user:", req.user.id);
+      
+      // Check if user has access to the referral program (PROSPER, PRESTIGE, or PINNACLE package)
+      const [packageCheck] = await connection.execute(
+        `SELECT selected_package FROM users WHERE id = ?`,
+        [req.user.id]
+      );
+      
+      if (!packageCheck || packageCheck.length === 0) {
+        console.log(`Referral API: User ${req.user.id} not found in database`);
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Get user package and convert to uppercase for consistent case-insensitive comparison
+      const userCurrentPackage = packageCheck[0].selected_package;
+      const allowedPackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
+      
+      // Convert to uppercase for case-insensitive comparison
+      const userPackageUpper = userCurrentPackage ? userCurrentPackage.toUpperCase() : '';
+      
+      console.log(`REFERRAL API: Checking package access for user ${req.user.id}: package="${userCurrentPackage}" (uppercase: "${userPackageUpper}"), eligible=${allowedPackages.includes(userPackageUpper)}`);
+      
+      // Case-insensitive check for package eligibility
+      if (!userCurrentPackage || !allowedPackages.includes(userPackageUpper)) {
+        console.log(`REFERRAL API: ⛔ Access denied to referral system for user ${req.user.id} with package "${userCurrentPackage}"`);
+        return res.status(403).json({ 
+          error: "Package upgrade required", 
+          message: "Referral program is only available for PROSPER package or higher",
+          details: {
+            currentPackage: userCurrentPackage, // Original case preserved
+            requiredPackages: allowedPackages,
+            eligibleCheck: allowedPackages.includes(userPackageUpper)
+          }
+        });
+      }
+      
+      console.log(`REFERRAL API: ✅ Access granted to referral system for user ${req.user.id} with package "${userCurrentPackage}"`)
+    } catch (error) {
+      console.error("Error checking user package:", error);
+      return res.status(500).json({ 
+        error: "Failed to check package eligibility",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
     try {
       console.log('Fetching referral info for user:', req.user.id);
 
@@ -1566,6 +2293,10 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }
 
       // Get direct referrals with their package info and nested referrals count
+      // MariaDB doesn't support the JSON_ARRAYAGG in the same way as other MySQL versions
+      // So we'll use a simpler query and build the package stats in JavaScript
+      
+      // First get basic referral tree
       const [referrals] = await connection.execute(
         `WITH RECURSIVE referral_tree AS (
           -- Base case: direct referrals (level 1)
@@ -1607,22 +2338,30 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
             SELECT COUNT(*) 
             FROM users u2 
             WHERE u2.referred_by = rt.referral_code
-          ) as direct_referral_count,
-          (
-            SELECT JSON_ARRAYAGG(
-              JSON_OBJECT(
-                'package', u3.selected_package,
-                'count', COUNT(*)
-              )
-            )
-            FROM users u3
-            WHERE u3.referred_by = rt.referral_code
-            GROUP BY u3.selected_package
-          ) as referral_package_stats
+          ) as direct_referral_count
         FROM referral_tree rt
         ORDER BY rt.level, rt.created_at DESC`,
         [referralCode]
       );
+      
+      // Now let's get the package stats for each referral separately
+      for (const referral of referrals) {
+        // Get package counts for this referral's direct referrals
+        if (referral.referral_code) {
+          const [packageStats] = await connection.execute(
+            `SELECT selected_package as package, COUNT(*) as count
+             FROM users
+             WHERE referred_by = ?
+             GROUP BY selected_package`,
+            [referral.referral_code]
+          );
+          
+          // Add the package stats to the referral object
+          referral.referral_package_stats = packageStats.length > 0 ? JSON.stringify(packageStats) : '[]';
+        } else {
+          referral.referral_package_stats = '[]';
+        }
+      }
 
       // Get package prices for commission calculations
       const [packagePrices] = await connection.execute(
@@ -1638,14 +2377,15 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       const transformedReferrals = referrals.map((referral: any) => {
         // Calculate commission based on level
         const commissionPercentage = 
-          referral.level === 1 ? 0.075 : // 15% for level 1
-          referral.level === 2 ? 0.05 : // 10% for level 2
-          referral.level === 3 ? 0.025 : // 5% for level 3
+          referral.level === 1 ? 0.075 : // 7.5% for level 1
+          referral.level === 2 ? 0.05 : // 5% for level 2
+          referral.level === 3 ? 0.025 : // 2.5% for level 3
           0;
         
         const packageAmount = referral.package_amount || 0;
         const randValue = packageAmount * commissionPercentage;
-        const points = Math.floor(randValue * 100);
+        // Use a fixed 2000 points value for all referrals as required
+        const points = referral.level === 1 ? 2000 : Math.floor(randValue * 100);
 
         // Parse referral package stats
         const packageStats = referral.referral_package_stats 
@@ -2185,6 +2925,233 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       await connection.end();
     }
   });
+  
+  // Generate test customers for demo purposes
+  app.post("/api/admin/generate-test-customers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || adminCheck.length === 0) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { count = 10, packageType } = req.body;
+      
+      // Validate count
+      const numCount = parseInt(count.toString(), 10);
+      if (isNaN(numCount) || numCount <= 0 || numCount > 100) {
+        return res.status(400).json({ error: "Count must be between 1 and 100" });
+      }
+      
+      // Validate package type if provided
+      const validPackages = ['OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'];
+      if (packageType && !validPackages.includes(packageType)) {
+        return res.status(400).json({ error: "Invalid package type" });
+      }
+      
+      // Extract any custom name values if provided
+      const { customFirstName, customLastName } = req.body;
+      
+      try {
+        // Call our fixed implementation that uses the correct DB schema
+        await generateTestCustomers(req, res, connection, {
+          numCount,
+          packageType,
+          customFirstName,
+          customLastName
+        });
+      } catch (error) {
+        console.error("Error generating test customers:", error);
+        return res.status(500).json({ 
+          error: "Error generating test customers",
+          message: error instanceof Error ? error.message : "Unknown error" 
+        });
+      }
+    } catch (error) {
+      console.error("Error in generate-test-customers endpoint:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
+      try {
+        // Close connection in case of error
+        if (connection) {
+          if (typeof connection.release === 'function') {
+            connection.release();
+          } else if (typeof connection.end === 'function') {
+            await connection.end();
+          }
+        }
+      } catch (endError) {
+        console.error("Error ending connection:", endError);
+      }
+    }
+  });
+      
+      const lastNames = [
+        'Smith', 'Johnson', 'Williams', 'Jones', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor',
+        'Anderson', 'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson', 'Garcia', 'Martinez', 'Robinson',
+        'Nkosi', 'Ndlovu', 'Khumalo', 'Dlamini', 'Mkhize', 'Mokoena', 'Sithole', 'Molefe', 'Tshabalala', 'Mabaso'
+      ];
+
+      // Helper functions
+      const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+      
+      const getRandomDate = () => {
+        const now = new Date();
+        const pastYear = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        const randomTime = pastYear.getTime() + Math.random() * (now.getTime() - pastYear.getTime());
+        return new Date(randomTime);
+      };
+      
+      const generateMobileNumber = () => {
+        const prefixes = ['060', '061', '062', '063', '064', '065', '066', '067', '068', '071', '072', '073', '074', '076', '078', '079', '081', '082', '083', '084'];
+        const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+        const randomNumbers = Math.floor(Math.random() * 10000000).toString().padStart(7, '0');
+        return randomPrefix + randomNumbers;
+      };
+      
+      const generateEmail = (firstName, lastName) => {
+        const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'opianrewards.com'];
+        const randomDomain = domains[Math.floor(Math.random() * domains.length)];
+        
+        const cleanFirst = firstName.toLowerCase().replace(/[^a-z]/g, '');
+        const cleanLast = lastName.toLowerCase().replace(/[^a-z]/g, '');
+        
+        const randomNum = Math.floor(Math.random() * 1000);
+        
+        return `${cleanFirst}.${cleanLast}${randomNum}@${randomDomain}`;
+      };
+      
+      const hashPassword = async (password: string): Promise<string> => {
+        // Use native Node.js crypto module without require
+        const crypto = await import('crypto');
+        const util = await import('util');
+        
+        const scryptAsync = util.promisify(crypto.scrypt);
+        const salt = crypto.randomBytes(16).toString('hex');
+        const buf = await scryptAsync(password, salt, 64) as Buffer;
+        return `${buf.toString('hex')}.${salt}`;
+      };
+
+      // Check if admin_logs table exists before logging action
+      try {
+        const [adminLogsTable] = await connection.execute("SHOW TABLES LIKE 'admin_logs'");
+        
+        if (adminLogsTable && (adminLogsTable as any[]).length > 0) {
+          // Log action in admin_logs
+          await connection.execute(
+            "INSERT INTO admin_logs (admin_id, action_type, details) VALUES (?, ?, ?)",
+            [req.user.id, "GENERATE_TEST_CUSTOMERS", `Generated ${numCount} test customers${packageType ? ` with package ${packageType}` : ''}`]
+          );
+          console.log("Admin action logged successfully");
+        } else {
+          console.log("admin_logs table does not exist, skipping admin log entry");
+        }
+      } catch (logError) {
+        // Just log the error but continue with customer generation
+        console.error("Error logging admin action:", logError);
+      }
+
+      await connection.beginTransaction();
+      
+      try {
+        // Track created users
+        const createdUsers = [];
+
+        // Generate and insert test customers
+        for (let i = 0; i < numCount; i++) {
+          const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+          const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+          const email = generateEmail(firstName, lastName);
+          const mobileNumber = generateMobileNumber();
+          const selectedPackage = packages[Math.floor(Math.random() * packages.length)];
+          const premiumAmount = packagePrices[selectedPackage];
+          const address = `${getRandomInt(1, 999)} ${['Main', 'Park', 'Church', 'High', 'Oak', 'Pine', 'Cedar', 'Maple'][Math.floor(Math.random() * 8)]} ${['Street', 'Road', 'Avenue', 'Boulevard', 'Lane', 'Drive'][Math.floor(Math.random() * 6)]}, ${southAfricanCities[Math.floor(Math.random() * southAfricanCities.length)]}`;
+          const cardStatus = cardStatuses[Math.floor(Math.random() * cardStatuses.length)];
+          const pointsBalance = getRandomInt(0, 10000);
+          const createdAt = getRandomDate();
+          const username = `${firstName.toLowerCase()}${lastName.toLowerCase()}${getRandomInt(1, 999)}`;
+          
+          // Standard password for test accounts
+          const hashedPassword = await hashPassword('Password123!');
+
+          // Insert user
+          const [userResult] = await connection.execute(
+            `INSERT INTO users (
+              first_name, last_name, email, phone_number, username, password, 
+              role, address, selected_package, premium_amount, 
+              card_status, points, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              firstName, lastName, email, mobileNumber, username, hashedPassword,
+              'CUSTOMER', address, selectedPackage, premiumAmount,
+              cardStatus, pointsBalance, createdAt
+            ]
+          );
+
+          const userId = userResult.insertId;
+          createdUsers.push({
+            id: userId,
+            name: `${firstName} ${lastName}`,
+            package: selectedPackage,
+            email: email
+          });
+        }
+
+        await connection.commit();
+        
+        res.status(200).json({ 
+          success: true,
+          message: "Test customers created successfully", 
+          count: createdUsers.length,
+          users: createdUsers
+        });
+      } catch (error) {
+        console.error('Transaction failed:', error);
+        try {
+          await connection.rollback();
+          console.log('Transaction rolled back successfully');
+        } catch (rollbackError) {
+          console.error('Error during rollback:', rollbackError);
+        }
+        
+        res.status(500).json({ 
+          error: "Error generating test customers", 
+          details: error instanceof Error ? error.message : 'Transaction failed' 
+        });
+        return;
+      }
+    } catch (error) {
+      console.error("Error generating test customers:", error);
+      res.status(500).json({ 
+        error: "Error generating test customers", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    } finally {
+      try {
+        // Check if connection has a release method (it's from a pool)
+        if (typeof connection.release === 'function') {
+          connection.release();
+        } else if (typeof connection.end === 'function') {
+          await connection.end();
+        }
+        console.log('Database connection closed successfully');
+      } catch (closeError) {
+        console.error('Error closing database connection:', closeError);
+      }
+    }
+  });
 
   app.put("/api/admin/users/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
@@ -2447,87 +3414,10 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/admin/users", async (req, res) => {
-    console.log('Admin users request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? {
-        id: req.user.id,
-        email: req.user.email,
-        is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin
-      } : null
-    });
+  // Removed duplicate /api/admin/users endpoint
 
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    // Check if user is admin or super admin
-    if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
-      console.log('User lacks admin privileges:', {
-        id: req.user?.id,
-        email: req.user?.email,
-        is_admin: req.user?.is_admin,
-        is_super_admin: req.user?.is_super_admin
-      });
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
-    const connection = await createConnection();
-    try {
-      // Only select users who are either admins or agents
-      const [users] = await connection.execute(
-        `SELECT u.*, 
-         CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
-         FROM users u
-         LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE au.role_type IS NOT NULL OR u.is_agent = 1
-         ORDER BY u.created_at DESC`
-      );
-
-      console.log('Raw users from database:', users.map((u: any) => ({
-        id: u.id,
-        email: u.email,
-        is_admin: Boolean(u.is_admin),
-        is_super_admin: Boolean(u.is_super_admin),
-        is_agent: Boolean(u.is_agent)
-      })));
-
-      const transformedUsers = users.map((user: any) => {
-        const { password, ...safeUser } = user;
-        return {
-          ...safeUser,
-          id: user.id,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          phoneNumber: user.phone_number,
-          isAdmin: Boolean(user.is_admin),
-          isAgent: Boolean(user.is_agent),
-          isSuperAdmin: Boolean(user.is_super_admin),
-          isEnabled: Boolean(user.is_enabled),
-          createdAt: user.created_at
-        };
-      });
-
-      console.log('Fetched admin/agent users:', transformedUsers.map(u => ({
-        id: u.id,
-        email: u.email,
-        isAdmin: u.isAdmin,
-        isSuperAdmin: u.isSuperAdmin,
-        isAgent: u.isAgent
-      })));
-
-      res.json(transformedUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      res.status(500).json({ error: 'Failed to fetch users' });
-    } finally {
-      await connection.end();
-    }
-  });
-
-  app.put("/api/user", async (req, res) => {
+  // This code belongs to another function, moved to the correct context
+  app.put("/api/user-profile", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -2611,7 +3501,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.put("/api/admin/users/:id/toggle-status", async (req, res) => {
+  // Support both PUT and POST methods for toggle-status
+  app.use("/api/admin/users/:id/toggle-status", async (req, res) => {
+    // Only allow PUT and POST methods
+    if (req.method !== 'PUT' && req.method !== 'POST') {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
@@ -2931,94 +3826,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/admin/customers", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    const connection = await createConnection();
-    try {
-      // Check admin status
-      const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
-        [req.user.id]
-      );
-
-      if (!adminCheck || adminCheck.length === 0) {
-        return res.status(403).json({ error: "Admin access required" });
-      }
-
-      // Fetch users with their product assignments and activities
-      const [customers] = await connection.execute(
-        `SELECT 
-          u.*,
-          JSON_ARRAYAGG(
-            JSON_OBJECT(
-              'id', pa.id,
-              'product', JSON_OBJECT(
-                'id', p.id,
-                'name', p.name,
-                'description', p.description,
-                'activities', (
-                  SELECT JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                      'id', act.id,
-                      'type', act.type,
-                      'pointsValue', act.points_value
-                    )
-                  )
-                  FROM product_activities act
-                  WHERE act.product_id = p.id
-                )
-              )
-            )
-          ) as product_assignments
-        FROM users u
-        LEFT JOIN product_assignments pa ON u.id = pa.user_id
-        LEFT JOIN products p ON pa.product_id = p.id
-        GROUP BY u.id
-        ORDER BY u.created_at DESC`
-      );
-
-      // Transform the data
-      const transformedCustomers = customers.map(customer => {
-        let productAssignments = [];
-        try {
-          productAssignments = customer.product_assignments ? 
-            JSON.parse(customer.product_assignments.replace(/null/g, '[]')) : [];
-        } catch (e) {
-          console.error('Error parsing product assignments:', e);
-        }
-
-        return {
-          id: customer.id,
-          email: customer.email,
-          firstName: customer.first_name,
-          lastName: customer.last_name,
-          phoneNumber: customer.phone_number,
-          isEnabled: Boolean(customer.is_enabled),
-          points: customer.points || 0,
-          createdAt: customer.created_at,
-          productAssignments: productAssignments.filter(pa => pa.id) // Filter out null assignments
-        };
-      });
-
-      console.log('Fetched customers with product activities:', 
-        transformedCustomers.map(c => ({
-          id: c.id,
-          assignmentsCount: c.productAssignments.length,
-          sampleActivities: c.productAssignments[0]?.product.activities?.length || 0
-        }))
-      );
-
-      res.json(transformedCustomers);
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-      res.status(500).json({ error: 'Failed to fetch customers' });
-    } finally {
-      await connection.end();
-    }
-  });
 
   app.put("/api/products/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -3717,192 +4524,254 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/customer/points", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, req.user.id),
-    });
-    res.json(user);
-  });
+  // REMOVED DUPLICATE ENDPOINTS - USING EARLIER DEFINITIONS INSTEAD
 
-  // Add the customer transactions endpoint
-  app.get("/api/customer/transactions", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+  // Customer referrals endpoint - moved from previous duplicate implementation
+  app.get("/api/customer/referrals", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      console.log("Referrals API: Authentication check failed");
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
+    const connection = await createConnection();
     try {
-      console.log('Fetching transactions for user:', req.user.id);
-
-      const transactions = await db.execute(
-        `SELECT 
-          t.*,
-          DATE_FORMAT(t.created_at, '%Y-%m-%dT%H:%i:%s.000Z') as created_at
-        FROM transactions t
-        WHERE t.user_id = ?
-        ORDER BY t.created_at DESC`,
+      console.log("Referrals API: Fetching referral stats for user:", req.user.id);
+      
+      // Get user with referral code
+      const [userData] = await connection.execute(
+        `SELECT * FROM users WHERE id = ?`,
         [req.user.id]
       );
 
-      // Transform the data to match the expected format
-      const formattedTransactions = transactions[0].map((t: any) => ({
-        id: t.id,
-        points: t.points,
-        description: t.description,
-        type: t.type,
-        createdAt: t.created_at
-      }));
-
-      res.json(formattedTransactions);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      res.status(500).json({ error: 'Failed to fetch transactions' });
-    }
-  });
-
-  app.get("/api/customer/referral", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, req.user.id))
-        .limit(1)
-        .execute();
-
-      if (!user) {
+      if (!userData || userData.length === 0) {
+        console.log('No user found with ID:', req.user.id);
         return res.status(404).json({ error: "User not found" });
       }
 
-      let currentReferralCode = user.referral_code;
-      if (!currentReferralCode) {
-        currentReferralCode = randomBytes(8).toString("hex");
-        await db
-          .update(users)
-          .set({ referral_code: currentReferralCode })
-          .where(eq(users.id, req.user.id))
-          .execute();
+      const currentUser = userData[0];
+      
+      // Check if user has PROSPER package or higher - case-insensitive
+      const eligiblePackages = ['PROSPER', 'PRESTIGE', 'PINNACLE'];
+      const userPackage = currentUser.selected_package ? currentUser.selected_package.toUpperCase() : '';
+      
+      console.log(`REFERRAL DEBUG: Checking package access for user ${req.user.id}: package="${currentUser.selected_package}" (uppercase: "${userPackage}"), eligible=${eligiblePackages.includes(userPackage)}`);
+      console.log(`REFERRAL DEBUG: User data:`, JSON.stringify(currentUser));
+      
+      if (!eligiblePackages.includes(userPackage)) {
+        console.log(`REFERRAL DEBUG: ⛔ Access denied to referral system for user ${req.user.id} with package "${userPackage}"`);
+        return res.status(403).json({ 
+          error: "Package upgrade required", 
+          message: "You need to upgrade to PROSPER package or higher to access the referral program",
+          details: {
+            currentPackage: currentUser.selected_package, // Original case preserved
+            requiredPackages: eligiblePackages,
+            eligibleCheck: eligiblePackages.includes(userPackage)
+          }
+        });
+      } else {
+        console.log(`REFERRAL DEBUG: ✅ Access granted to referral system for user ${req.user.id} with package "${userPackage}"`);
       }
-
-      const referrals = await db
-        .select({
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          createdAt: users.createdAt,
-        })
-        .from(users)
-        .where(eq(users.referred_by, currentReferralCode))
-        .orderBy(desc(users.createdAt))
-        .execute();
-
-      res.json({
-        referralCode: currentReferralCode,
-        referralCount: referrals.length,
-        referrals,
-      });
-    } catch (error) {
-      console.error('Error fetching referral info:', error);
-      res.status(500).json({ error: 'Failed to fetch referral information' });
-    }
-  });
-
-  app.get("/api/customer/referrals", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-
-    try {
-      console.log("Fetching referral stats for user:", req.user.id);
-
-      const [currentUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, req.user.id))
-        .limit(1)
-        .execute();
-
-      if (!currentUser) {
-        return res.status(404).json({ error: "User not found" });
+      
+      console.log(`Access granted to referral system for user ${req.user.id} with package ${userPackage}`);
+      
+      let referralCode = currentUser.referral_code;
+      
+      // Generate referral code if user doesn't have one
+      if (!referralCode) {
+        referralCode = randomBytes(8).toString("hex");
+        await connection.execute(
+          `UPDATE users SET referral_code = ? WHERE id = ?`,
+          [referralCode, req.user.id]
+        );
+        console.log('Generated new referral code:', referralCode);
       }
-
-      const level1Referrals = await db
-        .select({
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          email: users.email,
-          createdAt: users.createdAt,
-          referral_code: users.referral_code
-        })
-        .from(users)
-        .where(eq(users.referred_by, currentUser.referral_code))
-        .execute();
-
-      const level2Count = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(
-          inArray(
-            users.referred_by,
-            level1Referrals.map(r => r.referral_code)
+      
+      // Check if package_premium_amounts table exists, create if it doesn't
+      try {
+        await connection.execute(`
+          CREATE TABLE IF NOT EXISTS package_premium_amounts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            package_type VARCHAR(50) NOT NULL UNIQUE,
+            premium_amount DECIMAL(10,2) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
-        )
-        .execute();
-
-      const level2Referrals = await db
-        .select({ referral_code: users.referral_code })
-        .from(users)
-        .where(
-          inArray(
-            users.referred_by,
-            level1Referrals.map(r => r.referral_code)
-          )
-        )
-        .execute();
-
-      const level3Count = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(
-          inArray(
-            users.referred_by,
-            level2Referrals.map(r => r.referral_code)
-          )
-        )
-        .execute();
-
-      const referralsWithCounts = await Promise.all(
-        level1Referrals.map(async (referral) => {
-          const referralCount = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(users)
-            .where(eq(users.referred_by, referral.referral_code))
-            .execute();
-
-          return {
-            ...referral,
-            referralCount: Number(referralCount[0]?.count || 0),
-          };
-        })
+        `);
+        
+        // Check if we have data in the table
+        const [checkData] = await connection.execute(
+          `SELECT COUNT(*) as count FROM package_premium_amounts`
+        );
+        
+        // If no data, insert default values
+        if (checkData[0].count === 0) {
+          await connection.execute(`
+            INSERT INTO package_premium_amounts (package_type, premium_amount) VALUES 
+            ('OPPORTUNITY', 350.00),
+            ('MOMENTUM', 450.00),
+            ('PROSPER', 550.00),
+            ('PRESTIGE', 695.00),
+            ('PINNACLE', 825.00)
+          `);
+          console.log('Created package_premium_amounts table with default values');
+        }
+      } catch (error) {
+        console.error('Error setting up package_premium_amounts table:', error);
+      }
+      
+      // Get package prices for commission calculations
+      const [packagePrices] = await connection.execute(
+        `SELECT package_type, premium_amount FROM package_premium_amounts`
       );
-
-      console.log("Sending referral stats:", {
-        referralCode: currentUser.referral_code,
-        level1Count: level1Referrals.length,
-        level2Count: Number(level2Count[0]?.count || 0),
-        level3Count: Number(level3Count[0]?.count || 0),
+      
+      const packagePricesMap = {};
+      if (packagePrices && Array.isArray(packagePrices)) {
+        packagePrices.forEach(pkg => {
+          packagePricesMap[pkg.package_type] = pkg.premium_amount;
+        });
+      } else {
+        // Default values if query failed
+        packagePricesMap.OPPORTUNITY = 350.00;
+        packagePricesMap.MOMENTUM = 450.00;
+        packagePricesMap.PROSPER = 550.00;
+        packagePricesMap.PRESTIGE = 695.00;
+        packagePricesMap.PINNACLE = 825.00;
+      }
+      
+      // Fetch referrals with commission details using recursive CTE
+      const [allReferrals] = await connection.execute(`
+        WITH RECURSIVE referral_tree AS (
+          -- Base case: direct referrals (level 1)
+          SELECT 
+            u.id,
+            u.first_name as firstName,
+            u.last_name as lastName, 
+            u.email,
+            u.selected_package as selectedPackage,
+            u.created_at as createdAt,
+            u.referral_code,
+            1 as level,
+            pp.premium_amount
+          FROM users u
+          LEFT JOIN package_premium_amounts pp ON pp.package_type = u.selected_package
+          WHERE u.referred_by = ?
+          
+          UNION ALL
+          
+          -- Recursive case: find nested referrals (level 2 and 3)
+          SELECT 
+            u.id,
+            u.first_name as firstName,
+            u.last_name as lastName,
+            u.email,
+            u.selected_package as selectedPackage,
+            u.created_at as createdAt,
+            u.referral_code,
+            rt.level + 1 as level,
+            pp.premium_amount
+          FROM users u
+          LEFT JOIN package_premium_amounts pp ON pp.package_type = u.selected_package
+          INNER JOIN referral_tree rt ON u.referred_by = rt.referral_code
+          WHERE rt.level < 3
+        )
+        SELECT 
+          rt.*,
+          (
+            SELECT COUNT(*) 
+            FROM users u2 
+            WHERE u2.referred_by = rt.referral_code
+          ) as directReferralCount
+        FROM referral_tree rt
+        ORDER BY rt.level, rt.createdAt DESC
+      `, [referralCode]);
+      
+      // Process referrals by level
+      const referralsByLevel = {};
+      const packageStatsByLevel = {};
+      
+      // Initialize structure
+      [1, 2, 3].forEach(level => {
+        referralsByLevel[level] = [];
+        packageStatsByLevel[level] = {};
       });
+      
+      // Calculate commission percentages by level
+      const commissionPercentages = {
+        1: 0.075, // 7.5%
+        2: 0.05,  // 5%
+        3: 0.025  // 2.5%
+      };
+      
+      // Process all referrals
+      allReferrals.forEach(referral => {
+        const level = referral.level;
+        const packageType = referral.selectedPackage || 'UNKNOWN';
+        const baseAmount = referral.premium_amount || 0;
+        const percentage = commissionPercentages[level] || 0;
+        
+        // Add to referralsByLevel
+        referralsByLevel[level].push({
+          id: referral.id,
+          firstName: referral.firstName,
+          lastName: referral.lastName,
+          email: referral.email,
+          selectedPackage: packageType,
+          createdAt: referral.createdAt,
+          directReferralCount: referral.directReferralCount || 0,
+          commission: {
+            percentage: percentage * 100,
+            randValue: (baseAmount * percentage).toFixed(2),
+            points: level === 1 ? 2000 : Math.floor(baseAmount * percentage * 10) // Fixed 2000 points for level 1
+          }
+        });
+        
+        // Update package stats
+        if (!packageStatsByLevel[level][packageType]) {
+          packageStatsByLevel[level][packageType] = {
+            count: 0,
+            totalReferrals: 0,
+            referralsByPackage: {
+              OPPORTUNITY: 0,
+              MOMENTUM: 0,
+              PROSPER: 0,
+              PRESTIGE: 0,
+              PINNACLE: 0
+            },
+            commission: {
+              percentage: percentage * 100,
+              baseAmount: baseAmount
+            }
+          };
+        }
+        
+        packageStatsByLevel[level][packageType].count++;
+        packageStatsByLevel[level][packageType].totalReferrals += (referral.directReferralCount || 0);
+        
+        // This would need additional queries to be accurate, but simplifying for now
+        if (referral.directReferralCount > 0) {
+          packageStatsByLevel[level][packageType].referralsByPackage[packageType]++;
+        }
+      });
+      
+      // Count total referrals (direct level 1 referrals)
+      const referralCount = referralsByLevel[1].length;
+      
+      console.log("Sending formatted referral stats for user:", req.user.id);
 
       res.json({
-        referralCode: currentUser.referral_code,
-        level1Count: level1Referrals.length,
-        level2Count: Number(level2Count[0]?.count || 0),
-        level3Count: Number(level3Count[0]?.count || 0),
-        referrals: referralsWithCounts,
+        referralCode,
+        referralCount,
+        packagePrices: packagePricesMap,
+        packageStatsByLevel,
+        referralsByLevel
       });
     } catch (error) {
       console.error("Error fetching referral stats:", error);
-      res.status(500).json({ error: "Failed to fetch referral stats" });
+      res.status(500).json({ 
+        error: "Failed to fetch referral information",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -4213,58 +5082,93 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.get("/api/notifications", async (req, res) => {    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+  app.get("/api/notifications", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
     }
-
+    
+    const connection = await createConnection();
     try {
-      const userNotifications = await db.query.notifications.findMany({
-        where: eq(notifications.userId, req.user.id),
-        orderBy: desc(notifications.createdAt),
-        limit: 50 
-      });
-
-      res.json(userNotifications);
+      console.log('Fetching notifications for user:', req.user.id);
+      
+      const [notifications] = await connection.execute(
+        `SELECT *
+         FROM notifications
+         WHERE user_id = ?
+         ORDER BY created_at DESC 
+         LIMIT 50`,
+        [req.user.id]
+      );
+      
+      // Transform data to match client expectations
+      const transformedNotifications = notifications.map(notification => ({
+        id: notification.id,
+        userId: notification.user_id,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        read: Boolean(notification.read),
+        createdAt: notification.created_at,
+        metadata: notification.metadata ? JSON.parse(notification.metadata) : null
+      }));
+      
+      console.log(`Found ${transformedNotifications.length} notifications for user ${req.user.id}`);
+      res.json(transformedNotifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
-      res.status(500).json({ error: 'Failed to fetch notifications' });
+      res.status(500).json({ 
+        error: "Failed to fetch notifications",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } finally {
+      await connection.end();
     }
   });
 
   app.post("/api/notifications/mark-read", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
     const { notificationId } = req.body;
-
+    const connection = await createConnection();
+    
     try {
+      console.log('Marking notification(s) as read for user:', req.user.id);
+      
       if (notificationId) {
-        const [deletedNotification] = await db
-          .delete(notifications)
-          .where(
-            and(
-              eq(notifications.id, parseInt(notificationId)),
-              eq(notifications.userId, req.user.id)
-            )
-          )
-          .returning()
-          .execute();
-
-        if (!deletedNotification) {
-          return res.status(404).json({ error:"Notification not found" });
+        // Mark specific notification as read (delete it)
+        const [result] = await connection.execute(
+          `DELETE FROM notifications 
+           WHERE id = ? AND user_id = ?`,
+          [notificationId, req.user.id]
+        );
+        
+        if (!result || result.affectedRows === 0) {
+          console.log('Notification not found:', notificationId);
+          return res.status(404).json({ error: "Notification not found" });
         }
+        
+        console.log(`Marked notification ${notificationId} as read`);
       } else {
-        await db
-          .delete(notifications)
-          .where(eq(notifications.userId, req.user.id))
-          .execute();
+        // Mark all notifications as read (delete all)
+        const [result] = await connection.execute(
+          `DELETE FROM notifications WHERE user_id = ?`,
+          [req.user.id]
+        );
+        
+        console.log(`Marked all notifications as read for user ${req.user.id}, deleted ${result.affectedRows} notifications`);
       }
 
       res.json({ success: true });
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      res.status(500).json({ error: 'Failed to mark notification as read' });
+      res.status(500).json({ 
+        error: "Failed to mark notification as read",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } finally {
+      await connection.end();
     }
   });
 
@@ -4371,12 +5275,14 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.put("/api/user", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+  // This endpoint allows users to update their profile
+  app.put("/api/user-profile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
-    try{
+    const connection = await createConnection();
+    try {
       const {
         firstName,
         lastName,
@@ -4393,150 +5299,229 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         bankName,
         accountType,
         accountNumber,
-        hasCreditCard
-        
+        hasCreditCard,
+        password
       } = req.body;
 
-      const updates: any = {
-        firstName,
-        lastName,
-        phoneNumber,
-        address,
-        city,
-        postalCode,
-        idNumber,
-        dateOfBirth,
-        industry,
-        occupation,
-        isSouthAfrican,
-        selectedPackage,
-        bankName,
-        accountType,
-        accountNumber,
-        hasCreditCard
-      };
-
-      if (password) {
-        const hashedPassword = await crypto.hash(password);
-        updates.password = hashedPassword;
-      }
-
-      const [updatedUser] = await db
-        .update(users)
-        .set(updates)
-        .where(eq(users.id, req.user.id))
-        .returning()
-        .execute();
-
-      if (!updatedUser) {
+      // Check if user exists
+      const [userCheck] = await connection.execute(
+        'SELECT id FROM users WHERE id = ?',
+        [req.user.id]
+      );
+      
+      if (!userCheck || userCheck.length === 0) {
         return res.status(404).json({ error: "User not found" });
       }
-
-      res.json(updatedUser);
+      
+      // Build update SQL with only the fields that are provided
+      let updateFields = [];
+      let updateParams = [];
+      
+      if (firstName !== undefined) {
+        updateFields.push('first_name = ?');
+        updateParams.push(firstName);
+      }
+      
+      if (lastName !== undefined) {
+        updateFields.push('last_name = ?');
+        updateParams.push(lastName);
+      }
+      
+      if (phoneNumber !== undefined) {
+        updateFields.push('phone_number = ?');
+        updateParams.push(phoneNumber);
+      }
+      
+      if (address !== undefined) {
+        updateFields.push('address = ?');
+        updateParams.push(address);
+      }
+      
+      if (city !== undefined) {
+        updateFields.push('city = ?');
+        updateParams.push(city);
+      }
+      
+      if (postalCode !== undefined) {
+        updateFields.push('postal_code = ?');
+        updateParams.push(postalCode);
+      }
+      
+      if (idNumber !== undefined) {
+        updateFields.push('id_number = ?');
+        updateParams.push(idNumber);
+      }
+      
+      if (dateOfBirth !== undefined) {
+        updateFields.push('date_of_birth = ?');
+        updateParams.push(dateOfBirth);
+      }
+      
+      if (industry !== undefined) {
+        updateFields.push('industry = ?');
+        updateParams.push(industry);
+      }
+      
+      if (occupation !== undefined) {
+        updateFields.push('occupation = ?');
+        updateParams.push(occupation);
+      }
+      
+      if (isSouthAfrican !== undefined) {
+        updateFields.push('is_south_african = ?');
+        updateParams.push(isSouthAfrican);
+      }
+      
+      if (selectedPackage !== undefined) {
+        updateFields.push('selected_package = ?');
+        updateParams.push(selectedPackage);
+      }
+      
+      if (bankName !== undefined) {
+        updateFields.push('bank_name = ?');
+        updateParams.push(bankName);
+      }
+      
+      if (accountType !== undefined) {
+        updateFields.push('account_type = ?');
+        updateParams.push(accountType);
+      }
+      
+      if (accountNumber !== undefined) {
+        updateFields.push('account_number = ?');
+        updateParams.push(accountNumber);
+      }
+      
+      if (hasCreditCard !== undefined) {
+        updateFields.push('has_credit_card = ?');
+        updateParams.push(hasCreditCard);
+      }
+      
+      if (password !== undefined) {
+        updateFields.push('password = ?');
+        const hashedPassword = await hashPassword(password);
+        updateParams.push(hashedPassword);
+      }
+      
+      // Add user id as the last parameter
+      updateParams.push(req.user.id);
+      
+      if (updateFields.length === 0) {
+        return res.status(400).json({ error: "No fields to update" });
+      }
+      
+      const updateQuery = `
+        UPDATE users
+        SET ${updateFields.join(', ')}
+        WHERE id = ?
+      `;
+      
+      const [updateResult] = await connection.execute(updateQuery, updateParams);
+      
+      // Get updated user data
+      const [updatedUserData] = await connection.execute(
+        `SELECT 
+          id,
+          email,
+          first_name,
+          last_name,
+          phone_number,
+          is_admin,
+          is_super_admin,
+          is_agent,
+          is_enabled,
+          points,
+          referral_code,
+          referred_by,
+          is_south_african,
+          id_number,
+          date_of_birth,
+          address,
+          city,
+          postal_code,
+          industry,
+          occupation,
+          bank_name,
+          account_type,
+          account_number,
+          selected_package,
+          has_credit_card
+        FROM users
+        WHERE id = ?`,
+        [req.user.id]
+      );
+      
+      if (!updatedUserData || updatedUserData.length === 0) {
+        return res.status(404).json({ error: "Failed to retrieve updated user data" });
+      }
+      
+      console.log(`Updated user profile for user ${req.user.id}`);
+      res.json(updatedUserData[0]);
     } catch (error) {
       console.error('Error updating user profile:', error);
       res.status(500).json({ 
         error: 'Failed to update profile',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred'
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
+    } finally {
+      await connection.end();
     }
   });
   // Unified API endpoint that handles both session-based and JWT token-based authentication
-  app.get("/api/user", (req, res) => {
-    console.log('User request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? { id: req.user.id, email: req.user.email } : null,
-      hasAuthHeader: !!req.headers.authorization
-    });
+  app.get("/api/user", async (req, res) => {
+    try {
+      console.log('User request:', {
+        isAuthenticated: req.isAuthenticated(),
+        user: req.user ? { id: req.user.id, email: req.user.email } : null,
+        hasAuthHeader: !!req.headers.authorization
+      });
 
-    // First check session authentication
-    if (req.isAuthenticated()) {
-      // Get complete user details from database if authenticated via session
-      const connection = createConnection()
-        .then(conn => {
-          conn.execute(
-            `SELECT 
-              u.id,
-              u.email,
-              u.first_name,
-              u.last_name,
-              u.phone_number,
-              u.is_admin,
-              u.is_super_admin,
-              u.is_agent,
-              u.is_enabled,
-              u.points,
-              u.referral_code,
-              u.referred_by,
-              u.created_at,
-              u.is_south_african,
-              u.id_number,
-              u.date_of_birth,
-              u.address,
-              u.city,
-              u.postal_code,
-              u.industry,
-              u.occupation,
-              u.bank_name,
-              u.account_type,
-              u.account_number,
-              u.account_holder_name,
-              u.branch_code,
-              u.selected_package,
-              u.gender,
-              u.has_credit_card,
-              u.signature
-            FROM users u
-            WHERE u.id = ?`,
-            [req.user.id]
-          )
-          .then(([users]: any) => {
-            if (users && users.length > 0) {
-              const user = users[0];
-              // Format dates properly
-              if (user.created_at) {
-                user.created_at = new Date(user.created_at).toISOString();
-              }
-              if (user.date_of_birth) {
-                user.date_of_birth = new Date(user.date_of_birth).toISOString().split('T')[0];
-              }
-              res.json(user);
-            } else {
-              res.status(404).json({ error: "User not found" });
-            }
-            return conn;
-          })
-          .catch(error => {
-            console.error('Error fetching user details:', error);
-            res.status(500).json({ error: 'Failed to fetch user details' });
-            return conn;
-          })
-          .then(conn => conn.end());
-        })
-        .catch(error => {
-          console.error('DB connection error:', error);
-          res.status(500).json({ error: 'Database connection error' });
-        });
-      
-      return;
-    }
-    
-    // Then try JWT token authentication
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
+      // Try to get user from either JWT token or session using the helper function
+      let user;
       try {
-        const decoded = verifyJwtToken(token);
-        if (decoded) {
-          return res.json(decoded);
-        }
-      } catch (err) {
-        console.error('JWT verification error:', err);
+        user = await getUserFromTokenOrSession(req);
+      } catch (error) {
+        console.error('Error in getUserFromTokenOrSession:', error);
+        return res.status(401).json({ error: "Authentication error" });
       }
+
+      if (!user) {
+        console.log('User not authenticated via session or token');
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      console.log('User authenticated, returning user data');
+      
+      // Format the response to match what the frontend expects
+      const response = {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phone_number: user.phone_number,
+        phoneNumber: user.phone_number,
+        is_admin: Boolean(user.is_admin),
+        is_super_admin: Boolean(user.is_super_admin),
+        is_agent: Boolean(user.is_agent),
+        is_enabled: Boolean(user.is_enabled),
+        isAdmin: Boolean(user.is_admin),
+        isSuperAdmin: Boolean(user.is_super_admin),
+        isAgent: Boolean(user.is_agent),
+        isEnabled: Boolean(user.is_enabled),
+        points: parseFloat(user.points || '0'),
+        referral_code: user.referral_code,
+        referralCode: user.referral_code,
+        referred_by: user.referred_by,
+        referredBy: user.referred_by
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('Error in /api/user endpoint:', error);
+      res.status(500).json({ error: 'Failed to fetch user data' });
     }
-    
-    // If neither authentication method succeeded
-    return res.status(401).json({ error: "Unauthorized" });
   });
 
   app.post("/api/admin/products/assign", async (req, res) => {
@@ -4620,75 +5605,75 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  // Add new route for admin dashboard stats
-  app.get("/api/admin/dashboard/stats", async (req, res) => {
-    console.log('Admin dashboard stats request:', {
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? {
-        id: req.user.id,
-        email: req.user.email,
-        is_admin: req.user.is_admin,
-        is_super_admin: req.user.is_super_admin
-      } : null
-    });
-
+  // Add new route for admin dashboard stats - optimized for performance
+  app.get("/api/admin/dashboard/stats", checkAdmin, async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
     const connection = await createConnection();
     try {
-      // Check admin status
+      // Check admin status - use index hint
       const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        'SELECT role_type FROM admin_users USE INDEX (PRIMARY) WHERE user_id = ? LIMIT 1',
         [req.user.id]
       );
 
       if (!adminCheck || adminCheck.length === 0) {
-        console.log('User not found in admin_users:', req.user.id);
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Get total customers (non-admin users)
-      const [customerCount] = await connection.execute(
-        `SELECT COUNT(*) as count 
-         FROM users u 
-         LEFT JOIN admin_users au ON u.id = au.user_id 
-         WHERE au.user_id IS NULL`
-      );
-
-      // Get total points in circulation
-      const [pointsTotal] = await connection.execute(
-        'SELECT COALESCE(SUM(points), 0) as total FROM users'
-      );
-
-      // Get active rewards count
-      const [rewardsCount] = await connection.execute(
-        'SELECT COUNT(*) as count FROM rewards WHERE available = 1'
-      );
-
-      // Get total redemptions
-      const [redemptionsCount] = await connection.execute(
-        `SELECT COUNT(*) as count 
-         FROM transactions 
-         WHERE type = 'REDEEMED'`
-      );
-
-      // Get recent transactions for charts
-      const [transactions] = await connection.execute(
-        `SELECT 
-          t.*,
-          u.first_name,
-          u.last_name,
-          u.email
-         FROM transactions t
-         JOIN users u ON t.user_id = u.id
-         ORDER BY t.created_at DESC
-         LIMIT 50`
-      );
+      // Run all queries in parallel for better performance
+      const [
+        customerCountResult, 
+        pointsTotalResult, 
+        rewardsCountResult, 
+        redemptionsCountResult, 
+        transactions
+      ] = await Promise.all([
+        // Get total customers (non-admin users) - optimize with indexes
+        connection.execute(
+          `SELECT COUNT(*) as count 
+           FROM users u 
+           LEFT JOIN admin_users au ON u.id = au.user_id 
+           WHERE au.user_id IS NULL`
+        ),
+        
+        // Get total points in circulation - simplified query
+        connection.execute(
+          'SELECT COALESCE(SUM(points), 0) as total FROM users'
+        ),
+        
+        // Get active rewards count
+        connection.execute(
+          'SELECT COUNT(*) as count FROM rewards WHERE available = 1'
+        ),
+        
+        // Get total redemptions
+        connection.execute(
+          `SELECT COUNT(*) as count 
+           FROM transactions
+           WHERE type = 'REDEEMED'`
+        ),
+        
+        // Get recent transactions for charts - limit fields and optimize join
+        connection.execute(
+          `SELECT 
+            t.created_at,
+            t.points,
+            t.type,
+            u.first_name,
+            u.last_name,
+            u.email
+           FROM transactions t
+           JOIN users u USE INDEX (PRIMARY) ON t.user_id = u.id
+           ORDER BY t.created_at DESC
+           LIMIT 30`
+        )
+      ]);
 
       // Transform transaction data for frontend
-      const transformedTransactions = transactions.map((t: any) => ({
+      const transformedTransactions = transactions[0].map((t: any) => ({
         date: new Date(t.created_at).toLocaleDateString(),
         points: Math.abs(Number(t.points)),
         type: t.type,
@@ -4700,14 +5685,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }));
 
       const response = {
-        totalCustomers: Number(customerCount[0].count),
-        totalPoints: Number(pointsTotal[0].total),
-        activeRewards: Number(rewardsCount[0].count),
-        totalRedemptions: Number(redemptionsCount[0].count),
+        totalCustomers: Number(customerCountResult[0][0].count),
+        totalPoints: Number(pointsTotalResult[0][0].total),
+        activeRewards: Number(rewardsCountResult[0][0].count),
+        totalRedemptions: Number(redemptionsCountResult[0][0].count),
         recentTransactions: transformedTransactions
       };
 
-      console.log('Sending dashboard stats:', response);
       res.json(response);
 
     } catch (error) {
@@ -4718,179 +5702,134 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  // Cache for admin/agent users
+  const USERS_CACHE_TTL = 60 * 1000; // 1 minute
+  let usersCache = {
+    data: null,
+    timestamp: 0
+  };
+
   app.get("/api/admin/users", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    const connection = await createConnection();
-    try {
-      // Check admin status
-      const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
-        [req.user.id]
-      );
-
-      if (!adminCheck || adminCheck.length === 0) {
-        return res.status(403).json({ error: "Admin access required" });
-      }
-
-      // Fetch all admin users
-      const [admins] = await connection.execute(
-        `SELECT u.*, au.role_type
-         FROM users u 
-         INNER JOIN admin_users au ON u.id = au.user_id
-         ORDER BY u.created_at DESC`
-      );
-
-      console.log(`Found ${admins.length} admin users`);
-
-      // Transform boolean fields
-      const transformedAdmins = admins.map(admin => ({
-        id: admin.id,
-        email: admin.email,
-        firstName: admin.first_name,
-        lastName: admin.last_name,
-        phoneNumber: admin.phone_number,
-        isEnabled: Boolean(admin.is_enabled),
-        createdAt: admin.created_at,
-        is_admin: true,
-        is_super_admin: admin.role_type === 'SUPER_ADMIN'
-      }));
-
-      res.json(transformedAdmins);
-    } catch (error) {
-      console.error('Error fetching admin users:', error);
-      res.status(500).json({ error: 'Failed to fetch admin users' });
-    } finally {
-      await connection.end();
-    }
-  });
-
-  app.get("/api/admin/customers", async (req, res) => {
-    console.log('Admin customers request:', {
+    console.log('Admin users request:', {
       isAuthenticated: req.isAuthenticated(),
       user: req.user ? {
         id: req.user.id,
-        email: req.user.email
+        email: req.user.email,
+        is_admin: req.user.is_admin,
+        is_super_admin: req.user.is_super_admin
       } : null
     });
-
+    
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
+    // Check if user is admin or super admin
+    if (!req.user || (!req.user.is_admin && !req.user.is_super_admin)) {
+      console.log('User lacks admin privileges:', {
+        id: req.user?.id,
+        email: req.user?.email,
+        is_admin: req.user?.is_admin,
+        is_super_admin: req.user?.is_super_admin
+      });
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    // Check if we have a valid cached response
+    const now = Date.now();
+    if (usersCache.data && (now - usersCache.timestamp < USERS_CACHE_TTL)) {
+      console.log('Returning cached users data:', {
+        count: usersCache.data.length,
+        cacheAge: Math.round((now - usersCache.timestamp) / 1000) + 's'
+      });
+      return res.json(usersCache.data);
+    }
+
     const connection = await createConnection();
     try {
-      // Check admin status
-      const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
-        [req.user.id]
-      );
+      // Admin check is already done above, no need to check again
 
-      if (!adminCheck || adminCheck.length === 0) {
-        console.log('User not found in admin_users:', req.user.id);
-        return res.status(403).json({ error: "Admin access required" });
-      }
+      // Run queries in parallel for better performance
+      const [adminUsers, agentUsers] = await Promise.all([
+        // Fetch all admin users with their roles
+        connection.execute(
+          `SELECT u.*, au.role_type
+           FROM users u 
+           INNER JOIN admin_users au ON u.id = au.user_id
+           ORDER BY u.created_at DESC`
+        ),
+        
+        // Fetch all agent users
+        connection.execute(
+          `SELECT * FROM users 
+           WHERE is_agent = 1
+           ORDER BY created_at DESC`
+        )
+      ]);
 
-      // First, get all customers (non-admin users)
-      const [customers] = await connection.execute(
-        `SELECT DISTINCT u.*
-         FROM users u
-         LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE au.user_id IS NULL
-         ORDER BY u.created_at DESC`
-      );
+      console.log(`Found ${adminUsers[0].length} admin users and ${agentUsers[0].length} agent users`);
 
-      // Then, for each customer, get their assigned products and activities
-      const transformedCustomers = await Promise.all(customers.map(async (customer) => {
-        // Get assigned products with their activities
-        const [assignments] = await connection.execute(
-          `SELECT 
-            p.id as product_id,
-            p.name as product_name,
-            p.description as product_description,
-            p.is_enabled as product_is_enabled,
-            pa.id as assignment_id,
-            GROUP_CONCAT(
-              JSON_OBJECT(
-                'id', pact.id,
-                'type', pact.type,
-                'pointsValue', pact.points_value
-              )
-            ) as activities
-           FROM product_assignments pa
-           JOIN products p ON pa.product_id = p.id
-           LEFT JOIN product_activities pact ON p.id = pact.product_id
-           WHERE pa.user_id = ?
-           GROUP BY p.id, pa.id`,
-          [customer.id]
-        );
+      console.log('Admin users sample:', adminUsers[0][0] || {});
+      console.log('Agent users sample:', agentUsers[0][0] || {});
 
-        // Get referral count
-        const [referrals] = await connection.execute(
-          'SELECT COUNT(*) as count FROM users WHERE referred_by = ?',
-          [customer.referral_code]
-        );
-
-        // Transform assignments into the expected format
-        const productAssignments = assignments.map(assignment => ({
-          id: assignment.assignment_id,
-          product: {
-            id: assignment.product_id,
-            name: assignment.product_name,
-            description: assignment.product_description,
-            isEnabled: Boolean(assignment.product_is_enabled),
-            activities: assignment.activities ? 
-              assignment.activities.split(',').map(activity => {
-                try {
-                  return JSON.parse(activity);
-                } catch (e) {
-                  console.error('Error parsing activity:', e);
-                  return null;
-                }
-              }).filter(Boolean) : []
-          }
-        }));
-
-        return {
-          id: customer.id,
-          email: customer.email,
-          firstName: customer.first_name,
-          lastName: customer.last_name,
-          phoneNumber: customer.phone_number,
-          isEnabled: Boolean(customer.is_enabled),
-          isSouthAfrican: Boolean(customer.is_south_african),
-          hasCreditCard: Boolean(customer.has_credit_card),
-          points: Number(customer.points || 0),
-          createdAt: customer.created_at,
-          selectedPackage: customer.selected_package,
-          industry: customer.industry,
-          occupation: customer.occupation,
-          address: customer.address,
-          city: customer.city,
-          postalCode: customer.postal_code,
-          bankName: customer.bank_name,
-          accountType: customer.account_type,
-          accountNumber: customer.account_number,
-          accountHolderName: customer.account_holder_name,
-          branchCode: customer.branch_code,
-          referralCode: customer.referral_code,
-          referredBy: customer.referred_by,
-          productAssignments: productAssignments,
-          referralCount: Number(referrals[0].count || 0)
-        };
+      // Transform admin users
+      const transformedAdmins = adminUsers[0].map(admin => ({
+        id: admin.id,
+        email: admin.email,
+        firstName: admin.first_name || '',
+        lastName: admin.last_name || '',
+        phoneNumber: admin.phone_number || '',
+        isEnabled: Boolean(admin.is_enabled),
+        createdAt: admin.created_at,
+        isAdmin: true,
+        isAgent: false,
+        isSuperAdmin: admin.role_type === 'SUPER_ADMIN',
+        adminRole: admin.role_type
       }));
 
-      console.log(`Found ${transformedCustomers.length} customers`);
-      res.json(transformedCustomers);
+      // Transform agent users
+      const transformedAgents = agentUsers[0].map(agent => ({
+        id: agent.id,
+        email: agent.email,
+        firstName: agent.first_name || '',
+        lastName: agent.last_name || '',
+        phoneNumber: agent.phone_number || '',
+        isEnabled: Boolean(agent.is_enabled),
+        createdAt: agent.created_at,
+        isAdmin: false,
+        isAgent: true,
+        isSuperAdmin: false,
+        adminRole: null
+      }));
+
+      // Combine both types of users
+      const allUsers = [...transformedAdmins, ...transformedAgents];
+      
+      // Sort by creation date (newest first)
+      allUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      // Update cache
+      usersCache = {
+        data: allUsers,
+        timestamp: now
+      };
+
+      res.json(allUsers);
     } catch (error) {
-      console.error('Error fetching customers:', error);
-      res.status(500).json({ error: 'Failed to fetch customers' });
+      console.error('Error fetching admin/agent users:', error);
+      
+      // If there's cached data, return it even if it's stale rather than showing an error
+      if (usersCache.data) {
+        console.log('Returning stale cache due to error');
+        return res.json(usersCache.data);
+      }
+      
+      res.status(500).json({ error: 'Failed to fetch admin/agent users' });
     } finally {
       await connection.end();
     }
   });
+
 
   // Add this endpoint after other routes
   app.post("/api/agent/customers/create", async (req, res) => {
@@ -5156,5 +6095,374 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
+  // Test endpoint for manually verifying email content with mandate acceptance
+  app.post("/api/register-test-email-html", async (req: Request, res: Response) => {
+    try {
+      console.log('Received email HTML test request');
+      
+      // Create sample customer data with mandate_accepted set to true
+      const customerData = {
+        firstName: req.body.first_name || "Test",
+        lastName: req.body.last_name || "Customer",
+        email: req.body.email || "test@example.com",
+        mobileNumber: req.body.phone_number || "27123456789",
+        selectedPackage: req.body.selectedPackage || "Gold",
+        signature: req.body.signature || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        isSouthAfrican: req.body.isSouthAfrican !== undefined ? req.body.isSouthAfrican : true,
+        idNumber: req.body.idNumber || "7012345678901",
+        mandate_accepted: req.body.mandate_accepted !== undefined ? req.body.mandate_accepted : true // explicitly set to true for testing
+      };
+      
+      // Generate email content
+      const { text, html } = formatNewCustomerAdminEmail(customerData);
+      
+      // Also generate PDF to check its content
+      console.log('Generating PDF for mandate acceptance test...');
+      const pdfBuffer = await generateRegistrationPDF(customerData);
+      
+      // Return the HTML for inspection
+      res.status(200).json({
+        success: true,
+        message: "Email content generated successfully",
+        mandate_accepted: customerData.mandate_accepted,
+        html: html,
+        text: text,
+        pdf_generated: !!pdfBuffer
+      });
+    } catch (error) {
+      console.error('Error generating email content:', error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate email content",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // New endpoint to test quote request emails
+  app.post("/api/test-quote-email", async (req: Request, res: Response) => {
+    try {
+      const { customerName, customerEmail, productName, adminName } = req.body;
+      
+      if (!customerEmail) {
+        return res.status(400).json({ success: false, message: "Customer email is required" });
+      }
+      
+      // Test customer quote request email
+      const customerQuoteEmail = formatQuoteRequestEmail(
+        customerName || "Test Customer", 
+        productName || "Test Product"
+      );
+      
+      // Send customer email
+      await sendEmail({
+        to: customerEmail,
+        subject: "Your Quote Request Confirmation",
+        html: customerQuoteEmail.html,
+        text: customerQuoteEmail.text,
+        emailType: "QUOTE_REQUEST"
+      });
+      
+      // Test admin quote request email
+      if (adminName) {
+        const adminQuoteEmail = formatAdminQuoteRequestEmail(
+          customerName || "Test Customer",
+          customerEmail,
+          productName || "Test Product",
+          adminName
+        );
+        
+        // Send admin email
+        await sendEmail({
+          to: customerEmail, // Sending to the same email for testing
+          subject: "New Quote Request Notification",
+          html: adminQuoteEmail.html,
+          text: adminQuoteEmail.text,
+          emailType: "ADMIN_QUOTE_REQUEST"
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: "Quote request test emails sent successfully",
+        timestamp: new Date().toISOString(),
+        recipient: customerEmail
+      });
+    } catch (error) {
+      console.error("Failed to send test quote emails:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to send test quote emails",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Test endpoint to generate and download a PDF sample for testing
+  app.get("/api/test-registration-pdf", async (req: Request, res: Response) => {
+    try {
+      console.log('Generating test registration PDF...');
+      
+      // Import the necessary function
+      const { generateRegistrationPDF } = await import('./utils/emailService');
+      
+      // Create sample customer data for testing
+      const customerData = {
+        firstName: "Test",
+        lastName: "Customer",
+        email: "test@example.com",
+        mobileNumber: "1234567890",
+        selectedPackage: "PROSPER",
+        idNumber: "1234567890",
+        dateOfBirth: "1990-01-01",
+        gender: "Male",
+        isSouthAfrican: true,
+        occupation: "Software Developer",
+        industry: "Technology",
+        address: "123 Test Street",
+        city: "Test City",
+        postalCode: "12345",
+        hasCreditCard: true,
+        bankName: "Test Bank",
+        accountType: "SAVINGS",
+        accountNumber: "123456789",
+        accountHolderName: "Test Customer",
+        branchCode: "12345",
+        mandate_accepted: true,
+        signature: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+      };
+      
+      // Generate the PDF buffer
+      const pdfBuffer = await generateRegistrationPDF(customerData);
+      
+      // Send PDF as download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=test-registration.pdf');
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  });
+
+  // Admin endpoint to generate test customers
+  app.post("/api/admin/generate-test-customers", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    // Check admin status
+    const connection = await createConnection();
+    try {
+      // Check if user is admin first
+      const [userCheck] = await connection.execute(
+        'SELECT is_admin, is_super_admin FROM users WHERE id = ?',
+        [req.user.id]
+      );
+      
+      console.log('User admin check for generate test customers:', { 
+        userId: req.user.id,
+        userCheckResult: userCheck,
+        userCheckLength: userCheck ? userCheck.length : 0
+      });
+      
+      // Verify user exists and is at least an admin
+      if (!userCheck || userCheck.length === 0 || !userCheck[0].is_admin) {
+        await connection.end();
+        return res.status(403).json({ error: "Admin access required for this feature" });
+      }
+      
+      // For test customer generation, we'll require super admin access
+      if (!userCheck[0].is_super_admin) {
+        await connection.end();
+        return res.status(403).json({ error: "Super admin access required for this feature" });
+      }
+
+      const { count = 10, packageType } = req.body;
+      
+      // Validate input
+      const numCount = Math.min(Math.max(parseInt(count, 10) || 10, 1), 100);
+      
+      if (isNaN(numCount)) {
+        return res.status(400).json({ error: "Invalid count parameter" });
+      }
+      
+      console.log(`Generating ${numCount} test customers${packageType ? ` with package ${packageType}` : ''}`);
+      
+      // Helper functions for generating test data
+      function getRandomInt(min: number, max: number) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+      
+      function getRandomDate() {
+        const now = new Date();
+        const pastDate = new Date();
+        pastDate.setDate(now.getDate() - getRandomInt(1, 365)); // Random date within past year
+        return pastDate;
+      }
+      
+      function generateMobileNumber() {
+        return `+27${getRandomInt(60, 89)}${getRandomInt(1000000, 9999999)}`;
+      }
+      
+      function generateEmail(firstName: string, lastName: string) {
+        const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com'];
+        const randomDomain = domains[Math.floor(Math.random() * domains.length)];
+        
+        // Clean up name parts for email
+        const cleanFirst = firstName.toLowerCase().replace(/[^a-z]/g, '');
+        const cleanLast = lastName.toLowerCase().replace(/[^a-z]/g, '');
+        
+        // Add a random number to ensure uniqueness
+        const randomNum = Math.floor(Math.random() * 1000);
+        
+        return `${cleanFirst}.${cleanLast}${randomNum}@${randomDomain}`;
+      }
+      
+      async function hashPassword(password: string) {
+        const salt = randomBytes(16).toString("hex");
+        const buf = await scryptAsync(password, salt, 64) as Buffer;
+        return `${buf.toString("hex")}.${salt}`;
+      }
+      
+      // South African cities for address generation
+      const southAfricanCities = [
+        'Johannesburg', 'Cape Town', 'Durban', 'Pretoria', 'Bloemfontein',
+        'Port Elizabeth', 'East London', 'Kimberley', 'Polokwane', 'Nelspruit',
+        'Pietermaritzburg', 'Rustenburg', 'Potchefstroom', 'George', 'Upington'
+      ];
+      
+      // First names and last names for test customers
+      const firstNames = [
+        'John', 'Mary', 'James', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth',
+        'David', 'Susan', 'Richard', 'Jessica', 'Joseph', 'Sarah', 'Thomas', 'Karen', 'Charles', 'Nancy',
+        'Sipho', 'Thandi', 'Mandla', 'Nomsa', 'Thabo', 'Lerato', 'Mpho', 'Nosipho', 'Themba', 'Zanele'
+      ];
+      
+      const lastNames = [
+        'Smith', 'Johnson', 'Williams', 'Jones', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor',
+        'Anderson', 'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson', 'Garcia', 'Martinez', 'Robinson',
+        'Nkosi', 'Ndlovu', 'Khumalo', 'Dlamini', 'Mkhize', 'Mokoena', 'Sithole', 'Molefe', 'Tshabalala', 'Mabaso'
+      ];
+      
+      // Package options and prices
+      const packages = packageType ? [packageType] : ['OPPORTUNITY', 'MOMENTUM', 'PROSPER', 'PRESTIGE', 'PINNACLE'];
+      const packagePrices: {[key: string]: number} = {
+        'OPPORTUNITY': 350,
+        'MOMENTUM': 450,
+        'PROSPER': 550,
+        'PRESTIGE': 695,
+        'PINNACLE': 825
+      };
+      
+      // Card status options
+      const cardStatuses = ['PENDING', 'APPROVED', 'RECEIVED', 'ACTIVATED', 'DECLINED'];
+      
+      // Check if admin_logs table exists before logging the action
+      const [adminLogsTable] = await connection.execute("SHOW TABLES LIKE 'admin_logs'");
+      
+      if (adminLogsTable && adminLogsTable.length > 0) {
+        // Log action in admin_logs
+        await connection.execute(
+          "INSERT INTO admin_logs (admin_id, action_type, details) VALUES (?, ?, ?)",
+          [req.user.id, "GENERATE_TEST_CUSTOMERS", `Generated ${numCount} test customers${packageType ? ` with package ${packageType}` : ''}`]
+        );
+      } else {
+        console.log("admin_logs table does not exist, skipping admin log entry");
+      }
+
+      console.log(`Starting transaction to generate ${numCount} test customers...`);
+      await connection.beginTransaction();
+      
+      try {
+        // Track created users
+        const createdUsers: Array<{id: number, name: string, package: string, email: string}> = [];
+        
+        // Generate and insert test customers
+        for (let i = 0; i < numCount; i++) {
+          const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+          const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+          const email = generateEmail(firstName, lastName);
+          const mobileNumber = generateMobileNumber();
+          const selectedPackage = packages[Math.floor(Math.random() * packages.length)];
+          const premiumAmount = packagePrices[selectedPackage];
+          const address = `${getRandomInt(1, 999)} ${['Main', 'Park', 'Church', 'High', 'Oak', 'Pine', 'Cedar', 'Maple'][Math.floor(Math.random() * 8)]} ${['Street', 'Road', 'Avenue', 'Boulevard', 'Lane', 'Drive'][Math.floor(Math.random() * 6)]}, ${southAfricanCities[Math.floor(Math.random() * southAfricanCities.length)]}`;
+          const cardStatus = cardStatuses[Math.floor(Math.random() * cardStatuses.length)];
+          const pointsBalance = getRandomInt(0, 10000);
+          const createdAt = getRandomDate();
+          const username = `${firstName.toLowerCase()}${lastName.toLowerCase()}${getRandomInt(1, 999)}`;
+          
+          // Standard password for test accounts
+          const hashedPassword = await hashPassword('Password123!');
+          
+          // Insert user
+          const [userResult] = await connection.execute(
+            `INSERT INTO users (
+              first_name, last_name, email, phone_number, username, password, 
+              role, address, selected_package, premium_amount, 
+              card_status, points, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              firstName, lastName, email, mobileNumber, username, hashedPassword,
+              'CUSTOMER', address, selectedPackage, premiumAmount,
+              cardStatus, pointsBalance, createdAt
+            ]
+          );
+
+          const userId = userResult.insertId;
+          createdUsers.push({
+            id: userId,
+            name: `${firstName} ${lastName}`,
+            package: selectedPackage,
+            email: email
+          });
+        }
+
+        await connection.commit();
+        
+        res.status(200).json({ 
+          success: true,
+          message: "Test customers created successfully", 
+          count: createdUsers.length,
+          users: createdUsers
+        });
+      } catch (error) {
+        await connection.rollback();
+        console.error('Transaction failed:', error);
+        res.status(500).json({ 
+          error: "Error generating test customers", 
+          details: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      }
+    } catch (error) {
+      console.error("Error generating test customers:", error);
+      res.status(500).json({ 
+        error: "Error generating test customers", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    } finally {
+      await connection.end();
+    }
+  });
+
+  // Sitemap route to serve sitemap.xml for better SEO
+  app.get('/sitemap.xml', async (req, res) => {
+    try {
+      const sitemap = await generateSitemap();
+      res.header('Content-Type', 'application/xml');
+      res.send(sitemap);
+    } catch (error) {
+      console.error('Error serving sitemap:', error);
+      res.status(500).send('Error generating sitemap');
+    }
+  });
+
+  // Initialize sitemap generation on server start and schedule regeneration
+  scheduleSitemapGeneration(24); // Regenerate sitemap once a day
+  
   return httpServer;
 }

@@ -2969,9 +2969,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           customFirstName,
           customLastName
         });
-        
-        // The function handles the response, so we return here
-        return;
       } catch (error) {
         console.error("Error generating test customers:", error);
         return res.status(500).json({ 
@@ -2979,16 +2976,27 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           message: error instanceof Error ? error.message : "Unknown error" 
         });
       }
-
-      // Card status options
-      const cardStatuses = ['PENDING', 'APPROVED', 'RECEIVED', 'ACTIVATED', 'DECLINED'];
-
-      // First names and last names for test data
-      const firstNames = [
-        'John', 'Mary', 'James', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth',
-        'David', 'Susan', 'Richard', 'Jessica', 'Joseph', 'Sarah', 'Thomas', 'Karen', 'Charles', 'Nancy',
-        'Sipho', 'Thandi', 'Mandla', 'Nomsa', 'Thabo', 'Lerato', 'Mpho', 'Nosipho', 'Themba', 'Zanele'
-      ];
+    } catch (error) {
+      console.error("Error in generate-test-customers endpoint:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
+      try {
+        // Close connection in case of error
+        if (connection) {
+          if (typeof connection.release === 'function') {
+            connection.release();
+          } else if (typeof connection.end === 'function') {
+            await connection.end();
+          }
+        }
+      } catch (endError) {
+        console.error("Error ending connection:", endError);
+      }
+    }
+  });
       
       const lastNames = [
         'Smith', 'Johnson', 'Williams', 'Jones', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor',
