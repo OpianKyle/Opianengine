@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export function TestCustomerGenerator() {
   const [isLoading, setIsLoading] = useState(false);
   const [count, setCount] = useState(10);
-  const [packageType, setPackageType] = useState<string>('');
+  const [packageType, setPackageType] = useState<string>("random");
   const { toast } = useToast();
 
   const handleCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,12 +87,12 @@ export function TestCustomerGenerator() {
 
         <div className="space-y-2">
           <Label htmlFor="package-select">Package Filter (Optional)</Label>
-          <Select value={packageType} onValueChange={setPackageType}>
+          <Select value={packageType || "random"} onValueChange={setPackageType}>
             <SelectTrigger>
               <SelectValue placeholder="All packages (random)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All packages (random)</SelectItem>
+              <SelectItem value="random">All packages (random)</SelectItem>
               <SelectItem value="OPPORTUNITY">OPPORTUNITY</SelectItem>
               <SelectItem value="MOMENTUM">MOMENTUM</SelectItem>
               <SelectItem value="PROSPER">PROSPER</SelectItem>
