@@ -11,23 +11,24 @@ export function ProtectedSocialRoute({
   component: () => React.JSX.Element;
 }) {
   const { user, isLoading } = useAuth();
-  
-  // Check if the user is a social user or admin
-  const isSocialAuthorized = !!user && (user.is_social || user.is_admin || user.is_super_admin);
+
+  // Simple direct function to check social authorization
+  const checkSocialAuth = (user: any) => {
+    return !!user && (user.is_social || user.is_admin || user.is_super_admin);
+  };
   
   // Log authentication status for debugging
   useEffect(() => {
     if (!isLoading) {
       console.log('ProtectedSocialRoute user auth state:', { 
         isLoading, 
-        user: !!user, 
+        hasUser: !!user, 
         isSocial: user?.is_social,
         isAdmin: user?.is_admin,
-        isSuperAdmin: user?.is_super_admin,
-        isSocialAuthorized
+        isSuperAdmin: user?.is_super_admin
       });
     }
-  }, [isLoading, user, isSocialAuthorized]);
+  }, [isLoading, user]);
 
   if (isLoading) {
     return (
@@ -39,7 +40,7 @@ export function ProtectedSocialRoute({
     );
   }
 
-  if (!isSocialAuthorized) {
+  if (!user || !checkSocialAuth(user)) {
     console.log('User not authorized for social dashboard, redirecting to login');
     return (
       <Route path={path}>
@@ -48,5 +49,7 @@ export function ProtectedSocialRoute({
     );
   }
 
-  return <Route path={path} component={Component} />;
+  return <Route path={path}>
+    <Component />
+  </Route>;
 }

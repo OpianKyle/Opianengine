@@ -278,10 +278,8 @@ function Router() {
       
       {/* Subscription routes removed as requested */}
 
-      {/* Social User Routes */}
-      <Route path="/social">
-        <ProtectedSocialRoute path="/social" component={SocialDashboard} />
-      </Route>
+      {/* Social User Routes - Direct path without nesting */}
+      <ProtectedSocialRoute path="/social" component={SocialDashboard} />
 
       <Route component={NotFound} />
     </Switch>
