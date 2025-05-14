@@ -85,11 +85,7 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     requestingAgentRoute: agent
   });
 
-  // Social users should only access social routes
-  if (Boolean(user.is_social)) {
-    console.log('Social user detected, redirecting to social dashboard');
-    return <Redirect to="/social" />;
-  }
+  // Do NOT redirect social users here - they will be redirected by proper route access
 
   // Handle routing based on user role
   if (admin && !(Boolean(user.is_admin) || Boolean(user.is_super_admin))) {
@@ -106,6 +102,12 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
       return <Redirect to="/admin" />;
     }
     return <Redirect to="/dashboard" />;
+  }
+
+  // Redirect social users to social dashboard
+  if (Boolean(user.is_social)) {
+    console.log('Social user detected, redirecting to social dashboard');
+    return <Redirect to="/social" />;
   }
 
   // Redirect users to their appropriate dashboards if they try to access routes not for their role
@@ -278,8 +280,10 @@ function Router() {
       
       {/* Subscription routes removed as requested */}
 
-      {/* Social User Routes - Direct path without nesting */}
-      <ProtectedSocialRoute path="/social" component={SocialDashboard} />
+      {/* Social User Routes */}
+      <Route path="/social">
+        <SocialDashboard />
+      </Route>
 
       <Route component={NotFound} />
     </Switch>

@@ -262,9 +262,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Force direct navigation based on the user role properties received from the server
       console.log('Direct navigation check - User roles:', { 
-        isAdmin: normalizedUser.is_admin, 
-        isSuperAdmin: normalizedUser.is_super_admin, 
-        isAgent: normalizedUser.is_agent 
+        isAdmin: Boolean(normalizedUser.is_admin), 
+        isSuperAdmin: Boolean(normalizedUser.is_super_admin), 
+        isAgent: Boolean(normalizedUser.is_agent),
+        isSocial: Boolean(normalizedUser.is_social),
+        fullUserData: normalizedUser
       });
       
       // Immediate navigation without setTimeout to prevent timeouts
@@ -276,7 +278,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('Redirecting to agent dashboard');
         setLocation('/agent'); 
       } else if (normalizedUser.is_social) {
-        console.log('Redirecting to social dashboard');
+        // High priority redirect for social users
+        console.log('Redirecting to social dashboard - IS_SOCIAL=TRUE');
         setLocation('/social');
       } else {
         console.log('Redirecting to customer dashboard');
