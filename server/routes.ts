@@ -3018,21 +3018,35 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return `${cleanFirst}.${cleanLast}${randomNum}@${randomDomain}`;
       };
       
-      const hashPassword = async (password) => {
-        const { scrypt, randomBytes } = require('crypto');
-        const { promisify } = require('util');
-        const scryptAsync = promisify(scrypt);
+      const hashPassword = async (password: string): Promise<string> => {
+        // Use native Node.js crypto module without require
+        const crypto = await import('crypto');
+        const util = await import('util');
         
-        const salt = randomBytes(16).toString('hex');
-        const buf = await scryptAsync(password, salt, 64);
+        const scryptAsync = util.promisify(crypto.scrypt);
+        const salt = crypto.randomBytes(16).toString('hex');
+        const buf = await scryptAsync(password, salt, 64) as Buffer;
         return `${buf.toString('hex')}.${salt}`;
       };
 
-      // Log action
-      await connection.execute(
-        "INSERT INTO admin_logs (admin_id, action_type, details) VALUES (?, ?, ?)",
-        [req.user.id, "GENERATE_TEST_CUSTOMERS", `Generated ${numCount} test customers${packageType ? ` with package ${packageType}` : ''}`]
-      );
+      // Check if admin_logs table exists before logging action
+      try {
+        const [adminLogsTable] = await connection.execute("SHOW TABLES LIKE 'admin_logs'");
+        
+        if (adminLogsTable && (adminLogsTable as any[]).length > 0) {
+          // Log action in admin_logs
+          await connection.execute(
+            "INSERT INTO admin_logs (admin_id, action_type, details) VALUES (?, ?, ?)",
+            [req.user.id, "GENERATE_TEST_CUSTOMERS", `Generated ${numCount} test customers${packageType ? ` with package ${packageType}` : ''}`]
+          );
+          console.log("Admin action logged successfully");
+        } else {
+          console.log("admin_logs table does not exist, skipping admin log entry");
+        }
+      } catch (logError) {
+        // Just log the error but continue with customer generation
+        console.error("Error logging admin action:", logError);
+      }
 
       await connection.beginTransaction();
       
