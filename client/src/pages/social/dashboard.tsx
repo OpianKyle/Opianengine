@@ -1,13 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
-import { useSocialAuth } from "@/hooks/use-social-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import SocialMediaTracker from "@/components/admin/social-media-tracker";
 import { LogOut } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function SocialDashboard() {
-  const { user, isLoading } = useSocialAuth();
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"social" | "devices" | "traffic">("social");
+
+  // Redirect non-social users
+  useEffect(() => {
+    if (!isLoading && user && !user.is_social && !user.is_admin && !user.is_super_admin) {
+      console.log('Non-social user detected in social dashboard, redirecting to customer dashboard');
+      setLocation('/dashboard');
+    }
+    
+    if (!isLoading && !user) {
+      console.log('No user found in social dashboard, redirecting to login');
+      setLocation('/login');
+    }
+  }, [isLoading, user, setLocation]);
 
   if (isLoading) {
     return (
@@ -20,6 +35,15 @@ export default function SocialDashboard() {
   if (!user) {
     return null;
   }
+  
+  // Log user information for debugging
+  console.log('SocialDashboard rendering with user:', {
+    id: user.id,
+    email: user.email,
+    isSocial: user.is_social,
+    isAdmin: user.is_admin,
+    isSuperAdmin: user.is_super_admin
+  });
 
   return (
     <>
