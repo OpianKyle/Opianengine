@@ -10,6 +10,7 @@ import { getQueryFn } from "@/lib/queryClient";
 import AnimatedMetric from "@/components/shared/animated-metric";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SocialMediaTracker from "@/components/admin/social-media-tracker";
+import { TestCustomerGenerator } from "@/components/admin/test-customer-generator";
 import { AdminSEO } from "@/components/admin/admin-seo";
 
 interface DashboardStats {
