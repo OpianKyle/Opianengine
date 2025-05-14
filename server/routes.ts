@@ -1458,9 +1458,10 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
     const offset = (page - 1) * limit;
+    const search = (req.query.search as string) || '';
     
-    // Create a cache key based on pagination
-    const cacheKey = `customers_${page}_${limit}`;
+    // Create a cache key based on pagination and search
+    const cacheKey = `customers_${page}_${limit}_${search}`;
     const now = Date.now();
     
     // Changed to 10 seconds for development to enable immediate updates
@@ -1500,20 +1501,37 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }
 
       // Improved query using LEFT JOIN instead of a subquery for better performance
-      // Count total users for pagination info
+      // Count total users for pagination info with search functionality
+      let countQuery = `
+        SELECT COUNT(*) as total 
+        FROM users u 
+        LEFT JOIN admin_users au ON u.id = au.user_id
+        WHERE u.is_agent = 0 AND au.user_id IS NULL`;
+        
+      // Add search condition if search term is provided
+      if (search) {
+        countQuery += ` AND (
+          u.first_name LIKE ? OR 
+          u.last_name LIKE ? OR 
+          u.email LIKE ? OR 
+          u.phone_number LIKE ?
+        )`;
+      }
+      
+      const countParams = search ? 
+        [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`] : 
+        [];
+      
       const [countResult] = await connection.execute(
-        `SELECT COUNT(*) as total 
-         FROM users u 
-         LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE u.is_agent = 0 AND au.user_id IS NULL`
+        countQuery,
+        countParams
       );
       
       const totalCustomers = countResult[0]?.total || 0;
       const totalPages = Math.ceil(totalCustomers / limit);
       
-      // Get users with pagination using improved JOIN strategy
-      const [users] = await connection.execute(
-        `SELECT 
+      // Get users with pagination using improved JOIN strategy with search functionality
+      let usersQuery = `SELECT 
           u.id,
           u.email,
           u.first_name,
@@ -1545,10 +1563,29 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           au.role_type as admin_role
          FROM users u
          LEFT JOIN admin_users au ON u.id = au.user_id
-         WHERE u.is_agent = 0 AND au.user_id IS NULL
-         ORDER BY u.created_at DESC
-         LIMIT ?, ?`,
-        [offset, limit]
+         WHERE u.is_agent = 0 AND au.user_id IS NULL`;
+         
+      // Add search condition if search term is provided
+      if (search) {
+        usersQuery += ` AND (
+          u.first_name LIKE ? OR 
+          u.last_name LIKE ? OR 
+          u.email LIKE ? OR 
+          u.phone_number LIKE ?
+        )`;
+      }
+      
+      // Add ordering and limit
+      usersQuery += ` ORDER BY u.created_at DESC LIMIT ?, ?`;
+      
+      // Prepare query parameters
+      const userQueryParams = search ? 
+        [`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, offset, limit] : 
+        [offset, limit];
+      
+      const [users] = await connection.execute(
+        usersQuery,
+        userQueryParams
       );
       
       if (!users || users.length === 0) {
