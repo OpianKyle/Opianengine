@@ -24,7 +24,7 @@ export function ProtectedSocialRoute({
   if (!isSocialAuthorized) {
     return (
       <Route path={path}>
-        <Redirect to="/auth" />
+        <Redirect to="/login" />
       </Route>
     );
   }

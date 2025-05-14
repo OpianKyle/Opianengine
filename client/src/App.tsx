@@ -80,9 +80,16 @@ function ProtectedRoute({ component: Component, admin = false, agent = false, ..
     isAdmin: Boolean(user.is_admin), 
     isSuperAdmin: Boolean(user.is_super_admin), 
     isAgent: Boolean(user.is_agent),
+    isSocial: Boolean(user.is_social),
     requestingAdminRoute: admin,
     requestingAgentRoute: agent
   });
+
+  // Social users should only access social routes
+  if (Boolean(user.is_social)) {
+    console.log('Social user detected, redirecting to social dashboard');
+    return <Redirect to="/social" />;
+  }
 
   // Handle routing based on user role
   if (admin && !(Boolean(user.is_admin) || Boolean(user.is_super_admin))) {
