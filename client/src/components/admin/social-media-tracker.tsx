@@ -304,7 +304,7 @@ const SocialMediaTracker: React.FC = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={socialData?.results}
+                      data={socialData?.results.filter(item => item.sessions > 0)}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -314,7 +314,7 @@ const SocialMediaTracker: React.FC = () => {
                       nameKey="name"
                       label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                     >
-                      {socialData?.results?.map((entry) => (
+                      {socialData?.results?.filter(item => item.sessions > 0).map((entry) => (
                         <Cell key={entry.id} fill={entry.color} />
                       ))}
                     </Pie>
@@ -337,7 +337,7 @@ const SocialMediaTracker: React.FC = () => {
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={socialData?.results}
+                    data={socialData?.results.filter(item => item.sessions > 0)}
                     layout="vertical"
                     margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
                   >
