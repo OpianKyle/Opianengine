@@ -64,7 +64,7 @@ export function registerTestCustomerRoutes(app: Express) {
         const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
         const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
         const email = generateEmail(firstName, lastName);
-        const mobileNumber = generateMobileNumber();
+        const phoneNumber = generatePhoneNumber();
         const city = cities[Math.floor(Math.random() * cities.length)];
         const packageType = packageTypes[Math.floor(Math.random() * packageTypes.length)];
         const registrationDate = getRandomDate();
@@ -73,8 +73,8 @@ export function registerTestCustomerRoutes(app: Express) {
         const hashedPassword = await hashPassword("test123");
         const [userResult] = await connection.execute(
           // Note: No username column, matching actual schema
-          "INSERT INTO users (email, password, first_name, last_name, mobile_number, city, created_at, updated_at, verified, card_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [email, hashedPassword, firstName, lastName, mobileNumber, city, registrationDate, registrationDate, 1, "REQUESTED"]
+          "INSERT INTO users (email, password, first_name, last_name, phone_number, city, created_at, updated_at, verified, card_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [email, hashedPassword, firstName, lastName, phoneNumber, city, registrationDate, registrationDate, 1, "REQUESTED"]
         );
         
         // @ts-ignore - TypeScript doesn't recognize insertId property
@@ -100,7 +100,7 @@ export function registerTestCustomerRoutes(app: Express) {
           firstName,
           lastName,
           email,
-          mobileNumber,
+          phoneNumber,
           city,
           packageType,
           registrationDate,
@@ -158,7 +158,7 @@ function getRandomDate() {
   return new Date(randomTimestamp).toISOString().slice(0, 19).replace('T', ' ');
 }
 
-function generateMobileNumber() {
+function generatePhoneNumber() {
   // South African mobile numbers typically start with 07, 06, or 08
   const prefixes = ["07", "06", "08"];
   const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
