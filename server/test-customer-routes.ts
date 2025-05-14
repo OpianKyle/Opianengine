@@ -73,21 +73,21 @@ export function registerTestCustomerRoutes(app: Express) {
         const hashedPassword = await hashPassword("test123");
         const [userResult] = await connection.execute(
           // Note: No username or updated_at column in users table
-          "INSERT INTO users (email, password, first_name, last_name, phone_number, city, created_at, card_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-          [email, hashedPassword, firstName, lastName, phoneNumber, city, registrationDate, "REQUESTED"]
+          "INSERT INTO users (email, password, first_name, last_name, phone_number, city, created_at, card_status, is_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [email, hashedPassword, firstName, lastName, phoneNumber, city, registrationDate, "NOT_DELIVERED", true]
         );
         
         // @ts-ignore - TypeScript doesn't recognize insertId property
         const userId = userResult.insertId;
         
-        // Update user's package type instead of creating a separate customer record (no customers table exists)
-        await connection.execute(
-          "UPDATE users SET selected_package = ? WHERE id = ?",
-          [packageType, userId]
-        );
-        
         // Initialize points balance (random between 0-5000)
         const initialPoints = Math.floor(Math.random() * 5000);
+        
+        // Update user's package type instead of creating a separate customer record (no customers table exists)
+        await connection.execute(
+          "UPDATE users SET selected_package = ?, points = ? WHERE id = ?",
+          [packageType, initialPoints, userId]
+        );
         if (initialPoints > 0) {
           await connection.execute(
             "INSERT INTO transactions (user_id, points, type, description, created_at) VALUES (?, ?, ?, ?, ?)",
