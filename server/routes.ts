@@ -3089,15 +3089,38 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           users: createdUsers
         });
       } catch (error) {
-        await connection.rollback();
         console.error('Transaction failed:', error);
-        throw error;
+        try {
+          await connection.rollback();
+          console.log('Transaction rolled back successfully');
+        } catch (rollbackError) {
+          console.error('Error during rollback:', rollbackError);
+        }
+        
+        res.status(500).json({ 
+          error: "Error generating test customers", 
+          details: error instanceof Error ? error.message : 'Transaction failed' 
+        });
+        return;
       }
     } catch (error) {
       console.error("Error generating test customers:", error);
-      res.status(500).json({ error: "Error generating test customers", details: error.message });
+      res.status(500).json({ 
+        error: "Error generating test customers", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
     } finally {
-      await connection.end();
+      try {
+        // Check if connection has a release method (it's from a pool)
+        if (typeof connection.release === 'function') {
+          connection.release();
+        } else if (typeof connection.end === 'function') {
+          await connection.end();
+        }
+        console.log('Database connection closed successfully');
+      } catch (closeError) {
+        console.error('Error closing database connection:', closeError);
+      }
     }
   });
 
@@ -6206,13 +6229,28 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     // Check admin status
     const connection = await createConnection();
     try {
-      const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
+      // Check if user is admin first
+      const [userCheck] = await connection.execute(
+        'SELECT is_admin, is_super_admin FROM users WHERE id = ?',
         [req.user.id]
       );
-
-      if (!adminCheck || adminCheck.length === 0) {
-        return res.status(403).json({ error: "Admin access required" });
+      
+      console.log('User admin check for generate test customers:', { 
+        userId: req.user.id,
+        userCheckResult: userCheck,
+        userCheckLength: userCheck ? userCheck.length : 0
+      });
+      
+      // Verify user exists and is at least an admin
+      if (!userCheck || userCheck.length === 0 || !userCheck[0].is_admin) {
+        await connection.end();
+        return res.status(403).json({ error: "Admin access required for this feature" });
+      }
+      
+      // For test customer generation, we'll require super admin access
+      if (!userCheck[0].is_super_admin) {
+        await connection.end();
+        return res.status(403).json({ error: "Super admin access required for this feature" });
       }
 
       const { count = 10, packageType } = req.body;
@@ -6295,12 +6333,20 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       // Card status options
       const cardStatuses = ['PENDING', 'APPROVED', 'RECEIVED', 'ACTIVATED', 'DECLINED'];
       
-      // Log action
-      await connection.execute(
-        "INSERT INTO admin_logs (admin_id, action_type, details) VALUES (?, ?, ?)",
-        [req.user.id, "GENERATE_TEST_CUSTOMERS", `Generated ${numCount} test customers${packageType ? ` with package ${packageType}` : ''}`]
-      );
+      // Check if admin_logs table exists before logging the action
+      const [adminLogsTable] = await connection.execute("SHOW TABLES LIKE 'admin_logs'");
+      
+      if (adminLogsTable && adminLogsTable.length > 0) {
+        // Log action in admin_logs
+        await connection.execute(
+          "INSERT INTO admin_logs (admin_id, action_type, details) VALUES (?, ?, ?)",
+          [req.user.id, "GENERATE_TEST_CUSTOMERS", `Generated ${numCount} test customers${packageType ? ` with package ${packageType}` : ''}`]
+        );
+      } else {
+        console.log("admin_logs table does not exist, skipping admin log entry");
+      }
 
+      console.log(`Starting transaction to generate ${numCount} test customers...`);
       await connection.beginTransaction();
       
       try {
