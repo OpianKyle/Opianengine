@@ -7,9 +7,13 @@ import { LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function SocialDashboard() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logoutMutation } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"social" | "devices" | "traffic">("social");
+  
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   // Redirect non-social users
   useEffect(() => {
@@ -63,12 +67,17 @@ export default function SocialDashboard() {
               <span className="text-sm text-muted-foreground hidden md:inline">
                 Welcome, {user.first_name} {user.last_name}
               </span>
-              <form action="/api/logout" method="post">
-                <Button type="submit" variant="ghost" size="sm">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Logout</span>
-                </Button>
-              </form>
+              <Button 
+                onClick={handleLogout} 
+                variant="ghost" 
+                size="sm"
+                disabled={logoutMutation.isPending}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">
+                  {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
+                </span>
+              </Button>
             </div>
           </div>
         </header>
@@ -81,6 +90,19 @@ export default function SocialDashboard() {
             </div>
           </div>
         </main>
+
+        {/* Mobile-only logout button that stays above the bottom navbar */}
+        <div className="fixed bottom-20 left-0 right-0 px-4 py-2 lg:hidden z-40">
+          <Button
+            variant="destructive"
+            className="w-full flex items-center justify-center gap-2"
+            onClick={handleLogout}
+            disabled={logoutMutation.isPending}
+          >
+            <LogOut className="h-4 w-4" />
+            {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
+          </Button>
+        </div>
 
         {/* Footer */}
         <footer className="border-t border-border mt-auto">
