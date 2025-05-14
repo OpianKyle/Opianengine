@@ -152,7 +152,8 @@ export function setupAuth(app: Express) {
         const userQuery = `
           SELECT u.*, 
             CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-            CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+            CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin,
+            u.is_social
           FROM users u
           LEFT JOIN admin_users au ON u.id = au.user_id
           WHERE u.email = ?
@@ -252,6 +253,7 @@ export function setupAuth(app: Express) {
           is_admin: Boolean(user.is_admin),
           is_super_admin: Boolean(user.is_super_admin),
           is_agent: Boolean(user.is_agent),
+          is_social: Boolean(user.is_social),
           is_enabled: Boolean(user.is_enabled),
           points: user.points || 0,
           referral_code: user.referral_code,
@@ -283,7 +285,8 @@ export function setupAuth(app: Express) {
       const [users] = await connection.execute(
         `SELECT u.*, 
          CASE WHEN au.role_type = 'SUPER_ADMIN' THEN 1 ELSE 0 END as is_super_admin,
-         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin
+         CASE WHEN au.role_type IS NOT NULL THEN 1 ELSE 0 END as is_admin,
+         u.is_social
          FROM users u
          LEFT JOIN admin_users au ON u.id = au.user_id
          WHERE u.id = ?`,
@@ -305,6 +308,7 @@ export function setupAuth(app: Express) {
         is_admin: Boolean(user.is_admin),
         is_super_admin: Boolean(user.is_super_admin),
         is_agent: Boolean(user.is_agent),
+        is_social: Boolean(user.is_social),
         is_enabled: Boolean(user.is_enabled),
         points: user.points || 0,
         referral_code: user.referral_code,

@@ -22,6 +22,7 @@ export interface User {
   is_agent: boolean;
   is_admin: boolean;
   is_super_admin: boolean;
+  is_social: boolean;
   is_enabled: boolean;
   points: number;
   referral_code: string | null;
@@ -240,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         is_admin: Boolean(userData.is_admin),
         is_super_admin: Boolean(userData.is_super_admin),
         is_agent: Boolean(userData.is_agent),
+        is_social: Boolean(userData.is_social),
         is_enabled: Boolean(userData.is_enabled)
       };
 
@@ -273,6 +275,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (normalizedUser.is_agent) {
         console.log('Redirecting to agent dashboard');
         setLocation('/agent'); 
+      } else if (normalizedUser.is_social) {
+        console.log('Redirecting to social dashboard');
+        setLocation('/social');
       } else {
         console.log('Redirecting to customer dashboard');
         setLocation('/dashboard');
