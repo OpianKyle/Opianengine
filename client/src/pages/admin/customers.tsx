@@ -272,14 +272,34 @@ export default function AdminCustomers() {
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
   const [showCardStatusUpdate, setShowCardStatusUpdate] = useState(false);
   const [showBulkPointsAllocation, setShowBulkPointsAllocation] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  
+  // Debounce search query to avoid too many requests
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setPage(1); // Reset to first page on search
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   
   const { data: customersResponse, isLoading: isCustomersLoading, isError: isCustomersError, error: customersError } = useQuery({
-    queryKey: ["/api/admin/customers", page, limit],
+    queryKey: ["/api/admin/customers", page, limit, debouncedSearchQuery],
     queryFn: async () => {
       console.time('customersQuery');
       // Add cache-busting query parameter to avoid browser cache
       const cacheBuster = new Date().getTime();
-      const response = await fetch(`/api/admin/customers?page=${page}&limit=${limit}&_t=${cacheBuster}`, {
+      const url = new URL(`/api/admin/customers`, window.location.origin);
+      url.searchParams.append('page', page.toString());
+      url.searchParams.append('limit', limit.toString());
+      url.searchParams.append('_t', cacheBuster.toString());
+      if (debouncedSearchQuery) {
+        url.searchParams.append('search', debouncedSearchQuery);
+      }
+      
+      const response = await fetch(url.toString(), {
         credentials: 'include'
       });
       if (!response.ok) {
