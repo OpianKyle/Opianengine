@@ -70,7 +70,7 @@ export function registerTestCustomerRoutes(app: Express) {
         const registrationDate = getRandomDate();
         
         // Create user
-        const hashedPassword = await hashPassword("test123");
+        const hashedPassword = await hashPassword("Password123!");
         const [userResult] = await connection.execute(
           // Note: No username or updated_at column in users table
           "INSERT INTO users (email, password, first_name, last_name, phone_number, city, created_at, card_status, is_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -184,6 +184,8 @@ function generateEmail(firstName: string, lastName: string) {
 }
 
 async function hashPassword(password: string) {
-  const salt = Math.random().toString(36).substring(2, 15);
-  return `${password}|${salt}`; // Simplified for test data - real system uses scrypt
+  const crypto = require('crypto');
+  const salt = crypto.randomBytes(16).toString('hex');
+  const buffer = await require('util').promisify(crypto.scrypt)(password, salt, 64);
+  return `${buffer.toString('hex')}.${salt}`;
 }
