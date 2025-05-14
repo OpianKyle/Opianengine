@@ -204,9 +204,9 @@ export default function AnimatedMetric({
               {prefix}{formatter(displayValue)}{suffix}
             </div>
             {description && (
-              <p className={cn("text-xs mt-2 overflow-hidden line-clamp-2 min-h-[2.5rem]", colors.description)}>
+              <div className={cn("text-xs mt-2 overflow-hidden line-clamp-2 min-h-[2.5rem]", colors.description)}>
                 {description}
-              </p>
+              </div>
             )}
           </>
         )}

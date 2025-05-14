@@ -8,10 +8,12 @@ import PointsDisplay from "@/components/shared/points-display";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { queryClient } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReferralSection from "@/components/shared/referral-section";
 import { formatTransactionType } from "@/lib/utils";
 import { Package as PackageIcon, Award } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 
 import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext";
 import AnimatedMetric from "@/components/shared/animated-metric";
@@ -74,6 +76,17 @@ const getTierInfo = (points: number): { name: string; color: string; nextTier?: 
 };
 
 function CustomerDashboardContent() {
+  // Use the auth hook to get the current user
+  const { user: authUser } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Redirect social users to social dashboard
+  useEffect(() => {
+    if (authUser && authUser.is_social) {
+      console.log('Social user detected in customer dashboard, redirecting to social dashboard');
+      setLocation('/social');
+    }
+  }, [authUser, setLocation]);
   // Use the onboarding context but don't access until we know the user is logged in
   const onboarding = useOnboarding();
   
