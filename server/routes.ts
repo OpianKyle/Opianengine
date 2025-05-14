@@ -5407,41 +5407,72 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      // Check if is_test column exists
+      const [columns] = await connection.execute(
+        `SELECT COLUMN_NAME 
+         FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'users' 
+         AND COLUMN_NAME = 'is_test'`
+      );
+      
+      const hasIsTestColumn = columns.length > 0;
+      console.log(`Dashboard stats: is_test column exists: ${hasIsTestColumn}`, columns);
+
+      // Count test users to verify
+      if (hasIsTestColumn) {
+        const [testUserCount] = await connection.execute(
+          `SELECT COUNT(*) as count FROM users WHERE is_test = TRUE`
+        );
+        console.log('Test users count:', testUserCount[0].count);
+      }
+
       // Run all queries in parallel for better performance
-      const [
-        customerCountResult, 
-        pointsTotalResult, 
-        rewardsCountResult, 
-        redemptionsCountResult, 
-        transactions
-      ] = await Promise.all([
-        // Get total customers (non-admin users and not test users) - optimize with indexes
-        connection.execute(
+      let queries = [];
+      
+      // Get total customers (non-admin users and optionally exclude test users)
+      if (hasIsTestColumn) {
+        queries.push(connection.execute(
           `SELECT COUNT(*) as count 
            FROM users u 
            LEFT JOIN admin_users au ON u.id = au.user_id 
            WHERE au.user_id IS NULL AND u.is_test = FALSE`
-        ),
-        
-        // Get total points in circulation (excluding test users) - simplified query
-        connection.execute(
-          'SELECT COALESCE(SUM(points), 0) as total FROM users WHERE is_test = FALSE'
-        ),
-        
-        // Get active rewards count
-        connection.execute(
-          'SELECT COUNT(*) as count FROM rewards WHERE available = 1'
-        ),
-        
-        // Get total redemptions
-        connection.execute(
+        ));
+      } else {
+        queries.push(connection.execute(
           `SELECT COUNT(*) as count 
-           FROM transactions
-           WHERE type = 'REDEEMED'`
-        ),
-        
-        // Get recent transactions for charts (excluding test users) - limit fields and optimize join
-        connection.execute(
+           FROM users u 
+           LEFT JOIN admin_users au ON u.id = au.user_id 
+           WHERE au.user_id IS NULL`
+        ));
+      }
+      
+      // Get total points in circulation (optionally exclude test users)
+      if (hasIsTestColumn) {
+        queries.push(connection.execute(
+          'SELECT COALESCE(SUM(points), 0) as total FROM users WHERE is_test = FALSE'
+        ));
+      } else {
+        queries.push(connection.execute(
+          'SELECT COALESCE(SUM(points), 0) as total FROM users'
+        ));
+      }
+      
+      // Get active rewards count
+      queries.push(connection.execute(
+        'SELECT COUNT(*) as count FROM rewards WHERE available = 1'
+      ));
+      
+      // Get total redemptions
+      queries.push(connection.execute(
+        `SELECT COUNT(*) as count 
+         FROM transactions
+         WHERE type = 'REDEEMED'`
+      ));
+      
+      // Get recent transactions for charts (optionally exclude test users)
+      if (hasIsTestColumn) {
+        queries.push(connection.execute(
           `SELECT 
             t.created_at,
             t.points,
@@ -5454,8 +5485,39 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
            WHERE u.is_test = FALSE
            ORDER BY t.created_at DESC
            LIMIT 30`
-        )
-      ]);
+        ));
+      } else {
+        queries.push(connection.execute(
+          `SELECT 
+            t.created_at,
+            t.points,
+            t.type,
+            u.first_name,
+            u.last_name,
+            u.email
+           FROM transactions t
+           JOIN users u USE INDEX (PRIMARY) ON t.user_id = u.id
+           ORDER BY t.created_at DESC
+           LIMIT 30`
+        ));
+      }
+      
+      const [
+        customerCountResult, 
+        pointsTotalResult, 
+        rewardsCountResult, 
+        redemptionsCountResult, 
+        transactions
+      ] = await Promise.all(queries);
+
+      // Log results for debugging
+      console.log('Dashboard stats query results:', {
+        customerCount: customerCountResult[0][0].count,
+        pointsTotal: pointsTotalResult[0][0].total,
+        rewardsCount: rewardsCountResult[0][0].count,
+        redemptionsCount: redemptionsCountResult[0][0].count,
+        transactionsCount: transactions[0].length
+      });
 
       // Transform transaction data for frontend
       const transformedTransactions = transactions[0].map((t: any) => ({
