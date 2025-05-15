@@ -11,6 +11,7 @@ import ResetPassword from "@/pages/reset-password";
 import ReferralPage from "@/pages/referral"; 
 import HowItWorks from "@/pages/how-it-works";
 import MeetTheTeam from "@/pages/meet-the-team";
+import AnalyticsTestPage from "@/pages/analytics-test";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 // Session timeout functionality has been removed
 // import { useSessionTimeout } from "@/hooks/use-session-timeout";
@@ -165,6 +166,9 @@ function Router() {
       </Route>
       <Route path="/meet-the-team">
         <MeetTheTeam />
+      </Route>
+      <Route path="/analytics-test">
+        <AnalyticsTestPage />
       </Route>
 
       {/* Admin Routes */}

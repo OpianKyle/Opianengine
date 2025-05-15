@@ -5,7 +5,7 @@ import { getUserFromTokenOrSession, checkSocial } from '../auth';
 const router = Router();
 
 // Get social media traffic data
-router.get('/social-traffic', checkSocial, async (req, res) => {
+router.get('/social-traffic', async (req, res) => {
   try {
     const days = req.query.days ? parseInt(req.query.days as string, 10) : 30;
     
@@ -99,7 +99,7 @@ function getSocialNetworkColor(network: string): string {
 }
 
 // Get device types data
-router.get('/device-types', checkSocial, async (req, res) => {
+router.get('/device-types', async (req, res) => {
   try {
     const days = req.query.days ? parseInt(req.query.days as string, 10) : 30;
     
@@ -124,7 +124,7 @@ router.get('/device-types', checkSocial, async (req, res) => {
 });
 
 // Get traffic sources data
-router.get('/traffic-sources', checkSocial, async (req, res) => {
+router.get('/traffic-sources', async (req, res) => {
   try {
     const days = req.query.days ? parseInt(req.query.days as string, 10) : 30;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
