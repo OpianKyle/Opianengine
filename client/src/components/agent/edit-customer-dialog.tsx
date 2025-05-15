@@ -44,7 +44,7 @@ const customerSchema = z.object({
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
   occupation: z.string().min(1, "Occupation is required"),
   industry: z.string().min(1, "Industry is required"),
-  address: z.string().min(1, "Address is required"),
+  addressLine1: z.string().min(1, "Address is required"),
   suburb: z.string().min(1, "Suburb is required"),
   city: z.string().min(1, "City is required"),
   postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
@@ -99,7 +99,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
       phoneNumber: "",
       occupation: "",
       industry: "",
-      address: "",
+      addressLine1: "",
       suburb: "",
       city: "",
       postalCode: "",
@@ -130,7 +130,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
         phoneNumber: customer.phoneNumber || "",
         occupation: customer.occupation || "",
         industry: customer.industry || "",
-        address: customer.address || "",
+        addressLine1: customer.address || "",
         suburb: customer.suburb || "",
         city: customer.city || "",
         postalCode: customer.postalCode || "",
@@ -364,7 +364,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
                 />
                 <FormField
                   control={form.control}
-                  name="address"
+                  name="addressLine1"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Address</FormLabel>

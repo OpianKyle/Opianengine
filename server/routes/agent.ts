@@ -103,7 +103,7 @@ router.get('/customers', async (req: any, res) => {
         gender: customer.gender,
         occupation: customer.occupation,
         industry: customer.industry,
-        address: customer.address,
+        addressLine1: customer.address,
         city: customer.city,
         postalCode: customer.postal_code,
         selectedPackage: customer.selected_package,
@@ -418,8 +418,8 @@ router.put('/customers/:id/update', async (req: any, res) => {
 
     const { 
       email, firstName, lastName, phoneNumber, dateOfBirth,
-      gender, idNumber, occupation, industry, address,
-      city, postalCode, selectedPackage, bankName,
+      gender, idNumber, occupation, industry, addressLine1,
+      suburb, city, province, postalCode, selectedPackage, bankName,
       accountType, accountNumber, accountHolderName,
       branchCode, isSouthAfrican, hasCreditCard
     } = req.body;
@@ -445,7 +445,7 @@ router.put('/customers/:id/update', async (req: any, res) => {
         `UPDATE users SET
           email = ?, first_name = ?, last_name = ?, phone_number = ?,
           date_of_birth = ?, gender = ?, id_number = ?, occupation = ?,
-          industry = ?, address = ?, city = ?, postal_code = ?,
+          industry = ?, address = ?, suburb = ?, city = ?, province = ?, postal_code = ?,
           selected_package = UPPER(?), bank_name = ?, account_type = ?,
           account_number = ?, account_holder_name = ?, branch_code = ?,
           is_south_african = ?, has_credit_card = ?
@@ -453,7 +453,7 @@ router.put('/customers/:id/update', async (req: any, res) => {
         [
           email, firstName, lastName, phoneNumber,
           dateOfBirth, gender, idNumber, occupation,
-          industry, address, city, postalCode,
+          industry, addressLine1, suburb, city, province, postalCode,
           selectedPackage, bankName, accountType,
           accountNumber, accountHolderName, branchCode,
           isSouthAfrican ? 1 : 0, hasCreditCard ? 1 : 0,
