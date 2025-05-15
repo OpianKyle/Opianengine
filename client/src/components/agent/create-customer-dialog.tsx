@@ -48,6 +48,8 @@ const customerSchema = z.object({
   industry: z.string().min(1, "Industry is required"),
   addressLine1: z.string().min(1, "Address is required"),
   suburb: z.string().min(1, "Suburb is required"),
+  city: z.string().min(1, "City is required"),
+  province: z.string().min(1, "Province is required"),
   postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
   hasCreditCard: z.boolean(),
   selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]),

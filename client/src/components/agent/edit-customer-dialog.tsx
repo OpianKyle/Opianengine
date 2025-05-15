@@ -130,7 +130,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
         phoneNumber: customer.phoneNumber || "",
         occupation: customer.occupation || "",
         industry: customer.industry || "",
-        addressLine1: customer.address || "",
+        addressLine1: customer.addressLine1 || customer.address || "",
         suburb: customer.suburb || "",
         city: customer.city || "",
         postalCode: customer.postalCode || "",
@@ -155,7 +155,7 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
         body: JSON.stringify({
           ...data,
           phoneNumber: data.phoneNumber,
-          address: data.address,
+          address: data.addressLine1,
           suburb: data.suburb,
           city: data.city,
           province: data.province,
