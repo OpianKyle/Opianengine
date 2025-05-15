@@ -1465,10 +1465,10 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     const limit = parseInt(req.query.limit as string) || 50;
     const offset = (page - 1) * limit;
     const search = (req.query.search as string) || '';
-    const showTest = req.query.isTest === 'true';
+    const showTest = req.query.showTest === 'true';
     
     // Create a cache key based on pagination, search and test filter
-    const cacheKey = `customers_${page}_${limit}_${search}_isTest_${showTest}`;
+    const cacheKey = `customers_${page}_${limit}_${search}_showTest_${showTest}`;
     const now = Date.now();
     
     // Changed to 10 seconds for development to enable immediate updates
@@ -1482,7 +1482,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           page,
           limit,
           count: cacheEntry.data.data.length,
-          isTest: showTest,
+          showTest: showTest,
           cacheAge: Math.round((now - cacheEntry.timestamp) / 1000) + 's'
         });
         return res.json(cacheEntry.data);
