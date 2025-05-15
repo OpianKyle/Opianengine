@@ -25,6 +25,7 @@ import { registerTestCustomerRoutes } from './test-customer-routes';
 import adminToolsRouter from './routes/admin-tools';
 import analyticsRouter from './routes/analytics';
 import socialUsersRouter from './routes/social-users';
+import specialMigrationsRouter from './routes/special-migrations';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
