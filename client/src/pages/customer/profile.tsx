@@ -25,7 +25,9 @@ const profileSchema = z.object({
   last_name: z.string().min(1, "Last name is required"),
   phone_number: z.string().min(1, "Mobile number is required"),
   address: z.string().min(1, "Address is required"),
+  suburb: z.string().min(1, "Suburb is required"),
   city: z.string().min(1, "City is required"),
+  province: z.string().min(1, "Province is required"),
   postal_code: z.string().min(1, "Postal code is required"),
   id_number: z.string().min(1, "ID number is required"),
   date_of_birth: z.string().min(1, "Date of birth is required"),
@@ -241,7 +243,9 @@ export default function ProfilePage() {
       last_name: profile?.lastName || "",
       phone_number: profile?.phoneNumber || "",
       address: profile?.address || "",
+      suburb: profile?.suburb || "",
       city: profile?.city || "",
+      province: profile?.province || "",
       postal_code: profile?.postalCode || "",
       id_number: profile?.idNumber || "",
       date_of_birth: profile?.dateOfBirth || "",
@@ -511,14 +515,43 @@ export default function ProfilePage() {
                       )}
                     />
                   </div>
-
+                  
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="suburb"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Suburb</FormLabel>
+                          <FormControl>
+                            <Input {...field} className="w-full" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={form.control}
                       name="city"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>City</FormLabel>
+                          <FormControl>
+                            <Input {...field} className="w-full" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="province"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Province</FormLabel>
                           <FormControl>
                             <Input {...field} className="w-full" />
                           </FormControl>
