@@ -53,6 +53,8 @@ const customerSchema = z.object({
   industry: z.string().min(1, "Industry is required"),
   addressLine1: z.string().min(1, "Address is required"),
   suburb: z.string().min(1, "Suburb is required"),
+  city: z.string().min(1, "City is required"),
+  province: z.string().min(1, "Province is required"),
   postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
   hasCreditCard: z.boolean(),
   selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]),
@@ -120,6 +122,8 @@ export function LeadConversionModal({ open, onOpenChange, leadData, onConvert }:
       industry: "",
       addressLine1: "",
       suburb: "",
+      city: "",
+      province: "",
       postalCode: "",
       hasCreditCard: false,
       selectedPackage: "OPPORTUNITY",
@@ -398,6 +402,32 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Suburb</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="province"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Province</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
