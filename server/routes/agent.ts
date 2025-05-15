@@ -104,7 +104,9 @@ router.get('/customers', async (req: any, res) => {
         occupation: customer.occupation,
         industry: customer.industry,
         addressLine1: customer.address,
+        suburb: customer.suburb,
         city: customer.city,
+        province: customer.province,
         postalCode: customer.postal_code,
         selectedPackage: customer.selected_package,
         isSouthAfrican: Boolean(customer.is_south_african),
@@ -342,7 +344,9 @@ router.post('/customers/create', async (req: any, res) => {
             industry,
             // Map the address fields correctly
             address: addressLine1,
-            city: suburb,
+            suburb,
+            city,
+            province,
             postalCode,
             selectedPackage: normalizedPackage,
             bankName,
@@ -360,7 +364,10 @@ router.post('/customers/create', async (req: any, res) => {
           
           console.log('Sending admin notification with data:', JSON.stringify({
             address: customerData.address,
+            suburb: customerData.suburb,
             city: customerData.city,
+            province: customerData.province,
+            postalCode: customerData.postalCode,
             mandate_accepted: customerData.mandate_accepted
           }));
           
