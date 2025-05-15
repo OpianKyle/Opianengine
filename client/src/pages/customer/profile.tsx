@@ -293,7 +293,7 @@ export default function ProfilePage() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      const response = await fetch("/api/user", {
+      const response = await fetch("/api/user-profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -302,6 +302,8 @@ export default function ProfilePage() {
         body: JSON.stringify({
           ...data,
           address: data.address,
+          suburb: data.suburb,
+          province: data.province,
         }),
       });
 
