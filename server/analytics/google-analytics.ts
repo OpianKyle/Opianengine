@@ -192,7 +192,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
   const analyticsClient: BetaAnalyticsDataClient = client;
   
   // Get GA4 property ID from environment variable or use the default
-  const propertyId = process.env.GA_PROPERTY_ID || '488980111'; 
+  const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
   // Formatted property ID required by the Google Analytics Data API
   const formattedPropertyId = `properties/${propertyId}`;
   
@@ -418,7 +418,7 @@ export async function getDeviceTypes(days: number = 30) {
   const analyticsClient: BetaAnalyticsDataClient = client;
   
   // Get GA4 property ID from environment variable or use the default
-  const propertyId = process.env.GA_PROPERTY_ID || '488980111'; 
+  const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
   // Formatted property ID required by the Google Analytics Data API
   const formattedPropertyId = `properties/${propertyId}`;
   
@@ -493,7 +493,7 @@ export async function getTrafficSources(days: number = 30, limit: number = 10) {
   const analyticsClient: BetaAnalyticsDataClient = client;
   
   // Get GA4 property ID from environment variable or use the default
-  const propertyId = process.env.GA_PROPERTY_ID || '488980111'; 
+  const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
   // Formatted property ID required by the Google Analytics Data API
   const formattedPropertyId = `properties/${propertyId}`;
   
