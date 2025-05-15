@@ -1465,7 +1465,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     const limit = parseInt(req.query.limit as string) || 50;
     const offset = (page - 1) * limit;
     const search = (req.query.search as string) || '';
-    const showTest = req.query.showTest === 'true';
+    const requestedShowTest = req.query.showTest === 'true';
     
     // Create a cache key based on pagination, search and test filter
     const cacheKey = `customers_${page}_${limit}_${search}_showTest_${showTest}`;

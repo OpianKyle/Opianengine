@@ -25,6 +25,7 @@ import { CardStatusDropdown } from "@/components/admin/card-status-dropdown";
 import { BulkCardStatusUpdate } from "@/components/admin/bulk-card-status-update";
 import BulkPointsAllocation from "@/components/admin/bulk-points-allocation";
 import { useCardStatusMutation } from "@/hooks/use-card-status";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Accordion,
   AccordionContent,
@@ -270,6 +271,9 @@ const AssignProductsDialog = ({ customer, onClose }: { customer: any; onClose: (
 };
 
 export default function AdminCustomers() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.is_super_admin || false;
+  
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [pointsDialogOpen, setPointsDialogOpen] = useState(false);
@@ -309,8 +313,8 @@ export default function AdminCustomers() {
       url.searchParams.append('limit', limit.toString());
       url.searchParams.append('_t', cacheBuster.toString());
       
-      // Add showTest parameter based on the active tab
-      if (activeTab === 'test') {
+      // Add showTest parameter based on the active tab, but only if super admin
+      if (activeTab === 'test' && isSuperAdmin) {
         url.searchParams.append('showTest', 'true');
       }
       
@@ -789,15 +793,19 @@ export default function AdminCustomers() {
           
           {/* Tabs for regular vs test customers */}
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'regular' | 'test')} className="mt-4">
-            <TabsList className="grid grid-cols-2">
+            <TabsList className={isSuperAdmin ? "grid grid-cols-2" : ""}>
               <TabsTrigger value="regular" className="flex items-center">
                 <Users className="w-4 h-4 mr-2" />
                 Regular Customers
               </TabsTrigger>
-              <TabsTrigger value="test" className="flex items-center">
-                <Beaker className="w-4 h-4 mr-2" />
-                Test Customers
-              </TabsTrigger>
+              
+              {/* Only show test customers tab for super admins */}
+              {isSuperAdmin && (
+                <TabsTrigger value="test" className="flex items-center">
+                  <Beaker className="w-4 h-4 mr-2" />
+                  Test Customers
+                </TabsTrigger>
+              )}
             </TabsList>
           </Tabs>
           
