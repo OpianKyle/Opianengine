@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail, ChevronLeft, ChevronRight, CreditCard, Search, X } from "lucide-react";
+import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail, ChevronLeft, ChevronRight, CreditCard, Search, X, Beaker, Users } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,6 +31,12 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "@/components/ui/accordion";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs";
 
 const genderEnum = ["male", "female", "other"] as const;
 
@@ -293,7 +299,7 @@ export default function AdminCustomers() {
   }, [searchQuery]);
   
   const { data: customersResponse, isLoading: isCustomersLoading, isError: isCustomersError, error: customersError } = useQuery({
-    queryKey: ["/api/admin/customers", page, limit, debouncedSearchQuery],
+    queryKey: ["/api/admin/customers", page, limit, debouncedSearchQuery, activeTab === 'test'],
     queryFn: async () => {
       console.time('customersQuery');
       // Add cache-busting query parameter to avoid browser cache
@@ -302,6 +308,12 @@ export default function AdminCustomers() {
       url.searchParams.append('page', page.toString());
       url.searchParams.append('limit', limit.toString());
       url.searchParams.append('_t', cacheBuster.toString());
+      
+      // Add showTest parameter based on the active tab
+      if (activeTab === 'test') {
+        url.searchParams.append('showTest', 'true');
+      }
+      
       if (debouncedSearchQuery) {
         url.searchParams.append('search', debouncedSearchQuery);
       }
@@ -425,7 +437,7 @@ export default function AdminCustomers() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit, debouncedSearchQuery, activeTab === 'test'] });
       toast({ title: "Success", description: "User details updated successfully" });
       editDetailsForm.reset();
       setEditDialogOpen(false);
@@ -450,7 +462,7 @@ export default function AdminCustomers() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers", page, limit, debouncedSearchQuery, activeTab === 'test'] });
       toast({ title: "Success", description: "User status updated successfully" });
     },
     onError: (error: Error) => {
@@ -766,7 +778,7 @@ export default function AdminCustomers() {
       <Card className="flex-1 flex flex-col">
         <CardHeader className="pb-4 flex-shrink-0">
           <div className="flex flex-row items-center justify-between">
-            <CardTitle>All Customers</CardTitle>
+            <CardTitle>Customers</CardTitle>
             {isCustomersLoading && (
               <div className="flex items-center text-muted-foreground text-sm">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -774,6 +786,21 @@ export default function AdminCustomers() {
               </div>
             )}
           </div>
+          
+          {/* Tabs for regular vs test customers */}
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'regular' | 'test')} className="mt-4">
+            <TabsList className="grid grid-cols-2">
+              <TabsTrigger value="regular" className="flex items-center">
+                <Users className="w-4 h-4 mr-2" />
+                Regular Customers
+              </TabsTrigger>
+              <TabsTrigger value="test" className="flex items-center">
+                <Beaker className="w-4 h-4 mr-2" />
+                Test Customers
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
           {/* Search input */}
           <div className="mt-4 mb-2">
             <div className="relative">
@@ -901,7 +928,15 @@ export default function AdminCustomers() {
                             />
                           </TableCell>
                           <TableCell>
-                            <div className="font-medium">{customer.firstName} {customer.lastName}</div>
+                            <div className="font-medium flex items-center">
+                              {customer.firstName} {customer.lastName}
+                              {customer.isTest && (
+                                <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 text-[10px] px-1 py-0">
+                                  <Beaker className="h-3 w-3 mr-1" />
+                                  Test
+                                </Badge>
+                              )}
+                            </div>
                             {/* Mobile-only info that will be hidden on larger screens */}
                             <div className="md:hidden text-xs text-muted-foreground mt-1">
                               {customer.email}
