@@ -1515,7 +1515,14 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         FROM users u 
         LEFT JOIN admin_users au ON u.id = au.user_id
         WHERE u.is_agent = 0 AND au.user_id IS NULL`;
-        
+      
+      // Add test user filter - only show test users if showTest is true
+      if (showTest) {
+        countQuery += ` AND u.is_test = TRUE`;
+      } else {
+        countQuery += ` AND (u.is_test IS NULL OR u.is_test = FALSE)`;
+      }
+      
       // Add search condition if search term is provided
       if (search) {
         countQuery += ` AND (
@@ -1567,11 +1574,19 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           u.created_at,
           u.agent_id,
           u.is_agent,
+          u.is_test,
           CASE WHEN au.role_type IS NOT NULL THEN TRUE ELSE FALSE END as is_admin,
           au.role_type as admin_role
          FROM users u
          LEFT JOIN admin_users au ON u.id = au.user_id
          WHERE u.is_agent = 0 AND au.user_id IS NULL`;
+      
+      // Add test user filter - only show test users if showTest is true
+      if (showTest) {
+        usersQuery += ` AND u.is_test = TRUE`;
+      } else {
+        usersQuery += ` AND (u.is_test IS NULL OR u.is_test = FALSE)`;
+      }
          
       // Add search condition if search term is provided
       if (search) {
@@ -1728,6 +1743,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           selectedPackage: user.selected_package,
           isAgent: Boolean(user.is_agent),
           isAdmin: Boolean(user.is_admin),
+          isTest: Boolean(user.is_test),
           adminRole: user.admin_role,
           assignmentCount,
           assignedProducts,

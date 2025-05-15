@@ -275,6 +275,7 @@ export default function AdminCustomers() {
   const [showBulkPointsAllocation, setShowBulkPointsAllocation] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'regular' | 'test'>('regular');
   
   // Debounce search query to avoid too many requests
   useEffect(() => {
