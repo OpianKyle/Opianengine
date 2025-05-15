@@ -45,8 +45,10 @@ const customerSchema = z.object({
   occupation: z.string().min(1, "Occupation is required"),
   industry: z.string().min(1, "Industry is required"),
   address: z.string().min(1, "Address is required"),
+  suburb: z.string().min(1, "Suburb is required"),
   city: z.string().min(1, "City is required"),
   postalCode: z.string().min(4, "Postal code must be at least 4 characters"),
+  province: z.string().min(1, "Province is required"),
   hasCreditCard: z.boolean(),
   selectedPackage: z.enum(["OPPORTUNITY", "MOMENTUM", "PROSPER", "PRESTIGE", "PINNACLE"]),
   accountHolderName: z.string().min(1, "Account holder name is required"),
@@ -98,8 +100,10 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
       occupation: "",
       industry: "",
       address: "",
+      suburb: "",
       city: "",
       postalCode: "",
+      province: "",
       hasCreditCard: false,
       selectedPackage: "OPPORTUNITY",
       accountHolderName: "",
@@ -127,8 +131,10 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
         occupation: customer.occupation || "",
         industry: customer.industry || "",
         address: customer.address || "",
+        suburb: customer.suburb || "",
         city: customer.city || "",
         postalCode: customer.postalCode || "",
+        province: customer.province || "",
         hasCreditCard: customer.hasCreditCard || false,
         selectedPackage: customer.selectedPackage?.toUpperCase() || "OPPORTUNITY",
         accountHolderName: customer.accountHolderName || "",
@@ -150,7 +156,9 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
           ...data,
           phoneNumber: data.phoneNumber,
           address: data.address,
+          suburb: data.suburb,
           city: data.city,
+          province: data.province,
           selectedPackage: data.selectedPackage?.toUpperCase()
         }),
       });
@@ -369,10 +377,36 @@ export default function EditCustomerDialog({ open, onOpenChange, customer }: Edi
                 />
                 <FormField
                   control={form.control}
+                  name="suburb"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Suburb</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="city"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="province"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Province</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>

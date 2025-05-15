@@ -1156,6 +1156,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/admin/tools', adminToolsRouter);
   app.use('/api/analytics', analyticsRouter);
   app.use('/api/social', socialUsersRouter);
+  app.use('/api/special-migrations', specialMigrationsRouter);
   
   // Register test customer routes
   registerTestCustomerRoutes(app);

@@ -8,7 +8,7 @@ const router = Router();
 router.post("/add-address-fields", async (req, res) => {
   try {
     // Only allow super admins to run this migration
-    if (!req.isAuthenticated() || !req.user?.isSuperAdmin) {
+    if (!req.isAuthenticated() || !(req.user as any)?.isSuperAdmin) {
       return res.status(403).json({ 
         success: false, 
         message: "Unauthorized: Only super admins can run migrations" 
