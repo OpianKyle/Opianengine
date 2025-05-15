@@ -3257,6 +3257,18 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         delete updates.addressLine1;
       }
 
+      // Map suburb field if frontend uses different naming
+      if (updates.addressSuburb && !updates.suburb) {
+        updates.suburb = updates.addressSuburb;
+        delete updates.addressSuburb;
+      }
+
+      // Map province field if frontend uses different naming
+      if (updates.addressProvince && !updates.province) {
+        updates.province = updates.addressProvince;
+        delete updates.addressProvince;
+      }
+
       // Remove any fields that don't exist in the database
       const invalidFields = ['addressLine2'];
       invalidFields.forEach(field => delete updates[field]);
@@ -5105,7 +5117,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         lastName,
         phoneNumber,
         address,
+        suburb,
         city,
+        province,
         postalCode,
         idNumber,
         dateOfBirth,
@@ -5154,9 +5168,19 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         updateParams.push(address);
       }
       
+      if (suburb !== undefined) {
+        updateFields.push('suburb = ?');
+        updateParams.push(suburb);
+      }
+      
       if (city !== undefined) {
         updateFields.push('city = ?');
         updateParams.push(city);
+      }
+      
+      if (province !== undefined) {
+        updateFields.push('province = ?');
+        updateParams.push(province);
       }
       
       if (postalCode !== undefined) {
