@@ -192,14 +192,14 @@ router.post('/customers/create', async (req: any, res) => {
         INSERT INTO users (
           email, password, first_name, last_name, phone_number,
           date_of_birth, gender, id_number, occupation, industry,
-          address, city, postal_code, selected_package, bank_name,
+          address, suburb, city, province, postal_code, selected_package, bank_name,
           account_type, account_number, account_holder_name, branch_code,
           is_south_african, has_credit_card, is_enabled, points,
           agent_id, is_agent, referral_code, mandate_accepted, created_at
         ) VALUES (
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
-          ?, ?, ?, UPPER(?), ?,
+          ?, ?, ?, ?, ?, UPPER(?), ?,
           ?, ?, ?, ?,
           ?, ?, 1, ?,
           ?, 0, ?, 1, NOW()

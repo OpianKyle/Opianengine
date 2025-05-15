@@ -104,6 +104,8 @@ export default function CreateCustomerDialog({ open, onOpenChange }: CreateCusto
       industry: "",
       addressLine1: "",
       suburb: "",
+      city: "",
+      province: "",
       postalCode: "",
       hasCreditCard: false,
       selectedPackage: "OPPORTUNITY",
@@ -371,6 +373,32 @@ I/We acknowledge that this Authority and Mandate has been ceded to Netcash (Pty)
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Suburb</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="province"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Province</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
