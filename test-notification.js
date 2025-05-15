@@ -92,6 +92,8 @@ async function generateRegistrationPDF(customerData) {
           <h2>Address Information</h2>
           <p><strong>Address:</strong> ${customerData.addressLine1 || 'Not provided'}</p>
           <p><strong>Suburb:</strong> ${customerData.suburb || 'Not provided'}</p>
+          <p><strong>City:</strong> ${customerData.city || 'Not provided'}</p>
+          <p><strong>Province:</strong> ${customerData.province || 'Not provided'}</p>
           <p><strong>Postal Code:</strong> ${customerData.postalCode || 'Not provided'}</p>
         </div>
 

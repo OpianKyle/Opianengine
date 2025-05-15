@@ -691,7 +691,9 @@ export function formatNewCustomerAdminEmail(
     occupation?: string;
     industry?: string;
     address?: string;
+    suburb?: string;
     city?: string;
+    province?: string;
     postalCode?: string;
     hasCreditCard?: boolean;
     bankName?: string;
@@ -736,7 +738,9 @@ export function formatNewCustomerAdminEmail(
 
     Address Information:
     Address: ${customerData.address || 'Not provided'}
+    Suburb: ${customerData.suburb || 'Not provided'}
     City: ${customerData.city || 'Not provided'}
+    Province: ${customerData.province || 'Not provided'}
     Postal Code: ${customerData.postalCode || 'Not provided'}
 
     Banking Details:
@@ -796,7 +800,9 @@ export function formatNewCustomerAdminEmail(
         <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; margin: 20px 0;">
           <h3 style="color: #43EB3E; margin-top: 0;">Address Information</h3>
           <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Address:</strong> ${customerData.address || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Suburb:</strong> ${customerData.suburb || 'Not provided'}</p>
           <p style="margin: 10px 0;"><strong style="color: #43EB3E;">City:</strong> ${customerData.city || 'Not provided'}</p>
+          <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Province:</strong> ${customerData.province || 'Not provided'}</p>
           <p style="margin: 10px 0;"><strong style="color: #43EB3E;">Postal Code:</strong> ${customerData.postalCode || 'Not provided'}</p>
         </div>
 
@@ -1044,7 +1050,9 @@ export async function generateRegistrationPDF(customerData: any): Promise<Buffer
         <div class="section">
           <h2>Address Information</h2>
           <p><strong>Address:</strong> ${customerData.address || 'Not provided'}</p>
+          <p><strong>Suburb:</strong> ${customerData.suburb || 'Not provided'}</p>
           <p><strong>City:</strong> ${customerData.city || 'Not provided'}</p>
+          <p><strong>Province:</strong> ${customerData.province || 'Not provided'}</p>
           <p><strong>Postal Code:</strong> ${customerData.postalCode || 'Not provided'}</p>
         </div>
 
