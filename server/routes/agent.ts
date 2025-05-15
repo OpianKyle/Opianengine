@@ -138,7 +138,7 @@ router.post('/customers/create', async (req: any, res) => {
     const { 
       email, firstName, lastName, mobileNumber, dateOfBirth,
       gender, idNumber, occupation, industry, addressLine1,
-      suburb, postalCode, selectedPackage, bankName,
+      suburb, city, province, postalCode, selectedPackage, bankName,
       accountType, accountNumber, accountHolderName,
       branchCode, isSouthAfrican, hasCreditCard, leadId
     } = req.body;
@@ -218,6 +218,8 @@ router.post('/customers/create', async (req: any, res) => {
         industry,
         addressLine1,
         suburb,
+        city || '', // Add city parameter
+        province || '', // Add province parameter
         postalCode,
         selectedPackage,
         bankName,
