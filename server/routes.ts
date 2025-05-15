@@ -1467,6 +1467,17 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     const search = (req.query.search as string) || '';
     const requestedShowTest = req.query.showTest === 'true';
     
+    // Check if the user is a super admin
+    const [superAdminCheck] = await connectionPool.execute(
+      'SELECT is_super_admin FROM users WHERE id = ? LIMIT 1',
+      [req.user.id]
+    );
+    
+    const isSuperAdmin = superAdminCheck[0]?.is_super_admin === 1;
+    
+    // Only allow showing test users if the user is a super admin
+    const showTest = requestedShowTest && isSuperAdmin;
+    
     // Create a cache key based on pagination, search and test filter
     const cacheKey = `customers_${page}_${limit}_${search}_showTest_${showTest}`;
     const now = Date.now();
