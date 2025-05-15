@@ -27,7 +27,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Path to the Google Analytics credentials file
-const credentialsPath = path.join(__dirname, './opianrewards-459707-8efa68d16b95.json');
+const credentialsPath = path.join(__dirname, './opianrewards-488980111-8efa68d16b95.json');
 
 // Define error types for the Google Analytics client
 type GAClientError = {
@@ -47,7 +47,7 @@ const createGAClient = async (): Promise<BetaAnalyticsDataClient | GAClientError
     // Check if credentials file exists
     if (!fs.existsSync(credentialsPath)) {
       console.error(`SETUP ERROR: Google Analytics credentials file not found at ${credentialsPath}`);
-      console.error('Please ensure the opianrewards-459707-8efa68d16b95.json file is in the server/analytics/ directory');
+      console.error('Please ensure the opianrewards-488980111-8efa68d16b95.json file is in the server/analytics/ directory');
       return {
         error: 'missing_credentials_file',
         message: `Google Analytics credentials file not found at ${credentialsPath}`
@@ -67,7 +67,7 @@ const createGAClient = async (): Promise<BetaAnalyticsDataClient | GAClientError
     console.log(`Using Google Analytics credentials from ${credentialsPath}`);
     
     // Get GA4 property ID from environment variable or use the default
-    const propertyId = process.env.GA_PROPERTY_ID || '459707'; // Default property ID from project
+    const propertyId = process.env.GA_PROPERTY_ID || '488980111'; // Default property ID from project
     
     // Formatted property ID required by the Google Analytics Data API
     const formattedPropertyId = `properties/${propertyId}`;
@@ -192,7 +192,7 @@ export async function getSocialMediaTraffic(days: number = 30) {
   const analyticsClient: BetaAnalyticsDataClient = client;
   
   // Get GA4 property ID from environment variable or use the default
-  const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
+  const propertyId = process.env.GA_PROPERTY_ID || '488980111'; 
   // Formatted property ID required by the Google Analytics Data API
   const formattedPropertyId = `properties/${propertyId}`;
   
@@ -418,7 +418,7 @@ export async function getDeviceTypes(days: number = 30) {
   const analyticsClient: BetaAnalyticsDataClient = client;
   
   // Get GA4 property ID from environment variable or use the default
-  const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
+  const propertyId = process.env.GA_PROPERTY_ID || '488980111'; 
   // Formatted property ID required by the Google Analytics Data API
   const formattedPropertyId = `properties/${propertyId}`;
   
@@ -493,7 +493,7 @@ export async function getTrafficSources(days: number = 30, limit: number = 10) {
   const analyticsClient: BetaAnalyticsDataClient = client;
   
   // Get GA4 property ID from environment variable or use the default
-  const propertyId = process.env.GA_PROPERTY_ID || '459707'; 
+  const propertyId = process.env.GA_PROPERTY_ID || '488980111'; 
   // Formatted property ID required by the Google Analytics Data API
   const formattedPropertyId = `properties/${propertyId}`;
   
