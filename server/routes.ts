@@ -3191,7 +3191,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           industry = ?,
           occupation = ?,
           address = ?,
+          suburb = ?,
           city = ?,
+          province = ?,
           postal_code = ?
         WHERE id = ?`,
         [
@@ -3203,7 +3205,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           updateData.industry,
           updateData.occupation,
           updateData.address,
+          updateData.suburb,
           updateData.city,
+          updateData.province,
           updateData.postalCode,
           req.params.id
         ]

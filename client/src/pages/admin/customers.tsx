@@ -411,7 +411,9 @@ export default function AdminCustomers() {
       idNumber: customer.idNumber || "",
       dateOfBirth: formattedDate,
       address: customer.address || "",
+      suburb: customer.suburb || "",
       city: customer.city || "",
+      province: customer.province || "",
       postalCode: customer.postalCode || "",
       industry: customer.industry || "",
       occupation: customer.occupation || "",
@@ -1200,10 +1202,36 @@ export default function AdminCustomers() {
                                     />
                                     <FormField
                                       control={editDetailsForm.control}
+                                      name="suburb"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Suburb</FormLabel>
+                                          <FormControl>
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={editDetailsForm.control}
                                       name="city"
                                       render={({ field }) => (
                                         <FormItem>
                                           <FormLabel>City</FormLabel>
+                                          <FormControl>
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={editDetailsForm.control}
+                                      name="province"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Province</FormLabel>
                                           <FormControl>
                                             <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
