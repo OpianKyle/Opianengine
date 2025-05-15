@@ -27,7 +27,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Path to the Google Analytics credentials file
-const credentialsPath = path.join(__dirname, './opianrewards-488980111-8efa68d16b95.json');
+// Try to use environment variable first, then fallback to hardcoded paths
+const credentialsFilename = process.env.GA_CREDENTIALS_FILENAME || 'opianrewards-459707-8efa68d16b95.json';
+const credentialsPath = path.join(__dirname, `./${credentialsFilename}`);
 
 // Define error types for the Google Analytics client
 type GAClientError = {
