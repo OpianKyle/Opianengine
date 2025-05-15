@@ -225,7 +225,9 @@ export default function ProfilePage() {
       if (!response.ok) {
         throw new Error("Failed to fetch profile");
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Profile data received:', data);
+      return data;
     },
   });
 
@@ -270,7 +272,9 @@ export default function ProfilePage() {
         last_name: profile.lastName,
         phone_number: profile.phoneNumber,
         address: profile.address,
+        suburb: profile.suburb,
         city: profile.city,
+        province: profile.province,
         postal_code: profile.postalCode,
         id_number: profile.idNumber,
         date_of_birth: profile.dateOfBirth,
