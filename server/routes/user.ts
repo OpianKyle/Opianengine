@@ -9,7 +9,7 @@ router.get('/activities', async (req: Request, res: Response) => {
   try {
     const user = await getUserFromTokenOrSession(req);
     
-    if (!user) {
+    if (!user || !user.id) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
@@ -17,7 +17,7 @@ router.get('/activities', async (req: Request, res: Response) => {
     
     try {
       // Fetch activities for the user (points history, referrals, etc.)
-      const [activities] = await connection.execute(
+      const [rows] = await connection.execute(
         `SELECT 
           ph.id,
           ph.points,
@@ -30,6 +30,9 @@ router.get('/activities', async (req: Request, res: Response) => {
         LIMIT 10`,
         [user.id]
       );
+      
+      // Cast the result to the right type to avoid TypeScript errors
+      const activities = Array.isArray(rows) ? rows : [];
       
       return res.status(200).json(activities);
     } finally {
@@ -46,7 +49,7 @@ router.get('/package', async (req: Request, res: Response) => {
   try {
     const user = await getUserFromTokenOrSession(req);
     
-    if (!user) {
+    if (!user || !user.id) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
@@ -54,7 +57,7 @@ router.get('/package', async (req: Request, res: Response) => {
     
     try {
       // Fetch the user's current subscription/package
-      const [subscriptions] = await connection.execute(
+      const [rows] = await connection.execute(
         `SELECT 
           s.id,
           s.package_type as name,
@@ -69,6 +72,9 @@ router.get('/package', async (req: Request, res: Response) => {
         LIMIT 1`,
         [user.id]
       );
+      
+      // Cast the result to the right type to avoid TypeScript errors
+      const subscriptions = Array.isArray(rows) ? rows : [];
       
       if (subscriptions.length === 0) {
         return res.status(200).json(null);
