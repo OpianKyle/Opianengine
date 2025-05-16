@@ -1,0 +1,12 @@
+{
+  "name": "opian-rewards-mobile-preview",
+  "version": "1.0.0",
+  "description": "Web-based preview of Opian Rewards mobile app",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
