@@ -158,25 +158,25 @@ router.get('/agents/stats', async (req: any, res) => {
       'SELECT COUNT(*) as count FROM users WHERE is_agent = 1'
     );
 
-    // Get total number of customers
+    // Get total number of customers (excluding test users)
     const [customersCount] = await connection.execute(
-      'SELECT COUNT(*) as count FROM users WHERE is_agent = 0'
+      'SELECT COUNT(*) as count FROM users WHERE is_agent = 0 AND is_test = 0'
     );
 
-    // Get today's sign-ups
+    // Get today's sign-ups (excluding test users)
     const today = new Date().toISOString().split('T')[0];
     const [todaySignups] = await connection.execute(
-      'SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = ? AND is_agent = 0',
+      'SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = ? AND is_agent = 0 AND is_test = 0',
       [today]
     );
 
-    // Get all agents with their statistics
+    // Get all agents with their statistics (excluding test users)
     const [agents] = await connection.execute(
       `SELECT 
         a.id, a.first_name as firstName, a.last_name as lastName, 
         a.email, a.is_enabled as isEnabled, a.created_at as joinDate,
         COUNT(c.id) as totalCustomers,
-        SUM(CASE WHEN DATE(c.created_at) = ? THEN 1 ELSE 0 END) as todaySignups,
+        SUM(CASE WHEN DATE(c.created_at) = ? AND c.is_test = 0 THEN 1 ELSE 0 END) as todaySignups,
         SUM(c.points) as totalCustomerPoints,
         CAST(
           (
@@ -187,7 +187,7 @@ router.get('/agents/stats', async (req: any, res) => {
           ) AS DECIMAL(10,2)
         ) as potentialCommissions
        FROM users a
-       LEFT JOIN users c ON c.agent_id = a.id
+       LEFT JOIN users c ON c.agent_id = a.id AND c.is_test = 0
        WHERE a.is_agent = 1
        GROUP BY a.id
        ORDER BY totalCustomers DESC`,
