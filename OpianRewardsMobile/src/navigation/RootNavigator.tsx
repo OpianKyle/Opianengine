@@ -7,73 +7,108 @@ import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import RewardsScreen from '../screens/RewardsScreen';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+// Create navigation types
+type AuthStackParamList = {
+  Login: undefined;
+  Register: undefined;
+};
 
-function AuthStack() {
+type MainTabsParamList = {
+  Home: undefined;
+  Rewards: undefined;
+  Profile: undefined;
+};
+
+type RootStackParamList = {
+  AuthStack: undefined;
+  MainTabs: undefined;
+};
+
+// Create navigator instances
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const MainTabs = createBottomTabNavigator<MainTabsParamList>();
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+
+// Auth Navigator (Login & Register screens)
+const AuthNavigator = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-    </Stack.Navigator>
-  );
-}
-
-function MainTabs() {
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: '#022b5c',
-        tabBarInactiveTintColor: 'gray',
+    <AuthStack.Navigator 
+      screenOptions={{ 
+        headerShown: false,
+        contentStyle: { backgroundColor: 'white' }
       }}
     >
-      <Tab.Screen 
-        name="Home" 
-        component={HomeScreen} 
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen 
-        name="Rewards" 
-        component={RewardsScreen} 
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="star" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen} 
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account" color={color} size={size} />
-          ),
-        }}
-      />
-    </Tab.Navigator>
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="Register" component={RegisterScreen} />
+    </AuthStack.Navigator>
   );
-}
+};
 
-export default function RootNavigator() {
-  const { user, isLoading } = useAuth();
+// Main App Navigator (Tabs)
+const MainNavigator = () => {
+  return (
+    <MainTabs.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: '#022b5c',
+        tabBarInactiveTintColor: '#999',
+        tabBarStyle: {
+          height: 60,
+          paddingTop: 5,
+          paddingBottom: 10,
+        },
+        tabBarIcon: ({ color, size }) => {
+          let iconName: any;
 
+          if (route.name === 'Home') {
+            iconName = 'home';
+          } else if (route.name === 'Rewards') {
+            iconName = 'gift';
+          } else if (route.name === 'Profile') {
+            iconName = 'user';
+          }
+
+          return <Feather name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      <MainTabs.Screen name="Home" component={HomeScreen} />
+      <MainTabs.Screen name="Rewards" component={RewardsScreen} />
+      <MainTabs.Screen name="Profile" component={ProfileScreen} />
+    </MainTabs.Navigator>
+  );
+};
+
+// Root Navigator
+const RootNavigator = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  // Show loading screen if auth state is loading
   if (isLoading) {
-    return null; // Or a loading screen
+    return (
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        <RootStack.Screen name="Loading" component={LoadingScreen} />
+      </RootStack.Navigator>
+    );
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {user ? (
-        <Stack.Screen name="Main" component={MainTabs} />
+    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      {isAuthenticated ? (
+        <RootStack.Screen name="MainTabs" component={MainNavigator} />
       ) : (
-        <Stack.Screen name="Auth" component={AuthStack} />
+        <RootStack.Screen name="AuthStack" component={AuthNavigator} />
       )}
-    </Stack.Navigator>
+    </RootStack.Navigator>
   );
-}
+};
+
+// Simple loading screen component
+const LoadingScreen = () => {
+  // You can create a proper loading screen with a spinner
+  return null;
+};
+
+export default RootNavigator;
