@@ -194,12 +194,42 @@ router.get('/agents/stats', async (req: any, res) => {
       [today]
     );
 
+    // Add detailed debugging to understand customer counts
     console.log('Agent statistics:', {
       totalAgents: (agentsCount as any)[0].count,
       totalCustomers: (customersCount as any)[0].count,
       todaySignups: (todaySignups as any)[0].count,
       agentsCount: (agents as any).length
     });
+    
+    // Debug log to analyze total customers by agent
+    try {
+      const [detailedCustomers] = await connection.execute(
+        `SELECT 
+          a.id, a.first_name, a.last_name, a.email,
+          COUNT(c.id) as total_customers
+         FROM users a
+         LEFT JOIN users c ON c.agent_id = a.id 
+         WHERE a.is_agent = 1
+         GROUP BY a.id`
+      );
+      
+      console.log('Customer distribution (including test users):', detailedCustomers);
+      
+      const [detailedCustomersNoTest] = await connection.execute(
+        `SELECT 
+          a.id, a.first_name, a.last_name, a.email,
+          COUNT(c.id) as total_customers
+         FROM users a
+         LEFT JOIN users c ON c.agent_id = a.id AND c.is_test = 0
+         WHERE a.is_agent = 1
+         GROUP BY a.id`
+      );
+      
+      console.log('Customer distribution (excluding test users):', detailedCustomersNoTest);
+    } catch (err) {
+      console.error('Error fetching debug data:', err);
+    }
 
     res.json({
       totalAgents: (agentsCount as any)[0].count,
