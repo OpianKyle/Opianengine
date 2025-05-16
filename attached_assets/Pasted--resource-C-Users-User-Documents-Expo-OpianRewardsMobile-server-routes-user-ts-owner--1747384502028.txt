@@ -1,0 +1,76 @@
+[{
+	"resource": "/C:/Users/User/Documents/Expo/OpianRewardsMobile/server/routes/user.ts",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'session' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.",
+	"source": "ts",
+	"startLineNumber": 24,
+	"startColumn": 13,
+	"endLineNumber": 24,
+	"endColumn": 20
+},{
+	"resource": "/C:/Users/User/Documents/Expo/OpianRewardsMobile/server/routes/user.ts",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'session' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.",
+	"source": "ts",
+	"startLineNumber": 24,
+	"startColumn": 28,
+	"endLineNumber": 24,
+	"endColumn": 35
+},{
+	"resource": "/C:/Users/User/Documents/Expo/OpianRewardsMobile/server/routes/user.ts",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'session' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.",
+	"source": "ts",
+	"startLineNumber": 25,
+	"startColumn": 18,
+	"endLineNumber": 25,
+	"endColumn": 25
+},{
+	"resource": "/C:/Users/User/Documents/Expo/OpianRewardsMobile/server/routes/user.ts",
+	"owner": "typescript",
+	"code": "2769",
+	"severity": 8,
+	"message": "No overload matches this call.\n  The last overload gave the following error.\n    Argument of type '(req: Request, res: Response) => Promise<express.Response<any, Record<string, any>>>' is not assignable to parameter of type 'Application<Record<string, any>>'.\n      Type '(req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<...>' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.",
+	"source": "ts",
+	"startLineNumber": 46,
+	"startColumn": 27,
+	"endLineNumber": 46,
+	"endColumn": 67,
+	"relatedInformation": [
+		{
+			"startLineNumber": 168,
+			"startColumn": 5,
+			"endLineNumber": 168,
+			"endColumn": 56,
+			"message": "The last overload is declared here.",
+			"resource": "/c:/Users/User/Documents/Expo/OpianRewardsMobile/node_modules/@types/express-serve-static-core/index.d.ts"
+		}
+	]
+},{
+	"resource": "/C:/Users/User/Documents/Expo/OpianRewardsMobile/server/routes/user.ts",
+	"owner": "typescript",
+	"code": "2769",
+	"severity": 8,
+	"message": "No overload matches this call.\n  The last overload gave the following error.\n    Argument of type '(req: Request, res: Response) => Promise<express.Response<any, Record<string, any>>>' is not assignable to parameter of type 'Application<Record<string, any>>'.\n      Type '(req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<...>' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.",
+	"source": "ts",
+	"startLineNumber": 86,
+	"startColumn": 24,
+	"endLineNumber": 86,
+	"endColumn": 64,
+	"relatedInformation": [
+		{
+			"startLineNumber": 168,
+			"startColumn": 5,
+			"endLineNumber": 168,
+			"endColumn": 56,
+			"message": "The last overload is declared here.",
+			"resource": "/c:/Users/User/Documents/Expo/OpianRewardsMobile/node_modules/@types/express-serve-static-core/index.d.ts"
+		}
+	]
+}]

@@ -1,0 +1,43 @@
+[{
+	"resource": "/C:/Users/User/Documents/Expo/OpianRewardsMobile/server/routes/user.ts",
+	"owner": "typescript",
+	"code": "2769",
+	"severity": 8,
+	"message": "No overload matches this call.\n  The last overload gave the following error.\n    Argument of type '(req: Request, res: Response) => Promise<express.Response<any, Record<string, any>>>' is not assignable to parameter of type 'Application<Record<string, any>>'.\n      Type '(req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<...>' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.",
+	"source": "ts",
+	"startLineNumber": 57,
+	"startColumn": 27,
+	"endLineNumber": 57,
+	"endColumn": 67,
+	"relatedInformation": [
+		{
+			"startLineNumber": 168,
+			"startColumn": 5,
+			"endLineNumber": 168,
+			"endColumn": 56,
+			"message": "The last overload is declared here.",
+			"resource": "/c:/Users/User/Documents/Expo/OpianRewardsMobile/node_modules/@types/express-serve-static-core/index.d.ts"
+		}
+	]
+},{
+	"resource": "/C:/Users/User/Documents/Expo/OpianRewardsMobile/server/routes/user.ts",
+	"owner": "typescript",
+	"code": "2769",
+	"severity": 8,
+	"message": "No overload matches this call.\n  The last overload gave the following error.\n    Argument of type '(req: Request, res: Response) => Promise<express.Response<any, Record<string, any>>>' is not assignable to parameter of type 'Application<Record<string, any>>'.\n      Type '(req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<...>' is missing the following properties from type 'Application<Record<string, any>>': init, defaultConfiguration, engine, set, and 63 more.",
+	"source": "ts",
+	"startLineNumber": 97,
+	"startColumn": 24,
+	"endLineNumber": 97,
+	"endColumn": 64,
+	"relatedInformation": [
+		{
+			"startLineNumber": 168,
+			"startColumn": 5,
+			"endLineNumber": 168,
+			"endColumn": 56,
+			"message": "The last overload is declared here.",
+			"resource": "/c:/Users/User/Documents/Expo/OpianRewardsMobile/node_modules/@types/express-serve-static-core/index.d.ts"
+		}
+	]
+}]
