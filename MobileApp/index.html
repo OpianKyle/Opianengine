@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opian Rewards Mobile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/assets/styles.css">
+</head>
+<body>
+  <div id="app">
+    <div class="mobile-container">
+      <div class="status-bar">
+        <div class="time">9:41</div>
+        <div class="status-icons">
+          <span>📶</span>
+          <span>📡</span>
+          <span>🔋</span>
+        </div>
+      </div>
+      <div id="screen-container">
+        <!-- Screens will be loaded here -->
+        <div id="login-screen" class="screen active">
+          <!-- Login screen content will be loaded via JavaScript -->
+        </div>
+        <div id="register-screen" class="screen">
+          <!-- Register screen content will be loaded via JavaScript -->
+        </div>
+        <div id="home-screen" class="screen">
+          <!-- Home screen content will be loaded via JavaScript -->
+        </div>
+        <div id="profile-screen" class="screen">
+          <!-- Profile screen content will be loaded via JavaScript -->
+        </div>
+        <div id="rewards-screen" class="screen">
+          <!-- Rewards screen content will be loaded via JavaScript -->
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item" data-screen="home-screen">
+          <div class="nav-icon">🏠</div>
+          <div class="nav-text">Home</div>
+        </div>
+        <div class="nav-item" data-screen="rewards-screen">
+          <div class="nav-icon">🎁</div>
+          <div class="nav-text">Rewards</div>
+        </div>
+        <div class="nav-item" data-screen="profile-screen">
+          <div class="nav-icon">👤</div>
+          <div class="nav-text">Profile</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="./src/assets/app.js"></script>
+</body>
+</html>
