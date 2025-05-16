@@ -1,11 +1,119 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Text, Card, Avatar, Button } from 'react-native-paper';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Share, RefreshControl, ActivityIndicator } from 'react-native';
+import { Text, Card, Avatar, Button, Divider } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../services/auth';
+import { useQuery } from '@tanstack/react-query';
+
+// API URL - this should be configurable in a real production app
+const API_URL = 'https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev';
+
+// Define types for our data
+interface ActivityItem {
+  id: number;
+  type: string;
+  points: number;
+  description: string;
+  date: string;
+}
+
+interface Package {
+  id: number;
+  name: string;
+  status: string;
+  expiryDate?: string;
+}
 
 export default function HomeScreen({ navigation }: any) {
-  const { user } = useAuth();
+  const { user, authToken } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Fetch user activities
+  const { 
+    data: activities, 
+    isLoading: activitiesLoading, 
+    refetch: refetchActivities 
+  } = useQuery({
+    queryKey: ['activities'],
+    queryFn: fetchUserActivities,
+    enabled: !!authToken,
+  });
+  
+  // Fetch user package information
+  const { 
+    data: packageInfo, 
+    isLoading: packageLoading, 
+    refetch: refetchPackage 
+  } = useQuery({
+    queryKey: ['package'],
+    queryFn: fetchUserPackage,
+    enabled: !!authToken,
+  });
+
+  // Function to fetch user activities
+  async function fetchUserActivities() {
+    try {
+      const response = await fetch(`${API_URL}/api/user/activities`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch activities');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      // Return some default activities for now if the API fails
+      return [];
+    }
+  }
+  
+  // Function to fetch user package information
+  async function fetchUserPackage() {
+    try {
+      const response = await fetch(`${API_URL}/api/user/package`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch package info');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching package info:', error);
+      return null;
+    }
+  }
+  
+  // Share referral code
+  const shareReferralCode = async () => {
+    if (!user?.referralCode) return;
+    
+    try {
+      await Share.share({
+        message: `Join Opian Rewards with my referral code: ${user.referralCode} and earn 2,000 bonus points! Sign up at https://opianrewards.com`,
+      });
+    } catch (error) {
+      console.error('Error sharing referral code:', error);
+    }
+  };
+  
+  // Handle pull-to-refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refetchActivities(), refetchPackage()]);
+    setRefreshing(false);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -13,7 +121,12 @@ export default function HomeScreen({ navigation }: any) {
         <Text style={styles.headerTitle}>Opian Rewards</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Welcome Card */}
         <Card style={styles.welcomeCard}>
           <Card.Content>
@@ -41,6 +154,33 @@ export default function HomeScreen({ navigation }: any) {
             </Button>
           </Card.Content>
         </Card>
+        
+        {/* Package Information */}
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text style={styles.cardTitle}>Your Package</Text>
+            {packageLoading ? (
+              <ActivityIndicator size="small" color="#022b5c" />
+            ) : packageInfo ? (
+              <>
+                <View style={styles.packageInfo}>
+                  <Text style={styles.packageName}>{packageInfo.name}</Text>
+                  <Text style={[
+                    styles.packageStatus, 
+                    packageInfo.status === 'Active' ? styles.statusActive : styles.statusInactive
+                  ]}>
+                    {packageInfo.status}
+                  </Text>
+                </View>
+                {packageInfo.expiryDate && (
+                  <Text style={styles.packageExpiry}>Expires: {new Date(packageInfo.expiryDate).toLocaleDateString()}</Text>
+                )}
+              </>
+            ) : (
+              <Text style={styles.noPackage}>No active package</Text>
+            )}
+          </Card.Content>
+        </Card>
 
         {/* Referral Card */}
         <Card style={styles.card}>
@@ -55,10 +195,7 @@ export default function HomeScreen({ navigation }: any) {
             <Button 
               mode="contained" 
               style={styles.button}
-              onPress={() => {
-                // Implementation for share functionality would go here
-                alert('Share functionality will be implemented here');
-              }}
+              onPress={shareReferralCode}
             >
               Share Referral Code
             </Button>
@@ -70,28 +207,35 @@ export default function HomeScreen({ navigation }: any) {
           <Text style={styles.sectionTitle}>Latest Activities</Text>
         </View>
 
-        {/* Activity Cards - would be populated from real data */}
-        <Card style={styles.activityCard}>
-          <Card.Content>
-            <View style={styles.activityHeader}>
-              <Text style={styles.activityTitle}>Points Earned</Text>
-              <Text style={styles.activityPoints}>+500</Text>
-            </View>
-            <Text style={styles.activityDate}>Today</Text>
-            <Text style={styles.activityDescription}>Account creation bonus</Text>
-          </Card.Content>
-        </Card>
-
-        <Card style={styles.activityCard}>
-          <Card.Content>
-            <View style={styles.activityHeader}>
-              <Text style={styles.activityTitle}>Subscription Renewed</Text>
-              <Text style={styles.activityPoints}>+1,500</Text>
-            </View>
-            <Text style={styles.activityDate}>Last week</Text>
-            <Text style={styles.activityDescription}>Monthly subscription renewed</Text>
-          </Card.Content>
-        </Card>
+        {activitiesLoading ? (
+          <ActivityIndicator size="large" color="#022b5c" style={styles.loader} />
+        ) : activities && activities.length > 0 ? (
+          activities.map((activity: ActivityItem) => (
+            <Card key={activity.id} style={styles.activityCard}>
+              <Card.Content>
+                <View style={styles.activityHeader}>
+                  <Text style={styles.activityTitle}>{activity.type}</Text>
+                  <Text style={[
+                    styles.activityPoints, 
+                    activity.points >= 0 ? styles.positivePoints : styles.negativePoints
+                  ]}>
+                    {activity.points >= 0 ? '+' : ''}{activity.points}
+                  </Text>
+                </View>
+                <Text style={styles.activityDate}>
+                  {new Date(activity.date).toLocaleDateString()}
+                </Text>
+                <Text style={styles.activityDescription}>{activity.description}</Text>
+              </Card.Content>
+            </Card>
+          ))
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Card.Content>
+              <Text style={styles.emptyText}>No recent activities</Text>
+            </Card.Content>
+          </Card>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -123,6 +267,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: 30,
   },
   welcomeCard: {
     marginBottom: 16,
@@ -164,6 +309,42 @@ const styles = StyleSheet.create({
     color: '#022b5c',
     marginBottom: 12,
   },
+  packageInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  packageName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#022b5c',
+  },
+  packageStatus: {
+    fontWeight: '500',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusActive: {
+    backgroundColor: '#e6f7e6',
+    color: '#2e7d32',
+  },
+  statusInactive: {
+    backgroundColor: '#ffebee',
+    color: '#c62828',
+  },
+  packageExpiry: {
+    fontSize: 14,
+    color: '#666',
+  },
+  noPackage: {
+    fontSize: 16,
+    color: '#888',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 10,
+  },
   button: {
     marginTop: 8,
     backgroundColor: '#022b5c',
@@ -203,7 +384,12 @@ const styles = StyleSheet.create({
   activityPoints: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  positivePoints: {
     color: 'green',
+  },
+  negativePoints: {
+    color: 'red',
   },
   activityDate: {
     fontSize: 12,
@@ -212,5 +398,17 @@ const styles = StyleSheet.create({
   },
   activityDescription: {
     fontSize: 14,
+  },
+  loader: {
+    marginVertical: 20,
+  },
+  emptyCard: {
+    marginVertical: 10,
+    backgroundColor: '#f9f9f9',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#888',
+    fontStyle: 'italic',
   },
 });

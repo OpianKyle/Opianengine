@@ -38,6 +38,7 @@ interface RegistrationData {
 // Auth context type
 interface AuthContextType {
   user: User | null;
+  authToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -46,8 +47,17 @@ interface AuthContextType {
   updateProfile: (userData: Partial<User>) => Promise<void>;
 }
 
-// Create the auth context
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Create the auth context with default values
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  authToken: null,
+  isLoading: false,
+  isAuthenticated: false,
+  login: async () => {},
+  register: async () => {},
+  logout: async () => {},
+  updateProfile: async () => {},
+});
 
 // Auth provider props
 interface AuthProviderProps {
@@ -241,6 +251,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Context value
   const value = {
     user,
+    authToken,
     isLoading,
     isAuthenticated: !!user,
     login,
