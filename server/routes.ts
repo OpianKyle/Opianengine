@@ -26,7 +26,6 @@ import adminToolsRouter from './routes/admin-tools';
 import analyticsRouter from './routes/analytics';
 import socialUsersRouter from './routes/social-users';
 import specialMigrationsRouter from './routes/special-migrations';
-import userRouter from './routes/user';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
@@ -1162,7 +1161,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/analytics', analyticsRouter);
   app.use('/api/social', socialUsersRouter);
   app.use('/api/special-migrations', specialMigrationsRouter);
-  app.use('/api/user', userRouter);
   
   // Register test customer routes
   registerTestCustomerRoutes(app);
