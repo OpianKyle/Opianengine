@@ -3332,6 +3332,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       isAuthenticated: req.isAuthenticated(),
       userId: req.params.id,
       requestBody: req.body,
+      hasCardNumber: !!req.body.cardNumber,
+      cardNumberValue: req.body.cardNumber,
       user: req.user ? {
         id: req.user.id,
         email: req.user.email
@@ -3361,40 +3363,50 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         selected_package: req.body.selectedPackage ? String(req.body.selectedPackage).toUpperCase() : null
       };
 
-      // Update user details
-      const [result] = await connection.execute(
-        `UPDATE users SET
-          first_name = ?,
-          last_name = ?,
-          email = ?,
-          phone_number = ?,
-          selected_package = ?,
-          industry = ?,
-          occupation = ?,
-          address = ?,
-          suburb = ?,
-          city = ?,
-          province = ?,
-          postal_code = ?,
-          card_number = ?
-        WHERE id = ?`,
-        [
-          updateData.firstName,
-          updateData.lastName,
-          updateData.email,
-          updateData.phoneNumber,
-          updateData.selected_package,
-          updateData.industry,
-          updateData.occupation,
-          updateData.address,
-          updateData.suburb,
-          updateData.city,
-          updateData.province,
-          updateData.postalCode,
-          updateData.cardNumber,
-          req.params.id
-        ]
-      );
+      // Check if this is a card number only update
+      let result;
+      if (req.body.cardNumber !== undefined && Object.keys(req.body).length === 1) {
+        console.log('Processing card number only update:', req.body.cardNumber);
+        [result] = await connection.execute(
+          `UPDATE users SET card_number = ? WHERE id = ?`,
+          [req.body.cardNumber, req.params.id]
+        );
+      } else {
+        // Full user details update
+        [result] = await connection.execute(
+          `UPDATE users SET
+            first_name = ?,
+            last_name = ?,
+            email = ?,
+            phone_number = ?,
+            selected_package = ?,
+            industry = ?,
+            occupation = ?,
+            address = ?,
+            suburb = ?,
+            city = ?,
+            province = ?,
+            postal_code = ?,
+            card_number = ?
+          WHERE id = ?`,
+          [
+            updateData.firstName,
+            updateData.lastName,
+            updateData.email,
+            updateData.phoneNumber,
+            updateData.selected_package,
+            updateData.industry,
+            updateData.occupation,
+            updateData.address,
+            updateData.suburb,
+            updateData.city,
+            updateData.province,
+            updateData.postalCode,
+            updateData.cardNumber,
+            req.params.id
+          ]
+        );
+      }
 
       if (result.affectedRows === 0) {
         return res.status(404).json({ error: "User not found" });
