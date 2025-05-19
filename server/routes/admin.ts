@@ -494,16 +494,28 @@ router.post('/resend-welcome-email', async (req: any, res) => {
     
     const user = userRows[0];
     
-    // We need to generate a new password for the user or get it from the database
-    // WARNING: For security, this should only be used for test accounts in development environments
-
-    // Get the stored password from the database
-    const passwordFromDB = user.password;
+    // Generate a temporary password and update the user's password in the database
+    const tempPassword = "12345678"; // Using a fixed password for testing purposes
     
-    // Extract original password or generate a temporary one
-    // In a real production environment, we would generate a new random password
-    // and update it in the database, but for this test environment, we'll use "12345678"
-    const tempPassword = "12345678";
+    // Hash the temporary password
+    const scrypt = require('crypto').scrypt;
+    const randomBytes = require('crypto').randomBytes;
+    const promisify = require('util').promisify;
+    const scryptAsync = promisify(scrypt);
+    
+    // Hash the password
+    const salt = randomBytes(16).toString('hex');
+    const buf = await scryptAsync(tempPassword, salt, 64);
+    const hashedPassword = `${buf.toString('hex')}.${salt}`;
+    
+    // Update the user's password in the database
+    await connection.query(
+      'UPDATE users SET password = ? WHERE id = ?',
+      [hashedPassword, userId]
+    );
+    
+    console.log(`Updated password for user ${userId} to '${tempPassword}' (hashed)`);
+    
     
     const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-rewards-logo(R).png";
     
