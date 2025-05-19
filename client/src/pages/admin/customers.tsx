@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail, ChevronLeft, ChevronRight, CreditCard, Search, X, Beaker, Users } from "lucide-react";
+import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail, ChevronLeft, ChevronRight, CreditCard, Search, X, Beaker, Users, UserCog } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
