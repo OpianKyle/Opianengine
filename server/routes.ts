@@ -4974,7 +4974,10 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         };
       });
 
-      res.json(transformedRedemptions);
+      // Return in the format expected by the frontend
+      res.json({
+        cashRedemptions: transformedRedemptions
+      });
     } catch (error) {
       console.error('Error fetching cash redemptions:', error);
       res.status(500).json({ error: 'Failed to fetch cash redemptions' });
