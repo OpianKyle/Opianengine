@@ -48,6 +48,7 @@ import CustomerLayout from "@/components/layout/customer-layout";
 import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
+import RedemptionsPage from "@/pages/customer/redemptions";
 import SubscriptionPage from "@/pages/customer/subscription"; // Import subscription page
 
 // Agent pages
@@ -279,6 +280,11 @@ function Router() {
       <Route path="/products">
         <CustomerLayout>
           <ProtectedRoute component={CustomerProducts} />
+        </CustomerLayout>
+      </Route>
+      <Route path="/redemptions">
+        <CustomerLayout>
+          <ProtectedRoute component={RedemptionsPage} />
         </CustomerLayout>
       </Route>
       

@@ -461,15 +461,7 @@ function CustomerDashboardContent() {
         
         {/* Right column - Activity and Training Videos stacked */}
         <div className="grid gap-3 md:gap-4">
-          {/* Redemption History Section */}
-          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
-            <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
-              <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Redemption History</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 px-3 md:px-6">
-              <RedemptionHistory />
-            </CardContent>
-          </Card>
+
 
           {/* Recent Activity Section */}
           <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden recent-transactions">
