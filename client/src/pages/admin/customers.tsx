@@ -1075,10 +1075,20 @@ export default function AdminCustomers() {
                                 onClick={() => {
                                   const newCardNumber = prompt("Enter card number:", customer.cardNumber || "");
                                   if (newCardNumber !== null) {
+                                    console.log('Updating card number to:', newCardNumber);
                                     updateUserDetailsMutation.mutate({
                                       userId: customer.id,
                                       data: { cardNumber: newCardNumber }
                                     });
+                                    
+                                    // Immediately update the local data for better user experience
+                                    const updatedCustomers = data.customers.map(c => 
+                                      c.id === customer.id ? {...c, cardNumber: newCardNumber} : c
+                                    );
+                                    queryClient.setQueryData(
+                                      ["/api/admin/customers", page, limit, debouncedSearchQuery, activeTab === 'test'], 
+                                      {customers: updatedCustomers, total: data.total}
+                                    );
                                   }
                                 }}
                               >
