@@ -4929,25 +4929,17 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.get("/api/admin/cash-redemptions", async (req, res) => {
     console.log('Cash redemptions request received');
     
-    // Completely bypass authentication for testing
-    // IMPORTANT: Remove this in production!
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
     const connection = await createConnection();
     try {
-      // Skip admin check in development mode
-      // In production, uncomment this
-      /*
-      // Check admin status
-      const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
-        [req.user.id]
-      );
-
-      if (!adminCheck || adminCheck.length === 0) {
-        console.log('User not found in admin_users:', req.user.id);
+      // Check admin status from the user object
+      if (!req.user || !req.user.is_admin) {
+        console.log('User is not an admin:', req.user?.id);
         return res.status(403).json({ error: "Admin access required" });
       }
-      */
 
       // Check if the cash_redemptions table exists and has data
       const [cashRedemptionsTable] = await connection.execute(

@@ -33,11 +33,11 @@ export default function CashRedemptions() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("pending");
   
-  // Use test endpoint during development
+  // Use production endpoint for cash redemptions
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["/api/test/cash-redemptions"],
+    queryKey: ["/api/admin/cash-redemptions"],
     queryFn: async () => {
-      const response = await fetch("/api/test/cash-redemptions", {
+      const response = await fetch("/api/admin/cash-redemptions", {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
