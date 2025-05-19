@@ -6,6 +6,7 @@ import { setupWebSocketServer } from "./websocket";
 import { getAgentByReferralCode } from "./utils/referral";
 import { createConnection, connectionPool } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
+import { sendCashRedemptionNotification } from "./utils/cashRedemptionEmail";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
@@ -3121,20 +3122,38 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
         await connection.commit();
 
-        // Get updated points balance
-        const [updated] = await connection.execute(
-          'SELECT points FROM users WHERE id = ?',
+        // Get updated points balance and user details for the email
+        const [userDetails] = await connection.execute(
+          'SELECT points, first_name, last_name FROM users WHERE id = ?',
           [req.user.id]
         );
 
         console.log('Redemption successful:', {
           userId: req.user.id,
-          newBalance: updated[0].points
+          newBalance: userDetails[0].points
         });
+        
+        // Send email notification about cash redemption
+        try {
+          // Get user's full name for the email
+          const userName = `${userDetails[0].first_name} ${userDetails[0].last_name}`;
+          
+          // Send notification email to admin
+          await sendCashRedemptionNotification(
+            userName,
+            pointsRequired,
+            redemptionAmount
+          );
+          
+          console.log('Cash redemption notification email sent');
+        } catch (emailError) {
+          console.error('Failed to send cash redemption notification email:', emailError);
+          // We don't want to fail the redemption if email fails, so just log the error
+        }
 
         res.json({
           message: "Points redeemed successfully",
-          newBalance: updated[0].points
+          newBalance: userDetails[0].points
         });
 
       } catch (error) {
