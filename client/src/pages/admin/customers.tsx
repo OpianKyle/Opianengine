@@ -64,6 +64,7 @@ const userSchema = z.object({
   gender: z.enum(genderEnum).nullable(),
   hasCreditCard: z.boolean().optional(),
   isSouthAfrican: z.boolean().optional(),
+  cardNumber: z.string().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -395,6 +396,7 @@ export default function AdminCustomers() {
       gender: null,
       hasCreditCard: false,
       isSouthAfrican: false,
+      cardNumber: "",
     },
   });
 
@@ -426,6 +428,7 @@ export default function AdminCustomers() {
       gender: (customer.gender as typeof genderEnum[number]) || null,
       hasCreditCard: Boolean(customer.hasCreditCard),
       isSouthAfrican: Boolean(customer.isSouthAfrican),
+      cardNumber: customer.cardNumber || "",
     });
     setEditDialogOpen(true);
   };
