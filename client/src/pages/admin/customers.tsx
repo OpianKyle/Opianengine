@@ -1082,13 +1082,16 @@ export default function AdminCustomers() {
                                     });
                                     
                                     // Immediately update the local data for better user experience
-                                    const updatedCustomers = data.customers.map(c => 
-                                      c.id === customer.id ? {...c, cardNumber: newCardNumber} : c
-                                    );
-                                    queryClient.setQueryData(
-                                      ["/api/admin/customers", page, limit, debouncedSearchQuery, activeTab === 'test'], 
-                                      {customers: updatedCustomers, total: data.total}
-                                    );
+                                    const currentData = queryClient.getQueryData(["/api/admin/customers", page, limit, debouncedSearchQuery, activeTab === 'test']);
+                                    if (currentData) {
+                                      const updatedCustomers = currentData.customers.map(c => 
+                                        c.id === customer.id ? {...c, cardNumber: newCardNumber} : c
+                                      );
+                                      queryClient.setQueryData(
+                                        ["/api/admin/customers", page, limit, debouncedSearchQuery, activeTab === 'test'], 
+                                        {customers: updatedCustomers, total: currentData.total}
+                                      );
+                                    }
                                   }
                                 }}
                               >
