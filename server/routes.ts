@@ -4843,6 +4843,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       }
 
       // Fetch cash redemptions with user details
+      // Use LIKE instead of exact match since casing might be different in the database
       const [redemptions] = await connection.execute(
         `SELECT 
           t.*,
@@ -4860,17 +4861,37 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         FROM transactions t
         INNER JOIN users u ON t.user_id = u.id
         LEFT JOIN users p ON t.processed_by = p.id
-        WHERE t.type = 'CASH_REDEMPTION'
+        WHERE t.type LIKE '%CASH_REDEMPTION%' OR t.description LIKE '%cash%'
         ORDER BY t.created_at DESC`
       );
 
-      console.log(`Found ${redemptions.length} cash redemptions`);
+      console.log(`Found ${redemptions.length} cash redemptions`, redemptions.length > 0 ? {
+        sampleRedemption: {
+          id: redemptions[0].id,
+          userId: redemptions[0].user_id,
+          points: redemptions[0].points,
+          type: redemptions[0].type,
+          status: redemptions[0].status || 'PENDING',
+          description: redemptions[0].description
+        }
+      } : 'No redemptions found');
 
       // Transform the redemptions data
       const transformedRedemptions = redemptions.map(redemption => ({
-        ...redemption,
-        processor: redemption.processor ? JSON.parse(redemption.processor) : null,
-        status: redemption.status || 'PENDING'
+        id: redemption.id,
+        userId: redemption.user_id,
+        points: redemption.points,
+        description: redemption.description,
+        createdAt: redemption.created_at,
+        status: redemption.status || 'PENDING',
+        processedAt: redemption.processed_at,
+        processedBy: redemption.processed_by,
+        user: {
+          firstName: redemption.user_first_name,
+          lastName: redemption.user_last_name,
+          email: redemption.user_email
+        },
+        processor: redemption.processor ? JSON.parse(redemption.processor) : null
       }));
 
       res.json(transformedRedemptions);
@@ -4883,36 +4904,116 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   app.post("/api/admin/cash-redemptions/:id/process", async (req, res) => {
-    if (!req.user?.isAdmin) return res.status(403).json({error: "Unauthorized"});
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    
+    console.log('Processing cash redemption:', {
+      transactionId: req.params.id,
+      userId: req.user?.id
+    });
+    
     const { id } = req.params;
-
+    const connection = await createConnection();
+    
     try {
-      const [transaction] = await db
-        .update(transactions)
-        .set({
-          status: 'PROCESSED',
-          processedAt: new Date(),
-          processedBy: req.user.id
-        })
-        .where(eq(transactions.id, parseInt(id)))
-        .returning()
-        .execute();
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT role_type FROM admin_users WHERE user_id = ?',
+        [req.user.id]
+      );
 
-      if (!transaction) {
-        return res.status(404).json({ error: "Transaction not found" });
+      if (!adminCheck || adminCheck.length === 0) {
+        console.log('User not found in admin_users:', req.user.id);
+        return res.status(403).json({ error: "Admin access required" });
       }
 
-      await logAdminAction({
-        adminId: req.user.id,
-        actionType: "POINT_ADJUSTMENT",
-        targetUserId: transaction.userId,
-        details: `Processed cash redemption of R${(Math.abs(transaction.points) * 0.015).toFixed(2)} (${Math.abs(transaction.points)} points)`,
-      });
+      await connection.beginTransaction();
+      
+      try {
+        // Update transaction status
+        const [updateResult] = await connection.execute(
+          `UPDATE transactions 
+           SET status = 'PROCESSED', 
+               processed_at = NOW(), 
+               processed_by = ? 
+           WHERE id = ?`,
+          [req.user.id, id]
+        );
 
-      res.json(transaction);
+        if (!updateResult || updateResult.affectedRows === 0) {
+          throw new Error("Transaction not found or already processed");
+        }
+
+        // Get updated transaction data
+        const [transactions] = await connection.execute(
+          `SELECT t.*, 
+                  u.email as user_email,
+                  u.first_name as user_first_name,
+                  u.last_name as user_last_name
+           FROM transactions t
+           JOIN users u ON t.user_id = u.id
+           WHERE t.id = ?`,
+          [id]
+        );
+
+        if (!transactions || transactions.length === 0) {
+          throw new Error("Failed to retrieve updated transaction");
+        }
+
+        const transaction = transactions[0];
+        const cashAmount = (Math.abs(transaction.points) * 0.015).toFixed(2);
+
+        // Log admin action
+        await connection.execute(
+          `INSERT INTO admin_actions (
+            admin_id, action_type, target_user_id, details, created_at
+          ) VALUES (?, ?, ?, ?, NOW())`,
+          [
+            req.user.id, 
+            "POINT_ADJUSTMENT", 
+            transaction.user_id,
+            `Processed cash redemption of R${cashAmount} (${Math.abs(transaction.points)} points)`
+          ]
+        );
+
+        await connection.commit();
+
+        // Format response to match client expectations
+        const response = {
+          id: transaction.id,
+          userId: transaction.user_id,
+          points: transaction.points,
+          description: transaction.description,
+          createdAt: transaction.created_at,
+          status: 'PROCESSED',
+          processedAt: new Date(),
+          processedBy: req.user.id,
+          user: {
+            firstName: transaction.user_first_name,
+            lastName: transaction.user_last_name,
+            email: transaction.user_email
+          }
+        };
+
+        console.log('Successfully processed cash redemption:', {
+          transactionId: id,
+          userId: transaction.user_id,
+          amount: cashAmount
+        });
+
+        res.json(response);
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      }
     } catch (error) {
       console.error('Error processing cash redemption:', error);
-      res.status(500).json({ error: 'Failed to process cash redemption' });
+      res.status(500).json({ 
+        error: error.message || 'Failed to process cash redemption'
+      });
+    } finally {
+      await connection.end();
     }
   });
 
