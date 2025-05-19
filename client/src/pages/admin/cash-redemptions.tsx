@@ -33,10 +33,11 @@ export default function CashRedemptions() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("pending");
   
-  const { data: transactions = [], isLoading, isError, error } = useQuery<Transaction[]>({
+  // Updated to properly handle the API response format with cashRedemptions field
+  const { data, isLoading, isError, error } = useQuery<{ cashRedemptions: Transaction[] }>({
     queryKey: ["/api/admin/cash-redemptions"],
     refetchInterval: 30000, // Refresh every 30 seconds to catch new redemptions
-    onError: (err) => {
+    onError: (err: any) => {
       console.error("Error fetching cash redemptions:", err);
       toast({
         variant: "destructive",
@@ -45,12 +46,16 @@ export default function CashRedemptions() {
       });
     },
     onSuccess: (data) => {
-      console.log(`Loaded ${data.length} cash redemptions:`, 
-        data.length > 0 ? 
-        {firstRedemption: data[0]} : 
+      const redemptions = data?.cashRedemptions || [];
+      console.log(`Loaded ${redemptions.length} cash redemptions:`, 
+        redemptions.length > 0 ? 
+        {firstRedemption: redemptions[0]} : 
         "No redemptions found");
     }
   });
+  
+  // Extract the transactions from the response
+  const transactions = data?.cashRedemptions || [];
 
   // Debug empty responses
   if (transactions.length === 0 && !isLoading) {
