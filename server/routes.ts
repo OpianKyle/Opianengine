@@ -3331,6 +3331,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     console.log('Update user details request:', {
       isAuthenticated: req.isAuthenticated(),
       userId: req.params.id,
+      requestBody: req.body,
       user: req.user ? {
         id: req.user.id,
         email: req.user.email

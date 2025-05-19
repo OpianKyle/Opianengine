@@ -434,7 +434,8 @@ export default function AdminCustomers() {
   };
 
   const updateUserDetailsMutation = useMutation({
-    mutationFn: async ({ userId, data }: { userId: number; data: UserFormData }) => {
+    mutationFn: async ({ userId, data }: { userId: number; data: Partial<UserFormData> }) => {
+      console.log('Sending data to server:', data);
       const res = await fetch(`/api/admin/users/${userId}/details`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
