@@ -78,6 +78,7 @@ export const ADMIN_API_ENDPOINTS = {
     '/api/admin/logs',
     '/api/admin/quote-requests',
     '/api/admin/redemptions',
+    '/api/admin/cash-redemptions',
     '/api/leads'
   ],
   dashboard: [

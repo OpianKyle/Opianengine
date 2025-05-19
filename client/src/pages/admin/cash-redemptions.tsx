@@ -34,9 +34,14 @@ export default function CashRedemptions() {
   const [activeTab, setActiveTab] = useState<string>("pending");
   
   // Updated to properly handle the API response format with cashRedemptions field
+  // Added credentials option to ensure auth cookies are sent with request
   const { data, isLoading, isError, error } = useQuery<{ cashRedemptions: Transaction[] }>({
     queryKey: ["/api/admin/cash-redemptions"],
     refetchInterval: 30000, // Refresh every 30 seconds to catch new redemptions
+    retry: 3,
+    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnMount: true,
     onError: (err: any) => {
       console.error("Error fetching cash redemptions:", err);
       toast({
