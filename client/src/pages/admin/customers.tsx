@@ -1479,7 +1479,7 @@ export default function AdminCustomers() {
                               }
                             }}
                           >
-                            <MailPlus className="mr-2 h-4 w-4" />
+                            <Mail className="mr-2 h-4 w-4" />
                             Resend Welcome Email
                           </DropdownMenuItem>
                           <Dialog open={showAssignProducts} onOpenChange={setShowAssignProducts}>
