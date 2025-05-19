@@ -92,7 +92,6 @@ export default function RedemptionsPage() {
                   <TableHead>Cash Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Processed Date</TableHead>
-                  <TableHead>Processed By</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -111,12 +110,7 @@ export default function RedemptionsPage() {
                     <TableCell>
                       {redemption.processedAt ? formatDate(redemption.processedAt) : "Pending"}
                     </TableCell>
-                    <TableCell>
-                      {redemption.processor 
-                        ? `${redemption.processor.firstName} ${redemption.processor.lastName}`
-                        : "Pending"
-                      }
-                    </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
