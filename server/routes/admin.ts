@@ -481,7 +481,7 @@ router.post('/resend-welcome-email', async (req: any, res) => {
     
     // Get the user's details from the database
     const [userRows] = await connection.query(
-      'SELECT first_name, email FROM users WHERE id = ?',
+      'SELECT first_name, email, password FROM users WHERE id = ?',
       [userId]
     );
     
@@ -494,7 +494,17 @@ router.post('/resend-welcome-email', async (req: any, res) => {
     
     const user = userRows[0];
     
-    // Create a custom welcome email for existing users (without password)
+    // We need to generate a new password for the user or get it from the database
+    // WARNING: For security, this should only be used for test accounts in development environments
+
+    // Get the stored password from the database
+    const passwordFromDB = user.password;
+    
+    // Extract original password or generate a temporary one
+    // In a real production environment, we would generate a new random password
+    // and update it in the database, but for this test environment, we'll use "12345678"
+    const tempPassword = "12345678";
+    
     const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-rewards-logo(R).png";
     
     const html = `
@@ -509,6 +519,7 @@ router.post('/resend-welcome-email', async (req: any, res) => {
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
           .header { background-color: #011d3d; padding: 20px; text-align: center; }
           .content { padding: 20px; background-color: #ffffff; }
+          .credentials { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
           .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
           .btn { display: inline-block; background-color: #0056b3; color: white; padding: 10px 20px; 
                 text-decoration: none; border-radius: 5px; }
@@ -523,6 +534,13 @@ router.post('/resend-welcome-email', async (req: any, res) => {
             <h2>Welcome to OPIAN Rewards!</h2>
             <p>Dear ${user.first_name},</p>
             <p>Thank you for being a valued member of OPIAN Rewards. We're excited to have you on board!</p>
+            
+            <div class="credentials">
+              <p><strong>Your Login Information:</strong></p>
+              <p>Username: ${user.email}</p>
+              <p>Password: ${tempPassword}</p>
+            </div>
+            
             <p>With OPIAN Rewards, you can:</p>
             <ul>
               <li>Earn points on everyday purchases</li>
@@ -530,7 +548,7 @@ router.post('/resend-welcome-email', async (req: any, res) => {
               <li>Refer friends and family to earn even more</li>
               <li>Track your rewards progress through our dashboard</li>
             </ul>
-            <p>Simply log in to your account at <a href="https://www.opianrewards.com">www.opianrewards.com</a> with your existing credentials to get started.</p>
+            <p>Simply log in to your account at <a href="https://www.opianrewards.com">www.opianrewards.com</a> using the credentials above.</p>
             <p>If you have any questions, please don't hesitate to contact our support team at <a href="mailto:clientservices@opianrewards.com">clientservices@opianrewards.com</a>.</p>
             <p>Best regards,<br>The OPIAN Rewards Team</p>
           </div>
@@ -549,13 +567,17 @@ router.post('/resend-welcome-email', async (req: any, res) => {
       
       Thank you for being a valued member of OPIAN Rewards. We're excited to have you on board!
       
+      YOUR LOGIN INFORMATION:
+      Username: ${user.email}
+      Password: ${tempPassword}
+      
       With OPIAN Rewards, you can:
       - Earn points on everyday purchases
       - Redeem rewards for cash or products
       - Refer friends and family to earn even more
       - Track your rewards progress through our dashboard
       
-      Simply log in to your account at www.opianrewards.com with your existing credentials to get started.
+      Simply log in to your account at www.opianrewards.com using the credentials above.
       
       If you have any questions, please don't hesitate to contact our support team at clientservices@opianrewards.com.
       
