@@ -3136,7 +3136,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           ) VALUES (?, ?, ?, ?, ?)`,
           [
             req.user.id,
-            pointsToRedeem,
+            -pointsToRedeem, // Use negative value to match transaction record
             cashAmount,
             transactionId,
             'PENDING'
@@ -5011,38 +5011,56 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       await connection.beginTransaction();
       
       try {
-        // Update transaction status
-        const [updateResult] = await connection.execute(
-          `UPDATE transactions 
+        // First check if this is a cash redemption in our dedicated table
+        const [redemptions] = await connection.execute(
+          `SELECT * FROM cash_redemptions WHERE id = ?`,
+          [id]
+        );
+        
+        if (!redemptions || redemptions.length === 0) {
+          throw new Error("Cash redemption not found");
+        }
+        
+        const redemption = redemptions[0];
+        
+        // Update the cash redemption status
+        const [updateRedemptionResult] = await connection.execute(
+          `UPDATE cash_redemptions
            SET status = 'PROCESSED', 
                processed_at = NOW(), 
                processed_by = ? 
            WHERE id = ?`,
           [req.user.id, id]
         );
-
-        if (!updateResult || updateResult.affectedRows === 0) {
-          throw new Error("Transaction not found or already processed");
+        
+        if (!updateRedemptionResult || updateRedemptionResult.affectedRows === 0) {
+          throw new Error("Failed to update cash redemption status");
+        }
+        
+        // Also update the related transaction if applicable
+        if (redemption.transaction_id) {
+          await connection.execute(
+            `UPDATE transactions 
+             SET status = 'PROCESSED', 
+                 processed_at = NOW(), 
+                 processed_by = ? 
+             WHERE id = ?`,
+            [req.user.id, redemption.transaction_id]
+          );
         }
 
-        // Get updated transaction data
-        const [transactions] = await connection.execute(
-          `SELECT t.*, 
-                  u.email as user_email,
-                  u.first_name as user_first_name,
-                  u.last_name as user_last_name
-           FROM transactions t
-           JOIN users u ON t.user_id = u.id
-           WHERE t.id = ?`,
-          [id]
+        // Get user information
+        const [users] = await connection.execute(
+          `SELECT * FROM users WHERE id = ?`,
+          [redemption.user_id]
         );
 
-        if (!transactions || transactions.length === 0) {
-          throw new Error("Failed to retrieve updated transaction");
+        if (!users || users.length === 0) {
+          throw new Error("Failed to retrieve user information");
         }
 
-        const transaction = transactions[0];
-        const cashAmount = (Math.abs(transaction.points) * 0.015).toFixed(2);
+        const user = users[0];
+        const cashAmount = redemption.cash_amount || (Math.abs(redemption.points) * 0.015).toFixed(2);
 
         // Log admin action
         await connection.execute(
@@ -5051,9 +5069,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           ) VALUES (?, ?, ?, ?, NOW())`,
           [
             req.user.id, 
-            "POINT_ADJUSTMENT", 
-            transaction.user_id,
-            `Processed cash redemption of R${cashAmount} (${Math.abs(transaction.points)} points)`
+            "PROCESSED_CASH_REDEMPTION", 
+            redemption.user_id,
+            `Processed cash redemption of R${cashAmount} (${Math.abs(redemption.points)} points)`
           ]
         );
 
@@ -5061,24 +5079,24 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
         // Format response to match client expectations
         const response = {
-          id: transaction.id,
-          userId: transaction.user_id,
-          points: transaction.points,
-          description: transaction.description,
-          createdAt: transaction.created_at,
+          id: redemption.id,
+          userId: redemption.user_id,
+          points: redemption.points,
+          description: `Redeemed R${cashAmount} in cash`,
+          createdAt: redemption.created_at,
           status: 'PROCESSED',
           processedAt: new Date(),
           processedBy: req.user.id,
           user: {
-            firstName: transaction.user_first_name,
-            lastName: transaction.user_last_name,
-            email: transaction.user_email
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email
           }
         };
 
         console.log('Successfully processed cash redemption:', {
-          transactionId: id,
-          userId: transaction.user_id,
+          redemptionId: id,
+          userId: redemption.user_id,
           amount: cashAmount
         });
 
