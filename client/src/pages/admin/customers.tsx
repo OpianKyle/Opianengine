@@ -556,6 +556,37 @@ export default function AdminCustomers() {
       });
     },
   });
+  
+  // Mutation for super-admin to login as customer (impersonation)
+  const loginAsCustomerMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await fetch('/api/admin/login-as-customer', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: 'include',
+        body: JSON.stringify({ userId })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Success", 
+        description: data.message || "Successfully logged in as customer" 
+      });
+      // Redirect to customer dashboard
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
 
   const exportCustomersMutation = useMutation({
     mutationFn: async () => {
@@ -1482,6 +1513,20 @@ export default function AdminCustomers() {
                             <Mail className="mr-2 h-4 w-4" />
                             Resend Welcome Email
                           </DropdownMenuItem>
+                          
+                          {/* Only show this option for super-admins */}
+                          {user?.is_super_admin && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (confirm('Login as this customer? You will be logged out of your admin account.')) {
+                                  loginAsCustomerMutation.mutate(customer.id);
+                                }
+                              }}
+                            >
+                              <UserCog className="mr-2 h-4 w-4" />
+                              Login as Customer
+                            </DropdownMenuItem>
+                          )}
                           <Dialog open={showAssignProducts} onOpenChange={setShowAssignProducts}>
                             {selectedCustomer && (
                               <AssignProductsDialog

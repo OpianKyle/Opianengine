@@ -536,4 +536,96 @@ router.post('/resend-welcome-email', async (req: any, res) => {
   }
 });
 
+// Endpoint to allow super-admins to login as a specific customer
+router.post('/login-as-customer', async (req: any, res) => {
+  const connection = await pool.getConnection();
+  try {
+    // Check if the current user is a super-admin
+    if (!req.user.is_super_admin) {
+      return res.status(403).json({
+        success: false,
+        message: "Only super administrators can perform this action"
+      });
+    }
+    
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "User ID is required" 
+      });
+    }
+    
+    // Get the customer's details from the database
+    const [userRows] = await connection.query(
+      'SELECT * FROM users WHERE id = ?',
+      [userId]
+    );
+    
+    if (!userRows.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found"
+      });
+    }
+    
+    const customerUser = userRows[0];
+    
+    // Store the admin's session info for later restoration
+    const adminInfo = {
+      id: req.user.id,
+      email: req.user.email,
+      isAdmin: true,
+      isSuperAdmin: true
+    };
+    
+    // Save admin info in session for later use when they want to revert back
+    req.session.adminInfo = adminInfo;
+    
+    // Log this impersonation action
+    await logAdminAction({
+      adminId: req.user.id,
+      targetUserId: userId,
+      actionType: 'CUSTOMER_IMPERSONATION',
+      details: `Super-admin ${req.user.email} logged in as customer ${customerUser.email}`
+    });
+    
+    // Login as the customer (update session)
+    req.login(customerUser, (err: any) => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: "Error during customer login session creation"
+        });
+      }
+      
+      // Add a flag to indicate this is an impersonation session
+      req.session.isImpersonating = true;
+      req.session.save((err: any) => {
+        if (err) {
+          return res.status(500).json({
+            success: false,
+            message: "Error saving impersonation session"
+          });
+        }
+        
+        return res.status(200).json({
+          success: true,
+          message: `Now logged in as customer ${customerUser.email}`,
+          redirectUrl: '/customer/dashboard' // URL to redirect to after impersonation
+        });
+      });
+    });
+  } catch (error) {
+    console.error("Error during customer impersonation:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error during customer impersonation"
+    });
+  } finally {
+    connection.release();
+  }
+});
+
 export default router;
