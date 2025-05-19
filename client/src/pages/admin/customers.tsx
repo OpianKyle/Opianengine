@@ -529,6 +529,33 @@ export default function AdminCustomers() {
       });
     },
   });
+  
+  // Mutation for resending welcome email
+  const resendWelcomeEmailMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await fetch('/api/admin/resend-welcome-email', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: 'include',
+        body: JSON.stringify({ userId })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Success", 
+        description: data.message || "Welcome email resent successfully" 
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
 
   const exportCustomersMutation = useMutation({
     mutationFn: async () => {
@@ -1444,6 +1471,16 @@ export default function AdminCustomers() {
                           >
                             <Mail className="mr-2 h-4 w-4" />
                             Send Fund Card Email
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (confirm('Resend welcome email to this customer?')) {
+                                resendWelcomeEmailMutation.mutate(customer.id);
+                              }
+                            }}
+                          >
+                            <MailPlus className="mr-2 h-4 w-4" />
+                            Resend Welcome Email
                           </DropdownMenuItem>
                           <Dialog open={showAssignProducts} onOpenChange={setShowAssignProducts}>
                             {selectedCustomer && (
