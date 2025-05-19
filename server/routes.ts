@@ -6,7 +6,6 @@ import { setupWebSocketServer } from "./websocket";
 import { getAgentByReferralCode } from "./utils/referral";
 import { createConnection, connectionPool } from './db';
 import { sendEmail, formatPointsAssignmentEmail, formatAdminNotificationEmail, formatQuoteRequestEmail, formatAdminQuoteRequestEmail, formatRegistrationEmail, sendAdminRegistrationNotification, formatFundCardEmail, formatNewCustomerAdminEmail, generateRegistrationPDF } from "./utils/emailService";
-import { sendCashRedemptionNotification } from "./utils/cashRedemptionEmail";
 import { parse } from 'csv-parse';
 import { stringify } from 'csv-stringify';
 import { Readable } from 'stream';
@@ -4804,23 +4803,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           })
           .where(eq(users.id, user.id))
           .execute();
-      });
 
-      // Calculate rand amount from points
-      const randAmount = points * 0.015;
-      
-      // Send email notification to admin
-      try {
-        // Get user's full name for the notification
-        const userName = `${req.user.first_name} ${req.user.last_name}`;
-        
-        // Send the notification email
-        await sendCashRedemptionNotification(userName, points, randAmount);
-        console.log(`Cash redemption notification sent for user: ${userName}`);
-      } catch (emailError) {
-        // Log the error but don't fail the transaction - the redemption is still valid
-        console.error('Failed to send cash redemption notification:', emailError);
-      }
+
+      });
 
       res.json({
         success: true,
