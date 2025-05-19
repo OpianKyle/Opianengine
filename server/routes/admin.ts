@@ -613,7 +613,7 @@ router.post('/login-as-customer', async (req: any, res) => {
         return res.status(200).json({
           success: true,
           message: `Now logged in as customer ${customerUser.email}`,
-          redirectUrl: '/customer/dashboard' // URL to redirect to after impersonation
+          redirectUrl: '/dashboard' // URL to redirect to after impersonation (customer dashboard without prefix)
         });
       });
     });
