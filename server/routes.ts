@@ -5048,14 +5048,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     const connection = await createConnection();
     
     try {
-      // Check admin status
-      const [adminCheck] = await connection.execute(
-        'SELECT role_type FROM admin_users WHERE user_id = ?',
-        [req.user.id]
-      );
-
-      if (!adminCheck || adminCheck.length === 0) {
-        console.log('User not found in admin_users:', req.user.id);
+      // Check admin status from the user object
+      if (!req.user || !req.user.is_admin) {
+        console.log('User is not an admin:', req.user?.id);
         return res.status(403).json({ error: "Admin access required" });
       }
 
