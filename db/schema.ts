@@ -121,6 +121,7 @@ export const users = mysqlTable("users", {
   hasCreditCard: boolean("has_credit_card").default(false),
   cardStatus: mysqlEnum("card_status", CARD_STATUS).default("NOT_DELIVERED"),
   signature: text("signature"),
+  cardNumber: text("card_number"),
   mandateAccepted: boolean("mandate_accepted").default(false),
   mandateAcceptedAt: timestamp("mandate_accepted_at"),
   isAdmin: boolean("is_admin").default(false).notNull(),

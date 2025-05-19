@@ -956,6 +956,7 @@ export default function AdminCustomers() {
                     <TableHead className="hidden md:table-cell">Points</TableHead>
                     <TableHead className="hidden sm:table-cell">Status</TableHead>
                     <TableHead>Card Status</TableHead>
+                    <TableHead className="hidden md:table-cell">Card Number</TableHead>
                     <TableHead className="hidden lg:table-cell">Created Date</TableHead>
                     <TableHead className="hidden lg:table-cell">Assigned Products</TableHead>
                     <TableHead>Actions</TableHead>
@@ -1059,6 +1060,28 @@ export default function AdminCustomers() {
                           </TableCell>
                           <TableCell>
                             <CardStatusLabel status={customer.cardStatus || "NOT_DELIVERED"} />
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm">{customer.cardNumber || "—"}</span>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 w-6 p-0" 
+                                onClick={() => {
+                                  const newCardNumber = prompt("Enter card number:", customer.cardNumber || "");
+                                  if (newCardNumber !== null) {
+                                    updateUserDetailsMutation.mutate({
+                                      userId: customer.id,
+                                      data: { cardNumber: newCardNumber }
+                                    });
+                                  }
+                                }}
+                              >
+                                <span className="sr-only">Edit card number</span>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
                             {customer.createdAt ? (
@@ -1448,6 +1471,19 @@ export default function AdminCustomers() {
                                               onCheckedChange={field.onChange}
                                               className="bg-card border-input"
                                             />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={editDetailsForm.control}
+                                      name="cardNumber"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Card Number</FormLabel>
+                                          <FormControl>
+                                            <Input {...field} className="bg-card border-input text-card-foreground" />
                                           </FormControl>
                                           <FormMessage />
                                         </FormItem>
