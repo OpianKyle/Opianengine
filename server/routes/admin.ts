@@ -494,8 +494,74 @@ router.post('/resend-welcome-email', async (req: any, res) => {
     
     const user = userRows[0];
     
-    // Format the welcome email
-    const { text, html } = formatRegistrationEmail(user.first_name, user.email);
+    // Create a custom welcome email for existing users (without password)
+    const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-rewards-logo(R).png";
+    
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to OPIAN Rewards</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #011d3d; padding: 20px; text-align: center; }
+          .content { padding: 20px; background-color: #ffffff; }
+          .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+          .btn { display: inline-block; background-color: #0056b3; color: white; padding: 10px 20px; 
+                text-decoration: none; border-radius: 5px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <img src="${logoImageUrl}" alt="OPIAN Rewards Logo" style="max-width: 200px;">
+          </div>
+          <div class="content">
+            <h2>Welcome to OPIAN Rewards!</h2>
+            <p>Dear ${user.first_name},</p>
+            <p>Thank you for being a valued member of OPIAN Rewards. We're excited to have you on board!</p>
+            <p>With OPIAN Rewards, you can:</p>
+            <ul>
+              <li>Earn points on everyday purchases</li>
+              <li>Redeem rewards for cash or products</li>
+              <li>Refer friends and family to earn even more</li>
+              <li>Track your rewards progress through our dashboard</li>
+            </ul>
+            <p>Simply log in to your account at <a href="https://www.opianrewards.com">www.opianrewards.com</a> with your existing credentials to get started.</p>
+            <p>If you have any questions, please don't hesitate to contact our support team at <a href="mailto:clientservices@opianrewards.com">clientservices@opianrewards.com</a>.</p>
+            <p>Best regards,<br>The OPIAN Rewards Team</p>
+          </div>
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} OPIAN Rewards. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    const text = `
+      Welcome to OPIAN Rewards!
+      
+      Dear ${user.first_name},
+      
+      Thank you for being a valued member of OPIAN Rewards. We're excited to have you on board!
+      
+      With OPIAN Rewards, you can:
+      - Earn points on everyday purchases
+      - Redeem rewards for cash or products
+      - Refer friends and family to earn even more
+      - Track your rewards progress through our dashboard
+      
+      Simply log in to your account at www.opianrewards.com with your existing credentials to get started.
+      
+      If you have any questions, please don't hesitate to contact our support team at clientservices@opianrewards.com.
+      
+      Best regards,
+      The OPIAN Rewards Team
+    `;
     
     // Send the welcome email
     const emailResult = await sendEmail({
