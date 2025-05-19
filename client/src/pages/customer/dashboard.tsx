@@ -11,7 +11,15 @@ import { queryClient } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
 import ReferralSection from "@/components/shared/referral-section";
 import { formatTransactionType } from "@/lib/utils";
-import { Package as PackageIcon, Award } from "lucide-react";
+import { 
+  Package as PackageIcon, 
+  Award, 
+  DollarSign, 
+  Clock, 
+  CheckCircle2,
+  AlertCircle,
+  CalendarDays 
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 
@@ -342,6 +350,16 @@ function CustomerDashboardContent() {
         
         {/* Right column - Activity and Training Videos stacked */}
         <div className="grid gap-3 md:gap-4">
+          {/* Redemption History Section */}
+          <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
+            <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
+              <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Redemption History</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 px-3 md:px-6">
+              <RedemptionHistory />
+            </CardContent>
+          </Card>
+
           {/* Recent Activity Section */}
           <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden recent-transactions">
             <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
