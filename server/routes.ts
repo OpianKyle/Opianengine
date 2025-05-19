@@ -4842,38 +4842,36 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // First check if there are any CASH_REDEMPTION transactions at all
-      const [allTransactions] = await connection.execute(
-        `SELECT * FROM transactions WHERE type = 'CASH_REDEMPTION' LIMIT 5`
+      // Check for all recent transactions
+      const [recentTransactions] = await connection.execute(
+        `SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10`
       );
       
-      console.log('Debugging transactions table:', {
-        foundTransactions: allTransactions.length,
-        firstTransaction: allTransactions.length > 0 ? {
-          id: allTransactions[0].id,
-          user_id: allTransactions[0].user_id,
-          points: allTransactions[0].points,
-          type: allTransactions[0].type,
-          status: allTransactions[0].status,
-          created_at: allTransactions[0].created_at,
-        } : null
+      console.log('Recent transactions in database:', {
+        count: recentTransactions.length,
+        types: recentTransactions.map(t => t.type),
+        descriptions: recentTransactions.map(t => t.description)
       });
       
-      // Also check transactions with any "cash" in description
-      const [cashTransactions] = await connection.execute(
-        `SELECT * FROM transactions WHERE description LIKE '%cash%' OR description LIKE '%Cash%' LIMIT 5`
+      // Specifically check for all cash redemptions using the negative points approach
+      const [pointRedemptions] = await connection.execute(
+        `SELECT * FROM transactions 
+         WHERE points < 0 AND description LIKE '%cash%' 
+         ORDER BY created_at DESC LIMIT 10`
       );
       
-      console.log('Cash-related transactions:', {
-        count: cashTransactions.length,
-        sample: cashTransactions.length > 0 ? {
-          id: cashTransactions[0].id,
-          type: cashTransactions[0].type,
-          description: cashTransactions[0].description
-        } : null
+      console.log('Cash redemptions by negative points:', {
+        count: pointRedemptions.length,
+        details: pointRedemptions.map(t => ({
+          id: t.id,
+          type: t.type,
+          points: t.points,
+          description: t.description
+        }))
       });
 
-      // Now fetch properly for the frontend with user details included
+      // Fetch ALL redemptions with user details for the frontend
+      // Most inclusive query to catch all possible redemptions
       const [redemptions] = await connection.execute(
         `SELECT 
           t.*,
@@ -4891,7 +4889,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         FROM transactions t
         INNER JOIN users u ON t.user_id = u.id
         LEFT JOIN users p ON t.processed_by = p.id
-        WHERE (t.type = 'CASH_REDEMPTION' OR t.description LIKE '%cash%' OR t.description LIKE '%Cash%')
+        WHERE (t.points < 0 AND t.description LIKE '%cash%') 
+           OR t.type = 'CASH_REDEMPTION'
+           OR t.description LIKE '%Redeemed%cash%'
         ORDER BY t.created_at DESC`
       );
 
