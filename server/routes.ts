@@ -3067,34 +3067,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
     const connection = await createConnection();
     try {
-      // Support both parameter formats - "amount" (ZAR amount) or "points" (points to redeem)
-      const pointsToRedeem = req.body.points || 0;
-      const amountToRedeem = req.body.amount || 0;
-      
-      // Determine which parameter was provided and calculate accordingly
-      let pointsRequired, redemptionAmount;
-      
-      if (pointsToRedeem > 0) {
-        // If points were provided directly
-        pointsRequired = pointsToRedeem;
-        redemptionAmount = pointsToRedeem * 0.015; // Convert points to ZAR (1 point = R0.015)
-      } else if (amountToRedeem > 0) {
-        // If ZAR amount was provided
-        redemptionAmount = Number(amountToRedeem);
-        pointsRequired = redemptionAmount * 100 / 1.5; // Convert ZAR to points (R1 = ~67 points)
-      } else {
-        return res.status(400).json({ error: "Invalid redemption amount - please provide either points or amount" });
-      }
-      
-      // Ensure points are a whole number
-      pointsRequired = Math.round(pointsRequired);
-      
       console.log('Cash redemption request:', {
         userId: req.user.id,
-        pointsToRedeem,
-        amountToRedeem,
-        calculatedPointsRequired: pointsRequired,
-        calculatedRedemptionAmount: redemptionAmount
+        amount: req.body.amount
       });
 
       // Start transaction
@@ -3112,17 +3087,14 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         }
 
         const user = users[0];
-        
+        const redemptionAmount = Number(req.body.amount);
+        const pointsRequired = redemptionAmount * 100; // 1 ZAR = 100 points
+
         console.log('Redemption calculation:', {
           currentPoints: user.points,
           pointsRequired,
           redemptionAmount
         });
-
-        // Validate points required is positive
-        if (pointsRequired <= 0) {
-          throw new Error("Invalid points amount");
-        }
 
         // Validate points balance
         if (user.points < pointsRequired) {
@@ -4807,11 +4779,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
 
     try {
-      console.log('Drizzle - Cash redemption request:', {
-        userId: req.user.id,
-        points
-      });
-
       const user = await db.query.users.findFirst({
         where: eq(users.id, req.user.id),
       });
@@ -4820,21 +4787,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(400).json({ error: "Insufficient points" });
       }
 
-      // Calculate rand amount from points
-      const randAmount = points * 0.015;
-
-      console.log('Drizzle - Redemption calculation:', {
-        currentPoints: user.points,
-        pointsToRedeem: points,
-        randAmount
-      });
-
       await db.transaction(async (tx) => {
         const [transaction] = await tx.insert(transactions).values({
           userId: user.id,
           points: -points,
           type: "CASH_REDEMPTION",
-          description: `Redeemed points for R${randAmount.toFixed(2)}`,
+          description: `Redeemed points for R${(points * 0.015).toFixed(2)}`,
           status: "PENDING",
           createdAt: new Date(),
         }).returning().execute();
@@ -4847,6 +4805,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           .where(eq(users.id, user.id))
           .execute();
       });
+
+      // Calculate rand amount from points
+      const randAmount = points * 0.015;
       
       // Send email notification to admin
       try {
@@ -4863,7 +4824,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
       res.json({
         success: true,
-        message: `Successfully redeemed R${randAmount.toFixed(2)}`
+        message: `Successfully redeemed R${(points * 0.015).toFixed(2)}`
       });
     } catch (error) {
       console.error('Error processing cash redemption:', error);
