@@ -3166,34 +3166,74 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
         // Send email notification to clientservices@opianrewards.com
         try {
-          // Import email service if available
-          const { sendEmail } = require('./utils/emailService');
+          // Import email service from TypeScript module
+          const emailService = await import('./utils/emailService');
           
           const emailContent = `
-            <h2>New Cash Redemption Request</h2>
-            <p>A user has requested a cash redemption:</p>
-            <ul>
-              <li><strong>User ID:</strong> ${user.id}</li>
-              <li><strong>Name:</strong> ${user.first_name} ${user.last_name}</li>
-              <li><strong>Email:</strong> ${user.email}</li>
-              <li><strong>Points Redeemed:</strong> ${pointsToRedeem}</li>
-              <li><strong>Cash Amount:</strong> R${cashAmount}</li>
-              <li><strong>Transaction ID:</strong> ${transactionId}</li>
-              <li><strong>Date:</strong> ${new Date().toISOString()}</li>
-            </ul>
-            <p>Please process this redemption through the admin dashboard.</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 10px; border: 1px solid #eaeaea;">
+              <div style="text-align: center; margin-bottom: 20px;">
+                <img src="https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo.png" alt="Opian Rewards Logo" style="max-width: 150px;">
+              </div>
+              
+              <h2 style="color: #011d3d; text-align: center; margin-bottom: 20px;">New Cash Redemption Request</h2>
+              
+              <div style="background-color: #f9f9f9; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+                <p>A user has requested a cash redemption with the following details:</p>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                  <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea; font-weight: bold;">User ID:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea;">${user.id}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea; font-weight: bold;">Name:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea;">${user.first_name} ${user.last_name}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea; font-weight: bold;">Email:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea;">${user.email}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea; font-weight: bold;">Points Redeemed:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea;">${pointsToRedeem}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea; font-weight: bold;">Cash Amount:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea;">R${cashAmount}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea; font-weight: bold;">Transaction ID:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea;">${transactionId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea; font-weight: bold;">Date:</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eaeaea;">${new Date().toLocaleString()}</td>
+                  </tr>
+                </table>
+              </div>
+              
+              <div style="background-color: #011d3d; color: white; padding: 15px; border-radius: 5px; text-align: center; margin-top: 20px;">
+                <p style="margin: 0;">Please process this redemption through the <a href="https://opianrewards.replit.app/admin/cash-redemptions" style="color: #43EB3E; text-decoration: none;">admin dashboard</a>.</p>
+              </div>
+              
+              <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #666;">
+                <p>Opian Rewards | <a href="mailto:clientservices@opianrewards.com" style="color: #011d3d;">clientservices@opianrewards.com</a> | <a href="tel:0212141142" style="color: #011d3d;">021 214 1142</a></p>
+              </div>
+            </div>
           `;
           
-          await sendEmail({
+          const result = await emailService.sendEmail({
             to: 'clientservices@opianrewards.com',
-            subject: `Cash Redemption Request - R${cashAmount}`,
-            html: emailContent
+            subject: `Cash Redemption Request - R${cashAmount} - ${user.first_name} ${user.last_name}`,
+            html: emailContent,
+            emailType: 'CASH_REDEMPTION'
           });
           
-          console.log('Redemption notification email sent successfully');
+          console.log('Redemption notification email sending result:', result);
         } catch (emailError) {
           console.error('Failed to send redemption notification email:', emailError);
-          // Don't fail the request if email fails
+          // Don't fail the request if email fails, but log detailed error
+          console.error('Error details:', emailError instanceof Error ? emailError.stack : 'Unknown error');
         }
 
         res.json({
@@ -4863,43 +4903,24 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Check for all recent transactions
-      const [recentTransactions] = await connection.execute(
-        `SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10`
+      // Check if the cash_redemptions table exists and has data
+      const [cashRedemptionsTable] = await connection.execute(
+        `SELECT * FROM cash_redemptions ORDER BY created_at DESC LIMIT 1`
       );
       
-      console.log('Recent transactions in database:', {
-        count: recentTransactions.length,
-        types: recentTransactions.map(t => t.type),
-        descriptions: recentTransactions.map(t => t.description)
+      console.log('Cash redemptions table check:', {
+        tableExists: cashRedemptionsTable !== undefined,
+        hasData: cashRedemptionsTable && cashRedemptionsTable.length > 0
       });
       
-      // Specifically check for all cash redemptions using the negative points approach
-      const [pointRedemptions] = await connection.execute(
-        `SELECT * FROM transactions 
-         WHERE points < 0 AND description LIKE '%cash%' 
-         ORDER BY created_at DESC LIMIT 10`
-      );
-      
-      console.log('Cash redemptions by negative points:', {
-        count: pointRedemptions.length,
-        details: pointRedemptions.map(t => ({
-          id: t.id,
-          type: t.type,
-          points: t.points,
-          description: t.description
-        }))
-      });
-
-      // Fetch ALL redemptions with user details for the frontend
-      // Most inclusive query to catch all possible redemptions
+      // Fetch from dedicated cash_redemptions table with user details
       const [redemptions] = await connection.execute(
         `SELECT 
-          t.*,
+          cr.*,
           u.email as user_email,
           u.first_name as user_first_name,
           u.last_name as user_last_name,
-          CASE WHEN t.processed_by IS NOT NULL THEN
+          CASE WHEN cr.processed_by IS NOT NULL THEN
             JSON_OBJECT(
               'id', p.id,
               'email', p.email,
@@ -4907,16 +4928,13 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
               'lastName', p.last_name
             )
           ELSE NULL END as processor
-        FROM transactions t
-        INNER JOIN users u ON t.user_id = u.id
-        LEFT JOIN users p ON t.processed_by = p.id
-        WHERE (t.points < 0 AND t.description LIKE '%cash%') 
-           OR t.type = 'CASH_REDEMPTION'
-           OR t.description LIKE '%Redeemed%cash%'
-        ORDER BY t.created_at DESC`
+        FROM cash_redemptions cr
+        INNER JOIN users u ON cr.user_id = u.id
+        LEFT JOIN users p ON cr.processed_by = p.id
+        ORDER BY cr.created_at DESC`
       );
 
-      console.log(`Found ${redemptions.length} cash redemptions for frontend`, redemptions.length > 0 ? {
+      console.log(`Found ${redemptions.length} cash redemptions from dedicated table`, redemptions.length > 0 ? {
         sampleRedemption: {
           id: redemptions[0].id,
           userId: redemptions[0].user_id,
