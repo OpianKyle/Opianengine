@@ -4842,8 +4842,38 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Fetch cash redemptions with user details
-      // Use LIKE instead of exact match since casing might be different in the database
+      // First check if there are any CASH_REDEMPTION transactions at all
+      const [allTransactions] = await connection.execute(
+        `SELECT * FROM transactions WHERE type = 'CASH_REDEMPTION' LIMIT 5`
+      );
+      
+      console.log('Debugging transactions table:', {
+        foundTransactions: allTransactions.length,
+        firstTransaction: allTransactions.length > 0 ? {
+          id: allTransactions[0].id,
+          user_id: allTransactions[0].user_id,
+          points: allTransactions[0].points,
+          type: allTransactions[0].type,
+          status: allTransactions[0].status,
+          created_at: allTransactions[0].created_at,
+        } : null
+      });
+      
+      // Also check transactions with any "cash" in description
+      const [cashTransactions] = await connection.execute(
+        `SELECT * FROM transactions WHERE description LIKE '%cash%' OR description LIKE '%Cash%' LIMIT 5`
+      );
+      
+      console.log('Cash-related transactions:', {
+        count: cashTransactions.length,
+        sample: cashTransactions.length > 0 ? {
+          id: cashTransactions[0].id,
+          type: cashTransactions[0].type,
+          description: cashTransactions[0].description
+        } : null
+      });
+
+      // Now fetch properly for the frontend with user details included
       const [redemptions] = await connection.execute(
         `SELECT 
           t.*,
@@ -4861,11 +4891,11 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         FROM transactions t
         INNER JOIN users u ON t.user_id = u.id
         LEFT JOIN users p ON t.processed_by = p.id
-        WHERE t.type LIKE '%CASH_REDEMPTION%' OR t.description LIKE '%cash%'
+        WHERE (t.type = 'CASH_REDEMPTION' OR t.description LIKE '%cash%' OR t.description LIKE '%Cash%')
         ORDER BY t.created_at DESC`
       );
 
-      console.log(`Found ${redemptions.length} cash redemptions`, redemptions.length > 0 ? {
+      console.log(`Found ${redemptions.length} cash redemptions for frontend`, redemptions.length > 0 ? {
         sampleRedemption: {
           id: redemptions[0].id,
           userId: redemptions[0].user_id,
@@ -4876,23 +4906,34 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         }
       } : 'No redemptions found');
 
+      // Check the columns in the transactions table to ensure we're using the right column names
+      const [tableInfo] = await connection.execute(
+        `SHOW COLUMNS FROM transactions`
+      );
+      
+      console.log('Transactions table structure:', tableInfo.map(col => col.Field));
+
       // Transform the redemptions data
-      const transformedRedemptions = redemptions.map(redemption => ({
-        id: redemption.id,
-        userId: redemption.user_id,
-        points: redemption.points,
-        description: redemption.description,
-        createdAt: redemption.created_at,
-        status: redemption.status || 'PENDING',
-        processedAt: redemption.processed_at,
-        processedBy: redemption.processed_by,
-        user: {
-          firstName: redemption.user_first_name,
-          lastName: redemption.user_last_name,
-          email: redemption.user_email
-        },
-        processor: redemption.processor ? JSON.parse(redemption.processor) : null
-      }));
+      const transformedRedemptions = redemptions.map(redemption => {
+        console.log('Processing redemption:', redemption);
+        
+        return {
+          id: redemption.id,
+          userId: redemption.user_id,
+          points: redemption.points,
+          description: redemption.description,
+          createdAt: redemption.created_at,
+          status: redemption.status || 'PENDING',
+          processedAt: redemption.processed_at,
+          processedBy: redemption.processed_by,
+          user: {
+            firstName: redemption.user_first_name,
+            lastName: redemption.user_last_name,
+            email: redemption.user_email
+          },
+          processor: redemption.processor ? JSON.parse(redemption.processor) : null
+        };
+      });
 
       res.json(transformedRedemptions);
     } catch (error) {
