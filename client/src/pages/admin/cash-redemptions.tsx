@@ -207,7 +207,7 @@ function renderTransactionList(
                 <div className="flex justify-between items-center">
                   <h3 className="font-medium text-lg flex items-center gap-2">
                     <DollarSign className="h-5 w-5 text-yellow-500" />
-                    Cash Redemption: R{Math.abs(transaction.points / 100).toFixed(2)}
+                    Cash Redemption: R{(Math.abs(transaction.points) * 0.015).toFixed(2)} ({Math.abs(transaction.points).toLocaleString()} points)
                   </h3>
                   <Badge variant={transaction.status === 'PROCESSED' ? "outline" : "default"}>
                     {transaction.status === 'PROCESSED' ? (
