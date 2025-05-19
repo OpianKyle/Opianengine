@@ -3066,18 +3066,26 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
     const connection = await createConnection();
     try {
+      // Fix: Get points directly from request body instead of amount
+      const pointsToRedeem = Number(req.body.points);
+      
       console.log('Cash redemption request:', {
         userId: req.user.id,
-        amount: req.body.amount
+        points: pointsToRedeem
       });
+
+      // Validate points
+      if (!pointsToRedeem || pointsToRedeem <= 0) {
+        return res.status(400).json({ error: "Invalid points amount" });
+      }
 
       // Start transaction
       await connection.beginTransaction();
 
       try {
-        // Get user's current points
+        // Get user's current points and user details for email
         const [users] = await connection.execute(
-          'SELECT points FROM users WHERE id = ?',
+          'SELECT id, email, first_name, last_name, points FROM users WHERE id = ?',
           [req.user.id]
         );
 
@@ -3086,38 +3094,40 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         }
 
         const user = users[0];
-        const redemptionAmount = Number(req.body.amount);
-        const pointsRequired = redemptionAmount * 100; // 1 ZAR = 100 points
+        const cashAmount = (pointsToRedeem * 0.015).toFixed(2); // Convert points to cash (R0.015 per point)
 
         console.log('Redemption calculation:', {
           currentPoints: user.points,
-          pointsRequired,
-          redemptionAmount
+          pointsRequired: pointsToRedeem,
+          cashAmount
         });
 
         // Validate points balance
-        if (user.points < pointsRequired) {
+        if (user.points < pointsToRedeem) {
           throw new Error("Insufficient points balance");
         }
 
         // Update user points
         await connection.execute(
           'UPDATE users SET points = points - ? WHERE id = ?',
-          [pointsRequired, req.user.id]
+          [pointsToRedeem, req.user.id]
         );
 
         // Record the transaction
-        await connection.execute(
+        const [result] = await connection.execute(
           `INSERT INTO transactions (
-            user_id, points, type, description
-          ) VALUES (?, ?, ?, ?)`,
+            user_id, points, type, description, status
+          ) VALUES (?, ?, ?, ?, ?)`,
           [
             req.user.id,
-            -pointsRequired,
+            -pointsToRedeem,
             'CASH_REDEMPTION',
-            `Redeemed R${redemptionAmount.toFixed(2)} in cash`
+            `Redeemed R${cashAmount} in cash`,
+            'PENDING'
           ]
         );
+
+        const transactionId = result.insertId;
 
         await connection.commit();
 
@@ -3129,8 +3139,41 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
         console.log('Redemption successful:', {
           userId: req.user.id,
-          newBalance: updated[0].points
+          newBalance: updated[0].points,
+          transactionId
         });
+
+        // Send email notification to clientservices@opianrewards.com
+        try {
+          // Import email service if available
+          const { sendEmail } = require('./utils/emailService');
+          
+          const emailContent = `
+            <h2>New Cash Redemption Request</h2>
+            <p>A user has requested a cash redemption:</p>
+            <ul>
+              <li><strong>User ID:</strong> ${user.id}</li>
+              <li><strong>Name:</strong> ${user.first_name} ${user.last_name}</li>
+              <li><strong>Email:</strong> ${user.email}</li>
+              <li><strong>Points Redeemed:</strong> ${pointsToRedeem}</li>
+              <li><strong>Cash Amount:</strong> R${cashAmount}</li>
+              <li><strong>Transaction ID:</strong> ${transactionId}</li>
+              <li><strong>Date:</strong> ${new Date().toISOString()}</li>
+            </ul>
+            <p>Please process this redemption through the admin dashboard.</p>
+          `;
+          
+          await sendEmail({
+            to: 'clientservices@opianrewards.com',
+            subject: `Cash Redemption Request - R${cashAmount}`,
+            html: emailContent
+          });
+          
+          console.log('Redemption notification email sent successfully');
+        } catch (emailError) {
+          console.error('Failed to send redemption notification email:', emailError);
+          // Don't fail the request if email fails
+        }
 
         res.json({
           message: "Points redeemed successfully",
