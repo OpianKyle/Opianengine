@@ -481,7 +481,7 @@ router.post('/resend-welcome-email', async (req: any, res) => {
     
     // Get the user's details from the database
     const [userRows] = await connection.query(
-      'SELECT first_name, email, password FROM users WHERE id = ?',
+      'SELECT first_name, email FROM users WHERE id = ?',
       [userId]
     );
     
@@ -494,124 +494,25 @@ router.post('/resend-welcome-email', async (req: any, res) => {
     
     const user = userRows[0];
     
-    // Generate a temporary password and update the user's password in the database
-    const tempPassword = "12345678"; // Using a fixed password for testing purposes
+    // Format the welcome email
+    const { text, html } = formatRegistrationEmail(user.first_name, user.email);
     
-    // Hash the temporary password
-    const scrypt = require('crypto').scrypt;
-    const randomBytes = require('crypto').randomBytes;
-    const promisify = require('util').promisify;
-    const scryptAsync = promisify(scrypt);
+    // Send the welcome email
+    const emailResult = await sendEmail({
+      to: user.email,
+      subject: 'Welcome to OPIAN Rewards!',
+      text,
+      html,
+      emailType: 'CUSTOMER_WELCOME_RESEND'
+    });
     
-    try {
-      // Hash the password
-      const salt = randomBytes(16).toString('hex');
-      const buf = await scryptAsync(tempPassword, salt, 64);
-      const hashedPassword = `${buf.toString('hex')}.${salt}`;
-      
-      // Update the user's password in the database
-      await connection.query(
-        'UPDATE users SET password = ? WHERE id = ?',
-        [hashedPassword, userId]
-      );
-      
-      console.log(`Successfully updated password for user ${userId} to '${tempPassword}' (hashed)`);
-    } catch (passwordError) {
-      console.error("Error updating user password:", passwordError);
-      throw new Error("Failed to update user password");
-    }
-    
-    
-    const logoImageUrl = "https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-rewards-logo(R).png";
-    
-    const html = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to OPIAN Rewards</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background-color: #011d3d; padding: 20px; text-align: center; }
-          .content { padding: 20px; background-color: #ffffff; }
-          .credentials { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
-          .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
-          .btn { display: inline-block; background-color: #0056b3; color: white; padding: 10px 20px; 
-                text-decoration: none; border-radius: 5px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <img src="${logoImageUrl}" alt="OPIAN Rewards Logo" style="max-width: 200px;">
-          </div>
-          <div class="content">
-            <h2>Welcome to OPIAN Rewards!</h2>
-            <p>Dear ${user.first_name},</p>
-            <p>Thank you for being a valued member of OPIAN Rewards. We're excited to have you on board!</p>
-            
-            <div class="credentials">
-              <p><strong>Your Login Information:</strong></p>
-              <p>Username: ${user.email}</p>
-              <p>Password: ${tempPassword}</p>
-            </div>
-            
-            <p>With OPIAN Rewards, you can:</p>
-            <ul>
-              <li>Earn points on everyday purchases</li>
-              <li>Redeem rewards for cash or products</li>
-              <li>Refer friends and family to earn even more</li>
-              <li>Track your rewards progress through our dashboard</li>
-            </ul>
-            <p>Simply log in to your account at <a href="https://www.opianrewards.com">www.opianrewards.com</a> using the credentials above.</p>
-            <p>If you have any questions, please don't hesitate to contact our support team at <a href="mailto:clientservices@opianrewards.com">clientservices@opianrewards.com</a>.</p>
-            <p>Best regards,<br>The OPIAN Rewards Team</p>
-          </div>
-          <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} OPIAN Rewards. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-    
-    const text = `
-      Welcome to OPIAN Rewards!
-      
-      Dear ${user.first_name},
-      
-      Thank you for being a valued member of OPIAN Rewards. We're excited to have you on board!
-      
-      YOUR LOGIN INFORMATION:
-      Username: ${user.email}
-      Password: ${tempPassword}
-      
-      With OPIAN Rewards, you can:
-      - Earn points on everyday purchases
-      - Redeem rewards for cash or products
-      - Refer friends and family to earn even more
-      - Track your rewards progress through our dashboard
-      
-      Simply log in to your account at www.opianrewards.com using the credentials above.
-      
-      If you have any questions, please don't hesitate to contact our support team at clientservices@opianrewards.com.
-      
-      Best regards,
-      The OPIAN Rewards Team
-    `;
-    
-    // For demo purposes, we'll simulate successful email sending
-    // In a production environment, this would actually send an email through SMTP
-    let emailResult = true;
-    
-    // Log the attempt for debugging purposes
-    console.log(`[TEST MODE] Welcome email would be sent to ${user.email} with password ${tempPassword}`);
-    
-    // Skip logging for now to avoid the type error
-    // The action type 'RESEND_WELCOME_EMAIL' isn't in the allowed list
-    console.log(`Admin action: User ${req.user.id} resent welcome email to ${user.email}`);
+    // Log the admin action
+    await logAdminAction({
+      adminId: req.user.id,
+      targetUserId: userId,
+      actionType: 'RESEND_WELCOME_EMAIL',
+      details: `Resent welcome email to ${user.email}`
+    });
     
     if (emailResult) {
       return res.status(200).json({
