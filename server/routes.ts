@@ -4812,53 +4812,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  app.post("/api/rewards/redeem-cash", async (req, res) => {
-    if (!req.user) return res.status(401).json({error: "Unauthorized"});
-    const { points } = req.body;
-
-    if (!points || points <= 0) {
-      return res.status(400).json({ error: "Invalid points amount" });
-    }
-
-    try {
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, req.user.id),
-      });
-
-      if (!user || user.points < points) {
-        return res.status(400).json({ error: "Insufficient points" });
-      }
-
-      await db.transaction(async (tx) => {
-        const [transaction] = await tx.insert(transactions).values({
-          userId: user.id,
-          points: -points,
-          type: "CASH_REDEMPTION",
-          description: `Redeemed points for R${(points * 0.015).toFixed(2)}`,
-          status: "PENDING",
-          createdAt: new Date(),
-        }).returning().execute();
-
-        await tx
-          .update(users)
-          .set({
-            points: sql`${users.points} - ${points}`
-          })
-          .where(eq(users.id, user.id))
-          .execute();
-
-
-      });
-
-      res.json({
-        success: true,
-        message: `Successfully redeemed R${(points * 0.015).toFixed(2)}`
-      });
-    } catch (error) {
-      console.error('Error processing cash redemption:', error);
-      res.status(500).json({ error: 'Failed to process cash redemption' });
-    }
-  });
+  // Cash redemption endpoint handled above at line ~3062
 
   app.get("/api/admin/cash-redemptions", async (req, res) => {
     console.log('Cash redemptions request:', {
