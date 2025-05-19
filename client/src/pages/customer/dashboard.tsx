@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { queryClient } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
 import ReferralSection from "@/components/shared/referral-section";
-import { formatTransactionType } from "@/lib/utils";
+import { formatTransactionType, formatDate } from "@/lib/utils";
 import { 
   Package as PackageIcon, 
   Award, 
@@ -22,6 +22,117 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+
+// Add RedemptionHistory Component
+function RedemptionHistory() {
+  const { toast } = useToast();
+  
+  // Query to fetch redemption history
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["/api/customer/redemptions"],
+    queryFn: async () => {
+      const response = await fetch("/api/customer/redemptions");
+      if (!response.ok) {
+        throw new Error("Failed to fetch redemption history");
+      }
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+  
+  if (isLoading) {
+    return (
+      <div className="flex flex-col space-y-2">
+        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
+        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
+        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="text-center py-4">
+        <AlertCircle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+        <p className="text-sm text-muted-foreground">
+          Unable to load redemption history
+        </p>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="mt-2"
+          onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/customer/redemptions"] })}
+        >
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+  
+  const redemptions = data || [];
+  
+  if (redemptions.length === 0) {
+    return (
+      <div className="text-center py-4">
+        <DollarSign className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+        <p className="text-sm text-muted-foreground">
+          You haven't made any cash redemption requests yet.
+        </p>
+      </div>
+    );
+  }
+  
+  return (
+    <ScrollArea className="h-[180px] md:h-[220px]">
+      <div className="space-y-3">
+        {redemptions.map((redemption) => (
+          <Card key={redemption.id} className="bg-card dark:bg-[#011d3d]/70 border-border dark:border-[#022b5c] shadow-sm p-3">
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col">
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  <span className="font-medium">R{redemption.cashAmount}</span>
+                  <span className="text-xs text-muted-foreground">({redemption.points} points)</span>
+                </div>
+                <div className="flex items-center text-xs text-muted-foreground mt-1">
+                  <CalendarDays className="h-3 w-3 mr-1" />
+                  {formatDate(redemption.createdAt)}
+                </div>
+              </div>
+              <div>
+                <Badge 
+                  variant={redemption.status === 'PROCESSED' ? 'success' : 'outline'}
+                  className={`${
+                    redemption.status === 'PROCESSED' 
+                      ? 'bg-green-500/20 hover:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30' 
+                      : 'bg-yellow-500/20 hover:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30'
+                  }`}
+                >
+                  {redemption.status === 'PROCESSED' ? (
+                    <div className="flex items-center">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Processed
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Pending
+                    </div>
+                  )}
+                </Badge>
+              </div>
+            </div>
+            {redemption.status === 'PROCESSED' && redemption.processor && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Processed by {redemption.processor.firstName} {redemption.processor.lastName}
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </ScrollArea>
+  );
+}
 
 import { useOnboarding, OnboardingProvider } from "@/contexts/OnboardingContext";
 import AnimatedMetric from "@/components/shared/animated-metric";
