@@ -485,13 +485,20 @@ export default function TeamPage() {
                         <h3 className="text-white text-xl font-semibold text-center mb-1">{member.name}</h3>
                         <p className="text-[#43EB3E] text-sm text-center mb-4">{member.title}</p>
                         
-                        {/* Short description */}
-                        <p className="text-gray-300 text-sm text-center">
-                          {member.description.length > 120 
-                            ? `${member.description.substring(0, 120)}...` 
-                            : member.description
-                          }
-                        </p>
+                        {/* Short description with Read More indicator */}
+                        <div className="flex flex-col items-center">
+                          <p className="text-gray-300 text-sm text-center">
+                            {member.description.length > 100 
+                              ? `${member.description.substring(0, 100)}...` 
+                              : member.description
+                            }
+                          </p>
+                          {member.description.length > 100 && (
+                            <span className="text-[#43EB3E] text-xs mt-2 flex items-center font-medium">
+                              Read More <span className="ml-1 text-[#43EB3E]">→</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </DialogTrigger>
