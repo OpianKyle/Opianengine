@@ -5040,60 +5040,101 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     const connection = await createConnection();
     
     try {
-      // Simplified implementation with minimal dependencies
       // Check admin status directly from request user object
       if (!req.user || !req.user.is_admin) {
         console.log('User is not an admin:', req.user?.id);
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      // Direct update query without transaction for simplicity and reliability
-      const [updateResult] = await connection.execute(
-        `UPDATE cash_redemptions
-         SET status = 'PROCESSED', 
-             processed_at = NOW(), 
-             processed_by = ? 
-         WHERE id = ?`,
-        [req.user.id, id]
-      );
+      // Begin a transaction for database consistency
+      await connection.beginTransaction();
       
-      if (!updateResult || updateResult.affectedRows === 0) {
-        throw new Error("Failed to update cash redemption status. Redemption may not exist.");
-      }
-      
-      // Get the updated redemption details
-      const [redemptions] = await connection.execute(
-        `SELECT r.*, 
-                u.first_name AS user_first_name, 
-                u.last_name AS user_last_name, 
-                u.email AS user_email
-         FROM cash_redemptions r
-         JOIN users u ON r.user_id = u.id
-         WHERE r.id = ?`,
-        [id]
-      );
-      
-      if (!redemptions || redemptions.length === 0) {
-        throw new Error("Could not retrieve updated redemption information");
-      }
-      
-      const redemption = redemptions[0];
-      const cashAmount = redemption.cash_amount || (Math.abs(redemption.points) * 0.015).toFixed(2);
-      
-      console.log(`Cash redemption processed successfully: ID=${id}, Amount=R${cashAmount}`);
-      
-      // Return simplified response
-      res.json({
-        id: parseInt(id),
-        status: 'PROCESSED',
-        processedAt: new Date(),
-        processedBy: req.user.id,
-        user: {
-          firstName: redemption.user_first_name,
-          lastName: redemption.user_last_name,
-          email: redemption.user_email
+      try {
+        // 1. First check if this redemption exists and is pending
+        const [checkRedemptions] = await connection.execute(
+          `SELECT r.*, 
+                  u.first_name AS user_first_name, 
+                  u.last_name AS user_last_name, 
+                  u.email AS user_email,
+                  u.points AS user_current_points
+           FROM cash_redemptions r
+           JOIN users u ON r.user_id = u.id
+           WHERE r.id = ? AND r.status = 'PENDING'`,
+          [id]
+        );
+        
+        if (!checkRedemptions || checkRedemptions.length === 0) {
+          throw new Error("Cash redemption not found or already processed");
         }
-      });
+        
+        const redemption = checkRedemptions[0];
+        const cashAmount = redemption.cash_amount || (Math.abs(redemption.points) * 0.015).toFixed(2);
+        
+        // 2. Update the redemption status in cash_redemptions table
+        const [updateResult] = await connection.execute(
+          `UPDATE cash_redemptions
+           SET status = 'PROCESSED', 
+               processed_at = NOW(), 
+               processed_by = ? 
+           WHERE id = ?`,
+          [req.user.id, id]
+        );
+        
+        if (!updateResult || updateResult.affectedRows === 0) {
+          throw new Error("Failed to update cash redemption status");
+        }
+        
+        // 3. Log this action in the transaction history if needed
+        if (redemption.transaction_id) {
+          try {
+            await connection.execute(
+              `UPDATE transactions 
+               SET status = 'PROCESSED', 
+                   processed_at = NOW(), 
+                   processed_by = ? 
+               WHERE id = ?`,
+              [req.user.id, redemption.transaction_id]
+            );
+          } catch (transactionError) {
+            console.warn('Non-critical error updating transaction:', transactionError);
+            // Continue processing even if this fails - non-critical update
+          }
+        }
+        
+        // 4. Send email notification if applicable
+        try {
+          // This would be where an email notification is sent
+          // We'll just log it for now
+          console.log(`Email notification would be sent for cash redemption ID=${id}, Amount=R${cashAmount}`);
+        } catch (emailError) {
+          console.warn('Failed to send email notification:', emailError);
+          // Continue processing even if email fails - non-critical
+        }
+        
+        // 5. Commit all changes
+        await connection.commit();
+        
+        console.log(`Cash redemption processed successfully: ID=${id}, Amount=R${cashAmount}`);
+        
+        // 6. Return response with processed data
+        res.json({
+          id: parseInt(id),
+          status: 'PROCESSED',
+          processedAt: new Date(),
+          processedBy: req.user.id,
+          points: redemption.points,
+          cashAmount: cashAmount,
+          user: {
+            firstName: redemption.user_first_name,
+            lastName: redemption.user_last_name,
+            email: redemption.user_email
+          }
+        });
+      } catch (innerError) {
+        // Rollback transaction on error
+        await connection.rollback();
+        throw innerError;
+      }
     } catch (error) {
       console.error('Error processing cash redemption:', error);
       console.error('Request params:', req.params);
