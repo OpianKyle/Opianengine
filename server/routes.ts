@@ -5112,25 +5112,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
 
         const user = users[0];
         const cashAmount = redemption.cash_amount || (Math.abs(redemption.points) * 0.015).toFixed(2);
-
-        // Check if admin_actions table exists before logging
-        try {
-          await connection.execute(
-            `INSERT INTO admin_actions (
-              admin_id, action_type, target_user_id, details, created_at
-            ) VALUES (?, ?, ?, ?, NOW())`,
-            [
-              req.user.id, 
-              "PROCESSED_CASH_REDEMPTION", 
-              redemption.user_id,
-              `Processed cash redemption of R${cashAmount} (${Math.abs(redemption.points)} points)`
-            ]
-          );
-        } catch (logError) {
-          // If the table doesn't exist, just log to console but continue the process
-          console.log('Could not log to admin_actions table (might not exist):', logError.message);
-          // Continue with the transaction - don't let missing logging table block the core functionality
-        }
+        
+        // Log the action in console for debugging purposes
+        console.log(`Admin ${req.user.id} processed cash redemption of R${cashAmount} (${Math.abs(redemption.points)} points) for user ${redemption.user_id}`);
 
         await connection.commit();
 
