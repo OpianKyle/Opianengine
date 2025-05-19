@@ -898,6 +898,7 @@ export default function AdminCustomers() {
                     <TableHead className="hidden md:table-cell">Points</TableHead>
                     <TableHead className="hidden sm:table-cell">Status</TableHead>
                     <TableHead>Card Status</TableHead>
+                    <TableHead className="hidden lg:table-cell">Created Date</TableHead>
                     <TableHead className="hidden lg:table-cell">Assigned Products</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -1000,6 +1001,15 @@ export default function AdminCustomers() {
                           </TableCell>
                           <TableCell>
                             <CardStatusLabel status={customer.cardStatus || "NOT_DELIVERED"} />
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {customer.createdAt ? (
+                              <span className="whitespace-nowrap">
+                                {new Date(customer.createdAt).toLocaleDateString()}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">Not available</span>
+                            )}
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
                             <ScrollArea className="h-[100px]">
