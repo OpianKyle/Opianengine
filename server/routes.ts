@@ -3244,7 +3244,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           const emailContent = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 10px; border: 1px solid #eaeaea;">
               <div style="text-align: center; margin-bottom: 20px;">
-                <img src="https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-logo.png" alt="Opian Rewards Logo" style="max-width: 150px;">
+                <img src="https://8f2d193f-889d-43fe-9c09-168a138834c6-00-3ez96wkhjud1l.janeway.replit.dev/opian-rewards-logo(R).png" alt="Opian Rewards Logo" style="max-width: 150px;">
               </div>
               
               <h2 style="color: #011d3d; text-align: center; margin-bottom: 20px;">New Cash Redemption Request</h2>
