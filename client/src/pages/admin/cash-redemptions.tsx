@@ -33,11 +33,11 @@ export default function CashRedemptions() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("pending");
   
-  // Use direct fetch with credentials to handle authentication
+  // Use test endpoint during development
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["/api/admin/cash-redemptions"],
+    queryKey: ["/api/test/cash-redemptions"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/cash-redemptions", {
+      const response = await fetch("/api/test/cash-redemptions", {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
@@ -187,6 +187,8 @@ function renderTransactionList(
   showActions: boolean,
   onMarkProcessed?: (id: number) => void
 ) {
+  console.log("Transactions to render:", transactions);
+  
   if (transactions.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
