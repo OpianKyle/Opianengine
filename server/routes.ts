@@ -3128,6 +3128,27 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         );
 
         const transactionId = result.insertId;
+        
+        // Also record in the dedicated cash_redemptions table
+        await connection.execute(
+          `INSERT INTO cash_redemptions (
+            user_id, points, cash_amount, transaction_id, status
+          ) VALUES (?, ?, ?, ?, ?)`,
+          [
+            req.user.id,
+            pointsToRedeem,
+            cashAmount,
+            transactionId,
+            'PENDING'
+          ]
+        );
+
+        console.log('Cash redemption recorded in dedicated table', {
+          userId: req.user.id,
+          points: pointsToRedeem,
+          cashAmount,
+          transactionId
+        });
 
         await connection.commit();
 
