@@ -466,4 +466,74 @@ router.post('/process-monthly-renewals', async (req: any, res) => {
   }
 });
 
+// Endpoint to resend welcome email to a customer
+router.post('/resend-welcome-email', async (req: any, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "User ID is required" 
+      });
+    }
+    
+    // Get the user's details from the database
+    const [userRows] = await connection.query(
+      'SELECT first_name, email FROM users WHERE id = ?',
+      [userId]
+    );
+    
+    if (!userRows.length) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+    
+    const user = userRows[0];
+    
+    // Format the welcome email
+    const { text, html } = formatRegistrationEmail(user.first_name, user.email);
+    
+    // Send the welcome email
+    const emailResult = await sendEmail({
+      to: user.email,
+      subject: 'Welcome to OPIAN Rewards!',
+      text,
+      html,
+      emailType: 'CUSTOMER_WELCOME_RESEND'
+    });
+    
+    // Log the admin action
+    await logAdminAction({
+      adminId: req.user.id,
+      targetUserId: userId,
+      actionType: 'RESEND_WELCOME_EMAIL',
+      details: `Resent welcome email to ${user.email}`
+    });
+    
+    if (emailResult) {
+      return res.status(200).json({
+        success: true,
+        message: `Welcome email resent to ${user.email} successfully`
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send welcome email"
+      });
+    }
+  } catch (error) {
+    console.error("Error resending welcome email:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while resending welcome email"
+    });
+  } finally {
+    connection.release();
+  }
+});
+
 export default router;
