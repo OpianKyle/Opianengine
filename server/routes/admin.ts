@@ -3,6 +3,7 @@ import mysql from 'mysql2/promise';
 import { checkAdmin } from '../auth';
 import { logAdminAction } from '../admin-logger';
 import { stringify } from 'csv-stringify/sync';
+import { formatRegistrationEmail, sendEmail } from '../utils/emailService';
 // Import will be dynamically loaded in the route handler
 
 const router = Router();
