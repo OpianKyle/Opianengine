@@ -277,9 +277,19 @@ export default function HomePage() {
         setCurrentStep(emblaApi.selectedScrollSnap());
       });
       
+      // Auto-scroll functionality
+      const autoplayInterval = setInterval(() => {
+        if (emblaApi.canScrollNext()) {
+          emblaApi.scrollNext();
+        } else {
+          emblaApi.scrollTo(0); // Return to first slide if at the end
+        }
+      }, 5000); // Change slide every 5 seconds
+      
       // Return cleanup function
       return () => {
         emblaApi.off('select', () => {});
+        clearInterval(autoplayInterval);
       };
     }
   }, [emblaApi]);
