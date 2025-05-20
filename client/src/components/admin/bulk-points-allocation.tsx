@@ -101,7 +101,8 @@ export default function BulkPointsAllocation({ selectedIds, onUpdateComplete }: 
             <Label>Allocation Type</Label>
             <RadioGroup 
               defaultValue="regular" 
-              {...form.register('allocationType')}
+              value={form.watch('allocationType')}
+              onValueChange={(value) => form.setValue('allocationType', value as 'regular' | 'cashDeposit')}
               className="flex flex-col space-y-2"
             >
               <div className="flex items-center space-x-2">
