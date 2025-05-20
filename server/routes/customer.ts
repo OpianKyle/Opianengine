@@ -160,4 +160,127 @@ router.post('/cash-deposits/allocate', isAuthenticated, async (req: Request, res
   }
 });
 
+// Add cash withdrawal request endpoint
+router.post('/cash-redemptions/request', isAuthenticated, async (req: Request, res: Response) => {
+  let connection;
+  try {
+    const { bankDetails, notes } = req.body;
+    
+    if (!bankDetails || typeof bankDetails !== 'string' || bankDetails.trim() === '') {
+      return res.status(400).json({ error: 'Bank details are required' });
+    }
+    
+    console.log('Processing cash withdrawal request for user:', req.user.id);
+    
+    connection = await createConnection();
+    
+    // First check if the user has enough cash deposits (minimum R5000)
+    const [totalResult] = await connection.execute(
+      `SELECT COALESCE(SUM(points), 0) as total_points 
+       FROM cash_deposits 
+       WHERE user_id = ?`,
+      [req.user.id]
+    );
+    
+    const totalPoints = totalResult[0]?.total_points || 0;
+    const totalCashValue = parseFloat((totalPoints * 0.015).toFixed(2));
+    
+    console.log('User total cash value:', totalCashValue);
+    
+    if (totalCashValue < 5000) {
+      return res.status(400).json({ 
+        error: 'Insufficient funds for withdrawal',
+        message: 'You need at least R5,000 in your cash wallet to request a withdrawal'
+      });
+    }
+    
+    // Start transaction
+    await connection.beginTransaction();
+    
+    // Calculate how many points are needed for the withdrawal
+    const pointsNeeded = totalPoints;
+    
+    // Create redemption request in the cash_redemptions table
+    await connection.execute(
+      `INSERT INTO cash_redemptions (
+        user_id, 
+        points, 
+        cash_amount, 
+        bank_details, 
+        notes, 
+        status, 
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, 'PENDING', NOW())`,
+      [
+        req.user.id, 
+        -pointsNeeded, // Store as negative points as we're removing them from the wallet
+        totalCashValue, 
+        bankDetails,
+        notes || ''
+      ]
+    );
+    
+    // Remove all cash deposit records for this user (or mark them as redeemed)
+    await connection.execute(
+      `DELETE FROM cash_deposits WHERE user_id = ?`,
+      [req.user.id]
+    );
+    
+    // Send email notification to admin
+    try {
+      // Get user info for the email
+      const [userInfo] = await connection.execute(
+        'SELECT email, first_name, last_name FROM users WHERE id = ?',
+        [req.user.id]
+      );
+      
+      // Prepare email data
+      const user = userInfo[0];
+      const emailData = {
+        to: 'clientservices@opianrewards.com',
+        subject: 'New Cash Redemption Request',
+        text: `
+          A new cash redemption request has been submitted.
+          
+          User: ${user.first_name} ${user.last_name} (${user.email})
+          Amount: R${totalCashValue.toFixed(2)}
+          Bank Details: ${bankDetails}
+          ${notes ? `Additional Notes: ${notes}` : ''}
+          
+          Please process this request within 5-7 business days.
+        `
+      };
+      
+      // Use server's email sending function (this would be implemented elsewhere)
+      // This is a placeholder for the actual email sending logic
+      console.log('Would send email notification:', emailData);
+    } catch (emailError) {
+      console.error('Failed to send redemption notification email:', emailError);
+      // Continue with the redemption process even if email sending fails
+    }
+    
+    await connection.commit();
+    
+    res.json({ 
+      success: true, 
+      message: 'Withdrawal request submitted successfully',
+      amount: totalCashValue
+    });
+    
+  } catch (error) {
+    console.error('Error processing cash withdrawal request:', error);
+    if (connection) {
+      await connection.rollback();
+    }
+    res.status(500).json({ 
+      error: 'Failed to process withdrawal request',
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+    });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+});
+
 export default router;

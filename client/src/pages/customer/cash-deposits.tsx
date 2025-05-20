@@ -30,7 +30,7 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { InfoIcon, BanknoteIcon } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 
 interface CashDeposit {
   id: number;
@@ -304,6 +304,23 @@ export default function CashDepositsPage() {
   const totalCashValue = data?.totalCashValue || 0;
   const availablePoints = profileData?.points || 0;
 
+  // Function to handle withdrawal request submission
+  const handleWithdrawalRequest = async () => {
+    if (!bankDetails.trim()) {
+      toast({
+        title: "Missing Bank Details",
+        description: "Please provide your bank details for the withdrawal.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    withdrawalMutation.mutate({ 
+      bankDetails,
+      notes: withdrawalNotes
+    });
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
@@ -326,6 +343,80 @@ export default function CashDepositsPage() {
           ) : null}
         </div>
       </div>
+      
+      {/* Withdrawal Request Dialog */}
+      <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Cash Withdrawal</DialogTitle>
+            <DialogDescription>
+              You are about to request a withdrawal of {formatCurrency(totalCashValue)} from your cash wallet.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            {totalCashValue < 5000 ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Insufficient Funds</AlertTitle>
+                <AlertDescription>
+                  You need at least R5,000 in your cash wallet to request a withdrawal. You currently have {formatCurrency(totalCashValue)}.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                <div className="space-y-1">
+                  <Label htmlFor="bankDetails">Bank Details</Label>
+                  <Textarea 
+                    id="bankDetails"
+                    placeholder="Enter your bank details including account number, branch code, and bank name"
+                    value={bankDetails}
+                    onChange={(e) => setBankDetails(e.target.value)}
+                    className="min-h-[120px]"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-1">
+                  <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                  <Textarea 
+                    id="notes"
+                    placeholder="Any additional information regarding your withdrawal request"
+                    value={withdrawalNotes}
+                    onChange={(e) => setWithdrawalNotes(e.target.value)}
+                  />
+                </div>
+                
+                <Alert>
+                  <InfoIcon className="h-4 w-4" />
+                  <AlertTitle>Processing Time</AlertTitle>
+                  <AlertDescription>
+                    Withdrawal requests are typically processed within 5-7 business days.
+                  </AlertDescription>
+                </Alert>
+              </>
+            )}
+          </div>
+          
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setWithdrawDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            
+            <Button
+              type="button"
+              onClick={handleWithdrawalRequest}
+              disabled={totalCashValue < 5000 || !bankDetails.trim() || withdrawalMutation.isPending}
+            >
+              {withdrawalMutation.isPending ? "Processing..." : "Submit Withdrawal Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
