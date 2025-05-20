@@ -888,8 +888,8 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
 
           // Log in transaction history
           await conn.query(
-            'INSERT INTO transactions (user_id, points, description, transaction_type) VALUES (?, ?, ?, ?)',
-            [customer.id, pointsToAdd, transactionDescription, 'CARD_STATEMENT']
+            'INSERT INTO transactions (user_id, points, description, type) VALUES (?, ?, ?, ?)',
+            [customer.id, pointsToAdd, transactionDescription, 'ADMIN_ADJUSTMENT']
           );
 
           stats.pointsAllocated += pointsToAdd;
