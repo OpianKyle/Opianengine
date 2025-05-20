@@ -49,6 +49,7 @@ import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
 import RedemptionsPage from "@/pages/customer/redemptions";
+import CashDepositsPage from "@/pages/customer/cash-deposits";
 import SubscriptionPage from "@/pages/customer/subscription"; // Import subscription page
 
 // Agent pages
@@ -285,6 +286,12 @@ function Router() {
       <Route path="/redemptions">
         <CustomerLayout>
           <ProtectedRoute component={RedemptionsPage} />
+        </CustomerLayout>
+      </Route>
+      
+      <Route path="/cash-deposits">
+        <CustomerLayout>
+          <ProtectedRoute component={CashDepositsPage} />
         </CustomerLayout>
       </Route>
       

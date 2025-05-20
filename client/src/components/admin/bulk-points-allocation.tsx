@@ -11,10 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const bulkPointsSchema = z.object({
   points: z.coerce.number().int().min(1, { message: "Points must be a positive number" }),
   description: z.string().min(3, { message: "Description is required" }),
+  allocationType: z.enum(['regular', 'cashDeposit']),
 });
 
 type BulkPointsFormData = z.infer<typeof bulkPointsSchema>;
@@ -33,6 +35,7 @@ export default function BulkPointsAllocation({ selectedIds, onUpdateComplete }: 
     defaultValues: {
       points: 0,
       description: "",
+      allocationType: "regular",
     },
   });
 
@@ -48,6 +51,7 @@ export default function BulkPointsAllocation({ selectedIds, onUpdateComplete }: 
           userIds: selectedIds,
           points: data.points,
           description: data.description,
+          allocationType: data.allocationType,
         }),
       });
       
@@ -93,6 +97,26 @@ export default function BulkPointsAllocation({ selectedIds, onUpdateComplete }: 
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-4 mb-4">
+            <Label>Allocation Type</Label>
+            <RadioGroup 
+              defaultValue="regular" 
+              {...form.register('allocationType')}
+              className="flex flex-col space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="regular" id="regular" />
+                <Label htmlFor="regular" className="font-normal">Regular Points</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="cashDeposit" id="cashDeposit" />
+                <Label htmlFor="cashDeposit" className="font-normal">
+                  Cash Deposits (R0.015 per point)
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="points">Points to Allocate</Label>
             <Input
@@ -103,6 +127,11 @@ export default function BulkPointsAllocation({ selectedIds, onUpdateComplete }: 
             />
             {form.formState.errors.points && (
               <p className="text-sm text-red-500">{form.formState.errors.points.message}</p>
+            )}
+            {form.watch('allocationType') === 'cashDeposit' && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Cash Value: R{(form.watch('points') || 0) * 0.015}
+              </p>
             )}
           </div>
 

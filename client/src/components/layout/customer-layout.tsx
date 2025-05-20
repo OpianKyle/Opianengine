@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Home, Gift, Users, User, Menu, X, ShoppingBag, CreditCard, HelpCircle, DollarSign } from "lucide-react";
+import { Home, Gift, Users, User, Menu, X, ShoppingBag, CreditCard, HelpCircle, DollarSign, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/NotificationBell";
 import { prefetchCustomerData } from "@/lib/queryClient";
@@ -71,6 +71,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     // Rewards section hidden as requested
     { label: "Referrals", href: "/referrals", icon: <Users className="h-4 w-4 mr-2" /> },
     { label: "Redemptions", href: "/redemptions", icon: <DollarSign className="h-4 w-4 mr-2" /> },
+    { label: "Cash Deposits", href: "/cash-deposits", icon: <Wallet className="h-4 w-4 mr-2" /> },
     // Subscription menu item removed as requested
     { label: "Profile", href: "/profile", icon: <User className="h-4 w-4 mr-2" />, className: "profile-link" },
   ];

@@ -26,6 +26,7 @@ import adminToolsRouter from './routes/admin-tools';
 import analyticsRouter from './routes/analytics';
 import socialUsersRouter from './routes/social-users';
 import specialMigrationsRouter from './routes/special-migrations';
+import customerRouter from './routes/customer';
 import { NotificationService } from './services/notification-service';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
@@ -1165,6 +1166,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/analytics', analyticsRouter);
   app.use('/api/social', socialUsersRouter);
   app.use('/api/special-migrations', specialMigrationsRouter);
+  app.use('/api/customer', customerRouter);
   
   // Register test customer routes
   registerTestCustomerRoutes(app);
@@ -1283,8 +1285,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { userIds, points, description } = req.body;
-      console.log('Bulk points allocation request:', { userIds, points, description });
+      const { userIds, points, description, allocationType } = req.body;
+      console.log('Bulk points allocation request:', { userIds, points, description, allocationType });
 
       if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
         return res.status(400).json({ error: "No users selected" });
@@ -1297,6 +1299,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       if (!description) {
         return res.status(400).json({ error: "Description is required" });
       }
+      
+      // Default to regular points if allocationType not specified
+      const pointsType = allocationType === 'cashDeposit' ? 'cashDeposit' : 'regular';
 
       // Begin transaction for bulk operations
       await connection.beginTransaction();
@@ -1321,39 +1326,75 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           if (users && users.length > 0) {
             const user = users[0];
             
-            // Insert transaction record
-            await connection.execute(
-              `INSERT INTO transactions (user_id, points, type, description)
-               VALUES (?, ?, 'ADMIN_ADJUSTMENT', ?)`,
-              [userId, points, description]
-            );
-
-            // Update user points
-            await connection.execute(
-              'UPDATE users SET points = points + ? WHERE id = ?',
-              [points, userId]
-            );
-
-            // Get updated points
-            const [updatedUsers] = await connection.execute(
-              'SELECT points FROM users WHERE id = ?',
-              [userId]
-            );
-
-            // Log admin action
-            await connection.execute(
-              `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
-               VALUES (?, 'POINT_ADJUSTMENT', ?, ?)`,
-              [req.user.id, userId, `Bulk adjustment - Points: ${points}, Reason: ${description}`]
-            );
-
-            results.push({
-              userId,
-              name: `${user.first_name} ${user.last_name}`,
-              email: user.email,
-              previousPoints: user.points,
-              newPoints: updatedUsers[0].points
-            });
+            if (pointsType === 'cashDeposit') {
+              // For cash deposits, add entry to cash_deposits table
+              await connection.execute(
+                `INSERT INTO cash_deposits (user_id, points, description)
+                 VALUES (?, ?, ?)`,
+                [userId, points, description]
+              );
+              
+              // Get updated cash deposits
+              const [cashDeposits] = await connection.execute(
+                `SELECT SUM(points) as total_cash_points FROM cash_deposits WHERE user_id = ?`,
+                [userId]
+              );
+              
+              // Log admin action for cash deposit
+              await connection.execute(
+                `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
+                 VALUES (?, 'CASH_DEPOSIT', ?, ?)`,
+                [req.user.id, userId, `Cash deposit - Points: ${points}, Reason: ${description}`]
+              );
+              
+              results.push({
+                userId,
+                name: `${user.first_name} ${user.last_name}`,
+                email: user.email,
+                previousPoints: user.points,
+                newPoints: user.points,
+                cashDepositPoints: cashDeposits[0].total_cash_points || 0,
+                cashDepositValue: ((cashDeposits[0].total_cash_points || 0) * 0.015).toFixed(2),
+                allocationType: 'cashDeposit'
+              });
+            } else {
+              // For regular points, update the users table and add transaction
+              
+              // Insert transaction record
+              await connection.execute(
+                `INSERT INTO transactions (user_id, points, type, description)
+                 VALUES (?, ?, 'ADMIN_ADJUSTMENT', ?)`,
+                [userId, points, description]
+              );
+  
+              // Update user points
+              await connection.execute(
+                'UPDATE users SET points = points + ? WHERE id = ?',
+                [points, userId]
+              );
+  
+              // Get updated points
+              const [updatedUsers] = await connection.execute(
+                'SELECT points FROM users WHERE id = ?',
+                [userId]
+              );
+  
+              // Log admin action
+              await connection.execute(
+                `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
+                 VALUES (?, 'POINT_ADJUSTMENT', ?, ?)`,
+                [req.user.id, userId, `Bulk adjustment - Points: ${points}, Reason: ${description}`]
+              );
+  
+              results.push({
+                userId,
+                name: `${user.first_name} ${user.last_name}`,
+                email: user.email,
+                previousPoints: user.points,
+                newPoints: updatedUsers[0].points,
+                allocationType: 'regular'
+              });
+            }
           }
         }
 
