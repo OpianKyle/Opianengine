@@ -294,6 +294,12 @@ function Router() {
         </CustomerLayout>
       </Route>
       
+      <Route path="/cash-wallet">
+        <CustomerLayout>
+          <ProtectedRoute component={CustomerCashWallet} />
+        </CustomerLayout>
+      </Route>
+      
       {/* Subscription routes removed as requested */}
 
       {/* Social User Routes */}

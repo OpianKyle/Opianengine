@@ -1,82 +1,112 @@
-import express from 'express';
-import mysql from 'mysql2/promise';
+import { Router } from 'express';
+import { createConnection } from '../db';
 
-// Database connection helper function
-export async function createConnection() {
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'dedi1350.jnb1.host-h.net',
-    user: process.env.DB_USER || 'opianrewards',
-    password: process.env.DB_PASSWORD || 'R4yq9q6ZxYOkbdgf',
-    database: process.env.DB_NAME || 'opianrewards'
-  });
-  
-  return connection;
-}
+const router = Router();
 
-const router = express.Router();
-
-// Get customer cash redemption history
-router.get('/redemptions', async (req, res) => {
+// Get customer information including points and cash balance
+router.get("/points", async (req: any, res) => {
   if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: 'Not authenticated' });
+    return res.status(401).json({ error: "Not authenticated" });
   }
-  
+
   const connection = await createConnection();
-  
   try {
-    const userId = req.user?.id;
-    console.log('Fetching redemptions for user:', userId);
-    
-    // Check if cash_redemptions table exists
-    const [tables] = await connection.execute(
-      `SHOW TABLES LIKE 'cash_redemptions'`
+    const [userData] = await connection.execute(
+      `SELECT 
+        id,
+        email,
+        first_name,
+        last_name,
+        CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
+        CAST(COALESCE(cash_balance, 0) as DECIMAL(10,2)) as cash_balance,
+        selected_package
+      FROM users 
+      WHERE id = ?`,
+      [req.user?.id]
     );
-    
-    if (!tables || tables.length === 0) {
-      console.log('cash_redemptions table does not exist');
-      return res.json([]);
+
+    if (!userData || !userData[0]) {
+      return res.status(404).json({ error: "User not found" });
     }
-    
-    // Get redemptions for this user with processor details
-    const [redemptions] = await connection.execute(
-      `SELECT r.*, 
-              u.first_name AS processor_first_name, 
-              u.last_name AS processor_last_name,
-              DATE_FORMAT(r.created_at, '%Y-%m-%dT%H:%i:%s.000Z') as formatted_created_date,
-              DATE_FORMAT(r.processed_at, '%Y-%m-%dT%H:%i:%s.000Z') as formatted_processed_date
-       FROM cash_redemptions r
-       LEFT JOIN users u ON r.processed_by = u.id
-       WHERE r.user_id = ?
-       ORDER BY r.created_at DESC`,
-      [userId]
+
+    console.log('Points data retrieved:', {
+      userId: userData[0].id,
+      rawPoints: userData[0].points,
+      pointsType: typeof userData[0].points,
+      cashBalance: userData[0].cash_balance,
+      package: userData[0].selected_package,
+      packageUpperCase: userData[0].selected_package ? userData[0].selected_package.toUpperCase() : null
+    });
+
+    // Ensure points is properly converted to a number
+    const points = parseFloat(userData[0].points || '0');
+    const cashBalance = parseFloat(userData[0].cash_balance || '0');
+
+    // Format response
+    res.json({
+      points,
+      cashBalance,
+      firstName: userData[0].first_name,
+      lastName: userData[0].last_name,
+      email: userData[0].email,
+      selectedPackage: userData[0].selected_package
+    });
+  } catch (error) {
+    console.error('Error fetching user points:', error);
+    res.status(500).json({ error: 'Failed to fetch user points' });
+  } finally {
+    await connection.end();
+  }
+});
+
+// Endpoint to fetch cash wallet transactions
+router.get("/cash-wallet", async (req: any, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const connection = await createConnection();
+  try {
+    console.log('Fetching cash wallet data for user:', req.user.id);
+
+    // First get the user's cash balance
+    const [userRows] = await connection.execute(
+      `SELECT 
+        id,
+        CAST(COALESCE(cash_balance, 0) as DECIMAL(10,2)) as cash_balance
+      FROM users 
+      WHERE id = ?`,
+      [req.user.id]
     );
-    
-    console.log('Found redemptions for user:', {
-      userId,
-      count: redemptions ? redemptions.length : 0
+
+    if (!userRows || !userRows[0]) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const cashBalance = parseFloat(userRows[0].cash_balance || '0');
+
+    // Now get transactions from cash_wallet_transactions table
+    const [transactions] = await connection.execute(
+      `SELECT 
+        cwt.*,
+        DATE_FORMAT(cwt.created_at, '%Y-%m-%dT%H:%i:%s.000Z') as timestamp
+      FROM cash_wallet_transactions cwt
+      WHERE cwt.user_id = ?
+      ORDER BY cwt.created_at DESC
+      LIMIT 50`,
+      [req.user.id]
+    );
+
+    console.log('Found cash wallet transactions:', transactions ? transactions.length : 0);
+
+    // Format the response
+    res.json({
+      cash_balance: cashBalance,
+      transactions: transactions || []
     });
-    
-    // Format the redemptions for the frontend
-    const formattedRedemptions = redemptions ? redemptions.map((r: any) => ({
-      id: r.id,
-      points: Math.abs(r.points), // Convert to positive for display
-      cashAmount: r.cash_amount || (Math.abs(r.points) * 0.015).toFixed(2),
-      status: r.status || 'PENDING',
-      createdAt: r.formatted_created_date || r.created_at,
-      processedAt: r.formatted_processed_date || r.processed_at,
-      processor: r.processed_by ? {
-        firstName: r.processor_first_name,
-        lastName: r.processor_last_name
-      } : null
-    })) : [];
-    
-    res.json(formattedRedemptions);
-  } catch (error: any) {
-    console.error('Error fetching redemptions:', error);
-    res.status(500).json({ 
-      error: "Failed to fetch redemptions",
-      message: error.message 
-    });
+  } catch (error) {
+    console.error('Error fetching cash wallet data:', error);
+    res.status(500).json({ error: 'Failed to fetch cash wallet data' });
   } finally {
     await connection.end();
   }

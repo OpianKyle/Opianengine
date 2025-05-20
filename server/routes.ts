@@ -23,6 +23,7 @@ import { leadsRouter } from './routes/leads';
 import { contactRouter } from './routes/contact';
 import { registerTestCustomerRoutes } from './test-customer-routes';
 import adminToolsRouter from './routes/admin-tools';
+import customerRouter from './routes/customer';
 import analyticsRouter from './routes/analytics';
 import socialUsersRouter from './routes/social-users';
 import specialMigrationsRouter from './routes/special-migrations';
@@ -1014,8 +1015,10 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Mount referral routes
-  // Mount the referral routes
   app.use('/api/referral', referralRouter);
+  
+  // Mount customer routes
+  app.use('/api/customer', customerRouter);
   
   // Direct endpoints for referral routes to avoid 404 issues
   app.get("/api/referral/validate", async (req, res) => {
@@ -3181,34 +3184,49 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     try {
       console.log('Fetching cash wallet transactions for user:', req.user.id);
 
-      const [transactions] = await connection.execute(
+      // First get the user's cash balance
+      const [userRows] = await connection.execute(
         `SELECT 
-          cw.*,
-          DATE_FORMAT(cw.transaction_date, '%Y-%m-%dT%H:%i:%s.000Z') as formatted_date
-        FROM cash_wallet cw
-        WHERE cw.user_id = ?
-        ORDER BY cw.transaction_date DESC`,
+          id,
+          CAST(COALESCE(cash_balance, 0) as DECIMAL(10,2)) as cash_balance
+        FROM users 
+        WHERE id = ?`,
         [req.user.id]
       );
 
-      console.log('Found cash wallet transactions:', transactions.length);
+      if (!userRows || !userRows[0]) {
+        return res.status(404).json({ error: "User not found" });
+      }
 
-      // Transform the transactions data
-      const transformedTransactions = transactions.map((t: any) => ({
-        id: t.id,
-        amount: t.amount,
-        description: t.description,
-        createdAt: t.formatted_date
-      }));
+      const cashBalance = parseFloat(userRows[0].cash_balance || '0');
 
-      res.json(transformedTransactions);
+      // Now get transactions from cash_wallet_transactions table
+      const [transactions] = await connection.execute(
+        `SELECT 
+          cwt.*,
+          DATE_FORMAT(cwt.created_at, '%Y-%m-%dT%H:%i:%s.000Z') as timestamp
+        FROM cash_wallet_transactions cwt
+        WHERE cwt.user_id = ?
+        ORDER BY cwt.created_at DESC
+        LIMIT 50`,
+        [req.user.id]
+      );
+
+      console.log('Found cash wallet transactions:', transactions ? transactions.length : 0);
+
+      // Format the response
+      res.json({
+        cash_balance: cashBalance,
+        transactions: transactions || []
+      });
     } catch (error) {
-      console.error('Error fetching cash wallet transactions:', error);
-      res.status(500).json({ error: 'Failed to fetch cash wallet transactions' });
+      console.error('Error fetching cash wallet data:', error);
+      res.status(500).json({ error: 'Failed to fetch cash wallet data' });
     } finally {
       await connection.end();
     }
   });
+
 
   // Add proper error handling and validation for cash redemption
   app.post("/api/rewards/redeem-cash", async (req, res) => {
