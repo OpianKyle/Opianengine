@@ -185,13 +185,13 @@ export default function CashDepositsPage() {
     }
     
     // Check if user has enough points
-    const availablePoints = profileData?.points || 0;
-    console.log('Available points:', availablePoints);
+    const availableRewardsPoints = profileData?.points || 0;
+    console.log('Available rewards points:', availableRewardsPoints);
     
-    if (points > availablePoints) {
+    if (points > availableRewardsPoints) {
       toast({
         title: 'Insufficient Points',
-        description: `You only have ${availablePoints.toLocaleString()} points available.`,
+        description: `You only have ${availableRewardsPoints.toLocaleString()} rewards points available.`,
         variant: 'destructive',
       });
       return;
@@ -298,9 +298,11 @@ export default function CashDepositsPage() {
 
   // Format the data for display
   const deposits = data?.deposits || [];
+  // Cash deposit points (10,000) - separate from regular rewards points (27,000)
   const totalPoints = data?.totalPoints || 0;
   const totalCashValue = data?.totalCashValue || 0;
-  const availablePoints = profileData?.points || 0;
+  // For allocation purposes, we use the regular rewards points (27,000)
+  const availableRewardsPoints = profileData?.points || 0;
 
   // Function to handle withdrawal request submission
   const handleWithdrawalRequest = async () => {
@@ -463,9 +465,14 @@ export default function CashDepositsPage() {
                 value={pointsToAllocate}
                 onChange={(e) => setPointsToAllocate(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                Available: {profileLoading ? 'Loading...' : (profileData ? profileData.points.toLocaleString() : '0')} points
-              </p>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">
+                  Available Cash Deposit Points: {totalPoints.toLocaleString()} points (R{totalCashValue.toFixed(2)})
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Available Rewards Points: {profileLoading ? 'Loading...' : (profileData ? profileData.points.toLocaleString() : '0')} points
+                </p>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="preview">Cash Value Preview</Label>
@@ -494,7 +501,7 @@ export default function CashDepositsPage() {
           </p>
           <Button 
             onClick={handleAllocate}
-            disabled={!pointsToAllocate || Number(pointsToAllocate) <= 0 || Number(pointsToAllocate) > availablePoints}
+            disabled={!pointsToAllocate || Number(pointsToAllocate) <= 0 || Number(pointsToAllocate) > availableRewardsPoints}
           >
             Allocate Points
           </Button>
