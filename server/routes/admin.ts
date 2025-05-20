@@ -872,13 +872,8 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
 
         // Process based on the transaction type we determined earlier
         if (determinedType === 'debit') {
-          // Money deduction = reward points (1 Rand = 1 point)
-          const pointsToAdd = Math.floor(transactionAmount);
-
-          if (pointsToAdd <= 0) {
-            stats.errors.push(`Row ${stats.totalProcessed}: Invalid points amount (${pointsToAdd})`);
-            continue;
-          }
+          // Each transaction = 1 reward point (not based on amount)
+          const pointsToAdd = 1;
 
           // Add points to customer
           await conn.query(
@@ -893,16 +888,11 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           );
 
           stats.pointsAllocated += pointsToAdd;
-          console.log(`Added ${pointsToAdd} reward points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
+          console.log(`Added ${pointsToAdd} reward point to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
         } 
         else if (determinedType === 'credit') {
-          // Money deposit = cash deposit points (1 Rand = 1 point)
-          const cashDepositPoints = Math.floor(transactionAmount);
-
-          if (cashDepositPoints <= 0) {
-            stats.errors.push(`Row ${stats.totalProcessed}: Invalid cash deposit amount (${cashDepositPoints})`);
-            continue;
-          }
+          // Each transaction = 1 cash deposit point (not based on amount)
+          const cashDepositPoints = 1;
 
           // Add to cash_deposits table
           await conn.query(
@@ -911,7 +901,7 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           );
 
           stats.cashDepositsAllocated += cashDepositPoints;
-          console.log(`Added ${cashDepositPoints} cash deposit points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
+          console.log(`Added ${cashDepositPoints} cash deposit point to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
         } 
         else {
           stats.errors.push(`Row ${stats.totalProcessed}: Unknown transaction type`);
