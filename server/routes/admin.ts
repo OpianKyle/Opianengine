@@ -866,14 +866,62 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           
           // Go through all values and find one that looks like a monetary amount
           for (const value of rowValues) {
-            // Remove currency symbols, spaces and commas to parse the number
-            const cleanedValue = String(value).replace(/[^0-9.,]/g, '').replace(/,/g, '.');
-            const parsedAmount = parseFloat(cleanedValue);
+            // Convert to string and standardize for processing
+            const stringValue = String(value).trim();
+            console.log(`Checking value: ${stringValue}`);
+            
+            // Check for European/South African format like 859,25
+            let parsedAmount: number;
+            
+            // Match exact format like "859,25" (numbers followed by comma and exactly 2 digits)
+            if (/^\d+,\d{2}$/.test(stringValue)) {
+              // It's definitely a decimal comma format - replace with dot for parsing
+              parsedAmount = parseFloat(stringValue.replace(',', '.'));
+              console.log(`European decimal format detected: ${stringValue} -> ${parsedAmount}`);
+            } else {
+              // For other formats, try a more general approach
+              // First clean the string of any non-numeric characters except comma and dot
+              const cleanedValue = stringValue.replace(/[^0-9.,\-]/g, '');
+              
+              if (cleanedValue.includes(',') && !cleanedValue.includes('.')) {
+                // There's only a comma - determine if it's decimal or thousands separator
+                const parts = cleanedValue.split(',');
+                if (parts.length === 2 && parts[1].length <= 2) {
+                  // Almost certainly a decimal comma (e.g., 859,25)
+                  parsedAmount = parseFloat(cleanedValue.replace(',', '.'));
+                  console.log(`Decimal comma format: ${stringValue} -> ${cleanedValue} -> ${parsedAmount}`);
+                } else {
+                  // Probably a thousands separator (e.g., 1,000)
+                  parsedAmount = parseFloat(cleanedValue.replace(/,/g, ''));
+                  console.log(`Thousands separator format: ${stringValue} -> ${cleanedValue} -> ${parsedAmount}`);
+                }
+              } else if (cleanedValue.includes(',') && cleanedValue.includes('.')) {
+                // Has both comma and dot - determine which is the decimal point based on position
+                const lastCommaIndex = cleanedValue.lastIndexOf(',');
+                const lastDotIndex = cleanedValue.lastIndexOf('.');
+                
+                if (lastCommaIndex > lastDotIndex) {
+                  // Format like 1.000,25 (European style)
+                  const properlyFormatted = cleanedValue.replace(/\./g, '').replace(',', '.');
+                  parsedAmount = parseFloat(properlyFormatted);
+                  console.log(`European mixed format: ${stringValue} -> ${properlyFormatted} -> ${parsedAmount}`);
+                } else {
+                  // Format like 1,000.25 (US style)
+                  const properlyFormatted = cleanedValue.replace(/,/g, '');
+                  parsedAmount = parseFloat(properlyFormatted);
+                  console.log(`US mixed format: ${stringValue} -> ${properlyFormatted} -> ${parsedAmount}`);
+                }
+              } else {
+                // Standard format or just dot as decimal
+                parsedAmount = parseFloat(cleanedValue);
+                console.log(`Standard format: ${stringValue} -> ${cleanedValue} -> ${parsedAmount}`);
+              }
+            }
             
             // Check if the amount is reasonable (between 1 and 100,000)
             // This prevents processing of unrealistic amounts
             if (!isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount < 100000) {
-              console.log(`Found valid amount: ${parsedAmount} from value: ${value}`);
+              console.log(`Found valid amount: ${parsedAmount} from value: ${stringValue}`);
               transactionAmount = parsedAmount;
               foundAmount = true;
               break;
