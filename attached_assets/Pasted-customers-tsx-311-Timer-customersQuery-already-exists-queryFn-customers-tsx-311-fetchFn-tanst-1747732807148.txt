@@ -1,0 +1,50 @@
+customers.tsx:311 Timer 'customersQuery' already exists
+queryFn @ customers.tsx:311
+fetchFn @ @tanstack_react-query.js?v=a880c058:840
+run @ @tanstack_react-query.js?v=a880c058:494
+start @ @tanstack_react-query.js?v=a880c058:536
+fetch @ @tanstack_react-query.js?v=a880c058:926
+executeFetch_fn @ @tanstack_react-query.js?v=a880c058:2211
+setOptions @ @tanstack_react-query.js?v=a880c058:1955
+(anonymous) @ @tanstack_react-query.js?v=a880c058:3032
+commitHookEffectListMount @ chunk-276SZO74.js?v=a880c058:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a880c058:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a880c058:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a880c058:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a880c058:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a880c058:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a880c058:19447
+commitRootImpl @ chunk-276SZO74.js?v=a880c058:19416
+commitRoot @ chunk-276SZO74.js?v=a880c058:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a880c058:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a880c058:9119
+(anonymous) @ chunk-276SZO74.js?v=a880c058:18627Understand this warning
+customers.tsx:361 productsQuery: 3146.5009765625 ms
+customers.tsx:335 customersQuery: 5461.69091796875 ms
+customers.tsx:335 Timer 'customersQuery' does not exist
+queryFn @ customers.tsx:335
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=a880c058:840
+run @ @tanstack_react-query.js?v=a880c058:494
+start @ @tanstack_react-query.js?v=a880c058:536
+fetch @ @tanstack_react-query.js?v=a880c058:926
+executeFetch_fn @ @tanstack_react-query.js?v=a880c058:2211
+setOptions @ @tanstack_react-query.js?v=a880c058:1955
+(anonymous) @ @tanstack_react-query.js?v=a880c058:3032
+commitHookEffectListMount @ chunk-276SZO74.js?v=a880c058:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a880c058:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a880c058:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a880c058:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a880c058:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a880c058:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a880c058:19447
+commitRootImpl @ chunk-276SZO74.js?v=a880c058:19416
+commitRoot @ chunk-276SZO74.js?v=a880c058:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a880c058:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a880c058:9119
+(anonymous) @ chunk-276SZO74.js?v=a880c058:18627Understand this warning
+customers.tsx:335 customersQuery: 1662.1669921875 ms
+analytics.ts:87 Tracked event: search {category: 'customers', label: 'search_term_lance', value: undefined}
+customers.tsx:335 customersQuery: 3006.60693359375 ms
+customers.tsx:335 customersQuery: 2555.3271484375 ms
+customers.tsx:335 customersQuery: 2553.753173828125 ms
