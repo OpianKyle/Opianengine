@@ -357,42 +357,10 @@ function CustomerDashboardContent() {
     }
   });
 
-  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
   const { toast } = useToast();
-
-  const redeemCashMutation = useMutation({
-    mutationFn: async (points: number) => {
-      const res = await fetch("/api/rewards/redeem-cash", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ points }),
-        credentials: 'include'
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customer/points"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/customer/transactions"] });
-      toast({
-        title: "Success",
-        description: `Successfully redeemed R${(pointsToRedeem * 0.015).toFixed(2)}`,
-      });
-      setPointsToRedeem(0);
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    },
-  });
 
   const points = typeof user?.points === 'number' ? user.points : Number(user?.points || 0);
   const tierInfo = getTierInfo(points);
-  const randValue = (pointsToRedeem * 0.015).toFixed(2);
-  const canRedeem = pointsToRedeem > 0 && pointsToRedeem <= points;
 
   // Get current time of day
   const currentDate = new Date();
@@ -509,28 +477,16 @@ function CustomerDashboardContent() {
               <div className="w-full">
                 <div className="flex flex-col gap-4">
                   <div>
-                    <p className="text-sm font-medium mb-1">Enter points to convert:</p>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={points}
-                      value={pointsToRedeem !== 0 ? pointsToRedeem : ''}
-                      onChange={(e) => setPointsToRedeem(Number(e.target.value))}
-                      placeholder="Enter points to convert"
-                      className="h-9 md:h-10 bg-background border-input dark:bg-[#022b5c] dark:border-[#033872] dark:text-white dark:placeholder:text-gray-400"
-                    />
-                    {pointsToRedeem > 0 && (
-                      <p className="text-sm font-medium mt-2">
-                        You will receive: <span className="text-2xl sm:text-3xl font-bold text-green-500">R{randValue}</span>
-                      </p>
-                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Convert your points to cash in the Cash Wallet section. 
+                      Each point is worth R0.015 in your cash wallet.
+                    </p>
                   </div>
                   <Button 
-                    className="w-full h-9 md:h-10 bg-green-600 hover:bg-green-700 text-white text-sm md:text-base"
-                    onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
-                    disabled={!canRedeem}
+                    className="w-full h-9 md:h-10"
+                    onClick={() => setLocation('/customer/cash-wallet')}
                   >
-                    {canRedeem ? "Convert to Cash" : "Insufficient Points"}
+                    Go to Cash Wallet
                   </Button>
                 </div>
               </div>
@@ -801,7 +757,7 @@ function CustomerDashboardContent() {
           <Card className="rewards-section shadow-sm">
             <CardHeader className="border-b border-border/40">
               <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold">
-                Cash Redemption
+                Cash Wallet
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-6">
@@ -810,46 +766,34 @@ function CustomerDashboardContent() {
                   <div className="space-y-2">
                     <div className="h-5 w-32 bg-muted rounded animate-pulse"></div>
                     <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
-                    <div className="h-4 w-48 bg-muted rounded animate-pulse"></div>
                   </div>
-                  <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
                 </>
               ) : (
                 <>
-                  <AnimatedMetric 
-                    title="Cash Value"
-                    value={points * 0.015}
-                    prefix="R"
-                    formatter={(val) => val.toFixed(2)}
-                    description="Current points exchange rate: 1 point = R0.015"
-                    isLoading={isUserLoading}
-                    delay={250}
-                    colorScheme="success"
-                    className="mb-4 -mt-4 -mx-6 p-0"
-                  />
-                  <div className="space-y-2 mt-4">
-                    <label className="text-sm font-medium">Points to Redeem</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={points}
-                      value={pointsToRedeem}
-                      onChange={(e) => setPointsToRedeem(Number(e.target.value))}
-                      placeholder="Enter points amount"
-                    />
-                    {pointsToRedeem > 0 && (
-                      <p className="text-sm font-medium mt-2">
-                        You will receive: <span className="text-green-500">R{randValue}</span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-medium">Available Balance</h3>
+                      <p className="text-3xl font-bold">
+                        {new Intl.NumberFormat('en-ZA', {
+                          style: 'currency',
+                          currency: 'ZAR',
+                          minimumFractionDigits: 2
+                        }).format(user?.cash_balance || 0)}
                       </p>
-                    )}
+                    </div>
+                    <DollarSign className="h-8 w-8 text-muted-foreground" />
                   </div>
-                  <Button
-                    className="w-full mt-2"
-                    onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
-                    disabled={!canRedeem}
-                  >
-                    {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
-                  </Button>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Visit the Cash Wallet page to view your transaction history and redeem points for cash.
+                    </p>
+                    <Button 
+                      onClick={() => setLocation('/customer/cash-wallet')}
+                      className="w-full"
+                    >
+                      Go to Cash Wallet
+                    </Button>
+                  </div>
                 </>
               )}
             </CardContent>
