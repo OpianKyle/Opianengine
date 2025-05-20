@@ -167,12 +167,8 @@ router.post('/cash-deposits/allocate', isAuthenticated, async (req: Request, res
       [points, req.user.id]
     );
     
-    // Add transaction record
-    await connection.execute(
-      `INSERT INTO points_transactions (user_id, points, transaction_type, description, created_at)
-       VALUES (?, ?, 'CASH_DEPOSIT_ALLOCATION', ?, NOW())`,
-      [req.user.id, -points, `Allocated ${points} points to cash deposits`]
-    );
+    // Skip points transaction record since the table doesn't exist
+    // We already recorded the transaction in cash_deposits table and updated user points
     
     await connection.commit();
     
