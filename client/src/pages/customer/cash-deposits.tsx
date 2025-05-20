@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Wallet, ArrowDownCircle, ArrowRight, AlertCircle, BanknoteIcon } from "lucide-react";
+import { Wallet, ArrowDownCircle, ArrowRight, AlertCircle, BanknoteIcon, InfoIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { apiRequest } from '@/lib/queryClient';
@@ -26,11 +26,9 @@ import {
   DialogDescription, 
   DialogFooter, 
   DialogHeader, 
-  DialogTitle,
-  DialogTrigger 
+  DialogTitle
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { InfoIcon } from "lucide-react";
 
 interface CashDeposit {
   id: number;
@@ -132,7 +130,7 @@ export default function CashDepositsPage() {
     }
   });
   
-  // Mutation for requesting a cash withdrawal
+  // Mutation for withdrawal requests
   const withdrawalMutation = useMutation({
     mutationFn: async ({ bankDetails, notes }: { bankDetails: string, notes?: string }) => {
       const res = await apiRequest('POST', '/api/customer/cash-redemptions/request', {
@@ -142,26 +140,26 @@ export default function CashDepositsPage() {
       
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'Failed to parse error response' }));
-        throw new Error(errorData.error || 'Failed to submit withdrawal request');
+        throw new Error(errorData.error || 'Failed to process withdrawal request');
       }
       
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: 'Withdrawal Request Submitted',
-        description: 'Your cash withdrawal request has been submitted successfully.',
+        description: `Your withdrawal request for ${formatCurrency(data.amount)} has been submitted for processing.`,
         variant: 'default',
       });
       
-      // Close dialog and reset form
-      setWithdrawDialogOpen(false);
+      // Reset form and close dialog
       setBankDetails('');
       setWithdrawalNotes('');
+      setWithdrawDialogOpen(false);
       
       // Refetch data
       queryClient.invalidateQueries({ queryKey: ['/api/customer/cash-deposits'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/customer/redemptions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/cash-redemptions'] });
     },
     onError: (error) => {
       toast({
@@ -428,172 +426,118 @@ export default function CashDepositsPage() {
           <CardContent>
             <div className="text-2xl font-bold">{totalPoints.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              Points available in your cash wallet
+              Points allocated to your cash wallet
             </p>
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cash Value</CardTitle>
-            <ArrowDownCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Cash Value</CardTitle>
+            <BanknoteIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalCashValue)}</div>
             <p className="text-xs text-muted-foreground">
-              Total Rand value of your cash points
+              Exchange rate: R0.015 per point
             </p>
           </CardContent>
         </Card>
       </div>
-      
-      {/* Points Allocation Card */}
+
+      {/* Allocate Points Form */}
       <Card>
         <CardHeader>
           <CardTitle>Allocate Points to Cash Wallet</CardTitle>
           <CardDescription>
-            Convert your reward points to cash at a rate of R0.015 per point
+            Convert your reward points to cash value at a rate of R0.015 per point.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="pointsToAllocate">Points to Allocate</Label>
-              <div className="flex items-center mt-1.5 gap-2">
-                <Input
-                  id="pointsToAllocate"
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="Enter points amount"
-                  value={pointsToAllocate}
-                  onChange={(e) => setPointsToAllocate(e.target.value)}
-                  className="w-full"
-                />
-                <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
-                <div className="text-sm font-medium hidden md:block">
-                  {previewCashValue()}
-                </div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <p className="text-xs text-muted-foreground">
-                  You have {availablePoints.toLocaleString()} points available
-                </p>
-                <p className="text-xs font-medium md:hidden">
-                  Value: {previewCashValue()}
-                </p>
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                placeholder="Add a note for this allocation"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="mt-1.5"
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="points">Points to Allocate</Label>
+              <Input 
+                id="points" 
+                type="number" 
+                placeholder="Enter points amount" 
+                value={pointsToAllocate}
+                onChange={(e) => setPointsToAllocate(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Available: {availablePoints.toLocaleString()} points
+              </p>
             </div>
-            
-            <Button 
-              onClick={() => {
-                // Validate input
-                const points = Number(pointsToAllocate);
-                console.log('Allocating points:', points);
-                
-                if (isNaN(points) || points <= 0) {
-                  toast({
-                    title: 'Invalid Points',
-                    description: 'Please enter a valid number of points greater than zero.',
-                    variant: 'destructive',
-                  });
-                  return;
-                }
-                
-                // Check if user has enough points
-                const availablePoints = profileData?.points || 0;
-                if (points > availablePoints) {
-                  toast({
-                    title: 'Insufficient Points',
-                    description: `You only have ${availablePoints.toLocaleString()} points available.`,
-                    variant: 'destructive',
-                  });
-                  return;
-                }
-                
-                // Call the mutation directly
-                allocateMutation.mutate(
-                  { 
-                    points, 
-                    description: description || 'Points allocated to cash deposits'
-                  },
-                  {
-                    onSuccess: () => {
-                      // This will run in addition to the onSuccess in the mutation definition
-                      setPointsToAllocate('');
-                      setDescription('');
-                    }
-                  }
-                );
-              }}
-              className="w-full"
-              disabled={
-                !pointsToAllocate || 
-                Number(pointsToAllocate) <= 0 || 
-                (profileData && Number(pointsToAllocate) > profileData.points) || 
-                allocateMutation.isPending
-              }
-            >
-              {allocateMutation.isPending ? 'Allocating...' : 'Allocate Points to Cash Wallet'}
-            </Button>
+            <div className="space-y-2">
+              <Label htmlFor="preview">Cash Value Preview</Label>
+              <div className="h-10 px-3 py-2 rounded-md border border-input bg-background text-sm">
+                {previewCashValue()}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Estimated cash value at R0.015 per point
+              </p>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="description">Description (Optional)</Label>
+            <Input 
+              id="description" 
+              placeholder="Add a note for this allocation" 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
         </CardContent>
+        <CardFooter className="flex justify-between border-t px-6 py-4">
+          <p className="text-sm text-muted-foreground">
+            Points will be deducted from your rewards balance
+          </p>
+          <Button 
+            onClick={handleAllocate}
+            disabled={!pointsToAllocate || Number(pointsToAllocate) <= 0 || Number(pointsToAllocate) > availablePoints}
+          >
+            Allocate Points
+          </Button>
+        </CardFooter>
       </Card>
 
-      <Separator />
-
-      {/* Deposits Table */}
+      {/* Deposit History */}
       <Card>
         <CardHeader>
           <CardTitle>Cash Deposit History</CardTitle>
+          <CardDescription>
+            Record of points allocated to your cash wallet
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {deposits.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center">
-              <Wallet className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No cash deposits yet</h3>
-              <p className="text-sm text-muted-foreground max-w-sm mt-2">
-                When cash deposits are added to your wallet, they will appear here.
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No cash deposits found</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Allocate points to start building your cash wallet
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Points</TableHead>
-                    <TableHead className="text-right">Cash Value</TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Points</TableHead>
+                  <TableHead className="text-right">Cash Value</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {deposits.map((deposit: CashDeposit) => (
+                  <TableRow key={deposit.id}>
+                    <TableCell>{formatDate(deposit.created_at)}</TableCell>
+                    <TableCell>{deposit.description}</TableCell>
+                    <TableCell>{deposit.points.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(deposit.cashValue)}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {deposits.map((deposit: CashDeposit) => (
-                    <TableRow key={deposit.id}>
-                      <TableCell className="whitespace-nowrap">
-                        {isClient ? formatDate(deposit.created_at) : ''}
-                      </TableCell>
-                      <TableCell>{deposit.description}</TableCell>
-                      <TableCell className="text-right">{deposit.points.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(deposit.cashValue)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
