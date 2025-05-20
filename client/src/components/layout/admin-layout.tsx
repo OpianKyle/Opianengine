@@ -18,6 +18,7 @@ import {
   UserCheck,
   Mail,
   RefreshCw,
+  Upload,
 } from "lucide-react";
 import { prefetchAdminData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";

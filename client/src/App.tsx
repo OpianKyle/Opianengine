@@ -40,6 +40,7 @@ import EmailLogs from "@/pages/admin/email-logs"; // Added import for EmailLogs
 import Migrations from "@/pages/admin/migrations"; // Added import for Migrations
 import AdminLeads from "@/pages/admin/leads"; // Added import for Leads management
 import CardStatusTest from "@/pages/admin/card-status-test"; // Added import for card status test page
+import CardStatementImportPage from "@/pages/admin/card-statement-import"; // Added import for card statement import page
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -237,6 +238,11 @@ function Router() {
       <Route path="/admin/leads">
         <AdminLayout>
           <ProtectedRoute component={AdminLeads} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/card-statement-import">
+        <AdminLayout>
+          <ProtectedRoute component={CardStatementImportPage} admin />
         </AdminLayout>
       </Route>
 
