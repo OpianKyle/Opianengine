@@ -20,7 +20,6 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { useProfile } from '@/hooks/use-profile';
 
 interface CashDeposit {
   id: number;
@@ -36,7 +35,19 @@ export default function CashDepositsPage() {
   const [description, setDescription] = useState<string>('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: profileData } = useProfile();
+  
+  // Fetch user profile data for available points
+  const { data: profileData, isLoading: profileLoading } = useQuery({
+    queryKey: ['/api/profile'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/profile');
+      if (!res.ok) {
+        throw new Error('Failed to fetch profile data');
+      }
+      return res.json();
+    },
+    staleTime: 30000 // 30 seconds
+  });
   
   // Use useEffect to handle SSR hydration
   useEffect(() => {
@@ -256,7 +267,13 @@ export default function CashDepositsPage() {
         <CardFooter className="flex justify-end">
           <Button 
             onClick={handleAllocate}
-            disabled={!pointsToAllocate || Number(pointsToAllocate) <= 0 || Number(pointsToAllocate) > availablePoints || allocateMutation.isPending}
+            disabled={
+              !pointsToAllocate || 
+              Number(pointsToAllocate) <= 0 || 
+              (profileData && Number(pointsToAllocate) > profileData.points) || 
+              allocateMutation.isPending ||
+              profileLoading
+            }
           >
             {allocateMutation.isPending ? 'Allocating...' : 'Allocate Points'}
           </Button>
