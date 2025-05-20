@@ -1592,6 +1592,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           u.branch_code,
           u.has_credit_card,
           u.card_status,
+          u.card_number,
           u.is_enabled,
           CAST(u.points as DECIMAL(10,2)) as points,
           u.created_at,
