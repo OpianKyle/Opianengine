@@ -712,6 +712,10 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       // Track unique users updated to avoid double-counting
       const updatedUsers = new Set<number>();
 
+      // Track totals for each transaction type
+      let totalDebitAmount = 0;  // For reward points (Deduction transactions)
+      let totalCreditAmount = 0; // For cash deposits (Load transactions)
+
       // Get the customer first to make sure they exist
       const [customers] = await conn.query(
         'SELECT id, first_name, last_name FROM users WHERE id = ?',
@@ -760,12 +764,27 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           const rowValuesStr = rowValues.join(' ');
           console.log(`Row ${stats.totalProcessed} values: ${rowValuesStr}`);
           
-          // For the special format, assume these rules:
-          // 1. Assign 50% rows as "debit" (normal points) and 50% as "credit" (cash deposits)
-          // This is a simple way to handle this particular format since we can't detect types
-          
-          // Use the row number to determine type (alternating)
-          determinedType = stats.totalProcessed % 2 === 0 ? 'debit' : 'credit';
+          // Look for keywords indicating "Load" or "Deduction" in the values
+          // For this format, try to find specific indicators of transaction type
+          if (rowValuesStr.includes('load') || 
+              rowValuesStr.includes('deposit') || 
+              rowValuesStr.includes('credit')) {
+            determinedType = 'credit'; // cash deposits for "Load" transactions
+            console.log(`Detected 'Load' transaction at row ${stats.totalProcessed}`);
+          } 
+          else if (rowValuesStr.includes('deduct') || 
+                  rowValuesStr.includes('debit') || 
+                  rowValuesStr.includes('purchase') ||
+                  rowValuesStr.includes('payment')) {
+            determinedType = 'debit'; // reward points for "Deduction" transactions
+            console.log(`Detected 'Deduction' transaction at row ${stats.totalProcessed}`);
+          }
+          else {
+            // If we can't determine, look at the transaction structure or file pattern
+            // Use even/odd row numbering as a fallback
+            determinedType = stats.totalProcessed % 2 === 0 ? 'debit' : 'credit';
+            console.log(`Fallback transaction type '${determinedType}' at row ${stats.totalProcessed}`);
+          }
           
           // Find a numeric value to use as amount
           let foundAmount = false;
@@ -880,20 +899,12 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             continue;
           }
 
-          // Add points to customer
-          await conn.query(
-            'UPDATE users SET points = points + ? WHERE id = ?',
-            [pointsToAdd, customer.id]
-          );
+          // Add this amount to our running total
+          totalDebitAmount += pointsToAdd;
 
-          // Log in transaction history
-          await conn.query(
-            'INSERT INTO transactions (user_id, points, description, type) VALUES (?, ?, ?, ?)',
-            [customer.id, pointsToAdd, transactionDescription, 'ADMIN_ADJUSTMENT']
-          );
-
+          // For tracking purposes in the response
           stats.pointsAllocated += pointsToAdd;
-          console.log(`Added ${pointsToAdd} reward points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
+          console.log(`Row ${stats.totalProcessed}: ${pointsToAdd} reward points (total: ${totalDebitAmount})`);
         } 
         else if (determinedType === 'credit') {
           // Money deposit = cash deposit points (1 Rand = 1 point)
@@ -904,14 +915,12 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             continue;
           }
 
-          // Add to cash_deposits table
-          await conn.query(
-            'INSERT INTO cash_deposits (user_id, points, description) VALUES (?, ?, ?)',
-            [customer.id, cashDepositPoints, transactionDescription]
-          );
+          // Add this amount to our running total
+          totalCreditAmount += cashDepositPoints;
 
+          // For tracking purposes in the response
           stats.cashDepositsAllocated += cashDepositPoints;
-          console.log(`Added ${cashDepositPoints} cash deposit points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
+          console.log(`Row ${stats.totalProcessed}: ${cashDepositPoints} cash deposit points (total: ${totalCreditAmount})`);
         } 
         else {
           stats.errors.push(`Row ${stats.totalProcessed}: Unknown transaction type`);
@@ -919,6 +928,37 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
         }
       }
 
+      // Now apply the accumulated totals to the customer account
+      console.log(`Processing total accumulated amounts: ${totalDebitAmount} reward points, ${totalCreditAmount} cash deposit points`);
+      
+      // Process reward points (debit transactions)
+      if (totalDebitAmount > 0) {
+        // Add points to customer
+        await conn.query(
+          'UPDATE users SET points = points + ? WHERE id = ?',
+          [totalDebitAmount, customer.id]
+        );
+
+        // Log in transaction history
+        await conn.query(
+          'INSERT INTO transactions (user_id, points, description, type) VALUES (?, ?, ?, ?)',
+          [customer.id, totalDebitAmount, `Card statement import - ${totalDebitAmount} reward points`, 'ADMIN_ADJUSTMENT']
+        );
+        
+        console.log(`Added ${totalDebitAmount} total reward points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
+      }
+      
+      // Process cash deposits (credit transactions)
+      if (totalCreditAmount > 0) {
+        // Add to cash_deposits table
+        await conn.query(
+          'INSERT INTO cash_deposits (user_id, points, description) VALUES (?, ?, ?)',
+          [customer.id, totalCreditAmount, `Card statement import - ${totalCreditAmount} cash deposit points`]
+        );
+        
+        console.log(`Added ${totalCreditAmount} total cash deposit points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
+      }
+      
       // Update statistics
       stats.usersUpdated = updatedUsers.size;
       
