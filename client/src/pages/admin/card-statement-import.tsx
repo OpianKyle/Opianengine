@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useMutation } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle, Upload } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { AlertTriangle, CheckCircle, Upload, Search } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,11 +23,21 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { MetaTags } from '@/components/seo/meta-tags';
 import { Helmet } from 'react-helmet';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Define the schema for the form
 const formSchema = z.object({
   file: z.any().refine((file) => file instanceof FileList && file.length > 0, {
     message: 'Please select a file.',
+  }),
+  customerId: z.string({
+    required_error: "Please select a customer",
   }),
 });
 
@@ -41,17 +51,51 @@ interface ImportStats {
 }
 
 // The main component for the Card Statement Import page
+// Define interface for customer data
+interface Customer {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  card_number?: string;
+}
+
 export default function CardStatementImportPage() {
   const { toast } = useToast();
   const [importStats, setImportStats] = useState<ImportStats | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Fetch customers for dropdown
+  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>(
+    ['/api/admin/customers'],
+    async () => {
+      const response = await fetch('/api/admin/customers');
+      if (!response.ok) {
+        throw new Error('Failed to fetch customers');
+      }
+      return response.json();
+    },
+    {
+      staleTime: 60000, // 1 minute
+    }
+  );
+
+  // Filter customers based on search term
+  const filteredCustomers = searchTerm 
+    ? customers.filter(c => 
+        c.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        `${c.first_name} ${c.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : customers;
 
   // Initialize the form with react-hook-form and zod validation
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       file: undefined,
+      customerId: '',
     },
   });
 
@@ -110,11 +154,21 @@ export default function CardStatementImportPage() {
 
   // Handle form submission
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (!values.customerId) {
+      toast({
+        title: "Customer selection required",
+        description: "Please select a customer before uploading the file",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const files = values.file as FileList;
     if (files.length === 0) return;
     
     const formData = new FormData();
     formData.append('file', files[0]);
+    formData.append('customerId', values.customerId);
     
     uploadMutation.mutate(formData);
   };
@@ -150,6 +204,48 @@ export default function CardStatementImportPage() {
               <CardContent>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="customerId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Select Customer</FormLabel>
+                          <FormControl>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              defaultValue={field.value}
+                              disabled={isUploading}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a customer" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {isLoadingCustomers ? (
+                                  <div className="flex items-center justify-center p-4">
+                                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                                  </div>
+                                ) : filteredCustomers.length > 0 ? (
+                                  filteredCustomers.map((customer) => (
+                                    <SelectItem key={customer.id} value={customer.id.toString()}>
+                                      {customer.first_name} {customer.last_name} - {customer.email}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <div className="p-2 text-center text-sm text-muted-foreground">
+                                    No customers found
+                                  </div>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormDescription>
+                            Choose the customer whose card statement you're uploading
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
                     <FormField
                       control={form.control}
                       name="file"
