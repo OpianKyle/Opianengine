@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Wallet, ArrowDownCircle, ArrowRight, AlertCircle, BanknoteIcon, InfoIcon } from "lucide-react";
+import { Wallet, ArrowDownCircle, ArrowRight, AlertCircle, BanknoteIcon, InfoIcon, CheckCircleIcon, LockIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { apiRequest } from '@/lib/queryClient';
@@ -466,64 +466,69 @@ export default function CashDepositsPage() {
         </Card>
       </div>
 
-      {/* Allocate Points Form */}
+      {/* Withdraw Cash Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Allocate Points to Cash Wallet</CardTitle>
+          <CardTitle>Withdraw Cash</CardTitle>
           <CardDescription>
-            Convert your reward points to cash value at a rate of R0.015 per point.
+            Request a withdrawal from your cash wallet. Minimum withdrawal amount: R5,000.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="points">Points to Allocate</Label>
-              <Input 
-                id="points" 
-                type="number" 
-                placeholder="Enter points amount" 
-                value={pointsToAllocate}
-                onChange={(e) => setPointsToAllocate(e.target.value)}
-              />
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">
-                  Available Cash Deposit Points: {totalPoints.toLocaleString()} points (R{totalCashValue.toFixed(2)})
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Available Rewards Points: {profileLoading ? 'Loading...' : (profileData ? profileData.points.toLocaleString() : '0')} points
-                </p>
+          <div className="space-y-4">
+            <div className="rounded-md border p-4 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">Cash Deposit Points</h4>
+                  <p className="text-sm text-muted-foreground">Your available cash deposit points</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold">{totalPoints.toLocaleString()} points</p>
+                  <p className="text-sm text-muted-foreground">R{totalCashValue.toFixed(2)}</p>
+                </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="preview">Cash Value Preview</Label>
-              <div className="h-10 px-3 py-2 rounded-md border border-input bg-background text-sm">
-                {previewCashValue()}
+
+            <Alert className={totalCashValue >= 5000 ? "bg-green-50" : "bg-amber-50"}>
+              <div className="flex items-center gap-2">
+                {totalCashValue >= 5000 ? (
+                  <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-amber-500" />
+                )}
+                <AlertTitle className={totalCashValue >= 5000 ? "text-green-700" : "text-amber-700"}>
+                  {totalCashValue >= 5000 ? "Eligible for Withdrawal" : "Minimum Amount Not Reached"}
+                </AlertTitle>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Estimated cash value at R0.015 per point
-              </p>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (Optional)</Label>
-            <Input 
-              id="description" 
-              placeholder="Add a note for this allocation" 
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
+              <AlertDescription className="mt-2 text-sm">
+                {totalCashValue >= 5000 
+                  ? `You have R${totalCashValue.toFixed(2)} available for withdrawal.`
+                  : `You need at least R5,000 to request a withdrawal. You currently have R${totalCashValue.toFixed(2)}.`
+                }
+              </AlertDescription>
+            </Alert>
           </div>
         </CardContent>
         <CardFooter className="flex justify-between border-t px-6 py-4">
           <p className="text-sm text-muted-foreground">
-            Points will be deducted from your rewards balance
+            Only cash deposit points can be withdrawn
           </p>
           <Button 
-            onClick={handleAllocate}
-            disabled={!pointsToAllocate || Number(pointsToAllocate) <= 0 || Number(pointsToAllocate) > availableRewardsPoints}
+            onClick={() => setWithdrawDialogOpen(true)}
+            disabled={totalCashValue < 5000}
+            variant={totalCashValue >= 5000 ? "default" : "outline"}
           >
-            Allocate Points
+            {totalCashValue >= 5000 ? (
+              <>
+                <BanknoteIcon className="mr-2 h-4 w-4" />
+                Request Withdrawal
+              </>
+            ) : (
+              <>
+                <LockIcon className="mr-2 h-4 w-4" />
+                Minimum R5,000 Required
+              </>
+            )}
           </Button>
         </CardFooter>
       </Card>
