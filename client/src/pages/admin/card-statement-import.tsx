@@ -69,9 +69,9 @@ export default function CardStatementImportPage() {
 
   // Fetch customers for dropdown
   const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>({
-    queryKey: ['/api/admin/customers'],
+    queryKey: ['/api/admin/customers'], // Keep same query key for cache consistency
     queryFn: async () => {
-      const response = await fetch('/api/admin/customers');
+      const response = await fetch('/api/admin/customers'); // This route maps to admin.ts router
       if (!response.ok) {
         throw new Error('Failed to fetch customers');
       }

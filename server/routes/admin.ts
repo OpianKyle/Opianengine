@@ -37,6 +37,24 @@ const pool = mysql.createPool({
 // Middleware to check if user is an admin
 router.use(checkAdmin);
 
+// Get all customers for dropdown selects
+router.get('/customers', async (req: any, res) => {
+  const connection = await pool.getConnection();
+  try {
+    // Only fetch active regular users (not admins, not agents)
+    const [users] = await connection.query(
+      'SELECT id, first_name, last_name, email, card_number FROM users WHERE is_enabled = 1 AND is_admin = 0 AND is_agent = 0 ORDER BY first_name, last_name LIMIT 1000'
+    );
+    
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching customers:', error);
+    res.status(500).json({ error: 'Failed to fetch customers' });
+  } finally {
+    connection.release();
+  }
+});
+
 // Get email logs with pagination and filtering
 router.get('/email-logs', async (req: any, res) => {
   const connection = await pool.getConnection();
