@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import CustomerLayout from "@/components/layout/customer-layout";
-import { OnboardingProvider } from "@/components/onboarding/OnboardingContext";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
 
 type CashTransaction = {
   id: number;
