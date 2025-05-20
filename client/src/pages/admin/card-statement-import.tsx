@@ -41,6 +41,12 @@ const formSchema = z.object({
   }),
 });
 
+// Define transaction types
+interface Transaction {
+  type: string;
+  amount: number;
+}
+
 // Define the response type for the import stats
 interface ImportStats {
   totalProcessed: number;
@@ -48,6 +54,10 @@ interface ImportStats {
   pointsAllocated: number;
   cashDepositsAllocated: number;
   errors: string[];
+  transactionDetails?: {
+    debitTransactions?: Transaction[];
+    creditTransactions?: Transaction[];
+  };
 }
 
 // The main component for the Card Statement Import page
@@ -384,6 +394,113 @@ export default function CardStatementImportPage() {
                       All transactions were processed without errors.
                     </AlertDescription>
                   </Alert>
+                )}
+                
+                {/* Detailed Transaction Breakdown */}
+                {importStats.transactionDetails && (
+                  <div className="mt-6 border rounded-lg overflow-hidden">
+                    <div className="bg-slate-100 px-4 py-3 border-b">
+                      <h3 className="font-semibold">Transaction Details</h3>
+                    </div>
+                    
+                    <div className="p-4">
+                      {/* Debit Transactions (Regular Reward Points) */}
+                      {importStats.transactionDetails.debitTransactions && 
+                       importStats.transactionDetails.debitTransactions.length > 0 && (
+                        <div className="mb-6">
+                          <h4 className="font-medium text-sm mb-2">Debit Transactions (Reward Points)</h4>
+                          <div className="overflow-x-auto border rounded-md">
+                            <table className="min-w-full divide-y divide-gray-200 text-sm">
+                              <thead className="bg-gray-100">
+                                <tr>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    #
+                                  </th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Amount (R)
+                                  </th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Converted Points
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {importStats.transactionDetails.debitTransactions.map((tx, idx) => (
+                                  <tr key={`debit-${idx}`}>
+                                    <td className="px-3 py-2 whitespace-nowrap">{idx + 1}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">R {tx.amount.toFixed(2)}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{Math.round(tx.amount * 25)}</td>
+                                  </tr>
+                                ))}
+                                <tr className="bg-blue-50 font-medium">
+                                  <td className="px-3 py-2 whitespace-nowrap">Total</td>
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    R {importStats.transactionDetails.debitTransactions
+                                      .reduce((sum, tx) => sum + tx.amount, 0)
+                                      .toFixed(2)}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    {importStats.pointsAllocated} points
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Credit Transactions (Cash Deposit Points) */}
+                      {importStats.transactionDetails.creditTransactions && 
+                       importStats.transactionDetails.creditTransactions.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-sm mb-2">Credit Transactions (Cash Deposit Points)</h4>
+                          <div className="overflow-x-auto border rounded-md">
+                            <table className="min-w-full divide-y divide-gray-200 text-sm">
+                              <thead className="bg-gray-100">
+                                <tr>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    #
+                                  </th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Amount (R)
+                                  </th>
+                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Converted Points
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {importStats.transactionDetails.creditTransactions.map((tx, idx) => (
+                                  <tr key={`credit-${idx}`}>
+                                    <td className="px-3 py-2 whitespace-nowrap">{idx + 1}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">R {tx.amount.toFixed(2)}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{Math.round(tx.amount * 25)}</td>
+                                  </tr>
+                                ))}
+                                <tr className="bg-blue-50 font-medium">
+                                  <td className="px-3 py-2 whitespace-nowrap">Total</td>
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    R {importStats.transactionDetails.creditTransactions
+                                      .reduce((sum, tx) => sum + tx.amount, 0)
+                                      .toFixed(2)}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    {importStats.cashDepositsAllocated} points
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mt-4 text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
+                        <p><strong>Conversion rate:</strong> R1 = 25 points</p>
+                        <p><strong>Debit transactions:</strong> Added to regular reward points</p>
+                        <p><strong>Credit transactions:</strong> Added to cash deposit points</p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </CardContent>
               <CardFooter>
