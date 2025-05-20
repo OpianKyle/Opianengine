@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Home, Gift, Users, User, Menu, X, ShoppingBag, CreditCard, HelpCircle, DollarSign, Wallet } from "lucide-react";
+import { Home, Gift, Users, User, Menu, X, ShoppingBag, CreditCard, HelpCircle, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/NotificationBell";
 import { prefetchCustomerData } from "@/lib/queryClient";
@@ -11,12 +11,11 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/providers/theme-provider";
 
 // Helper function for section determination
-const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' | 'referral' | 'cash-wallet' | 'all' => {
+const getSectionFromHref = (href: string): 'dashboard' | 'products' | 'rewards' | 'referral' | 'all' => {
   if (href === '/dashboard') return 'dashboard';
   if (href === '/products') return 'products';
   if (href === '/rewards') return 'rewards';
   if (href === '/referrals') return 'referral';
-  if (href === '/cash-wallet') return 'cash-wallet';
   // Subscription section removed as requested
   return 'all';
 };
@@ -71,7 +70,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     { label: "Products", href: "/products", icon: <ShoppingBag className="h-4 w-4 mr-2" /> },
     // Rewards section hidden as requested
     { label: "Referrals", href: "/referrals", icon: <Users className="h-4 w-4 mr-2" /> },
-    { label: "Cash Wallet", href: "/cash-wallet", icon: <Wallet className="h-4 w-4 mr-2" /> },
     { label: "Redemptions", href: "/redemptions", icon: <DollarSign className="h-4 w-4 mr-2" /> },
     // Subscription menu item removed as requested
     { label: "Profile", href: "/profile", icon: <User className="h-4 w-4 mr-2" />, className: "profile-link" },

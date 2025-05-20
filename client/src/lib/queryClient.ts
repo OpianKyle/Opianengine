@@ -48,8 +48,7 @@ export const CUSTOMER_API_ENDPOINTS = {
     '/api/products',
     '/api/transactions',
     '/api/statistics',
-    '/api/referral',
-    '/api/customer/cash-wallet'
+    '/api/referral'
     // '/api/subscription' - removed as requested
   ],
   dashboard: [
@@ -65,9 +64,6 @@ export const CUSTOMER_API_ENDPOINTS = {
   ],
   referral: [
     '/api/referral'
-  ],
-  'cash-wallet': [
-    '/api/customer/cash-wallet'
   ]
   // subscription section removed as requested
 };
@@ -133,10 +129,10 @@ export const prefetchAgentData = async (token?: string, section?: 'dashboard' | 
  * @param token JWT token for authenticated requests
  * @param section Optional section name to prefetch only specific endpoints
  */
-export const prefetchCustomerData = async (token?: string, section?: 'dashboard' | 'products' | 'rewards' | 'referral' | 'cash-wallet' | 'all') => {
+export const prefetchCustomerData = async (token?: string, section?: 'dashboard' | 'products' | 'rewards' | 'referral' | 'all') => {
   // If section is specified, prefetch only that section's endpoints
   // Handle any possible string value for backward compatibility
-  const validSections = ['dashboard', 'products', 'rewards', 'referral', 'cash-wallet', 'all'] as const;
+  const validSections = ['dashboard', 'products', 'rewards', 'referral', 'all'] as const;
   const endpointKey = (section && validSections.includes(section as any)) 
     ? section
     : 'all';

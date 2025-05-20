@@ -49,7 +49,6 @@ import ReferralsPage from "@/pages/customer/referrals";
 import ProfilePage from "@/pages/customer/profile";
 import CustomerProducts from "@/pages/customer/products";
 import RedemptionsPage from "@/pages/customer/redemptions";
-import CustomerCashWallet from "@/pages/customer/cash-wallet";
 import SubscriptionPage from "@/pages/customer/subscription"; // Import subscription page
 
 // Agent pages
@@ -283,20 +282,9 @@ function Router() {
           <ProtectedRoute component={CustomerProducts} />
         </CustomerLayout>
       </Route>
-      <Route path="/cash-wallet">
-        <CustomerLayout>
-          <ProtectedRoute component={CustomerCashWallet} />
-        </CustomerLayout>
-      </Route>
       <Route path="/redemptions">
         <CustomerLayout>
           <ProtectedRoute component={RedemptionsPage} />
-        </CustomerLayout>
-      </Route>
-      
-      <Route path="/cash-wallet">
-        <CustomerLayout>
-          <ProtectedRoute component={CustomerCashWallet} />
         </CustomerLayout>
       </Route>
       

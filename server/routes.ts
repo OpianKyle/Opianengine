@@ -23,7 +23,6 @@ import { leadsRouter } from './routes/leads';
 import { contactRouter } from './routes/contact';
 import { registerTestCustomerRoutes } from './test-customer-routes';
 import adminToolsRouter from './routes/admin-tools';
-import customerRouter from './routes/customer';
 import analyticsRouter from './routes/analytics';
 import socialUsersRouter from './routes/social-users';
 import specialMigrationsRouter from './routes/special-migrations';
@@ -974,7 +973,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           first_name,
           last_name,
           CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
-          CAST(COALESCE(cash_balance, 0) as DECIMAL(10,2)) as cash_balance,
           selected_package
         FROM users 
         WHERE id = ?`,
@@ -989,7 +987,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         userId: userData[0].id,
         rawPoints: userData[0].points,
         pointsType: typeof userData[0].points,
-        cashBalance: userData[0].cash_balance,
         package: userData[0].selected_package,
         packageUpperCase: userData[0].selected_package ? userData[0].selected_package.toUpperCase() : null
       });
@@ -1015,10 +1012,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   });
 
   // Mount referral routes
+  // Mount the referral routes
   app.use('/api/referral', referralRouter);
-  
-  // Mount customer routes
-  app.use('/api/customer', customerRouter);
   
   // Direct endpoints for referral routes to avoid 404 issues
   app.get("/api/referral/validate", async (req, res) => {
@@ -1288,8 +1283,8 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const { userIds, points, description, cashDeposit } = req.body;
-      console.log('Bulk points allocation request:', { userIds, points, description, cashDeposit });
+      const { userIds, points, description } = req.body;
+      console.log('Bulk points allocation request:', { userIds, points, description });
 
       if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
         return res.status(400).json({ error: "No users selected" });
@@ -1314,15 +1309,12 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         );
         const admin = admins[0];
 
-        // Exchange rate for cash deposits (R0.015 per point)
-        const CASH_EXCHANGE_RATE = 0.015;
-        
         // Process each user
         const results = [];
         for (const userId of userIds) {
           // Get user info
           const [users] = await connection.execute(
-            'SELECT id, email, first_name, last_name, points, cash_balance FROM users WHERE id = ?',
+            'SELECT id, email, first_name, last_name, points FROM users WHERE id = ?',
             [userId]
           );
 
@@ -1342,48 +1334,17 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
               [points, userId]
             );
 
-            // If cash deposit is enabled, add to cash wallet
-            if (cashDeposit === true && points > 0) {
-              const cashAmount = points * CASH_EXCHANGE_RATE;
-              
-              // Add cash to the user's wallet
-              await connection.execute(
-                'UPDATE users SET cash_balance = cash_balance + ? WHERE id = ?',
-                [cashAmount, userId]
-              );
-              
-              // Record the cash deposit in the cash_wallet table
-              await connection.execute(
-                `INSERT INTO cash_wallet (user_id, amount, description)
-                 VALUES (?, ?, ?)`,
-                [userId, cashAmount, `Cash deposit from points conversion: ${points} points = R${cashAmount.toFixed(2)}`]
-              );
-              
-              console.log('Cash deposit created:', {
-                userId,
-                points,
-                cashAmount,
-                description
-              });
-            }
-
-            // Get updated points and cash balance
+            // Get updated points
             const [updatedUsers] = await connection.execute(
-              'SELECT points, cash_balance FROM users WHERE id = ?',
+              'SELECT points FROM users WHERE id = ?',
               [userId]
             );
 
             // Log admin action
-            let actionDetails = `Bulk adjustment - Points: ${points}, Reason: ${description}`;
-            if (cashDeposit === true && points > 0) {
-              const cashAmount = points * CASH_EXCHANGE_RATE;
-              actionDetails += `, Cash deposit: R${cashAmount.toFixed(2)}`;
-            }
-            
             await connection.execute(
               `INSERT INTO admin_logs (admin_id, action_type, target_user_id, details)
                VALUES (?, 'POINT_ADJUSTMENT', ?, ?)`,
-              [req.user.id, userId, actionDetails]
+              [req.user.id, userId, `Bulk adjustment - Points: ${points}, Reason: ${description}`]
             );
 
             results.push({
@@ -1391,10 +1352,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
               name: `${user.first_name} ${user.last_name}`,
               email: user.email,
               previousPoints: user.points,
-              previousCashBalance: user.cash_balance || 0,
-              newPoints: updatedUsers[0].points,
-              newCashBalance: updatedUsers[0].cash_balance || 0,
-              cashDeposit: cashDeposit === true
+              newPoints: updatedUsers[0].points
             });
           }
         }
@@ -3173,60 +3131,6 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
       await connection.end();
     }
   });
-
-  // Endpoint to fetch cash wallet transactions
-  app.get("/api/customer/cash-wallet", async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    const connection = await createConnection();
-    try {
-      console.log('Fetching cash wallet transactions for user:', req.user.id);
-
-      // First get the user's cash balance
-      const [userRows] = await connection.execute(
-        `SELECT 
-          id,
-          CAST(COALESCE(cash_balance, 0) as DECIMAL(10,2)) as cash_balance
-        FROM users 
-        WHERE id = ?`,
-        [req.user.id]
-      );
-
-      if (!userRows || !userRows[0]) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      const cashBalance = parseFloat(userRows[0].cash_balance || '0');
-
-      // Now get transactions from cash_wallet_transactions table
-      const [transactions] = await connection.execute(
-        `SELECT 
-          cwt.*,
-          DATE_FORMAT(cwt.created_at, '%Y-%m-%dT%H:%i:%s.000Z') as timestamp
-        FROM cash_wallet_transactions cwt
-        WHERE cwt.user_id = ?
-        ORDER BY cwt.created_at DESC
-        LIMIT 50`,
-        [req.user.id]
-      );
-
-      console.log('Found cash wallet transactions:', transactions ? transactions.length : 0);
-
-      // Format the response
-      res.json({
-        cash_balance: cashBalance,
-        transactions: transactions || []
-      });
-    } catch (error) {
-      console.error('Error fetching cash wallet data:', error);
-      res.status(500).json({ error: 'Failed to fetch cash wallet data' });
-    } finally {
-      await connection.end();
-    }
-  });
-
 
   // Add proper error handling and validation for cash redemption
   app.post("/api/rewards/redeem-cash", async (req, res) => {

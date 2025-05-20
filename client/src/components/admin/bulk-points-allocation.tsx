@@ -11,13 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { FormItem, FormLabel, FormControl, FormDescription } from '@/components/ui/form';
 
 const bulkPointsSchema = z.object({
   points: z.coerce.number().int().min(1, { message: "Points must be a positive number" }),
   description: z.string().min(3, { message: "Description is required" }),
-  cashDeposit: z.boolean().default(false),
 });
 
 type BulkPointsFormData = z.infer<typeof bulkPointsSchema>;
@@ -36,7 +33,6 @@ export default function BulkPointsAllocation({ selectedIds, onUpdateComplete }: 
     defaultValues: {
       points: 0,
       description: "",
-      cashDeposit: false,
     },
   });
 
@@ -52,7 +48,6 @@ export default function BulkPointsAllocation({ selectedIds, onUpdateComplete }: 
           userIds: selectedIds,
           points: data.points,
           description: data.description,
-          cashDeposit: data.cashDeposit,
         }),
       });
       
@@ -123,35 +118,6 @@ export default function BulkPointsAllocation({ selectedIds, onUpdateComplete }: 
               <p className="text-sm text-red-500">{form.formState.errors.description.message}</p>
             )}
           </div>
-          
-          <div className="flex items-center space-x-2 pt-4">
-            <Switch 
-              id="cashDeposit" 
-              {...form.register('cashDeposit')} 
-              onCheckedChange={(checked) => form.setValue('cashDeposit', checked)}
-              checked={form.watch('cashDeposit')}
-            />
-            <div className="space-y-1">
-              <Label htmlFor="cashDeposit" className="font-medium">
-                Convert to Cash Deposit
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Points will be converted to cash at a rate of R0.015 per point
-              </p>
-            </div>
-          </div>
-          
-          {form.watch('cashDeposit') && (
-            <div className="p-4 mt-2 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="font-semibold text-blue-700">Cash Value:</p>
-              <p className="text-blue-600">
-                {form.watch('points') ? `R${(form.watch('points') * 0.015).toFixed(2)}` : 'R0.00'}
-              </p>
-              <p className="text-xs text-blue-600 mt-1">
-                Points will be added to customer accounts and the equivalent cash value will be added to their cash wallet.
-              </p>
-            </div>
-          )}
 
           <div className="flex justify-end space-x-2 pt-2">
             <Button

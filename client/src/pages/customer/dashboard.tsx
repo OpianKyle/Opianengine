@@ -23,92 +23,6 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 
-// Cash Wallet Transactions component
-function CashWalletHistory() {
-  const { toast } = useToast();
-  
-  // Query to fetch cash wallet transactions
-  const { data, isLoading, error } = useQuery<CashTransaction[]>({
-    queryKey: ["/api/customer/cash-wallet"],
-    queryFn: async () => {
-      const response = await fetch("/api/customer/cash-wallet");
-      if (!response.ok) {
-        throw new Error("Failed to fetch cash wallet transactions");
-      }
-      return response.json();
-    },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-  
-  if (isLoading) {
-    return (
-      <div className="flex flex-col space-y-2">
-        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
-        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
-        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
-      </div>
-    );
-  }
-  
-  if (error) {
-    return (
-      <div className="text-center py-4">
-        <AlertCircle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-        <p className="text-sm text-muted-foreground">
-          Unable to load cash wallet history
-        </p>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="mt-2"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/customer/cash-wallet"] })}
-        >
-          Try Again
-        </Button>
-      </div>
-    );
-  }
-  
-  const transactions = data || [];
-  
-  if (transactions.length === 0) {
-    return (
-      <div className="text-center py-4">
-        <DollarSign className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
-        <p className="text-sm text-muted-foreground">
-          You don't have any cash wallet transactions yet.
-        </p>
-      </div>
-    );
-  }
-  
-  return (
-    <ScrollArea className="h-[180px] md:h-[220px]">
-      <div className="space-y-3">
-        {transactions.map((transaction) => (
-          <Card key={transaction.id} className="bg-card dark:bg-[#011d3d]/70 border-border dark:border-[#022b5c] shadow-sm p-3">
-            <div className="flex justify-between items-start">
-              <div className="flex flex-col">
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="h-4 w-4 text-green-500" />
-                  <span className="font-medium">R{transaction.amount.toFixed(2)}</span>
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {transaction.description}
-                </div>
-                <div className="flex items-center text-xs text-muted-foreground mt-1">
-                  <CalendarDays className="h-3 w-3 mr-1" />
-                  {formatDate(transaction.createdAt)}
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </ScrollArea>
-  );
-}
-
 // Add RedemptionHistory Component
 function RedemptionHistory() {
   const { toast } = useToast();
@@ -231,7 +145,6 @@ interface User {
   firstName: string;
   lastName: string;
   points: number;
-  cash_balance?: number;
   selectedPackage?: string;
 }
 
@@ -241,13 +154,6 @@ interface Transaction {
   description: string;
   createdAt: string;
   type?: string;
-}
-
-interface CashTransaction {
-  id: number;
-  amount: number;
-  description: string;
-  createdAt: string;
 }
 
 const getTierInfo = (points: number): { name: string; color: string; nextTier?: { name: string; pointsNeeded: number } } => {
@@ -343,24 +249,42 @@ function CustomerDashboardContent() {
     }
   });
 
-  // Query to fetch cash wallet transactions
-  const { data: cashTransactions, isLoading: isCashTransactionsLoading } = useQuery({
-    queryKey: ["/api/customer/cash-wallet"],
-    queryFn: async () => {
-      const response = await fetch("/api/customer/cash-wallet", {
+  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
+  const { toast } = useToast();
+
+  const redeemCashMutation = useMutation({
+    mutationFn: async (points: number) => {
+      const res = await fetch("/api/rewards/redeem-cash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ points }),
         credentials: 'include'
       });
-      if (!response.ok) {
-        throw new Error("Failed to fetch cash wallet transactions");
-      }
-      return response.json();
-    }
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/points"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customer/transactions"] });
+      toast({
+        title: "Success",
+        description: `Successfully redeemed R${(pointsToRedeem * 0.015).toFixed(2)}`,
+      });
+      setPointsToRedeem(0);
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
   });
-
-  const { toast } = useToast();
 
   const points = typeof user?.points === 'number' ? user.points : Number(user?.points || 0);
   const tierInfo = getTierInfo(points);
+  const randValue = (pointsToRedeem * 0.015).toFixed(2);
+  const canRedeem = pointsToRedeem > 0 && pointsToRedeem <= points;
 
   // Get current time of day
   const currentDate = new Date();
@@ -391,9 +315,9 @@ function CustomerDashboardContent() {
         </div>
       </div>
 
-      {/* First row: Points Balance, Cash Balance, and Cash Redemption */}
-      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Points Balance Card */}
+      {/* First row: Points Balance and Cash Redemption side by side */}
+      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2">
+        {/* Profile Balance Card - Points */}
         <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden points-card">
           <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
             <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Your Points Balance</CardTitle>
@@ -435,41 +359,10 @@ function CustomerDashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Cash Balance Card */}
-        <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden cash-card">
-          <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
-            <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Your Cash Balance</CardTitle>
-            <p className="text-xs text-muted-foreground dark:text-gray-400 mb-2 md:mb-6">{lastUpdated}</p>
-          </CardHeader>
-          <CardContent className="pt-0 px-3 md:px-6">
-            <div className="flex items-center mb-2">
-              <div className="w-1/6 md:w-1/5">
-                <div className="flex justify-start">
-                  <DollarSign className="h-10 w-10 md:h-14 md:w-14 text-green-500 opacity-80" />
-                </div>
-              </div>
-              <div className="w-5/6 md:w-4/5">
-                <h3 className="text-3xl md:text-5xl font-bold">R{(user?.cash_balance || 0).toFixed(2)}</h3>
-              </div>
-            </div>
-            
-            <div className="flex items-center mt-2 md:mt-4">
-              <div className="w-full">
-                <div className="flex items-center gap-2 mb-1 md:mb-2">
-                  <span className="text-sm md:text-base font-medium text-card-foreground dark:text-gray-300">Cash Wallet</span>
-                </div>
-                <p className="text-xs md:text-sm text-muted-foreground dark:text-gray-300">
-                  This is your available cash balance from points conversion
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Redeem Points Card - Cash Value */}
-        <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden rewards-section sm:col-span-2 lg:col-span-1">
+        <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden rewards-section">
           <CardHeader className="pb-1 pt-3 md:pb-2 md:pt-4">
-            <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Convert Points to Cash</CardTitle>
+            <CardTitle className="text-card-foreground dark:text-white text-base md:text-lg">Cash Redemption</CardTitle>
             <p className="text-xs text-muted-foreground dark:text-gray-400">{lastUpdated}</p>
           </CardHeader>
           <CardContent className="pt-0 px-3 md:px-6">
@@ -477,82 +370,32 @@ function CustomerDashboardContent() {
               <div className="w-full">
                 <div className="flex flex-col gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">
-                      Convert your points to cash in the Cash Wallet section. 
-                      Each point is worth R0.015 in your cash wallet.
-                    </p>
+                    <p className="text-sm font-medium mb-1">Enter points to redeem:</p>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={points}
+                      value={pointsToRedeem !== 0 ? pointsToRedeem : ''}
+                      onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                      placeholder="Enter points to redeem"
+                      className="h-9 md:h-10 bg-background border-input dark:bg-[#022b5c] dark:border-[#033872] dark:text-white dark:placeholder:text-gray-400"
+                    />
+                    {pointsToRedeem > 0 && (
+                      <p className="text-sm font-medium mt-2">
+                        You will receive: <span className="text-2xl sm:text-3xl font-bold text-green-500">R{randValue}</span>
+                      </p>
+                    )}
                   </div>
                   <Button 
-                    className="w-full h-9 md:h-10"
-                    onClick={() => setLocation('/customer/cash-wallet')}
+                    className="w-full h-9 md:h-10 bg-green-600 hover:bg-green-700 text-white text-sm md:text-base"
+                    onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
+                    disabled={!canRedeem}
                   >
-                    Go to Cash Wallet
+                    {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
                   </Button>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Transactions History Row */}
-      <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2">
-        {/* Points Transactions Card */}
-        <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base md:text-lg">Points Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isTransactionsLoading ? (
-              <div className="flex flex-col space-y-2">
-                <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
-                <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
-                <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
-              </div>
-            ) : transactions && transactions.length > 0 ? (
-              <ScrollArea className="h-[180px] md:h-[220px]">
-                <div className="space-y-3">
-                  {transactions.map((transaction) => (
-                    <div key={transaction.id} className="p-3 bg-card dark:bg-[#022b5c]/40 rounded-md border border-border dark:border-[#033872]">
-                      <div className="flex justify-between">
-                        <div className="flex items-center space-x-2">
-                          {transaction.points > 0 ? (
-                            <Badge className="bg-green-500/20 hover:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30">
-                              +{transaction.points}
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-red-500/20 hover:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30">
-                              {transaction.points}
-                            </Badge>
-                          )}
-                          <span className="text-sm font-medium">
-                            {formatTransactionType(transaction.type ?? 'System')}
-                          </span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(transaction.createdAt)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">{transaction.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-sm text-muted-foreground">No points transactions yet</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Cash Wallet Transactions Card */}
-        <Card className="bg-card dark:bg-[#011d3d] text-card-foreground dark:text-white border-border dark:border-[#022b5c] shadow-md overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base md:text-lg">Cash Wallet Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CashWalletHistory />
           </CardContent>
         </Card>
       </div>
@@ -757,7 +600,7 @@ function CustomerDashboardContent() {
           <Card className="rewards-section shadow-sm">
             <CardHeader className="border-b border-border/40">
               <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold">
-                Cash Wallet
+                Cash Redemption
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-6">
@@ -766,34 +609,46 @@ function CustomerDashboardContent() {
                   <div className="space-y-2">
                     <div className="h-5 w-32 bg-muted rounded animate-pulse"></div>
                     <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
+                    <div className="h-4 w-48 bg-muted rounded animate-pulse"></div>
                   </div>
+                  <div className="h-10 w-full bg-muted rounded animate-pulse"></div>
                 </>
               ) : (
                 <>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-medium">Available Balance</h3>
-                      <p className="text-3xl font-bold">
-                        {new Intl.NumberFormat('en-ZA', {
-                          style: 'currency',
-                          currency: 'ZAR',
-                          minimumFractionDigits: 2
-                        }).format(user?.cash_balance || 0)}
+                  <AnimatedMetric 
+                    title="Cash Value"
+                    value={points * 0.015}
+                    prefix="R"
+                    formatter={(val) => val.toFixed(2)}
+                    description="Current points exchange rate: 1 point = R0.015"
+                    isLoading={isUserLoading}
+                    delay={250}
+                    colorScheme="success"
+                    className="mb-4 -mt-4 -mx-6 p-0"
+                  />
+                  <div className="space-y-2 mt-4">
+                    <label className="text-sm font-medium">Points to Redeem</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={points}
+                      value={pointsToRedeem}
+                      onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                      placeholder="Enter points amount"
+                    />
+                    {pointsToRedeem > 0 && (
+                      <p className="text-sm font-medium mt-2">
+                        You will receive: <span className="text-green-500">R{randValue}</span>
                       </p>
-                    </div>
-                    <DollarSign className="h-8 w-8 text-muted-foreground" />
+                    )}
                   </div>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Visit the Cash Wallet page to view your transaction history and redeem points for cash.
-                    </p>
-                    <Button 
-                      onClick={() => setLocation('/customer/cash-wallet')}
-                      className="w-full"
-                    >
-                      Go to Cash Wallet
-                    </Button>
-                  </div>
+                  <Button
+                    className="w-full mt-2"
+                    onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
+                    disabled={!canRedeem}
+                  >
+                    {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
+                  </Button>
                 </>
               )}
             </CardContent>
