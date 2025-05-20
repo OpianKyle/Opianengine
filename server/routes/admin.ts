@@ -4,7 +4,18 @@ import { checkAdmin } from '../auth';
 import { logAdminAction } from '../admin-logger';
 import { stringify } from 'csv-stringify/sync';
 import { formatRegistrationEmail, sendEmail } from '../utils/emailService';
+import * as xlsx from 'xlsx';
+import fileUpload from 'express-fileupload';
 // Import will be dynamically loaded in the route handler
+
+// Define interface for card statement import stats
+interface ImportStats {
+  totalProcessed: number;
+  usersUpdated: number;
+  pointsAllocated: number;
+  cashDepositsAllocated: number;
+  errors: string[];
+}
 
 const router = Router();
 
@@ -625,6 +636,167 @@ router.post('/login-as-customer', async (req: any, res) => {
     });
   } finally {
     connection.release();
+  }
+});
+
+// Endpoint to handle Excel card statement import
+router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
+  try {
+    // Validate request has file
+    if (!req.files || !req.files.file) {
+      return res.status(400).send('No file uploaded');
+    }
+
+    const uploadedFile = req.files.file;
+    
+    // Check if file is Excel
+    if (!uploadedFile.name.endsWith('.xlsx')) {
+      return res.status(400).send('Only .xlsx files are supported');
+    }
+
+    // Parse the Excel file
+    const workbook = xlsx.read(uploadedFile.data, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(worksheet);
+
+    if (!data || data.length === 0) {
+      return res.status(400).send('No data found in the Excel file');
+    }
+
+    // Statistics to return to the client
+    const stats: ImportStats = {
+      totalProcessed: 0,
+      usersUpdated: 0,
+      pointsAllocated: 0,
+      cashDepositsAllocated: 0,
+      errors: []
+    };
+
+    // Establish database connection
+    const conn = await pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+      console.log(`Processing ${data.length} records from card statement import`);
+
+      // Track unique users updated to avoid double-counting
+      const updatedUsers = new Set<number>();
+
+      // Process each row
+      for (const row of data as any[]) {
+        stats.totalProcessed++;
+
+        // Validate required fields
+        if (!row.CardNumber) {
+          stats.errors.push(`Row ${stats.totalProcessed}: Missing card number`);
+          continue;
+        }
+
+        if (!row.TransactionType) {
+          stats.errors.push(`Row ${stats.totalProcessed}: Missing transaction type`);
+          continue;
+        }
+
+        if (row.Amount === undefined || row.Amount === null) {
+          stats.errors.push(`Row ${stats.totalProcessed}: Missing amount`);
+          continue;
+        }
+
+        const cardNumber = row.CardNumber.toString();
+        const transactionType = row.TransactionType.toLowerCase();
+        const amount = Math.abs(parseFloat(row.Amount)); // Convert to positive value
+        const description = row.Description || `Card statement import - ${row.TransactionType}`;
+        const transactionDate = row.TransactionDate ? new Date(row.TransactionDate) : new Date();
+
+        // Find user by card number
+        const [users] = await conn.query(
+          'SELECT id, first_name, last_name FROM users WHERE card_number = ?',
+          [cardNumber]
+        );
+
+        if (!users || (users as any[]).length === 0) {
+          stats.errors.push(`Row ${stats.totalProcessed}: No user found with card number ${cardNumber}`);
+          continue;
+        }
+
+        const user = (users as any[])[0];
+        updatedUsers.add(user.id);
+
+        // Process based on transaction type
+        if (transactionType === 'debit') {
+          // Money deduction = reward points (1 Rand = 1 point)
+          const pointsToAdd = Math.floor(amount);
+
+          if (pointsToAdd <= 0) {
+            stats.errors.push(`Row ${stats.totalProcessed}: Invalid points amount (${pointsToAdd})`);
+            continue;
+          }
+
+          // Add points to user
+          await conn.query(
+            'UPDATE users SET points = points + ? WHERE id = ?',
+            [pointsToAdd, user.id]
+          );
+
+          // Log in transaction history
+          await conn.query(
+            'INSERT INTO transactions (user_id, points, description, transaction_type) VALUES (?, ?, ?, ?)',
+            [user.id, pointsToAdd, description, 'CARD_STATEMENT']
+          );
+
+          stats.pointsAllocated += pointsToAdd;
+          console.log(`Added ${pointsToAdd} reward points to user ${user.id} (${user.first_name} ${user.last_name})`);
+        } 
+        else if (transactionType === 'credit') {
+          // Money deposit = cash deposit points (1 Rand = 1 point)
+          const cashDepositPoints = Math.floor(amount);
+
+          if (cashDepositPoints <= 0) {
+            stats.errors.push(`Row ${stats.totalProcessed}: Invalid cash deposit amount (${cashDepositPoints})`);
+            continue;
+          }
+
+          // Add to cash_deposits table
+          await conn.query(
+            'INSERT INTO cash_deposits (user_id, points, description) VALUES (?, ?, ?)',
+            [user.id, cashDepositPoints, description]
+          );
+
+          stats.cashDepositsAllocated += cashDepositPoints;
+          console.log(`Added ${cashDepositPoints} cash deposit points to user ${user.id} (${user.first_name} ${user.last_name})`);
+        } 
+        else {
+          stats.errors.push(`Row ${stats.totalProcessed}: Unknown transaction type "${row.TransactionType}"`);
+          continue;
+        }
+      }
+
+      // Update statistics
+      stats.usersUpdated = updatedUsers.size;
+      
+      // Log admin action
+      await logAdminAction({
+        adminId: req.user.id,
+        targetUserId: null,
+        actionType: 'CARD_STATEMENT_IMPORT',
+        details: `Imported card statement data: ${stats.totalProcessed} transactions, ${stats.usersUpdated} users updated, ${stats.pointsAllocated} reward points, ${stats.cashDepositsAllocated} cash deposit points`
+      });
+      
+      // Commit transaction
+      await conn.commit();
+      
+      return res.status(200).json(stats);
+    } catch (error) {
+      await conn.rollback();
+      console.error('Error processing card statement import:', error);
+      return res.status(500).send(`Error processing import: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      conn.release();
+    }
+  } catch (error) {
+    console.error('Error handling card statement import:', error);
+    return res.status(500).send(`Server error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 });
 
