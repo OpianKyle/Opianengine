@@ -464,7 +464,7 @@ export default function CashDepositsPage() {
                 onChange={(e) => setPointsToAllocate(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Available: {availablePoints.toLocaleString()} points
+                Available: {profileLoading ? 'Loading...' : (profileData ? profileData.points.toLocaleString() : '0')} points
               </p>
             </div>
             <div className="space-y-2">
