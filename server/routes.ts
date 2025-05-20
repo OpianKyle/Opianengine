@@ -1792,6 +1792,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
           branchCode: user.branch_code || '',
           hasCreditCard: Boolean(user.has_credit_card),
           cardStatus: user.card_status || 'NOT_DELIVERED',
+          cardNumber: user.card_number || '',
           isSouthAfrican: Boolean(user.is_south_african),
           agentId: user.agent_id || null
         };
