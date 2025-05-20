@@ -863,9 +863,58 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
               const rawValue = String(row[column]);
               console.log(`Processing column ${column} with value: ${rawValue}`);
               
-              // Remove currency symbols, spaces and commas to parse the number
-              const cleanedValue = rawValue.replace(/[^0-9.,\-]/g, '').replace(/,/g, '.');
-              const testAmount = parseFloat(cleanedValue);
+              // For European/South African number format (e.g., 859,25)
+              // First check if this looks like a decimal with comma
+              let testAmount;
+              
+              if (/^\d+,\d+$/.test(rawValue.trim())) {
+                // This is definitely a decimal with comma format (e.g., 859,25)
+                // Replace comma with dot for proper parsing
+                const properDecimal = rawValue.replace(',', '.');
+                testAmount = parseFloat(properDecimal);
+                console.log(`European format detected: ${rawValue} -> ${properDecimal} -> ${testAmount}`);
+              } else {
+                // Standard cleanup for other formats
+                const cleanedValue = rawValue.replace(/[^0-9.,\-]/g, '');
+                
+                // Handle cases with both commas and periods (e.g., 1,000.00 or 1.000,00)
+                // Check if we have a number with thousands separators and decimal
+                if (cleanedValue.includes(',') && cleanedValue.includes('.')) {
+                  // If there are both, determine which is the decimal separator based on position
+                  const lastCommaIndex = cleanedValue.lastIndexOf(',');
+                  const lastDotIndex = cleanedValue.lastIndexOf('.');
+                  
+                  if (lastCommaIndex > lastDotIndex) {
+                    // Format like 1.000,00 (European)
+                    const properly = cleanedValue.replace(/\./g, '').replace(',', '.');
+                    testAmount = parseFloat(properly);
+                    console.log(`Mixed format (European): ${rawValue} -> ${properly} -> ${testAmount}`);
+                  } else {
+                    // Format like 1,000.00 (US/UK)
+                    const properly = cleanedValue.replace(/,/g, '');
+                    testAmount = parseFloat(properly);
+                    console.log(`Mixed format (US/UK): ${rawValue} -> ${properly} -> ${testAmount}`);
+                  }
+                } else if (cleanedValue.includes(',')) {
+                  // Only commas - check if it's likely decimal or thousands
+                  const parts = cleanedValue.split(',');
+                  if (parts.length === 2 && parts[1].length <= 2) {
+                    // Looks like decimal comma (e.g., 859,25)
+                    const properly = cleanedValue.replace(',', '.');
+                    testAmount = parseFloat(properly);
+                    console.log(`Comma decimal: ${rawValue} -> ${properly} -> ${testAmount}`);
+                  } else {
+                    // Looks like thousands separator (e.g., 1,000)
+                    const properly = cleanedValue.replace(/,/g, '');
+                    testAmount = parseFloat(properly);
+                    console.log(`Comma thousands: ${rawValue} -> ${properly} -> ${testAmount}`);
+                  }
+                } else {
+                  // Simple case, just use standard parsing
+                  testAmount = parseFloat(cleanedValue);
+                  console.log(`Standard format: ${rawValue} -> ${cleanedValue} -> ${testAmount}`);
+                }
+              }
               
               // Check if amount is reasonable (between 1 and 100,000)
               if (!isNaN(testAmount) && Math.abs(testAmount) > 0 && Math.abs(testAmount) < 100000) {
@@ -1003,11 +1052,54 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           
           // Find monetary value
           for (const value of rowValues) {
-            const cleanedValue = String(value).replace(/[^0-9.,]/g, '').replace(/,/g, '.');
-            const parsedAmount = parseFloat(cleanedValue);
+            const rawValue = String(value);
+            let parsedAmount;
+
+            // European format check (e.g. 859,25)
+            if (/^\d+,\d+$/.test(rawValue.trim())) {
+              const properDecimal = rawValue.replace(',', '.');
+              parsedAmount = parseFloat(properDecimal);
+              console.log(`European format detected: ${rawValue} -> ${properDecimal} -> ${parsedAmount}`);
+            } else {
+              // For other formats
+              const cleanedValue = rawValue.replace(/[^0-9.,\-]/g, '');
+              
+              // Handle mixed formats with both commas and periods
+              if (cleanedValue.includes(',') && cleanedValue.includes('.')) {
+                const lastCommaIndex = cleanedValue.lastIndexOf(',');
+                const lastDotIndex = cleanedValue.lastIndexOf('.');
+                
+                if (lastCommaIndex > lastDotIndex) {
+                  // European format like 1.000,00
+                  const properly = cleanedValue.replace(/\./g, '').replace(',', '.');
+                  parsedAmount = parseFloat(properly);
+                } else {
+                  // US/UK format like 1,000.00
+                  const properly = cleanedValue.replace(/,/g, '');
+                  parsedAmount = parseFloat(properly);
+                }
+              } else if (cleanedValue.includes(',')) {
+                // Only commas - check if it's decimal or thousands
+                const parts = cleanedValue.split(',');
+                if (parts.length === 2 && parts[1].length <= 2) {
+                  // Decimal comma (e.g., 859,25)
+                  const properly = cleanedValue.replace(',', '.');
+                  parsedAmount = parseFloat(properly);
+                  console.log(`Decimal comma: ${rawValue} -> ${properly} -> ${parsedAmount}`);
+                } else {
+                  // Thousands separator (e.g., 1,000)
+                  const properly = cleanedValue.replace(/,/g, '');
+                  parsedAmount = parseFloat(properly);
+                }
+              } else {
+                // Standard format
+                parsedAmount = parseFloat(cleanedValue);
+              }
+            }
             
             if (!isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount < 100000) {
               rowAmount = parsedAmount;
+              console.log(`Found amount: ${rawValue} -> ${parsedAmount}`);
               break;
             }
           }
