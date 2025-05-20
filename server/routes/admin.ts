@@ -647,7 +647,18 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       return res.status(400).send('No file uploaded');
     }
 
+    // Validate customerId is present
+    if (!req.body.customerId) {
+      return res.status(400).send('Customer ID is required');
+    }
+
     const uploadedFile = req.files.file;
+    const customerId = parseInt(req.body.customerId, 10);
+    
+    // Validate customerId is a number
+    if (isNaN(customerId)) {
+      return res.status(400).send('Invalid customer ID');
+    }
     
     // Check if file is Excel
     if (!uploadedFile.name.endsWith('.xlsx')) {
@@ -683,16 +694,23 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       // Track unique users updated to avoid double-counting
       const updatedUsers = new Set<number>();
 
+      // Get the customer first to make sure they exist
+      const [customers] = await conn.query(
+        'SELECT id, first_name, last_name FROM users WHERE id = ?',
+        [customerId]
+      );
+
+      if (!customers || (customers as any[]).length === 0) {
+        return res.status(404).send(`Customer with ID ${customerId} not found`);
+      }
+
+      const customer = (customers as any[])[0];
+      
       // Process each row
       for (const row of data as any[]) {
         stats.totalProcessed++;
 
         // Validate required fields
-        if (!row.CardNumber) {
-          stats.errors.push(`Row ${stats.totalProcessed}: Missing card number`);
-          continue;
-        }
-
         if (!row.TransactionType) {
           stats.errors.push(`Row ${stats.totalProcessed}: Missing transaction type`);
           continue;
@@ -703,25 +721,13 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           continue;
         }
 
-        const cardNumber = row.CardNumber.toString();
         const transactionType = row.TransactionType.toLowerCase();
         const amount = Math.abs(parseFloat(row.Amount)); // Convert to positive value
         const description = row.Description || `Card statement import - ${row.TransactionType}`;
         const transactionDate = row.TransactionDate ? new Date(row.TransactionDate) : new Date();
 
-        // Find user by card number
-        const [users] = await conn.query(
-          'SELECT id, first_name, last_name FROM users WHERE card_number = ?',
-          [cardNumber]
-        );
-
-        if (!users || (users as any[]).length === 0) {
-          stats.errors.push(`Row ${stats.totalProcessed}: No user found with card number ${cardNumber}`);
-          continue;
-        }
-
-        const user = (users as any[])[0];
-        updatedUsers.add(user.id);
+        // We're using the selected customer instead of searching by card number
+        updatedUsers.add(customer.id);
 
         // Process based on transaction type
         if (transactionType === 'debit') {
@@ -733,20 +739,20 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             continue;
           }
 
-          // Add points to user
+          // Add points to customer
           await conn.query(
             'UPDATE users SET points = points + ? WHERE id = ?',
-            [pointsToAdd, user.id]
+            [pointsToAdd, customer.id]
           );
 
           // Log in transaction history
           await conn.query(
             'INSERT INTO transactions (user_id, points, description, transaction_type) VALUES (?, ?, ?, ?)',
-            [user.id, pointsToAdd, description, 'CARD_STATEMENT']
+            [customer.id, pointsToAdd, description, 'CARD_STATEMENT']
           );
 
           stats.pointsAllocated += pointsToAdd;
-          console.log(`Added ${pointsToAdd} reward points to user ${user.id} (${user.first_name} ${user.last_name})`);
+          console.log(`Added ${pointsToAdd} reward points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
         } 
         else if (transactionType === 'credit') {
           // Money deposit = cash deposit points (1 Rand = 1 point)
@@ -760,11 +766,11 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           // Add to cash_deposits table
           await conn.query(
             'INSERT INTO cash_deposits (user_id, points, description) VALUES (?, ?, ?)',
-            [user.id, cashDepositPoints, description]
+            [customer.id, cashDepositPoints, description]
           );
 
           stats.cashDepositsAllocated += cashDepositPoints;
-          console.log(`Added ${cashDepositPoints} cash deposit points to user ${user.id} (${user.first_name} ${user.last_name})`);
+          console.log(`Added ${cashDepositPoints} cash deposit points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
         } 
         else {
           stats.errors.push(`Row ${stats.totalProcessed}: Unknown transaction type "${row.TransactionType}"`);
@@ -776,12 +782,16 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       stats.usersUpdated = updatedUsers.size;
       
       // Log admin action
-      await logAdminAction({
-        adminId: req.user.id,
-        targetUserId: null,
-        actionType: 'CARD_STATEMENT_IMPORT',
-        details: `Imported card statement data: ${stats.totalProcessed} transactions, ${stats.usersUpdated} users updated, ${stats.pointsAllocated} reward points, ${stats.cashDepositsAllocated} cash deposit points`
-      });
+      try {
+        await logAdminAction({
+          adminId: req.user.id,
+          targetUserId: customer.id, // Use the customer ID instead of null
+          actionType: 'CARD_STATEMENT_IMPORT',
+          details: `Imported card statement data: ${stats.totalProcessed} transactions, ${stats.usersUpdated} users updated, ${stats.pointsAllocated} reward points, ${stats.cashDepositsAllocated} cash deposit points`
+        });
+      } catch (error) {
+        console.log('Note: Could not log admin action, continuing with import process');
+      }
       
       // Commit transaction
       await conn.commit();

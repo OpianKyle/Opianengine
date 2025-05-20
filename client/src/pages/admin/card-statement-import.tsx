@@ -84,7 +84,7 @@ export default function CardStatementImportPage() {
 
   // Filter customers based on search term
   const filteredCustomers = searchTerm 
-    ? customers.filter(c => 
+    ? (customers as Customer[]).filter(c => 
         c.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
         `${c.first_name} ${c.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
       )
