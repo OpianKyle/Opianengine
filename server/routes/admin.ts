@@ -659,6 +659,81 @@ router.post('/login-as-customer', async (req: any, res) => {
 
 // Endpoint to handle Excel card statement import
 router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
+  // Debug helper function to parse numeric values properly
+  function parseAmountValue(value: string | number): number {
+    if (typeof value === 'number') return value;
+    
+    // Convert to string and clean it
+    const strValue = String(value).trim();
+    
+    // Print the raw value for debugging
+    console.log(`DEBUG - Parsing amount value: "${strValue}"`);
+    
+    // Check for European/South African format (e.g., "859,25")
+    if (/^\d+,\d{1,2}$/.test(strValue)) {
+      // Definitely a decimal comma - replace with dot
+      const result = parseFloat(strValue.replace(',', '.'));
+      console.log(`DEBUG - European decimal format detected: ${strValue} -> ${result}`);
+      return result;
+    }
+    
+    // Handle other formats
+    let parsedValue: number;
+    
+    // Check both comma and dot
+    if (strValue.includes(',') && strValue.includes('.')) {
+      // Has both comma and dot - determine by position which is the decimal
+      const lastCommaIndex = strValue.lastIndexOf(',');
+      const lastDotIndex = strValue.lastIndexOf('.');
+      
+      if (lastCommaIndex > lastDotIndex) {
+        // Format like 1.000,00 (European)
+        const cleanValue = strValue
+          .replace(/[^\d,.]/g, '') // Remove non-numeric except comma and dot
+          .replace(/\./g, '')      // Remove all dots (thousands separators)
+          .replace(',', '.');      // Convert decimal comma to dot
+        
+        parsedValue = parseFloat(cleanValue);
+        console.log(`DEBUG - Mixed Euro format: ${strValue} -> ${cleanValue} -> ${parsedValue}`);
+      } else {
+        // Format like 1,000.00 (US/UK)
+        const cleanValue = strValue
+          .replace(/[^\d,.]/g, '') // Remove non-numeric except comma and dot
+          .replace(/,/g, '');      // Remove all commas (thousands separators)
+        
+        parsedValue = parseFloat(cleanValue);
+        console.log(`DEBUG - Mixed US format: ${strValue} -> ${cleanValue} -> ${parsedValue}`);
+      }
+    } else if (strValue.includes(',')) {
+      // Only commas - check if decimal or thousands
+      const parts = strValue.split(',');
+      
+      if (parts.length === 2 && parts[1].length === 2) {
+        // Looks like a decimal comma (e.g., 859,25)
+        const cleanValue = strValue
+          .replace(/[^\d,]/g, '') // Remove everything except digits and comma
+          .replace(',', '.');     // Replace comma with dot
+        
+        parsedValue = parseFloat(cleanValue);
+        console.log(`DEBUG - Decimal comma format: ${strValue} -> ${cleanValue} -> ${parsedValue}`);
+      } else {
+        // Probably thousands separator (e.g., 1,000)
+        const cleanValue = strValue
+          .replace(/[^\d,]/g, '') // Remove non-numeric except comma
+          .replace(/,/g, '');     // Remove all commas
+        
+        parsedValue = parseFloat(cleanValue);
+        console.log(`DEBUG - Thousand separator format: ${strValue} -> ${cleanValue} -> ${parsedValue}`);
+      }
+    } else {
+      // Standard format or just dot as decimal
+      const cleanValue = strValue.replace(/[^\d.]/g, '');
+      parsedValue = parseFloat(cleanValue);
+      console.log(`DEBUG - Standard format: ${strValue} -> ${cleanValue} -> ${parsedValue}`);
+    }
+    
+    return isNaN(parsedValue) ? 0 : parsedValue;
+  }
   try {
     // Validate request has file
     if (!req.files || !req.files.file) {
