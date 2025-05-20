@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -288,140 +288,98 @@ export default function CashDepositsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form 
-            className="space-y-6" 
-            onSubmit={(e) => {
-              e.preventDefault();
-              
-              // Validate input
-              const points = Number(pointsToAllocate);
-              console.log('Form submitted with points:', points);
-              
-              if (isNaN(points) || points <= 0) {
-                toast({
-                  title: 'Invalid Points',
-                  description: 'Please enter a valid number of points greater than zero.',
-                  variant: 'destructive',
-                });
-                return;
-              }
-              
-              // Check if user has enough points
-              const availablePoints = profileData?.points || 0;
-              if (points > availablePoints) {
-                toast({
-                  title: 'Insufficient Points',
-                  description: `You only have ${availablePoints.toLocaleString()} points available.`,
-                  variant: 'destructive',
-                });
-                return;
-              }
-              
-              // Make direct API call
-              fetch('/api/customer/cash-deposits/allocate', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  points,
-                  description: description || 'Points allocated to cash deposits'
-                }),
-                credentials: 'include'
-              })
-              .then(response => {
-                console.log('Allocation response status:', response.status);
-                if (!response.ok) {
-                  return response.json().then(data => {
-                    throw new Error(data.error || 'Failed to allocate points');
-                  });
-                }
-                return response.json();
-              })
-              .then(data => {
-                console.log('Allocation success:', data);
-                toast({
-                  title: 'Points Allocated',
-                  description: `Successfully allocated ${points} points to your cash wallet.`,
-                  variant: 'default',
-                });
-                
-                // Reset form
-                setPointsToAllocate('');
-                setDescription('');
-                
-                // Refetch data
-                queryClient.invalidateQueries({ queryKey: ['/api/customer/cash-deposits'] });
-                queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
-              })
-              .catch(error => {
-                console.error('Allocation error:', error);
-                toast({
-                  title: 'Allocation Failed',
-                  description: error.message || 'Failed to allocate points',
-                  variant: 'destructive',
-                });
-              });
-            }}
-          >
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="pointsToAllocate">Points to Allocate</Label>
-                <div className="flex items-center mt-1.5 gap-2">
-                  <Input
-                    id="pointsToAllocate"
-                    name="pointsToAllocate"
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="Enter points amount"
-                    value={pointsToAllocate}
-                    onChange={(e) => setPointsToAllocate(e.target.value)}
-                    className="w-full"
-                    required
-                  />
-                  <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
-                  <div className="text-sm font-medium hidden md:block">
-                    {previewCashValue()}
-                  </div>
-                </div>
-                <div className="flex justify-between mt-1">
-                  <p className="text-xs text-muted-foreground">
-                    You have {availablePoints.toLocaleString()} points available
-                  </p>
-                  <p className="text-xs font-medium md:hidden">
-                    Value: {previewCashValue()}
-                  </p>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="pointsToAllocate">Points to Allocate</Label>
+              <div className="flex items-center mt-1.5 gap-2">
+                <Input
+                  id="pointsToAllocate"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="Enter points amount"
+                  value={pointsToAllocate}
+                  onChange={(e) => setPointsToAllocate(e.target.value)}
+                  className="w-full"
+                />
+                <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
+                <div className="text-sm font-medium hidden md:block">
+                  {previewCashValue()}
                 </div>
               </div>
-              
-              <div>
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  placeholder="Add a note for this allocation"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="mt-1.5"
-                />
+              <div className="flex justify-between mt-1">
+                <p className="text-xs text-muted-foreground">
+                  You have {availablePoints.toLocaleString()} points available
+                </p>
+                <p className="text-xs font-medium md:hidden">
+                  Value: {previewCashValue()}
+                </p>
               </div>
             </div>
             
+            <div>
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                placeholder="Add a note for this allocation"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+            
             <Button 
-              type="submit"
+              onClick={() => {
+                // Validate input
+                const points = Number(pointsToAllocate);
+                console.log('Allocating points:', points);
+                
+                if (isNaN(points) || points <= 0) {
+                  toast({
+                    title: 'Invalid Points',
+                    description: 'Please enter a valid number of points greater than zero.',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+                
+                // Check if user has enough points
+                const availablePoints = profileData?.points || 0;
+                if (points > availablePoints) {
+                  toast({
+                    title: 'Insufficient Points',
+                    description: `You only have ${availablePoints.toLocaleString()} points available.`,
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+                
+                // Call the mutation directly
+                allocateMutation.mutate(
+                  { 
+                    points, 
+                    description: description || 'Points allocated to cash deposits'
+                  },
+                  {
+                    onSuccess: () => {
+                      // This will run in addition to the onSuccess in the mutation definition
+                      setPointsToAllocate('');
+                      setDescription('');
+                    }
+                  }
+                );
+              }}
               className="w-full"
               disabled={
                 !pointsToAllocate || 
                 Number(pointsToAllocate) <= 0 || 
                 (profileData && Number(pointsToAllocate) > profileData.points) || 
-                allocateMutation.isPending ||
-                profileLoading
+                allocateMutation.isPending
               }
             >
               {allocateMutation.isPending ? 'Allocating...' : 'Allocate Points to Cash Wallet'}
             </Button>
-          </form>
+          </div>
         </CardContent>
       </Card>
 
