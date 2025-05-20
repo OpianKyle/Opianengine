@@ -68,19 +68,17 @@ export default function CardStatementImportPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch customers for dropdown
-  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>(
-    ['/api/admin/customers'],
-    async () => {
+  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>({
+    queryKey: ['/api/admin/customers'],
+    queryFn: async () => {
       const response = await fetch('/api/admin/customers');
       if (!response.ok) {
         throw new Error('Failed to fetch customers');
       }
       return response.json();
     },
-    {
-      staleTime: 60000, // 1 minute
-    }
-  );
+    staleTime: 60000, // 1 minute
+  });
 
   // Filter customers based on search term
   const filteredCustomers = searchTerm 
@@ -224,8 +222,8 @@ export default function CardStatementImportPage() {
                                   <div className="flex items-center justify-center p-4">
                                     <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
                                   </div>
-                                ) : filteredCustomers.length > 0 ? (
-                                  filteredCustomers.map((customer) => (
+                                ) : (filteredCustomers as Customer[]).length > 0 ? (
+                                  (filteredCustomers as Customer[]).map((customer: Customer) => (
                                     <SelectItem key={customer.id} value={customer.id.toString()}>
                                       {customer.first_name} {customer.last_name} - {customer.email}
                                     </SelectItem>
