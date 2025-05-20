@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import CustomerLayout from '@/components/layout/customer-layout';
 import { 
@@ -25,11 +25,15 @@ import {
   ArrowUpRight, 
   ArrowDownLeft, 
   Wallet, 
-  AlertCircle 
+  AlertCircle,
+  Award
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
-import { getQueryFn } from '@/lib/queryClient';
+import { getQueryFn, queryClient } from '@/lib/queryClient';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import AnimatedMetric from '@/components/shared/animated-metric';
 
 // Define the cash wallet data structure
 interface CashWalletData {
@@ -49,6 +53,7 @@ interface Transaction {
 
 export default function CashWalletPage() {
   const { toast } = useToast();
+  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
   
   // Fetch cash wallet data
   const { 
@@ -67,6 +72,44 @@ export default function CashWalletPage() {
         variant: 'destructive',
       });
     }
+  });
+  
+  // Fetch user points data
+  const { data: userPoints, isLoading: isPointsLoading } = useQuery({
+    queryKey: ['/api/customer/points'],
+    queryFn: getQueryFn(),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+  
+  // Cash redemption mutation
+  const redeemCashMutation = useMutation({
+    mutationFn: async (points: number) => {
+      const res = await fetch('/api/rewards/redeem-cash', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ points }),
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/points'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/cash-wallet'] });
+      toast({
+        title: 'Success',
+        description: `Successfully redeemed R${(pointsToRedeem * 0.015).toFixed(2)}`,
+      });
+      setPointsToRedeem(0);
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message,
+      });
+    },
   });
 
   // Format currency for display
@@ -131,6 +174,7 @@ export default function CashWalletPage() {
         ) : (
           <>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* Cash Balance Card */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-md font-medium">
@@ -147,6 +191,64 @@ export default function CashWalletPage() {
                       ? `Updated ${formatDate(new Date(walletData.transactions[0].timestamp))}` 
                       : 'No recent activity'}
                   </p>
+                </CardContent>
+              </Card>
+              
+              {/* Cash Redemption Card */}
+              <Card className="md:col-span-1 lg:col-span-2">
+                <CardHeader className="border-b border-border/40">
+                  <CardTitle className="flex items-center gap-2 text-primary-700 dark:text-primary-300 font-semibold">
+                    Cash Redemption
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-4">
+                  {isPointsLoading ? (
+                    <>
+                      <div className="space-y-2">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-4 w-48" />
+                      </div>
+                      <Skeleton className="h-10 w-full" />
+                    </>
+                  ) : (
+                    <>
+                      <AnimatedMetric 
+                        title="Cash Value"
+                        value={(userPoints?.points || 0) * 0.015}
+                        prefix="R"
+                        formatter={(val) => val.toFixed(2)}
+                        description="Current points exchange rate: 1 point = R0.015"
+                        isLoading={isPointsLoading}
+                        delay={250}
+                        colorScheme="success"
+                        className="mb-4 -mt-4 p-0"
+                      />
+                      <div className="space-y-2 mt-4">
+                        <label className="text-sm font-medium">Points to Redeem</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max={userPoints?.points || 0}
+                          value={pointsToRedeem}
+                          onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                          placeholder="Enter points amount"
+                        />
+                        {pointsToRedeem > 0 && (
+                          <p className="text-sm font-medium mt-2">
+                            You will receive: <span className="text-green-500">R{(pointsToRedeem * 0.015).toFixed(2)}</span>
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        className="w-full mt-2"
+                        onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
+                        disabled={!pointsToRedeem || pointsToRedeem <= 0 || pointsToRedeem > (userPoints?.points || 0)}
+                      >
+                        Redeem for Cash
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
