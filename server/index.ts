@@ -45,6 +45,7 @@ import adminRouter from './routes/admin';
 import migrationRouter from './routes/migration';
 import subscriptionRouter from './routes/subscription';
 import { leadsRouter } from './routes/leads';
+import customerRouter from './routes/customer';
 import session from 'express-session';
 import passport from 'passport';
 import { MemoryStore } from 'express-session';
@@ -163,6 +164,7 @@ app.use((req: any, res, next) => {
     app.use('/api/migration', migrationRouter);
     app.use('/api/subscription', subscriptionRouter);
     app.use('/api/leads', leadsRouter);
+    app.use('/api/customer', customerRouter);
     
     registerRoutes(app, sessionMiddleware);
     console.log('Routes registered');

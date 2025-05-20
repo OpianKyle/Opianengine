@@ -132,11 +132,23 @@ export default function CashDepositsPage() {
       return;
     }
     
+    // Add some logging to debug
+    console.log('Allocating points:', points);
+    
     // Execute the mutation
-    allocateMutation.mutate({ 
-      points, 
-      description: description || 'Points allocated to cash deposits'
-    });
+    try {
+      allocateMutation.mutate({ 
+        points, 
+        description: description || 'Points allocated to cash deposits'
+      });
+    } catch (error) {
+      console.error('Error in allocation mutation:', error);
+      toast({
+        title: 'Allocation Failed',
+        description: error instanceof Error ? error.message : 'Failed to allocate points',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Calculate preview value

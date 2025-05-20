@@ -8,8 +8,10 @@ const router = Router();
 // Middleware to check if user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: Function) => {
   if (!req.isAuthenticated()) {
+    console.log('User not authenticated for customer route');
     return res.status(401).json({ error: "Not authenticated" });
   }
+  console.log('User authenticated for customer route:', req.user?.id);
   next();
 };
 
@@ -84,11 +86,16 @@ router.get('/cash-deposits', isAuthenticated, async (req: Request, res: Response
 router.post('/cash-deposits/allocate', isAuthenticated, async (req: Request, res: Response) => {
   let connection;
   try {
+    console.log('Cash deposits allocation request:', req.body);
     const { points, description } = req.body;
     
     if (!points || isNaN(Number(points)) || Number(points) <= 0) {
+      console.log('Invalid points amount:', points);
       return res.status(400).json({ error: 'Valid points amount is required' });
     }
+    
+    const numPoints = Number(points);
+    console.log('Processing allocation of', numPoints, 'points for user', req.user.id);
     
     connection = await createConnection();
     
@@ -98,7 +105,10 @@ router.post('/cash-deposits/allocate', isAuthenticated, async (req: Request, res
       [req.user.id]
     );
     
-    if (!userPoints || !userPoints[0] || userPoints[0].points < points) {
+    console.log('User points available:', userPoints[0]?.points);
+    
+    if (!userPoints || !userPoints[0] || userPoints[0].points < numPoints) {
+      console.log('Insufficient points - available:', userPoints[0]?.points, 'requested:', numPoints);
       return res.status(400).json({ error: 'Insufficient points' });
     }
     
