@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -10,10 +11,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Wallet, ArrowDownCircle } from "lucide-react";
+import { Wallet, ArrowDownCircle, ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { apiRequest } from '@/lib/queryClient';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import { useProfile } from '@/hooks/use-profile';
 
 interface CashDeposit {
   id: number;
@@ -25,7 +32,12 @@ interface CashDeposit {
 
 export default function CashDepositsPage() {
   const [isClient, setIsClient] = useState(false);
-
+  const [pointsToAllocate, setPointsToAllocate] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: profileData } = useProfile();
+  
   // Use useEffect to handle SSR hydration
   useEffect(() => {
     setIsClient(true);
@@ -38,13 +50,90 @@ export default function CashDepositsPage() {
       const res = await apiRequest('GET', '/api/customer/cash-deposits');
       
       if (!res.ok) {
-        const errorData = await res.json();
+        const errorData = await res.json().catch(() => ({ error: 'Failed to parse error response' }));
         throw new Error(errorData.error || 'Failed to fetch cash deposits');
       }
       
       return res.json();
     }
   });
+  
+  // Mutation for allocating points to cash deposits
+  const allocateMutation = useMutation({
+    mutationFn: async ({ points, description }: { points: number, description: string }) => {
+      const res = await apiRequest('POST', '/api/customer/cash-deposits/allocate', {
+        points,
+        description
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to parse error response' }));
+        throw new Error(errorData.error || 'Failed to allocate points');
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Points Allocated',
+        description: `Successfully allocated points to your cash wallet.`,
+        variant: 'default',
+      });
+      
+      // Reset form
+      setPointsToAllocate('');
+      setDescription('');
+      
+      // Refetch data
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/cash-deposits'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Allocation Failed',
+        description: error instanceof Error ? error.message : 'Failed to allocate points',
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  const handleAllocate = () => {
+    // Validate input
+    const points = Number(pointsToAllocate);
+    if (isNaN(points) || points <= 0) {
+      toast({
+        title: 'Invalid Points',
+        description: 'Please enter a valid number of points greater than zero.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Check if user has enough points
+    const availablePoints = profileData?.points || 0;
+    if (points > availablePoints) {
+      toast({
+        title: 'Insufficient Points',
+        description: `You only have ${availablePoints.toLocaleString()} points available.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Execute the mutation
+    allocateMutation.mutate({ 
+      points, 
+      description: description || 'Points allocated to cash deposits'
+    });
+  };
+
+  // Calculate preview value
+  const previewCashValue = () => {
+    const points = Number(pointsToAllocate);
+    if (isNaN(points) || points <= 0) return formatCurrency(0);
+    return formatCurrency(points * 0.015);
+  };
 
   // Handle loading state
   if (isLoading) {
@@ -85,6 +174,7 @@ export default function CashDepositsPage() {
   const deposits = data?.deposits || [];
   const totalPoints = data?.totalPoints || 0;
   const totalCashValue = data?.totalCashValue || 0;
+  const availablePoints = profileData?.points || 0;
 
   return (
     <div className="space-y-8">
@@ -123,6 +213,57 @@ export default function CashDepositsPage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Points Allocation Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Allocate Points to Cash Wallet</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="pointsToAllocate">Points to Allocate</Label>
+              <div className="flex items-center mt-1.5 gap-2">
+                <Input
+                  id="pointsToAllocate"
+                  type="number"
+                  placeholder="Enter points amount"
+                  value={pointsToAllocate}
+                  onChange={(e) => setPointsToAllocate(e.target.value)}
+                />
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                <div className="text-sm font-medium">
+                  {previewCashValue()}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                You have {availablePoints.toLocaleString()} points available
+              </p>
+            </div>
+            
+            <div>
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                placeholder="Add a note for this allocation"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-end">
+          <Button 
+            onClick={handleAllocate}
+            disabled={!pointsToAllocate || Number(pointsToAllocate) <= 0 || Number(pointsToAllocate) > availablePoints || allocateMutation.isPending}
+          >
+            {allocateMutation.isPending ? 'Allocating...' : 'Allocate Points'}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <Separator />
 
       {/* Deposits Table */}
       <Card>
