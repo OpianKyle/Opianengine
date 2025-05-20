@@ -728,27 +728,89 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       for (const row of data as any[]) {
         stats.totalProcessed++;
 
-        // Validate required fields
-        if (!row.TransactionType) {
-          stats.errors.push(`Row ${stats.totalProcessed}: Missing transaction type`);
+        // Debug: Log raw row data to see what we're working with
+        if (stats.totalProcessed === 1) {
+          console.log('Excel file columns detected:', Object.keys(row).join(', '));
+        }
+        
+        // Get transaction type from any of the common column names
+        // Instead of strict validation, we'll try to determine the type from various columns
+        const possibleTypeColumns = ['TransactionType', 'Type', 'Category', 'TransactionCategory', 'Description', 'Narrative'];
+        let typeColumnFound = null;
+        
+        for (const column of possibleTypeColumns) {
+          if (row[column] !== undefined && row[column] !== null && row[column] !== '') {
+            typeColumnFound = column;
+            break;
+          }
+        }
+        
+        // Get amount from any of the common column names
+        const possibleAmountColumns = ['Amount', 'Value', 'TransactionValue', 'Debit', 'Credit'];
+        let amountColumnFound = null;
+        let validAmount = false;
+        
+        for (const column of possibleAmountColumns) {
+          if (row[column] !== undefined && row[column] !== null && row[column] !== '') {
+            const testAmount = parseFloat(String(row[column]).replace(/,/g, '.'));
+            if (!isNaN(testAmount)) {
+              amountColumnFound = column;
+              validAmount = true;
+              break;
+            }
+          }
+        }
+        
+        // Determine transaction type based on available data
+        let determinedType = '';
+        
+        // If we found a type column, use it
+        if (typeColumnFound) {
+          const typeValue = String(row[typeColumnFound]).toLowerCase();
+          
+          if (typeValue.includes('debit') || typeValue.includes('purchase') || 
+              typeValue.includes('deduction') || typeValue.includes('payment')) {
+            determinedType = 'debit';
+          } else if (typeValue.includes('credit') || typeValue.includes('deposit') || 
+                    typeValue.includes('load') || typeValue.includes('transfer in')) {
+            determinedType = 'credit';
+          }
+        }
+        
+        // If type not determined but amount columns exist, try to infer from amount columns
+        if (!determinedType && row['Debit'] !== undefined) {
+          determinedType = 'debit';
+        } else if (!determinedType && row['Credit'] !== undefined) {
+          determinedType = 'credit';
+        }
+        
+        if (!determinedType) {
+          stats.errors.push(`Row ${stats.totalProcessed}: Unable to determine transaction type`);
+          continue;
+        }
+        
+        if (!validAmount) {
+          stats.errors.push(`Row ${stats.totalProcessed}: Missing or invalid amount`);
           continue;
         }
 
-        if (row.Amount === undefined || row.Amount === null) {
-          stats.errors.push(`Row ${stats.totalProcessed}: Missing amount`);
-          continue;
-        }
-
-        const transactionType = row.TransactionType.toLowerCase();
-        const amount = Math.abs(parseFloat(row.Amount)); // Convert to positive value
-        const description = row.Description || `Card statement import - ${row.TransactionType}`;
-        const transactionDate = row.TransactionDate ? new Date(row.TransactionDate) : new Date();
+        // Get amount from the column we found earlier
+        const amount = amountColumnFound ? 
+            Math.abs(parseFloat(String(row[amountColumnFound]).replace(/,/g, '.'))) : 0;
+        
+        // Get description with fallbacks
+        const description = row.Description || row.Narrative || row.Detail || 
+            `Card statement import - ${typeColumnFound ? row[typeColumnFound] : determinedType}`;
+        
+        // Get date with fallbacks
+        const transactionDate = row.TransactionDate || row.Date ? 
+            new Date(row.TransactionDate || row.Date) : new Date();
 
         // We're using the selected customer instead of searching by card number
         updatedUsers.add(customer.id);
 
-        // Process based on transaction type
-        if (transactionType === 'debit') {
+        // Process based on the transaction type we determined earlier
+        if (determinedType === 'debit') {
           // Money deduction = reward points (1 Rand = 1 point)
           const pointsToAdd = Math.floor(amount);
 
@@ -772,7 +834,7 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           stats.pointsAllocated += pointsToAdd;
           console.log(`Added ${pointsToAdd} reward points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
         } 
-        else if (transactionType === 'credit') {
+        else if (determinedType === 'credit') {
           // Money deposit = cash deposit points (1 Rand = 1 point)
           const cashDepositPoints = Math.floor(amount);
 
@@ -791,7 +853,7 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           console.log(`Added ${cashDepositPoints} cash deposit points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
         } 
         else {
-          stats.errors.push(`Row ${stats.totalProcessed}: Unknown transaction type "${row.TransactionType}"`);
+          stats.errors.push(`Row ${stats.totalProcessed}: Unknown transaction type "${typeColumnFound ? row[typeColumnFound] : 'unknown'}"`);
           continue;
         }
       }
