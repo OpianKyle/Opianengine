@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Wallet, ArrowDownCircle, ArrowRight } from "lucide-react";
+import { Wallet, ArrowDownCircle, ArrowRight, AlertCircle, BanknoteIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { apiRequest } from '@/lib/queryClient';
@@ -20,6 +20,17 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle,
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { InfoIcon, BanknoteIcon } from "lucide-react";
 
 interface CashDeposit {
   id: number;
@@ -29,10 +40,22 @@ interface CashDeposit {
   cashValue: number;
 }
 
+interface CashRedemption {
+  id: number;
+  points: number;
+  cashAmount: number;
+  status: 'PENDING' | 'PROCESSED';
+  created_at: string;
+  processed_at: string | null;
+}
+
 export default function CashDepositsPage() {
   const [isClient, setIsClient] = useState(false);
   const [pointsToAllocate, setPointsToAllocate] = useState<string>('');
   const [description, setDescription] = useState<string>('');
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [bankDetails, setBankDetails] = useState<string>('');
+  const [withdrawalNotes, setWithdrawalNotes] = useState<string>('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -104,6 +127,46 @@ export default function CashDepositsPage() {
       toast({
         title: 'Allocation Failed',
         description: error instanceof Error ? error.message : 'Failed to allocate points',
+        variant: 'destructive',
+      });
+    }
+  });
+  
+  // Mutation for requesting a cash withdrawal
+  const withdrawalMutation = useMutation({
+    mutationFn: async ({ bankDetails, notes }: { bankDetails: string, notes?: string }) => {
+      const res = await apiRequest('POST', '/api/customer/cash-redemptions/request', {
+        bankDetails,
+        notes
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to parse error response' }));
+        throw new Error(errorData.error || 'Failed to submit withdrawal request');
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Withdrawal Request Submitted',
+        description: 'Your cash withdrawal request has been submitted successfully.',
+        variant: 'default',
+      });
+      
+      // Close dialog and reset form
+      setWithdrawDialogOpen(false);
+      setBankDetails('');
+      setWithdrawalNotes('');
+      
+      // Refetch data
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/cash-deposits'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/redemptions'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Withdrawal Request Failed',
+        description: error instanceof Error ? error.message : 'Failed to submit withdrawal request',
         variant: 'destructive',
       });
     }
@@ -243,11 +306,25 @@ export default function CashDepositsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
         <h1 className="text-2xl md:text-3xl font-bold">Cash Deposits</h1>
-        <Badge variant="outline" className="text-sm py-1 px-3 font-medium">
-          Exchange Rate: R0.015 / point
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-sm py-1 px-3 font-medium">
+            Exchange Rate: R0.015 / point
+          </Badge>
+          
+          {totalCashValue >= 5000 ? (
+            <Button
+              variant="default"
+              size="sm"
+              className="whitespace-nowrap"
+              onClick={() => setWithdrawDialogOpen(true)}
+            >
+              <BanknoteIcon className="mr-2 h-4 w-4" />
+              Request Withdrawal
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {/* Summary Cards */}
