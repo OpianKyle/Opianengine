@@ -109,9 +109,11 @@ export default function CashDepositsPage() {
     }
   });
   
-  const handleAllocate = () => {
+  const handleAllocate = async () => {
     // Validate input
     const points = Number(pointsToAllocate);
+    console.log('Starting allocation with points:', points);
+    
     if (isNaN(points) || points <= 0) {
       toast({
         title: 'Invalid Points',
@@ -123,6 +125,8 @@ export default function CashDepositsPage() {
     
     // Check if user has enough points
     const availablePoints = profileData?.points || 0;
+    console.log('Available points:', availablePoints);
+    
     if (points > availablePoints) {
       toast({
         title: 'Insufficient Points',
@@ -132,17 +136,55 @@ export default function CashDepositsPage() {
       return;
     }
     
-    // Add some logging to debug
-    console.log('Allocating points:', points);
+    // Add extensive logging to debug
+    console.log('Attempting to allocate points:', points);
+    console.log('With description:', description || 'Points allocated to cash deposits');
     
-    // Execute the mutation
+    // Execute the mutation directly with a fetch call for debugging
     try {
-      allocateMutation.mutate({ 
-        points, 
-        description: description || 'Points allocated to cash deposits'
+      console.log('Making direct fetch call to allocate points');
+      
+      const response = await fetch('/api/customer/cash-deposits/allocate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          points, 
+          description: description || 'Points allocated to cash deposits'
+        }),
+        credentials: 'include'
       });
+      
+      console.log('Allocation response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+        console.error('Allocation error:', errorData);
+        throw new Error(errorData.error || 'Failed to allocate points');
+      }
+      
+      const result = await response.json();
+      console.log('Allocation success:', result);
+      
+      // Show success toast
+      toast({
+        title: 'Points Allocated',
+        description: `Successfully allocated points to your cash wallet.`,
+        variant: 'default',
+      });
+      
+      // Reset form
+      setPointsToAllocate('');
+      setDescription('');
+      
+      // Refetch data
+      queryClient.invalidateQueries({ queryKey: ['/api/customer/cash-deposits'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+      
     } catch (error) {
-      console.error('Error in allocation mutation:', error);
+      console.error('Error in allocation request:', error);
       toast({
         title: 'Allocation Failed',
         description: error instanceof Error ? error.message : 'Failed to allocate points',
