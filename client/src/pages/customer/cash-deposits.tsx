@@ -340,7 +340,18 @@ export default function CashDepositsPage() {
               <BanknoteIcon className="mr-2 h-4 w-4" />
               Request Withdrawal
             </Button>
-          ) : null}
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="whitespace-nowrap"
+              disabled
+              title="Minimum R5000 required for withdrawal"
+            >
+              <AlertCircle className="mr-2 h-4 w-4" />
+              Minimum R5000 Required
+            </Button>
+          )}
         </div>
       </div>
       
@@ -353,6 +364,15 @@ export default function CashDepositsPage() {
               You are about to request a withdrawal of {formatCurrency(totalCashValue)} from your cash wallet.
             </DialogDescription>
           </DialogHeader>
+          
+          <Alert className="mt-2">
+            <InfoIcon className="h-4 w-4" />
+            <AlertTitle>Cash Deposit Points Only</AlertTitle>
+            <AlertDescription>
+              Only your cash deposit points ({totalPoints.toLocaleString()}) can be used for withdrawal. 
+              Regular rewards points cannot be withdrawn.
+            </AlertDescription>
+          </Alert>
           
           <div className="space-y-4 py-2">
             {totalCashValue < 5000 ? (

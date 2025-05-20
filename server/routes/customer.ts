@@ -235,8 +235,10 @@ router.post('/cash-redemptions/request', isAuthenticated, async (req: Request, r
     // Start transaction
     await connection.beginTransaction();
     
-    // Calculate how many points are needed for the withdrawal
+    // We'll use all available cash deposit points for the withdrawal
+    // These are completely separate from regular reward points
     const pointsNeeded = totalPoints;
+    const cashAmountRequested = totalCashValue;
     
     // Create redemption request in the cash_redemptions table
     await connection.execute(
@@ -252,7 +254,7 @@ router.post('/cash-redemptions/request', isAuthenticated, async (req: Request, r
       [
         req.user.id, 
         -pointsNeeded, // Store as negative points as we're removing them from the wallet
-        totalCashValue, 
+        cashAmountRequested, // Using our cash deposit points value specifically 
         bankDetails,
         notes || ''
       ]
