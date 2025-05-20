@@ -954,7 +954,6 @@ export default function AdminCustomers() {
                     </TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead className="hidden md:table-cell">Email</TableHead>
-                    <TableHead className="hidden sm:table-cell">Phone</TableHead>
                     <TableHead className="hidden lg:table-cell">Package</TableHead>
                     <TableHead className="hidden xl:table-cell">Tier</TableHead>
                     <TableHead className="hidden md:table-cell">Points</TableHead>
@@ -1017,9 +1016,6 @@ export default function AdminCustomers() {
                             <div className="md:hidden text-xs text-muted-foreground mt-1">
                               {customer.email}
                             </div>
-                            <div className="sm:hidden text-xs text-muted-foreground">
-                              {customer.phoneNumber}
-                            </div>
                             <div className="lg:hidden text-xs mt-1">
                               <Badge variant="secondary" className="text-[10px]">
                                 {customer.selectedPackage || 'No Package'}
@@ -1032,7 +1028,6 @@ export default function AdminCustomers() {
                             </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">{customer.email}</TableCell>
-                          <TableCell className="hidden sm:table-cell">{customer.phoneNumber}</TableCell>
                           <TableCell className="hidden lg:table-cell">
                             <Badge variant="secondary">
                               {customer.selectedPackage || 'No Package'}
