@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail, ChevronLeft, ChevronRight, CreditCard, Search, X, Beaker, Users, UserCog } from "lucide-react";
+import { Pencil, Power, PowerOff, TrendingUp, Plus, Package, MoreHorizontal, Download, Upload, Loader2, Mail, ChevronLeft, ChevronRight, CreditCard, Search, X, Beaker, Users, UserCog, DollarSign, Coins } from "lucide-react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -283,8 +283,16 @@ export default function AdminCustomers() {
   const [showAssignProducts, setShowAssignProducts] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
+  
+  // Cash deposit assignment form schema
+  const assignCashDepositSchema = z.object({
+    points: z.coerce.number().min(1, "Must convert at least 1 point"),
+    description: z.string().optional(),
+  });
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
   const [showCardStatusUpdate, setShowCardStatusUpdate] = useState(false);
+  const [showAssignCashDepositDialog, setShowAssignCashDepositDialog] = useState(false);
+  const [cashAmount, setCashAmount] = useState('0.00');
   const [showBulkPointsAllocation, setShowBulkPointsAllocation] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -535,6 +543,38 @@ export default function AdminCustomers() {
   });
   
   // Mutation for resending welcome email
+  // Mutation for assigning cash deposit
+  const assignCashDepositMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof assignCashDepositSchema>) => {
+      if (!selectedCustomer) throw new Error("No customer selected");
+      const res = await fetch(`/api/admin/customer/${selectedCustomer.id}/assign-cash-deposit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      setShowAssignCashDepositDialog(false);
+      setCashAmount('0.00');
+      assignCashDepositForm.reset();
+      toast({
+        title: "Cash deposit assigned",
+        description: "Points have been converted to cash successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Error assigning cash deposit",
+        description: error.message,
+      });
+    },
+  });
+  
   const resendWelcomeEmailMutation = useMutation({
     mutationFn: async (userId: number) => {
       const res = await fetch('/api/admin/resend-welcome-email', {
@@ -723,6 +763,15 @@ export default function AdminCustomers() {
       posBaseValue: 0,
       description: "",
       points: 0,
+    },
+  });
+  
+  // Form for assigning cash deposit
+  const assignCashDepositForm = useForm<z.infer<typeof assignCashDepositSchema>>({
+    resolver: zodResolver(assignCashDepositSchema),
+    defaultValues: {
+      points: 0,
+      description: "",
     },
   });
   
@@ -1547,6 +1596,32 @@ export default function AdminCustomers() {
                             <Mail className="mr-2 h-4 w-4" />
                             Send Fund Card Email
                           </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              setSelectedCustomer(customer);
+                              assignCashDepositForm.reset({ 
+                                points: 0,
+                                description: ""
+                              });
+                              setCashAmount('0.00');
+                              setShowAssignCashDepositDialog(true);
+                            }}
+                          >
+                            <Coins className="mr-2 h-4 w-4" />
+                            Assign Cash Deposit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              setSelectedCustomer(customer);
+                              setShowAssignCashDepositDialog(true);
+                            }}
+                          >
+                            <DollarSign className="mr-2 h-4 w-4" />
+                            Assign Cash Deposit
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
                               if (confirm('Resend welcome email to this customer?')) {
@@ -1962,6 +2037,98 @@ export default function AdminCustomers() {
                 });
               }} 
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Cash Deposit Dialog */}
+        <Dialog open={showAssignCashDepositDialog} onOpenChange={setShowAssignCashDepositDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Assign Cash Deposit</DialogTitle>
+              <DialogDescription>
+                Convert points to cash for {selectedCustomer?.firstName} {selectedCustomer?.lastName}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedCustomer && (
+              <div className="space-y-4 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Current Points:</span>
+                  <span className="font-bold">{selectedCustomer.points.toLocaleString()}</span>
+                </div>
+                
+                <Form {...assignCashDepositForm}>
+                  <form onSubmit={assignCashDepositForm.handleSubmit((data) => {
+                    assignCashDepositMutation.mutate(data);
+                  })} className="space-y-4">
+                    <FormField
+                      control={assignCashDepositForm.control}
+                      name="points"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Points to Convert</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              max={selectedCustomer.points}
+                              placeholder="Enter points to convert" 
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                const pointsValue = Number(e.target.value);
+                                setCashAmount(pointsValue > 0 ? (pointsValue * 0.015).toFixed(2) : '0.00');
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={assignCashDepositForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Optional description" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="px-1 py-2 bg-muted/50 rounded-md">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Cash Value:</span>
+                        <span className="text-lg font-bold text-green-600 dark:text-green-400">R{cashAmount}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Converting at a rate of R0.015 per point
+                      </p>
+                    </div>
+                    
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setShowAssignCashDepositDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        disabled={assignCashDepositMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {assignCashDepositMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Assign Cash Deposit
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
     </div>
