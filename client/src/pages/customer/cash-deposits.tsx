@@ -59,9 +59,9 @@ export default function CashDepositsPage() {
   
   // Fetch user profile data for available points
   const { data: profileData, isLoading: profileLoading } = useQuery({
-    queryKey: ['/api/profile'],
+    queryKey: ['/api/customer/profile'],
     queryFn: async () => {
-      const res = await apiRequest('GET', '/api/profile');
+      const res = await apiRequest('GET', '/api/customer/profile');
       if (!res.ok) {
         throw new Error('Failed to fetch profile data');
       }

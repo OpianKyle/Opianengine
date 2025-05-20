@@ -15,6 +15,44 @@ const isAuthenticated = (req: Request, res: Response, next: Function) => {
   next();
 };
 
+// Get user profile data
+router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
+  let connection;
+  try {
+    connection = await createConnection();
+    console.log('Fetching profile data for user:', req.user.id);
+
+    // Get user data
+    const [userData] = await connection.execute(
+      `SELECT * FROM users WHERE id = ?`,
+      [req.user.id]
+    );
+
+    if (!userData || !Array.isArray(userData) || userData.length === 0) {
+      console.log('User not found:', req.user.id);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Return profile data with points
+    return res.status(200).json({
+      id: userData[0].id,
+      email: userData[0].email,
+      firstName: userData[0].first_name,
+      lastName: userData[0].last_name,
+      phoneNumber: userData[0].phone_number,
+      points: userData[0].points,
+      referralCode: userData[0].referral_code,
+      cardNumber: userData[0].card_number,
+      cardStatus: userData[0].card_status
+    });
+  } catch (error) {
+    console.error('Error fetching profile data:', error);
+    return res.status(500).json({ error: 'Failed to fetch profile data' });
+  } finally {
+    if (connection) await connection.end();
+  }
+});
+
 // Get cash deposits data for the logged-in customer
 router.get('/cash-deposits', isAuthenticated, async (req: Request, res: Response) => {
   let connection;
