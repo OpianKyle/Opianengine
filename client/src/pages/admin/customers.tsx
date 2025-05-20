@@ -1081,17 +1081,13 @@ export default function AdminCustomers() {
                                       data: { cardNumber: newCardNumber }
                                     });
                                     
-                                    // Immediately update the local data for better user experience
-                                    const currentData = queryClient.getQueryData(["/api/admin/customers", page, limit, debouncedSearchQuery, activeTab === 'test']);
-                                    if (currentData) {
-                                      const updatedCustomers = currentData.customers.map(c => 
-                                        c.id === customer.id ? {...c, cardNumber: newCardNumber} : c
-                                      );
-                                      queryClient.setQueryData(
-                                        ["/api/admin/customers", page, limit, debouncedSearchQuery, activeTab === 'test'], 
-                                        {customers: updatedCustomers, total: currentData.total}
-                                      );
-                                    }
+                                    // We'll rely on the server response and refresh instead of optimistic updates
+                                    // This ensures data consistency and avoids type errors
+                                    setTimeout(() => {
+                                      queryClient.invalidateQueries({ 
+                                        queryKey: ["/api/admin/customers", page, limit, debouncedSearchQuery, activeTab === 'test'] 
+                                      });
+                                    }, 300);
                                   }
                                 }}
                               >
