@@ -795,10 +795,36 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             const cleanedValue = String(value).replace(/[^0-9.,]/g, '').replace(/,/g, '.');
             const parsedAmount = parseFloat(cleanedValue);
             
-            if (!isNaN(parsedAmount) && parsedAmount > 0) {
+            // Check if the amount is reasonable (between 1 and 100,000)
+            // This prevents processing of unrealistic amounts
+            if (!isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount < 100000) {
+              console.log(`Found valid amount: ${parsedAmount} from value: ${value}`);
               transactionAmount = parsedAmount;
               foundAmount = true;
               break;
+            }
+          }
+          
+          // If we couldn't find a reasonable amount, try a different approach
+          if (!foundAmount) {
+            // Look for specific patterns that might represent currency values
+            // Examples: R 100.00, 100.00 ZAR, etc.
+            const currencyPattern = /([rR]\s*\d+[.,]?\d*|\d+[.,]?\d*\s*[zZ][aA][rR])/;
+            
+            for (const value of rowValues) {
+              const match = String(value).match(currencyPattern);
+              if (match) {
+                // Extract just the numeric part
+                const numericPart = match[0].replace(/[^0-9.,]/g, '').replace(/,/g, '.');
+                const parsedAmount = parseFloat(numericPart);
+                
+                if (!isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount < 100000) {
+                  console.log(`Found currency amount: ${parsedAmount} from value: ${value}`);
+                  transactionAmount = parsedAmount;
+                  foundAmount = true;
+                  break;
+                }
+              }
             }
           }
           
@@ -833,11 +859,20 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           
           for (const column of possibleAmountColumns) {
             if (row[column] !== undefined && row[column] !== null && row[column] !== '') {
-              const testAmount = parseFloat(String(row[column]).replace(/,/g, '.'));
-              if (!isNaN(testAmount)) {
+              // Clean and parse the amount string
+              const rawValue = String(row[column]);
+              console.log(`Processing column ${column} with value: ${rawValue}`);
+              
+              // Remove currency symbols, spaces and commas to parse the number
+              const cleanedValue = rawValue.replace(/[^0-9.,\-]/g, '').replace(/,/g, '.');
+              const testAmount = parseFloat(cleanedValue);
+              
+              // Check if amount is reasonable (between 1 and 100,000)
+              if (!isNaN(testAmount) && Math.abs(testAmount) > 0 && Math.abs(testAmount) < 100000) {
                 amountColumn = column;
                 transactionAmount = Math.abs(testAmount);
                 validAmount = true;
+                console.log(`Found valid amount in column ${column}: ${transactionAmount}`);
                 break;
               }
             }
