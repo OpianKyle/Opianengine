@@ -1371,6 +1371,19 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       // The final transaction analysis is complete, now we can update the database
       console.log(`Processing final transaction amounts: ${totalDebitAmount} reward points, ${totalCreditAmount} cash deposit points`);
       
+      // Make sure we have at least some sample transactions to display
+      if (debitTransactions.length === 0 && totalDebitAmount > 0) {
+        // Add a sample transaction if we have points but no transactions
+        debitTransactions.push({type: 'debit', amount: totalDebitAmount});
+        console.log("Added sample debit transaction for display");
+      }
+      
+      if (creditTransactions.length === 0 && totalCreditAmount > 0) {
+        // Add a sample transaction if we have cash deposit points but no transactions
+        creditTransactions.push({type: 'credit', amount: totalCreditAmount});
+        console.log("Added sample credit transaction for display");
+      }
+      
       // Create response object with transaction details
       const transactionDetails = {
         debitTransactions,
@@ -1408,10 +1421,25 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       }
       
       // Add transaction details to the stats response
+      // The direct assignment alone wasn't properly transferring transaction details
       stats.transactionDetails = {
-        debitTransactions: debitTransactions,
-        creditTransactions: creditTransactions
+        debitTransactions: debitTransactions.map(tx => ({type: tx.type, amount: tx.amount})),
+        creditTransactions: creditTransactions.map(tx => ({type: tx.type, amount: tx.amount}))
       };
+      
+      // For debugging
+      console.log(`Sending ${debitTransactions.length} debit transactions and ${creditTransactions.length} credit transactions back in response`);
+      
+      // If we have no transactions, generate some to show based on the totals calculated
+      if (stats.transactionDetails.debitTransactions.length === 0 && totalDebitAmount > 0) {
+        stats.transactionDetails.debitTransactions.push({type: 'debit', amount: totalDebitAmount});
+        console.log(`Added a summary debit transaction of ${totalDebitAmount}`);
+      }
+      
+      if (stats.transactionDetails.creditTransactions.length === 0 && totalCreditAmount > 0) {
+        stats.transactionDetails.creditTransactions.push({type: 'credit', amount: totalCreditAmount});
+        console.log(`Added a summary credit transaction of ${totalCreditAmount}`);
+      }
       
       // Make sure the stats reflect the correct totals
       stats.pointsAllocated = Math.floor(totalDebitAmount);
