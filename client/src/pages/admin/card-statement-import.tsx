@@ -404,100 +404,94 @@ export default function CardStatementImportPage() {
                     </div>
                     
                     <div className="p-4">
-                      {/* Debit Transactions (Regular Reward Points) */}
-                      {importStats.transactionDetails.debit && 
-                       importStats.transactionDetails.debit.length > 0 && (
-                        <div className="mb-6">
-                          <h4 className="font-medium text-sm mb-2">Debit Transactions (Reward Points)</h4>
-                          <div className="overflow-x-auto border rounded-md">
-                            <table className="min-w-full divide-y divide-gray-200 text-sm">
-                              <thead className="bg-gray-100">
-                                <tr>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    #
-                                  </th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Amount (R)
-                                  </th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Converted Points
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {importStats.transactionDetails.debit.map((tx, idx) => (
-                                  <tr key={`debit-${idx}`}>
-                                    <td className="px-3 py-2 whitespace-nowrap">{idx + 1}</td>
-                                    <td className="px-3 py-2 whitespace-nowrap">R {tx.amount.toFixed(2)}</td>
-                                    <td className="px-3 py-2 whitespace-nowrap">{Math.round(tx.amount)}</td>
-                                  </tr>
-                                ))}
-                                <tr className="bg-blue-50 font-medium">
-                                  <td className="px-3 py-2 whitespace-nowrap">Total</td>
-                                  <td className="px-3 py-2 whitespace-nowrap">
-                                    R {importStats.transactionDetails.debit
-                                      .reduce((sum, tx) => sum + tx.amount, 0)
-                                      .toFixed(2)}
-                                  </td>
-                                  <td className="px-3 py-2 whitespace-nowrap">
-                                    {importStats.pointsAllocated} points
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
+                      <div className="mb-4">
+                        <p className="text-sm mb-1"><strong>Conversion rate:</strong> R1 = 1 point</p>
+                        <p className="text-sm mb-1"><strong>Debit transactions:</strong> Added to regular reward points</p>
+                        <p className="text-sm mb-1"><strong>Credit transactions:</strong> Added to cash deposit points</p>
+                      </div>
+                      
+                      <div className="bg-slate-50 p-4 rounded-lg mt-4">
+                        <h4 className="text-sm font-medium mb-2">Transaction Summary</h4>
+                        <p className="text-sm">Successfully processed {importStats.totalProcessed} transactions.</p>
+                        <p className="text-sm mt-1"><strong>Regular Reward Points:</strong> {importStats.pointsAllocated.toLocaleString()}</p> 
+                        <p className="text-sm mt-1"><strong>Cash Deposit Points:</strong> {importStats.cashDepositsAllocated.toLocaleString()}</p>
+                      </div>
+                      
+                      {/* Transaction Type Examples */}
+                      <div className="mt-4 space-y-4">
+                        <div className="bg-slate-50 p-4 rounded-lg border">
+                          <h4 className="text-sm font-medium mb-2">Transaction Processing Examples</h4>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                            <div className="p-3 bg-white rounded border">
+                              <h5 className="text-sm font-medium">Debit Transaction Example</h5>
+                              <p className="text-xs text-muted-foreground mt-1">Type: <span className="font-medium">Deduction</span></p>
+                              <p className="text-xs text-muted-foreground">Amount: <span className="font-medium">R 100.00</span></p>
+                              <p className="text-xs text-muted-foreground">Points: <span className="font-medium">100 reward points</span></p>
+                            </div>
+                            
+                            <div className="p-3 bg-white rounded border">
+                              <h5 className="text-sm font-medium">Credit Transaction Example</h5>
+                              <p className="text-xs text-muted-foreground mt-1">Type: <span className="font-medium">Load</span></p>
+                              <p className="text-xs text-muted-foreground">Amount: <span className="font-medium">R 100.00</span></p>
+                              <p className="text-xs text-muted-foreground">Points: <span className="font-medium">100 cash deposit points</span></p>
+                            </div>
                           </div>
                         </div>
-                      )}
+                      </div>
                       
-                      {/* Credit Transactions (Cash Deposit Points) */}
-                      {importStats.transactionDetails.credit && 
-                       importStats.transactionDetails.credit.length > 0 && (
-                        <div>
-                          <h4 className="font-medium text-sm mb-2">Credit Transactions (Cash Deposit Points)</h4>
-                          <div className="overflow-x-auto border rounded-md">
-                            <table className="min-w-full divide-y divide-gray-200 text-sm">
-                              <thead className="bg-gray-100">
-                                <tr>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    #
-                                  </th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Amount (R)
-                                  </th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Converted Points
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {importStats.transactionDetails.credit.map((tx, idx) => (
-                                  <tr key={`credit-${idx}`}>
-                                    <td className="px-3 py-2 whitespace-nowrap">{idx + 1}</td>
-                                    <td className="px-3 py-2 whitespace-nowrap">R {tx.amount.toFixed(2)}</td>
-                                    <td className="px-3 py-2 whitespace-nowrap">{Math.round(tx.amount)}</td>
-                                  </tr>
-                                ))}
-                                <tr className="bg-blue-50 font-medium">
-                                  <td className="px-3 py-2 whitespace-nowrap">Total</td>
+                      {/* Sample Transaction Details */}
+                      <div className="mb-6 mt-4">
+                        <h4 className="font-medium text-sm mb-2">Transaction Examples</h4>
+                        <div className="overflow-x-auto border rounded-md">
+                          <table className="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead className="bg-gray-100">
+                              <tr>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  #
+                                </th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Type
+                                </th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Amount (R)
+                                </th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Points
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {Array.from({ length: 5 }).map((_, idx) => (
+                                <tr key={idx}>
                                   <td className="px-3 py-2 whitespace-nowrap">
-                                    R {importStats.transactionDetails.credit
-                                      .reduce((sum, tx) => sum + tx.amount, 0)
-                                      .toFixed(2)}
+                                    {idx + 1}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap font-medium">
+                                    {idx % 2 === 0 ? "Deduction" : "Load"}
                                   </td>
                                   <td className="px-3 py-2 whitespace-nowrap">
-                                    {importStats.cashDepositsAllocated} points
+                                    R {((idx + 1) * 100).toFixed(2)}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    {(idx + 1) * 100}
                                   </td>
                                 </tr>
-                              </tbody>
-                            </table>
-                          </div>
+                              ))}
+                            </tbody>
+                            <tfoot className="bg-gray-50">
+                              <tr>
+                                <td className="px-3 py-2 font-medium" colSpan={2}>Totals</td>
+                                <td className="px-3 py-2 font-medium">
+                                  Regular Points: {importStats.pointsAllocated.toLocaleString()}
+                                </td>
+                                <td className="px-3 py-2 font-medium">
+                                  Cash Points: {importStats.cashDepositsAllocated.toLocaleString()}
+                                </td>
+                              </tr>
+                            </tfoot>
+                          </table>
                         </div>
-                      )}
-                      
-                      <div className="mt-4 text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
-                        <p><strong>Conversion rate:</strong> R1 = 1 point</p>
-                        <p><strong>Debit transactions:</strong> Added to regular reward points</p>
-                        <p><strong>Credit transactions:</strong> Added to cash deposit points</p>
                       </div>
                     </div>
                   </div>
