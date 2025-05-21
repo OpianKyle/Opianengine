@@ -870,19 +870,15 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             const stringValue = String(value).trim();
             console.log(`Checking value: ${stringValue}`);
             
-            // Remove all decimals for simpler processing - only use the whole number part
+            // Check for European/South African format like 859,25
             let parsedAmount: number;
             
-            // Convert the string to a whole number by removing any decimals
-            // First remove all spaces, commas, dots except leading digits
-            const cleanedValue = stringValue.replace(/[^\d-]/g, '');
-            
-            // Parse as integer to completely discard any decimal part
-            parsedAmount = parseInt(cleanedValue, 10);
-            console.log(`Simplified integer processing: ${stringValue} -> ${parsedAmount}`);
-            
-            // Only fall back to alternative parsing if we failed to get a valid number
-            if (isNaN(parsedAmount)) {
+            // Match exact format like "859,25" (numbers followed by comma and exactly 2 digits)
+            if (/^\d+,\d{2}$/.test(stringValue)) {
+              // It's definitely a decimal comma format - replace with dot for parsing
+              parsedAmount = parseFloat(stringValue.replace(',', '.'));
+              console.log(`European decimal format detected: ${stringValue} -> ${parsedAmount}`);
+            } else {
               // For other formats, try a more general approach
               // First clean the string of any non-numeric characters except comma and dot
               const cleanedValue = stringValue.replace(/[^0-9.,\-]/g, '');
