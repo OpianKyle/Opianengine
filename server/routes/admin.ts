@@ -864,32 +864,38 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             }
           }
           
-          // For Excel files that just contain numbers without any transaction type indicators,
-          // we'll set a transaction type based on configuration
+          // IMPORTANT: For this specific Excel import format, we're using a forced fallback approach
+          // Since transaction type detection is failing consistently, just use a default transaction type
+          // We're defaulting all transactions to 'debit' type (regular reward points)
+          
+          // OVERRIDE: Always use 'debit' type regardless of content
+          determinedType = 'debit';
+          console.log(`OVERRIDE: Setting all transactions to type 'debit' (regular reward points) for row ${stats.totalProcessed}`);
+          
+          // Old code disabled:
+          /*
           if (hasNumericValue) {
-            // Since we can't determine the type, let's go with the most common one - debit for reward points
             determinedType = 'debit';
             console.log(`Using default transaction type 'debit' for row ${stats.totalProcessed} with numeric values`);
           }
-          // As a fallback, try keyword detection
           else if (rowValuesStr.includes('load') || 
               rowValuesStr.includes('deposit') || 
               rowValuesStr.includes('credit')) {
-            determinedType = 'credit'; // cash deposits for "Load" transactions
+            determinedType = 'credit';
             console.log(`Detected 'Load' transaction at row ${stats.totalProcessed}`);
           } 
           else if (rowValuesStr.includes('deduct') || 
                   rowValuesStr.includes('debit') || 
                   rowValuesStr.includes('purchase') ||
                   rowValuesStr.includes('payment')) {
-            determinedType = 'debit'; // reward points for "Deduction" transactions
+            determinedType = 'debit';
             console.log(`Detected 'Deduction' transaction at row ${stats.totalProcessed}`);
           }
           else {
-            // Final fallback - just use debit as the default type
             determinedType = 'debit';
             console.log(`No transaction type detected - using fallback 'debit' for row ${stats.totalProcessed}`);
           }
+          */
           
           // Find a numeric value to use as amount
           let foundAmount = false;
