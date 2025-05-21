@@ -429,7 +429,7 @@ export default function CardStatementImportPage() {
                                   <tr key={`debit-${idx}`}>
                                     <td className="px-3 py-2 whitespace-nowrap">{idx + 1}</td>
                                     <td className="px-3 py-2 whitespace-nowrap">R {tx.amount.toFixed(2)}</td>
-                                    <td className="px-3 py-2 whitespace-nowrap">{Math.round(tx.amount * 25)}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{Math.round(tx.amount)}</td>
                                   </tr>
                                 ))}
                                 <tr className="bg-blue-50 font-medium">
@@ -474,7 +474,7 @@ export default function CardStatementImportPage() {
                                   <tr key={`credit-${idx}`}>
                                     <td className="px-3 py-2 whitespace-nowrap">{idx + 1}</td>
                                     <td className="px-3 py-2 whitespace-nowrap">R {tx.amount.toFixed(2)}</td>
-                                    <td className="px-3 py-2 whitespace-nowrap">{Math.round(tx.amount * 25)}</td>
+                                    <td className="px-3 py-2 whitespace-nowrap">{Math.round(tx.amount)}</td>
                                   </tr>
                                 ))}
                                 <tr className="bg-blue-50 font-medium">
@@ -495,7 +495,7 @@ export default function CardStatementImportPage() {
                       )}
                       
                       <div className="mt-4 text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
-                        <p><strong>Conversion rate:</strong> R1 = 25 points</p>
+                        <p><strong>Conversion rate:</strong> R1 = 1 point</p>
                         <p><strong>Debit transactions:</strong> Added to regular reward points</p>
                         <p><strong>Credit transactions:</strong> Added to cash deposit points</p>
                       </div>
