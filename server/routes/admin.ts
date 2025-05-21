@@ -948,10 +948,10 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             for (const value of rowValues) {
               console.log(`Checking currency value: "${value}"`);
               
-              // Special case for South African Rand format (e.g. "R 2196.00")
+              // Special case for South African Rand format (e.g. "R 2196.00" or "R859")
               if (String(value).includes('R') || String(value).includes('r')) {
-                // Extract just the numeric part
-                const numericPart = String(value).replace(/[^0-9.,]/g, '');
+                // Extract just the numeric part - handle both with and without space after R
+                const numericPart = String(value).replace(/[Rr\s]/g, '');
                 const parsedAmount = parseFloat(numericPart);
                 console.log(`South African Rand detected: ${value} -> ${numericPart} -> ${parsedAmount}`);
                 
@@ -959,7 +959,9 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
                   // Found valid currency amount in Rand
                   console.log(`Found valid Rand amount: ${parsedAmount} from value: ${value}`);
                   transactionAmount = parsedAmount;
-                  validAmount = true;
+                  // Found valid amount, exit the loop
+                  foundAmount = true;
+                  amountColumn = "Rand";
                   break;
                 }
               }
