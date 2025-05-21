@@ -1249,14 +1249,23 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           
           const rowValuesStr = rowValues.join(' ');
           
-          // Determine type from content
-          if (rowValuesStr.includes('load') || rowValuesStr.includes('deposit') || rowValuesStr.includes('credit')) {
+          // Determine type from content - Check for "Load" specifically as this indicates a cash deposit
+          if (rowValuesStr.includes('load')) {
+            console.log("Found 'load' in row, marking as CREDIT transaction");
             rowType = 'credit';
+          } else if (rowValuesStr.includes('deposit') || rowValuesStr.includes('credit')) {
+            console.log("Found deposit/credit in row, marking as CREDIT transaction");
+            rowType = 'credit';
+          } else if (rowValuesStr.includes('deduction')) {
+            console.log("Found 'deduction' in row, marking as DEBIT transaction");
+            rowType = 'debit';
           } else if (rowValuesStr.includes('deduct') || rowValuesStr.includes('debit') || rowValuesStr.includes('purchase')) {
+            console.log("Found debit/purchase in row, marking as DEBIT transaction");
             rowType = 'debit';
           } else {
             // Fall back to row numbering if we can't determine
             rowType = debitTransactions.length === creditTransactions.length ? 'debit' : 'credit';
+            console.log(`Fallback transaction type assignment: ${rowType}`);
           }
           
           // Find monetary value
@@ -1337,8 +1346,8 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       console.log("------ END TRANSACTION SUMMARY ------");
       console.log(`FINAL TOTALS: Debit (reward points): ${runningDebitTotal.toFixed(2)} | Credit (cash deposits): ${runningCreditTotal.toFixed(2)}`);
       
-      // Now apply the accumulated totals to the customer account
-      console.log(`Processing total accumulated amounts: ${totalDebitAmount} reward points, ${totalCreditAmount} cash deposit points`);
+      // The final transaction analysis is complete, now we can update the database
+      console.log(`Processing final transaction amounts: ${totalDebitAmount} reward points, ${totalCreditAmount} cash deposit points`);
       
       // Create response object with transaction details
       const transactionDetails = {
@@ -1376,13 +1385,19 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
         console.log(`Added ${totalCreditAmount} total cash deposit points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
       }
       
+      // Update the final transaction totals based on what we found in the detailed analysis
+      totalDebitAmount = runningDebitTotal;  // Use the debit running total as the final value
+      totalCreditAmount = runningCreditTotal; // Use the credit running total as the final value
+      
       // Add transaction details to the stats response
       stats.transactionDetails = {
         debitTransactions: debitTransactions,
         creditTransactions: creditTransactions
       };
       
-      // Update statistics
+      // Make sure the stats reflect the correct totals
+      stats.pointsAllocated = Math.floor(totalDebitAmount);
+      stats.cashDepositsAllocated = Math.floor(totalCreditAmount);
       stats.usersUpdated = updatedUsers.size;
       
       // Log admin action

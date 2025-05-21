@@ -440,9 +440,9 @@ export default function CardStatementImportPage() {
                         </div>
                       </div>
                       
-                      {/* Sample Transaction Details */}
+                      {/* Actual Transaction Details */}
                       <div className="mb-6 mt-4">
-                        <h4 className="font-medium text-sm mb-2">Transaction Examples</h4>
+                        <h4 className="font-medium text-sm mb-2">Transaction List</h4>
                         <div className="overflow-x-auto border rounded-md">
                           <table className="min-w-full divide-y divide-gray-200 text-sm">
                             <thead className="bg-gray-100">
@@ -462,19 +462,38 @@ export default function CardStatementImportPage() {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {Array.from({ length: 5 }).map((_, idx) => (
-                                <tr key={idx}>
+                              {/* Displaying debit transactions (reward points) */}
+                              {importStats.transactionDetails?.debitTransactions?.slice(0, 5).map((tx, idx) => (
+                                <tr key={`debit-${idx}`}>
                                   <td className="px-3 py-2 whitespace-nowrap">
                                     {idx + 1}
                                   </td>
                                   <td className="px-3 py-2 whitespace-nowrap font-medium">
-                                    {idx % 2 === 0 ? "Deduction" : "Load"}
+                                    Deduction
                                   </td>
                                   <td className="px-3 py-2 whitespace-nowrap">
-                                    R {((idx + 1) * 100).toFixed(2)}
+                                    R {tx.amount.toFixed(2)}
                                   </td>
                                   <td className="px-3 py-2 whitespace-nowrap">
-                                    {(idx + 1) * 100}
+                                    {Math.floor(tx.amount)}
+                                  </td>
+                                </tr>
+                              ))}
+                              
+                              {/* Displaying credit transactions (cash deposit points) */}
+                              {importStats.transactionDetails?.creditTransactions?.slice(0, 5).map((tx, idx) => (
+                                <tr key={`credit-${idx}`}>
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    {(importStats.transactionDetails?.debitTransactions?.length || 0) + idx + 1}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap font-medium">
+                                    Load
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    R {tx.amount.toFixed(2)}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    {Math.floor(tx.amount)}
                                   </td>
                                 </tr>
                               ))}
