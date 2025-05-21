@@ -1378,8 +1378,8 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       
       // Add transaction details to the stats response
       stats.transactionDetails = {
-        debit: debitTransactions,
-        credit: creditTransactions
+        debitTransactions: debitTransactions,
+        creditTransactions: creditTransactions
       };
       
       // Update statistics
