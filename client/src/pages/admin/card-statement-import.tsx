@@ -405,8 +405,8 @@ export default function CardStatementImportPage() {
                     
                     <div className="p-4">
                       {/* Debit Transactions (Regular Reward Points) */}
-                      {importStats.transactionDetails.debitTransactions && 
-                       importStats.transactionDetails.debitTransactions.length > 0 && (
+                      {importStats.transactionDetails.debit && 
+                       importStats.transactionDetails.debit.length > 0 && (
                         <div className="mb-6">
                           <h4 className="font-medium text-sm mb-2">Debit Transactions (Reward Points)</h4>
                           <div className="overflow-x-auto border rounded-md">
@@ -425,7 +425,7 @@ export default function CardStatementImportPage() {
                                 </tr>
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-200">
-                                {importStats.transactionDetails.debitTransactions.map((tx, idx) => (
+                                {importStats.transactionDetails.debit.map((tx, idx) => (
                                   <tr key={`debit-${idx}`}>
                                     <td className="px-3 py-2 whitespace-nowrap">{idx + 1}</td>
                                     <td className="px-3 py-2 whitespace-nowrap">R {tx.amount.toFixed(2)}</td>
@@ -435,7 +435,7 @@ export default function CardStatementImportPage() {
                                 <tr className="bg-blue-50 font-medium">
                                   <td className="px-3 py-2 whitespace-nowrap">Total</td>
                                   <td className="px-3 py-2 whitespace-nowrap">
-                                    R {importStats.transactionDetails.debitTransactions
+                                    R {importStats.transactionDetails.debit
                                       .reduce((sum, tx) => sum + tx.amount, 0)
                                       .toFixed(2)}
                                   </td>
@@ -450,8 +450,8 @@ export default function CardStatementImportPage() {
                       )}
                       
                       {/* Credit Transactions (Cash Deposit Points) */}
-                      {importStats.transactionDetails.creditTransactions && 
-                       importStats.transactionDetails.creditTransactions.length > 0 && (
+                      {importStats.transactionDetails.credit && 
+                       importStats.transactionDetails.credit.length > 0 && (
                         <div>
                           <h4 className="font-medium text-sm mb-2">Credit Transactions (Cash Deposit Points)</h4>
                           <div className="overflow-x-auto border rounded-md">
@@ -470,7 +470,7 @@ export default function CardStatementImportPage() {
                                 </tr>
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-200">
-                                {importStats.transactionDetails.creditTransactions.map((tx, idx) => (
+                                {importStats.transactionDetails.credit.map((tx, idx) => (
                                   <tr key={`credit-${idx}`}>
                                     <td className="px-3 py-2 whitespace-nowrap">{idx + 1}</td>
                                     <td className="px-3 py-2 whitespace-nowrap">R {tx.amount.toFixed(2)}</td>
@@ -480,7 +480,7 @@ export default function CardStatementImportPage() {
                                 <tr className="bg-blue-50 font-medium">
                                   <td className="px-3 py-2 whitespace-nowrap">Total</td>
                                   <td className="px-3 py-2 whitespace-nowrap">
-                                    R {importStats.transactionDetails.creditTransactions
+                                    R {importStats.transactionDetails.credit
                                       .reduce((sum, tx) => sum + tx.amount, 0)
                                       .toFixed(2)}
                                   </td>

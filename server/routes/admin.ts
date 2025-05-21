@@ -864,38 +864,33 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             }
           }
           
-          // IMPORTANT: For this specific Excel import format, we're using a forced fallback approach
-          // Since transaction type detection is failing consistently, just use a default transaction type
-          // We're defaulting all transactions to 'debit' type (regular reward points)
-          
-          // OVERRIDE: Always use 'debit' type regardless of content
-          determinedType = 'debit';
-          console.log(`OVERRIDE: Setting all transactions to type 'debit' (regular reward points) for row ${stats.totalProcessed}`);
-          
-          // Old code disabled:
-          /*
-          if (hasNumericValue) {
+          // Check for transaction type in column C specifically
+          if (row.C && typeof row.C === 'string') {
+            const typeValue = String(row.C).toLowerCase();
+            
+            if (typeValue.includes('load') || 
+                typeValue.includes('deposit') || 
+                typeValue.includes('credit')) {
+              determinedType = 'credit';
+              console.log(`Detected 'Load' transaction at row ${stats.totalProcessed}`);
+            } 
+            else if (typeValue.includes('deduct') || 
+                    typeValue.includes('debit') || 
+                    typeValue.includes('purchase') ||
+                    typeValue.includes('payment')) {
+              determinedType = 'debit';
+              console.log(`Detected 'Deduction' transaction at row ${stats.totalProcessed}`);
+            }
+            else {
+              // Default to debit if we can't determine
+              determinedType = 'debit';
+              console.log(`No specific transaction type detected - using fallback 'debit' for row ${stats.totalProcessed}`);
+            }
+          } else {
+            // If no transaction type column found, use a default
             determinedType = 'debit';
-            console.log(`Using default transaction type 'debit' for row ${stats.totalProcessed} with numeric values`);
+            console.log(`No transaction type column found - using fallback 'debit' for row ${stats.totalProcessed}`);
           }
-          else if (rowValuesStr.includes('load') || 
-              rowValuesStr.includes('deposit') || 
-              rowValuesStr.includes('credit')) {
-            determinedType = 'credit';
-            console.log(`Detected 'Load' transaction at row ${stats.totalProcessed}`);
-          } 
-          else if (rowValuesStr.includes('deduct') || 
-                  rowValuesStr.includes('debit') || 
-                  rowValuesStr.includes('purchase') ||
-                  rowValuesStr.includes('payment')) {
-            determinedType = 'debit';
-            console.log(`Detected 'Deduction' transaction at row ${stats.totalProcessed}`);
-          }
-          else {
-            determinedType = 'debit';
-            console.log(`No transaction type detected - using fallback 'debit' for row ${stats.totalProcessed}`);
-          }
-          */
           
           // Find a numeric value to use as amount
           let foundAmount = false;
@@ -1230,7 +1225,7 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       const debitTransactions = [];
       const creditTransactions = [];
       
-      // Re-process each row just for the summary, no database updates
+      // Keep these for logging
       console.log("--------- TRANSACTION SUMMARY ---------");
       console.log("Transaction Type | Amount | Running Total");
       
@@ -1382,7 +1377,10 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       }
       
       // Add transaction details to the stats response
-      stats.transactionDetails = transactionDetails;
+      stats.transactionDetails = {
+        debit: debitTransactions,
+        credit: creditTransactions
+      };
       
       // Update statistics
       stats.usersUpdated = updatedUsers.size;
