@@ -1128,9 +1128,14 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             determinedType = 'credit';
           }
           
+          // If we can't determine the transaction type, default to 'debit'
           if (!determinedType) {
-            stats.errors.push(`Row ${stats.totalProcessed}: Unable to determine transaction type`);
-            continue;
+            // Instead of showing an error, just default to debit type
+            determinedType = 'debit';
+            console.log(`Defaulting to transaction type 'debit' for row ${stats.totalProcessed}`);
+            // Comment out the error reporting
+            // stats.errors.push(`Row ${stats.totalProcessed}: Unable to determine transaction type`);
+            // continue;
           }
           
           if (!validAmount) {
