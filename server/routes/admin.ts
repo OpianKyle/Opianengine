@@ -1099,11 +1099,11 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
         // Process based on the transaction type we determined earlier
         if (determinedType === 'debit') {
           // Money deduction = reward points (1 Rand = 1 point)
-          // Convert from currency amount to points (R1 = 25 points)
-          const pointsToAdd = Math.floor(transactionAmount * 25);
+          // Convert from currency amount to points (R1 = 1 point)
+          const pointsToAdd = Math.floor(transactionAmount);
           
           // Log the currency-to-points conversion for debugging
-          console.log(`Converting currency amount ${transactionAmount} to ${pointsToAdd} points (rate: 25:1)`);
+          console.log(`Converting currency amount ${transactionAmount} to ${pointsToAdd} points (rate: 1:1)`);
 
           if (pointsToAdd <= 0) {
             stats.errors.push(`Row ${stats.totalProcessed}: Invalid points amount (${pointsToAdd})`);
@@ -1118,11 +1118,11 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           console.log(`Row ${stats.totalProcessed}: ${pointsToAdd} reward points (total: ${totalDebitAmount})`);
         } 
         else if (determinedType === 'credit') {
-          // Money deposit = cash deposit points (R1 = 25 points)
-          const cashDepositPoints = Math.floor(transactionAmount * 25);
+          // Money deposit = cash deposit points (R1 = 1 point)
+          const cashDepositPoints = Math.floor(transactionAmount);
           
           // Log the currency-to-points conversion for debugging
-          console.log(`Converting cash deposit amount ${transactionAmount} to ${cashDepositPoints} points (rate: 25:1)`);
+          console.log(`Converting cash deposit amount ${transactionAmount} to ${cashDepositPoints} points (rate: 1:1)`);
 
           if (cashDepositPoints <= 0) {
             stats.errors.push(`Row ${stats.totalProcessed}: Invalid cash deposit amount (${cashDepositPoints})`);
