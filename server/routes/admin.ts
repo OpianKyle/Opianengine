@@ -865,10 +865,10 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             console.log(`Detected 'Deduction' transaction at row ${stats.totalProcessed}`);
           }
           else {
-            // If we can't determine, look at the transaction structure or file pattern
-            // Use even/odd row numbering as a fallback
-            determinedType = stats.totalProcessed % 2 === 0 ? 'debit' : 'credit';
-            console.log(`Fallback transaction type '${determinedType}' at row ${stats.totalProcessed}`);
+            // If we can't determine the type based on keywords, default to debit
+            // This ensures we don't fail the import if transaction type is unclear
+            determinedType = 'debit';
+            console.log(`No transaction type detected in row values - defaulting to 'Deduction' for row ${stats.totalProcessed}`);
           }
           
           // Find a numeric value to use as amount
@@ -961,7 +961,6 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
                   transactionAmount = parsedAmount;
                   // Found valid amount, exit the loop
                   foundAmount = true;
-                  amountColumn = "Rand";
                   break;
                 }
               }
