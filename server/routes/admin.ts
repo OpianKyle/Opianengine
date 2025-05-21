@@ -1364,6 +1364,10 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       console.log("------ END TRANSACTION SUMMARY ------");
       console.log(`FINAL TOTALS: Debit (reward points): ${runningDebitTotal.toFixed(2)} | Credit (cash deposits): ${runningCreditTotal.toFixed(2)}`);
       
+      // Update the final transaction totals based on what we found in the detailed analysis
+      totalDebitAmount = runningDebitTotal;  // Use the debit running total as the final value
+      totalCreditAmount = runningCreditTotal; // Use the credit running total as the final value
+      
       // The final transaction analysis is complete, now we can update the database
       console.log(`Processing final transaction amounts: ${totalDebitAmount} reward points, ${totalCreditAmount} cash deposit points`);
       
@@ -1402,10 +1406,6 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
         
         console.log(`Added ${totalCreditAmount} total cash deposit points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
       }
-      
-      // Update the final transaction totals based on what we found in the detailed analysis
-      totalDebitAmount = runningDebitTotal;  // Use the debit running total as the final value
-      totalCreditAmount = runningCreditTotal; // Use the credit running total as the final value
       
       // Add transaction details to the stats response
       stats.transactionDetails = {
