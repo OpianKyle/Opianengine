@@ -874,10 +874,10 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             let parsedAmount: number;
             
             // Match exact format like "859,25" (numbers followed by comma and exactly 2 digits)
-            if (/^\d+,\d{2}$/.test(stringValue)) {
-              // It's definitely a decimal comma format - replace with dot for parsing
+            if (/^\d+,\d{1,2}$/.test(stringValue)) {
+              // It's definitely a decimal comma format (European/South African) - replace comma with dot
               parsedAmount = parseFloat(stringValue.replace(',', '.'));
-              console.log(`European decimal format detected: ${stringValue} -> ${parsedAmount}`);
+              console.log(`European decimal format detected: ${stringValue} -> ${parsedAmount} (direct comma replacement)`);
             } else {
               // For other formats, try a more general approach
               // First clean the string of any non-numeric characters except comma and dot
@@ -1099,7 +1099,11 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
         // Process based on the transaction type we determined earlier
         if (determinedType === 'debit') {
           // Money deduction = reward points (1 Rand = 1 point)
-          const pointsToAdd = Math.floor(transactionAmount);
+          // Convert from currency amount to points (R1 = 25 points)
+          const pointsToAdd = Math.floor(transactionAmount * 25);
+          
+          // Log the currency-to-points conversion for debugging
+          console.log(`Converting currency amount ${transactionAmount} to ${pointsToAdd} points (rate: 25:1)`);
 
           if (pointsToAdd <= 0) {
             stats.errors.push(`Row ${stats.totalProcessed}: Invalid points amount (${pointsToAdd})`);
@@ -1114,8 +1118,11 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           console.log(`Row ${stats.totalProcessed}: ${pointsToAdd} reward points (total: ${totalDebitAmount})`);
         } 
         else if (determinedType === 'credit') {
-          // Money deposit = cash deposit points (1 Rand = 1 point)
-          const cashDepositPoints = Math.floor(transactionAmount);
+          // Money deposit = cash deposit points (R1 = 25 points)
+          const cashDepositPoints = Math.floor(transactionAmount * 25);
+          
+          // Log the currency-to-points conversion for debugging
+          console.log(`Converting cash deposit amount ${transactionAmount} to ${cashDepositPoints} points (rate: 25:1)`);
 
           if (cashDepositPoints <= 0) {
             stats.errors.push(`Row ${stats.totalProcessed}: Invalid cash deposit amount (${cashDepositPoints})`);
