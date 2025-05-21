@@ -1111,13 +1111,30 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           // If we found a type column, use it to determine transaction type
           if (typeColumn) {
             const typeValue = String(row[typeColumn]).toLowerCase();
+            console.log(`Found transaction type column value: "${typeValue}"`);
             
             if (typeValue.includes('debit') || typeValue.includes('purchase') || 
                 typeValue.includes('deduction') || typeValue.includes('payment')) {
               determinedType = 'debit';
+              console.log(`Determined transaction type as DEBIT from "${typeValue}"`);
             } else if (typeValue.includes('credit') || typeValue.includes('deposit') || 
                       typeValue.includes('load') || typeValue.includes('transfer in')) {
               determinedType = 'credit';
+              console.log(`Determined transaction type as CREDIT from "${typeValue}"`);
+            }
+          }
+          
+          // Special case for column C which may contain transaction type
+          if (!determinedType && row['C'] !== undefined) {
+            const cValue = String(row['C']).toLowerCase();
+            console.log(`Checking column C for transaction type: "${cValue}"`);
+            
+            if (cValue.includes('load') || cValue === 'credit' || cValue.includes('deposit')) {
+              determinedType = 'credit';
+              console.log(`Setting transaction type to CREDIT based on column C value: "${cValue}"`);
+            } else if (cValue === 'deduction' || cValue === 'debit' || cValue.includes('purchase')) {
+              determinedType = 'debit';
+              console.log(`Setting transaction type to DEBIT based on column C value: "${cValue}"`);
             }
           }
           
