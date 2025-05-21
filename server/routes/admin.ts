@@ -763,11 +763,16 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     
-    // Enhanced parsing to handle European decimal format correctly (e.g., 859,25)
+    // Enhanced parsing for European/South African decimal format (e.g., 859,25)
+    // Use multiple options to ensure we extract values correctly
     const data = xlsx.utils.sheet_to_json(worksheet, {
       raw: false, // Return formatted text rather than raw values
-      defval: '' // Default to empty string for empty cells
+      defval: '', // Default to empty string for empty cells
+      blankrows: false, // Skip blank rows
+      header: "A" // Force custom header to preserve raw values
     });
+    
+    console.log("DEBUG - Raw Excel data:", JSON.stringify(data).substring(0, 500));
 
     if (!data || data.length === 0) {
       return res.status(400).send('No data found in the Excel file');
@@ -937,9 +942,28 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           if (!foundAmount) {
             // Look for specific patterns that might represent currency values
             // Examples: R 100.00, 100.00 ZAR, etc.
+            // Enhanced pattern to better catch South African Rand values with or without spaces
             const currencyPattern = /([rR]\s*\d+[.,]?\d*|\d+[.,]?\d*\s*[zZ][aA][rR])/;
             
             for (const value of rowValues) {
+              console.log(`Checking currency value: "${value}"`);
+              
+              // Special case for South African Rand format (e.g. "R 2196.00")
+              if (String(value).includes('R') || String(value).includes('r')) {
+                // Extract just the numeric part
+                const numericPart = String(value).replace(/[^0-9.,]/g, '');
+                const parsedAmount = parseFloat(numericPart);
+                console.log(`South African Rand detected: ${value} -> ${numericPart} -> ${parsedAmount}`);
+                
+                if (!isNaN(parsedAmount)) {
+                  // Found valid currency amount in Rand
+                  console.log(`Found valid Rand amount: ${parsedAmount} from value: ${value}`);
+                  transactionAmount = parsedAmount;
+                  validAmount = true;
+                  break;
+                }
+              }
+              
               const match = String(value).match(currencyPattern);
               if (match) {
                 // Extract just the numeric part
