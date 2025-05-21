@@ -842,16 +842,37 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           // For this format, we'll examine values in different columns to identify the type
           
           // Get all values from this row as a string to analyze
-          const rowValues = Object.values(row)
-            .filter(val => val !== null && val !== undefined && val !== '')
-            .map(val => String(val).toLowerCase());
+          // Preserve raw values for numeric detection
+          const rawRowValues = Object.values(row)
+            .filter(val => val !== null && val !== undefined && val !== '');
+            
+          // Also get lowercase values for keyword matching
+          const rowValues = rawRowValues.map(val => String(val).toLowerCase());
           
           const rowValuesStr = rowValues.join(' ');
-          console.log(`Row ${stats.totalProcessed} values: ${rowValuesStr}`);
+          console.log(`Row ${stats.totalProcessed} raw values: ${JSON.stringify(rawRowValues)}`);
           
-          // Look for keywords indicating "Load" or "Deduction" in the values
-          // For this format, try to find specific indicators of transaction type
-          if (rowValuesStr.includes('load') || 
+          // For simple numeric Excel files without keywords or R prefix, just handle each row as a valid transaction
+          // Let's check if we have any numeric values that we can use
+          let hasNumericValue = false;
+          for (const val of rawRowValues) {
+            // Try to extract a number from any field
+            const numericValue = parseFloat(String(val).replace(/[^\d.-]/g, ''));
+            if (!isNaN(numericValue) && numericValue > 0) {
+              hasNumericValue = true;
+              break;
+            }
+          }
+          
+          // For Excel files that just contain numbers without any transaction type indicators,
+          // we'll set a transaction type based on configuration
+          if (hasNumericValue) {
+            // Since we can't determine the type, let's go with the most common one - debit for reward points
+            determinedType = 'debit';
+            console.log(`Using default transaction type 'debit' for row ${stats.totalProcessed} with numeric values`);
+          }
+          // As a fallback, try keyword detection
+          else if (rowValuesStr.includes('load') || 
               rowValuesStr.includes('deposit') || 
               rowValuesStr.includes('credit')) {
             determinedType = 'credit'; // cash deposits for "Load" transactions
@@ -865,10 +886,9 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             console.log(`Detected 'Deduction' transaction at row ${stats.totalProcessed}`);
           }
           else {
-            // If we can't determine the type based on keywords, default to debit
-            // This ensures we don't fail the import if transaction type is unclear
+            // Final fallback - just use debit as the default type
             determinedType = 'debit';
-            console.log(`No transaction type detected in row values - defaulting to 'Deduction' for row ${stats.totalProcessed}`);
+            console.log(`No transaction type detected - using fallback 'debit' for row ${stats.totalProcessed}`);
           }
           
           // Find a numeric value to use as amount
@@ -949,11 +969,13 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
               console.log(`Checking currency value: "${value}"`);
               
               // Special case for South African Rand format (e.g. "R 2196.00" or "R859")
-              if (String(value).includes('R') || String(value).includes('r')) {
-                // Extract just the numeric part - handle both with and without space after R
+            // Also handle pure numeric values if that's all the Excel contains
+              if ((String(value).includes('R') || String(value).includes('r')) || 
+                  /^\d+(\.\d+)?$/.test(String(value).trim())) {
+                // Extract just the numeric part - handle both currency format and plain numbers
                 const numericPart = String(value).replace(/[Rr\s]/g, '');
                 const parsedAmount = parseFloat(numericPart);
-                console.log(`South African Rand detected: ${value} -> ${numericPart} -> ${parsedAmount}`);
+                console.log(`Number/Rand value detected: ${value} -> ${numericPart} -> ${parsedAmount}`);
                 
                 if (!isNaN(parsedAmount)) {
                   // Found valid currency amount in Rand
