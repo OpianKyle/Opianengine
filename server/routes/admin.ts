@@ -1138,6 +1138,27 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             // continue;
           }
           
+          // Special case for direct handling of Transaction Amount column (D)
+          if (!validAmount && row['D'] !== undefined) {
+            const rawAmountValue = String(row['D']).trim();
+            console.log(`Trying direct amount extraction from column D: "${rawAmountValue}"`);
+            
+            // Handle South African format with period (e.g., "859.00")
+            // Or just a plain number (e.g., "859")
+            if (/^\d+(\.\d+)?$/.test(rawAmountValue)) {
+              transactionAmount = parseFloat(rawAmountValue);
+              validAmount = true;
+              console.log(`Parsed direct amount from D column: ${transactionAmount}`);
+            }
+            // Handle amount with comma as decimal separator (e.g., "859,00")
+            else if (/^\d+,\d+$/.test(rawAmountValue)) {
+              const fixedAmount = rawAmountValue.replace(',', '.');
+              transactionAmount = parseFloat(fixedAmount);
+              validAmount = true;
+              console.log(`Parsed comma-decimal amount from D column: ${rawAmountValue} → ${transactionAmount}`);
+            }
+          }
+          
           if (!validAmount) {
             stats.errors.push(`Row ${stats.totalProcessed}: Missing or invalid amount`);
             continue;
