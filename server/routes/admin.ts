@@ -762,7 +762,12 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
     const workbook = xlsx.read(uploadedFile.data, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(worksheet);
+    
+    // Enhanced parsing to handle European decimal format correctly (e.g., 859,25)
+    const data = xlsx.utils.sheet_to_json(worksheet, {
+      raw: false, // Return formatted text rather than raw values
+      defval: '' // Default to empty string for empty cells
+    });
 
     if (!data || data.length === 0) {
       return res.status(400).send('No data found in the Excel file');
@@ -1186,8 +1191,10 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             let parsedAmount;
 
             // European format check (e.g. 859,25)
-            if (/^\d+,\d+$/.test(rawValue.trim())) {
-              const properDecimal = rawValue.replace(',', '.');
+            if (/^\d+,\d+$/.test(rawValue.trim()) || /^R\s*\d+,\d+$/i.test(rawValue.trim())) {
+              // Handle cases like "859,25" or "R 859,25"
+              const numericPart = rawValue.replace(/[R\s]/ig, '');
+              const properDecimal = numericPart.replace(',', '.');
               parsedAmount = parseFloat(properDecimal);
               console.log(`European format detected: ${rawValue} -> ${properDecimal} -> ${parsedAmount}`);
             } else {
