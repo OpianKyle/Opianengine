@@ -8,6 +8,12 @@ import * as xlsx from 'xlsx';
 import fileUpload from 'express-fileupload';
 // Import will be dynamically loaded in the route handler
 
+// Define transaction type
+interface Transaction {
+  type: string;
+  amount: number;
+}
+
 // Define interface for card statement import stats
 interface ImportStats {
   totalProcessed: number;
@@ -15,6 +21,10 @@ interface ImportStats {
   pointsAllocated: number;
   cashDepositsAllocated: number;
   errors: string[];
+  transactionDetails?: {
+    debitTransactions: Transaction[];
+    creditTransactions: Transaction[];
+  };
 }
 
 const router = Router();
