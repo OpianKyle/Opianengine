@@ -462,8 +462,18 @@ export default function CardStatementImportPage() {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
+                              {/* If no transactions are found, show a message */}
+                              {(!importStats.transactionDetails?.debitTransactions?.length && 
+                                !importStats.transactionDetails?.creditTransactions?.length) && (
+                                <tr>
+                                  <td colSpan={4} className="px-3 py-2 text-center text-gray-500">
+                                    No transaction details available
+                                  </td>
+                                </tr>
+                              )}
+                              
                               {/* Displaying debit transactions (reward points) */}
-                              {importStats.transactionDetails?.debitTransactions?.slice(0, 5).map((tx, idx) => (
+                              {importStats.transactionDetails?.debitTransactions?.map((tx, idx) => (
                                 <tr key={`debit-${idx}`}>
                                   <td className="px-3 py-2 whitespace-nowrap">
                                     {idx + 1}
@@ -481,7 +491,7 @@ export default function CardStatementImportPage() {
                               ))}
                               
                               {/* Displaying credit transactions (cash deposit points) */}
-                              {importStats.transactionDetails?.creditTransactions?.slice(0, 5).map((tx, idx) => (
+                              {importStats.transactionDetails?.creditTransactions?.map((tx, idx) => (
                                 <tr key={`credit-${idx}`}>
                                   <td className="px-3 py-2 whitespace-nowrap">
                                     {(importStats.transactionDetails?.debitTransactions?.length || 0) + idx + 1}

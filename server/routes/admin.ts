@@ -1232,6 +1232,10 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       let runningDebitTotal = 0;
       let runningCreditTotal = 0;
       
+      // These arrays will store the actual transaction details we'll send back
+      const debitTransactionDetails = [];
+      const creditTransactionDetails = [];
+      
       // Process each row again to show the breakdown
       for (const row of data as any[]) {
         // Reset variables for this analysis pass
@@ -1333,11 +1337,15 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
         if (rowAmount > 0) {
           if (rowType === 'debit') {
             runningDebitTotal += rowAmount;
-            debitTransactions.push({type: 'debit', amount: rowAmount});
+            const txDetails = {type: 'debit', amount: rowAmount};
+            debitTransactions.push(txDetails);
+            debitTransactionDetails.push(txDetails); // Add to our detailed storage array
             console.log(`DEBIT | ${rowAmount.toFixed(2)} | ${runningDebitTotal.toFixed(2)}`);
           } else if (rowType === 'credit') {
             runningCreditTotal += rowAmount;
-            creditTransactions.push({type: 'credit', amount: rowAmount});
+            const txDetails = {type: 'credit', amount: rowAmount};
+            creditTransactions.push(txDetails);
+            creditTransactionDetails.push(txDetails); // Add to our detailed storage array
             console.log(`CREDIT | ${rowAmount.toFixed(2)} | ${runningCreditTotal.toFixed(2)}`);
           }
         }
@@ -1391,8 +1399,8 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       
       // Add transaction details to the stats response
       stats.transactionDetails = {
-        debitTransactions: debitTransactions,
-        creditTransactions: creditTransactions
+        debitTransactions: debitTransactionDetails,
+        creditTransactions: creditTransactionDetails
       };
       
       // Make sure the stats reflect the correct totals
