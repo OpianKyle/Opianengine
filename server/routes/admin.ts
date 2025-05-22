@@ -1359,43 +1359,62 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
       console.log("------ END TRANSACTION SUMMARY ------");
       console.log(`FINAL TOTALS: Debit (reward points): ${runningDebitTotal.toFixed(2)} | Credit (cash deposits): ${runningCreditTotal.toFixed(2)}`);
       
-      // Now apply the accumulated totals to the customer account
-      console.log(`Processing total accumulated amounts: ${totalDebitAmount} reward points, ${totalCreditAmount} cash deposit points`);
+      // Apply a maximum limit of 20,000 points per import for each type
+      const MAX_POINTS_PER_IMPORT = 20000;
+      
+      // Cap both reward points and cash deposit points at 20,000 each
+      let finalDebitAmount = totalDebitAmount;
+      let finalCreditAmount = totalCreditAmount;
+      
+      if (finalDebitAmount > MAX_POINTS_PER_IMPORT) {
+        console.log(`CAPPING reward points from ${finalDebitAmount} to ${MAX_POINTS_PER_IMPORT} (maximum limit reached)`);
+        finalDebitAmount = MAX_POINTS_PER_IMPORT;
+        stats.pointsAllocated = MAX_POINTS_PER_IMPORT; // Update the stats to show capped amount
+      }
+      
+      if (finalCreditAmount > MAX_POINTS_PER_IMPORT) {
+        console.log(`CAPPING cash deposit points from ${finalCreditAmount} to ${MAX_POINTS_PER_IMPORT} (maximum limit reached)`);
+        finalCreditAmount = MAX_POINTS_PER_IMPORT;
+        stats.cashDepositsAllocated = MAX_POINTS_PER_IMPORT; // Update the stats to show capped amount
+      }
+      
+      // Now apply the accumulated totals to the customer account (with caps applied)
+      console.log(`Processing total accumulated amounts: ${finalDebitAmount} reward points, ${finalCreditAmount} cash deposit points (after applying 20,000 point limit)`);
       
       // Create response object with transaction details
       const transactionDetails = {
         debitTransactions,
         creditTransactions,
-        totalDebitAmount,
-        totalCreditAmount
+        totalDebitAmount: finalDebitAmount, // Use capped amount
+        totalCreditAmount: finalCreditAmount // Use capped amount
       };
       
       // Process reward points (debit transactions)
-      if (totalDebitAmount > 0) {
+      if (finalDebitAmount > 0) {
         // Add points to customer
         await conn.query(
           'UPDATE users SET points = points + ? WHERE id = ?',
-          [totalDebitAmount, customer.id]
+          [finalDebitAmount, customer.id]
         );
 
         // Log in transaction history
         await conn.query(
           'INSERT INTO transactions (user_id, points, description, type) VALUES (?, ?, ?, ?)',
-          [customer.id, totalDebitAmount, `Card statement import - ${totalDebitAmount} reward points`, 'ADMIN_ADJUSTMENT']
+          [customer.id, finalDebitAmount, `Card statement import - ${finalDebitAmount} reward points`, 'ADMIN_ADJUSTMENT']
         );
         
-        console.log(`Added ${totalDebitAmount} total reward points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
+        console.log(`Added ${finalDebitAmount} total reward points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
       }
       
       // Process cash deposits (credit transactions)
-      if (totalCreditAmount > 0) {
+      if (finalCreditAmount > 0) {
         // Add to cash_deposits table
         await conn.query(
           'INSERT INTO cash_deposits (user_id, points, description) VALUES (?, ?, ?)',
-          [customer.id, totalCreditAmount, `Card statement import - ${totalCreditAmount} cash deposit points`]
+          [customer.id, finalCreditAmount, `Card statement import - ${finalCreditAmount} cash deposit points`]
         );
         
-        console.log(`Added ${totalCreditAmount} total cash deposit points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
+        console.log(`Added ${finalCreditAmount} total cash deposit points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
       }
       
       // Add transaction details to the stats response
