@@ -104,8 +104,24 @@ router.get('/customers', async (req: any, res) => {
     
     console.log(`Returning ${customersResult.length} customers out of ${totalCustomers} total`);
     
+    // Map database fields to frontend expected format
+    const mappedCustomers = customersResult.map(customer => ({
+      ...customer,
+      isEnabled: customer.is_enabled,
+      firstName: customer.first_name,
+      lastName: customer.last_name,
+      phoneNumber: customer.phone_number,
+      selectedPackage: customer.selected_package,
+      cardStatus: customer.card_status,
+      cardNumber: customer.card_number,
+      createdAt: customer.created_at,
+      agentId: customer.agent_id,
+      isAgent: customer.is_agent,
+      isTest: customer.is_test
+    }));
+
     res.json({
-      customers: customersResult,
+      customers: mappedCustomers,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalCustomers / limit),
