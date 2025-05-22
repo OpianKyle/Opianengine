@@ -28,6 +28,7 @@ import socialUsersRouter from './routes/social-users';
 import specialMigrationsRouter from './routes/special-migrations';
 import customerRouter from './routes/customer';
 import { NotificationService } from './services/notification-service';
+import { whatsappService } from './whatsapp';
 import { scrypt, randomBytes } from "crypto";
 import nodemailer from 'nodemailer';
 import { promisify } from "util";
@@ -6832,6 +6833,50 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     } catch (error) {
       console.error('Error serving sitemap:', error);
       res.status(500).send('Error generating sitemap');
+    }
+  });
+
+  // WhatsApp Business API webhook endpoints
+  app.get('/api/whatsapp/webhook', (req, res) => {
+    whatsappService.verifyWebhook(req, res);
+  });
+
+  app.post('/api/whatsapp/webhook', (req, res) => {
+    whatsappService.handleWebhook(req, res);
+  });
+
+  // Admin endpoint to send WhatsApp notifications
+  app.post('/api/admin/whatsapp/send-notification', async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      // Check admin status
+      const [adminCheck] = await connection.execute(
+        'SELECT is_admin FROM users WHERE id = ?',
+        [req.user.id]
+      );
+
+      if (!adminCheck || !adminCheck[0]?.is_admin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const { phoneNumber, message } = req.body;
+
+      if (!phoneNumber || !message) {
+        return res.status(400).json({ error: "Phone number and message are required" });
+      }
+
+      await whatsappService.sendNotification(phoneNumber, message);
+
+      res.json({ success: true, message: "WhatsApp notification sent successfully" });
+    } catch (error) {
+      console.error('Error sending WhatsApp notification:', error);
+      res.status(500).json({ error: "Failed to send WhatsApp notification" });
+    } finally {
+      await connection.end();
     }
   });
 
