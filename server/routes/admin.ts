@@ -954,9 +954,9 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
               }
             }
             
-            // Check if the amount is reasonable (between 1 and 100,000)
+            // Check if the amount is reasonable (between 1 and 20,000)
             // This prevents processing of unrealistic amounts
-            if (!isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount < 100000) {
+            if (!isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 20000) {
               console.log(`Found valid amount: ${parsedAmount} from value: ${stringValue}`);
               transactionAmount = parsedAmount;
               foundAmount = true;
@@ -999,7 +999,7 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
                 const numericPart = match[0].replace(/[^0-9.,]/g, '').replace(/,/g, '.');
                 const parsedAmount = parseFloat(numericPart);
                 
-                if (!isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount < 100000) {
+                if (!isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 20000) {
                   console.log(`Found currency amount: ${parsedAmount} from value: ${value}`);
                   transactionAmount = parsedAmount;
                   foundAmount = true;
@@ -1330,7 +1330,7 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
               }
             }
             
-            if (!isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount < 100000) {
+            if (!isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 20000) {
               rowAmount = parsedAmount;
               console.log(`Found amount: ${rawValue} -> ${parsedAmount}`);
               break;
