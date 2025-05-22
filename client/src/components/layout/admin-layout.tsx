@@ -44,7 +44,7 @@ const getSectionFromHref = (href: string): 'dashboard' | 'users' | 'agents' | 'p
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { logoutMutation } = useUser();
+  const { logoutMutation, user } = useUser();
   const { token } = useAuth();
   const [location, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -60,8 +60,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Prefetch ALL admin data when the layout is first loaded
   useEffect(() => {
-    if (!hasPrefetched && token) {
+    if (!hasPrefetched && user && user.is_admin) {
       console.log(`🚀 Prefetching ALL admin data for instant page loads`);
+      console.log('User authenticated:', user.email, 'Admin:', user.is_admin);
       
       // Prefetch ALL admin data immediately - this makes every page feel instant!
       prefetchAdminData(token, 'all');
@@ -72,7 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         console.log('✅ All admin data prefetched - pages will now load instantly!');
       }, 2000);
     }
-  }, [token, hasPrefetched]);
+  }, [user, token, hasPrefetched]);
 
   const handleLogout = async () => {
     try {
