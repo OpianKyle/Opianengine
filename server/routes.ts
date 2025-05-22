@@ -1506,12 +1506,104 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   // Make cache available globally for other modules to access and clear
   global.customersCache = customersCache;
 
-  // Temporary redirect to handle cached requests
+  // Handle cached requests directly instead of redirect (AJAX doesn't follow redirects properly)
   app.get("/customers", async (req, res) => {
-    // Redirect to the correct endpoint
-    const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-    const redirectUrl = `/api/admin/customers${queryString ? '?' + queryString : ''}`;
-    return res.redirect(301, redirectUrl);
+    console.log('=== CUSTOMERS ENDPOINT HIT ===');
+    // Execute the same logic as /api/admin/customers
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      // Get pagination parameters
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+      const search = (req.query.search as string) || '';
+      const requestedShowTest = req.query.showTest === 'true';
+      
+      // Check if user is super admin to determine if they can see test users
+      const isSuperAdmin = req.user?.is_super_admin || false;
+      const showTest = requestedShowTest && isSuperAdmin;
+
+      console.log('Fetching customers with params:', { page, limit, search, showTest });
+      console.log('User requesting customers:', req.user?.id, req.user?.email);
+      
+      // Simple query to get customers
+      const connection = await connectionPool.getConnection();
+      
+      try {
+        // Check admin status
+        const [adminCheck] = await connection.execute(
+          'SELECT is_admin FROM users WHERE id = ? LIMIT 1',
+          [req.user.id]
+        );
+
+        if (!adminCheck || !adminCheck[0]?.is_admin) {
+          connection.release();
+          return res.status(403).json({ error: "Admin access required" });
+        }
+
+        // Get total count
+        let countQuery = `SELECT COUNT(*) as total FROM users WHERE is_agent = 0`;
+        if (showTest) {
+          countQuery += ` AND is_test = TRUE`;
+        } else {
+          countQuery += ` AND (is_test IS NULL OR is_test = FALSE)`;
+        }
+        
+        if (search) {
+          countQuery += ` AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)`;
+        }
+        
+        const countParams = search ? [`%${search}%`, `%${search}%`, `%${search}%`] : [];
+        const [countResult] = await connection.execute(countQuery, countParams);
+        console.log('Count query result:', countResult);
+        const totalCustomers = countResult[0]?.total || 0;
+        console.log('Total customers found:', totalCustomers);
+
+        // Get customers
+        let customersQuery = `SELECT * FROM users WHERE is_agent = 0`;
+        if (showTest) {
+          customersQuery += ` AND is_test = TRUE`;
+        } else {
+          customersQuery += ` AND (is_test IS NULL OR is_test = FALSE)`;
+        }
+        
+        if (search) {
+          customersQuery += ` AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)`;
+        }
+        
+        customersQuery += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+        
+        const queryParams = search ? 
+          [`%${search}%`, `%${search}%`, `%${search}%`, limit, offset] : 
+          [limit, offset];
+        
+        const [customersResult] = await connection.execute(customersQuery, queryParams);
+        
+        connection.release();
+        
+        console.log(`Found ${customersResult.length} customers out of ${totalCustomers} total`);
+        
+        return res.json({
+          customers: customersResult,
+          pagination: {
+            currentPage: page,
+            totalPages: Math.ceil(totalCustomers / limit),
+            totalCustomers,
+            limit
+          }
+        });
+        
+      } catch (dbError) {
+        connection.release();
+        throw dbError;
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      return res.status(500).json({ error: "Failed to fetch customers" });
+    }
   });
 
   app.get("/api/admin/customers", async (req, res) => {
