@@ -343,8 +343,20 @@ export default function AdminCustomers() {
     retryDelay: 1000
   });
   
-  // Extract data and pagination info
-  const customers = customersResponse?.customers || [];
+  // Extract data and pagination info - handle both response formats
+  const customers = (customersResponse?.customers || customersResponse?.data || []).map(customer => ({
+    ...customer,
+    isEnabled: Boolean(customer.is_enabled || customer.isEnabled),
+    firstName: customer.first_name || customer.firstName,
+    lastName: customer.last_name || customer.lastName,
+    phoneNumber: customer.phone_number || customer.phoneNumber,
+    selectedPackage: customer.selected_package || customer.selectedPackage,
+    cardStatus: customer.card_status || customer.cardStatus,
+    createdAt: customer.created_at || customer.createdAt,
+    agentId: customer.agent_id || customer.agentId,
+    isAgent: Boolean(customer.is_agent || customer.isAgent),
+    isTest: Boolean(customer.is_test || customer.isTest)
+  }));
   const pagination = customersResponse?.pagination || { currentPage: 1, limit: 50, totalCustomers: 0, totalPages: 1 };
 
   const { data: products, isLoading: isProductsLoading } = useQuery({
