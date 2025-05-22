@@ -355,7 +355,26 @@ export default function AdminCustomers() {
     createdAt: customer.created_at || customer.createdAt,
     agentId: customer.agent_id || customer.agentId,
     isAgent: Boolean(customer.is_agent || customer.isAgent),
-    isTest: Boolean(customer.is_test || customer.isTest)
+    isTest: Boolean(customer.is_test || customer.isTest),
+    // Add missing field mappings for edit modal
+    dateOfBirth: customer.date_of_birth || customer.dateOfBirth,
+    idNumber: customer.id_number || customer.idNumber,
+    postalCode: customer.postal_code || customer.postalCode,
+    bankName: customer.bank_name || customer.bankName,
+    accountType: customer.account_type || customer.accountType,
+    accountNumber: customer.account_number || customer.accountNumber,
+    accountHolderName: customer.account_holder_name || customer.accountHolderName,
+    branchCode: customer.branch_code || customer.branchCode,
+    cardNumber: customer.card_number || customer.cardNumber,
+    hasCreditCard: Boolean(customer.has_credit_card || customer.hasCreditCard),
+    isSouthAfrican: Boolean(customer.is_south_african || customer.isSouthAfrican),
+    address: customer.address_line_1 || customer.address || customer.addressLine1,
+    suburb: customer.suburb,
+    city: customer.city,
+    province: customer.province,
+    industry: customer.industry,
+    occupation: customer.occupation,
+    gender: customer.gender
   }));
   const pagination = customersResponse?.pagination || { currentPage: 1, limit: 50, totalCustomers: 0, totalPages: 1 };
   
