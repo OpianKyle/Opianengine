@@ -58,18 +58,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     initGA();
   }, []);
 
-  // Prefetch section-specific data when the layout is first loaded
+  // Prefetch ALL admin data when the layout is first loaded
   useEffect(() => {
     if (!hasPrefetched && token) {
-      // Get the current section based on the URL
-      const currentSection = getSectionFromHref(location);
-      console.log(`🚀 Initial prefetching for admin section: ${currentSection}`);
+      console.log(`🚀 Prefetching ALL admin data for instant page loads`);
       
-      // Prefetch data for the current section
-      prefetchAdminData(token, currentSection);
+      // Prefetch ALL admin data immediately - this makes every page feel instant!
+      prefetchAdminData(token, 'all');
       setHasPrefetched(true);
+      
+      // Add a success message so you know it's working
+      setTimeout(() => {
+        console.log('✅ All admin data prefetched - pages will now load instantly!');
+      }, 2000);
     }
-  }, [token, hasPrefetched, location]);
+  }, [token, hasPrefetched]);
 
   const handleLogout = async () => {
     try {

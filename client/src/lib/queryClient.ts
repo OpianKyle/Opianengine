@@ -70,8 +70,10 @@ export const CUSTOMER_API_ENDPOINTS = {
 
 export const ADMIN_API_ENDPOINTS = {
   all: [
-    '/api/admin/users',
+    '/api/admin/customers',
+    '/api/admin/users', 
     '/api/admin/statistics',
+    '/api/admin/dashboard/stats',
     '/api/admin/agents',
     '/api/admin/rewards',
     '/api/admin/products',
@@ -79,7 +81,8 @@ export const ADMIN_API_ENDPOINTS = {
     '/api/admin/quote-requests',
     '/api/admin/redemptions',
     '/api/admin/cash-redemptions',
-    '/api/leads'
+    '/api/leads',
+    '/api/products'
   ],
   dashboard: [
     '/api/admin/statistics',
