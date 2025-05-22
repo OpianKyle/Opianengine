@@ -358,6 +358,12 @@ export default function AdminCustomers() {
     isTest: Boolean(customer.is_test || customer.isTest)
   }));
   const pagination = customersResponse?.pagination || { currentPage: 1, limit: 50, totalCustomers: 0, totalPages: 1 };
+  
+  // Fix pagination field mapping - backend uses totalCustomers, frontend expects totalItems
+  const paginationFixed = {
+    ...pagination,
+    totalItems: pagination.totalCustomers || pagination.totalItems || 0
+  };
 
   const { data: products, isLoading: isProductsLoading } = useQuery({
     queryKey: ["/api/products"],
@@ -765,24 +771,24 @@ export default function AdminCustomers() {
         <Input
           type="number"
           min={1}
-          max={Math.ceil(pagination.totalItems / limit)}
+          max={Math.ceil(paginationFixed.totalItems / limit)}
           value={page}
           onChange={(e) => {
             const value = parseInt(e.target.value);
-            if (value && value > 0 && value <= Math.ceil(pagination.totalItems / limit)) {
+            if (value && value > 0 && value <= Math.ceil(paginationFixed.totalItems / limit)) {
               setPage(value);
             }
           }}
           className="w-16 h-8"
         />
-        <span className="text-sm font-medium mx-2">of {Math.ceil(pagination.totalItems / limit)}</span>
+        <span className="text-sm font-medium mx-2">of {Math.ceil(paginationFixed.totalItems / limit)}</span>
       </div>
       <Button
         variant="outline"
         size="icon"
         className="w-8 h-8"
-        onClick={() => setPage(p => Math.min(Math.ceil(pagination.totalItems / limit), p + 1))}
-        disabled={page === Math.ceil(pagination.totalItems / limit) || isCustomersLoading}
+        onClick={() => setPage(p => Math.min(Math.ceil(paginationFixed.totalItems / limit), p + 1))}
+        disabled={page === Math.ceil(paginationFixed.totalItems / limit) || isCustomersLoading}
       >
         <ChevronRight className="h-4 w-4" />
         <span className="sr-only">Next Page</span>
