@@ -919,7 +919,7 @@ export default function AdminCustomers() {
           
           {!isCustomersError && customersResponse && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-2 py-2 border-b gap-3">
-              <PaginationControls totalItems={pagination.totalItems} />
+              <PaginationControls totalItems={paginationFixed.totalItems} />
               <div className="flex items-center gap-2 sm:gap-4">
                 {selectedCustomerIds.length > 0 && (
                   <Button
@@ -1895,9 +1895,9 @@ export default function AdminCustomers() {
           </Table>
               
               {/* Pagination Controls */}
-              {pagination.totalItems > 0 && (
+              {paginationFixed.totalItems > 0 && (
                 <div className="py-3 border-t mt-2 flex items-center justify-between sticky bottom-0 bg-card">
-                  <PaginationControls totalItems={pagination.totalItems} />
+                  <PaginationControls totalItems={paginationFixed.totalItems} />
                   <div className="flex items-center gap-4">
                     <PaginationNavigation />
                     <Select value={limit.toString()} onValueChange={(value) => {
