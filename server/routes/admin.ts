@@ -37,16 +37,82 @@ const pool = mysql.createPool({
 // Middleware to check if user is an admin
 router.use(checkAdmin);
 
-// Get all customers for dropdown selects
+// Get all customers with pagination and filtering
 router.get('/customers', async (req: any, res) => {
   const connection = await pool.getConnection();
   try {
-    // Only fetch active regular users (not admins, not agents)
-    const [users] = await connection.query(
-      'SELECT id, first_name, last_name, email, card_number FROM users WHERE is_enabled = 1 AND is_admin = 0 AND is_agent = 0 ORDER BY first_name, last_name LIMIT 1000'
-    );
+    console.log('=== ADMIN CUSTOMERS ENDPOINT HIT ===');
     
-    res.json(users);
+    // Get pagination parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = (page - 1) * limit;
+    const search = (req.query.search as string) || '';
+    const requestedShowTest = req.query.showTest === 'true';
+    
+    // Check if user is super admin to determine if they can see test users
+    const isSuperAdmin = req.user?.is_super_admin || false;
+    const showTest = requestedShowTest && isSuperAdmin;
+
+    console.log('Customer query params:', { page, limit, search, showTest, isSuperAdmin });
+
+    // Get total count
+    let countQuery = `SELECT COUNT(*) as total FROM users WHERE is_agent = 0`;
+    if (showTest) {
+      countQuery += ` AND is_test = TRUE`;
+    } else {
+      countQuery += ` AND (is_test IS NULL OR is_test = FALSE)`;
+    }
+    
+    if (search) {
+      countQuery += ` AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)`;
+    }
+    
+    const countParams = search ? [`%${search}%`, `%${search}%`, `%${search}%`] : [];
+    const [countResult] = await connection.execute(countQuery, countParams);
+    const totalCustomers = countResult[0]?.total || 0;
+    
+    console.log('Total customers found:', totalCustomers);
+
+    // Get customers with full data
+    let customersQuery = `SELECT 
+        id, email, first_name, last_name, phone_number, is_south_african,
+        id_number, date_of_birth, gender, occupation, industry, address, suburb,
+        city, province, postal_code, selected_package, bank_name, account_type,
+        account_number, account_holder_name, branch_code, has_credit_card,
+        card_status, card_number, is_enabled, CAST(points as DECIMAL(10,2)) as points,
+        created_at, agent_id, is_agent, is_test
+      FROM users WHERE is_agent = 0`;
+      
+    if (showTest) {
+      customersQuery += ` AND is_test = TRUE`;
+    } else {
+      customersQuery += ` AND (is_test IS NULL OR is_test = FALSE)`;
+    }
+    
+    if (search) {
+      customersQuery += ` AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)`;
+    }
+    
+    customersQuery += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    
+    const queryParams = search ? 
+      [`%${search}%`, `%${search}%`, `%${search}%`, limit, offset] : 
+      [limit, offset];
+    
+    const [customersResult] = await connection.execute(customersQuery, queryParams);
+    
+    console.log(`Returning ${customersResult.length} customers out of ${totalCustomers} total`);
+    
+    res.json({
+      customers: customersResult,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalCustomers / limit),
+        totalCustomers,
+        limit
+      }
+    });
   } catch (error) {
     console.error('Error fetching customers:', error);
     res.status(500).json({ error: 'Failed to fetch customers' });
