@@ -311,7 +311,7 @@ export default function AdminCustomers() {
       console.time('customersQuery');
       // Add cache-busting query parameter to avoid browser cache
       const cacheBuster = new Date().getTime();
-      const url = new URL(`/customers`, window.location.origin);
+      const url = new URL(`/api/admin/customers`, window.location.origin);
       url.searchParams.append('page', page.toString());
       url.searchParams.append('limit', limit.toString());
       url.searchParams.append('_t', cacheBuster.toString());
