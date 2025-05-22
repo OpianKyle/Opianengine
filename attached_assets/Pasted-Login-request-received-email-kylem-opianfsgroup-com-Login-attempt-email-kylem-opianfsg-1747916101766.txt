@@ -1,0 +1,51 @@
+Login request received: { email: 'kylem@opianfsgroup.com' }
+Login attempt: { email: 'kylem@opianfsgroup.com' }
+Session debug: {
+  hasSession: true,
+  sessionID: '0oArS7yc7dzkxmRGj0SdLDdnQVAzQm4h',
+  isAuthenticated: false,
+  user: null,
+  cookies: '_ga=GA1.1.2132070615.1747205758; _ga_GPVTEJ3641=GS2.1.s1747231658$o3$g0$t1747231658$j0$l0$h0; connect.sid=s%3AmgYnQ2SxeenGZrVi_DIeig6OSSoH4o8V.sw84Qz4vg7HpkJihljF148QbfE3oWvHCn9KNV8eOry8'
+}
+Session debug: {
+  hasSession: true,
+  sessionID: '0oArS7yc7dzkxmRGj0SdLDdnQVAzQm4h',
+  isAuthenticated: false,
+  user: undefined,
+  cookies: '_ga=GA1.1.2132070615.1747205758; _ga_GPVTEJ3641=GS2.1.s1747231658$o3$g0$t1747231658$j0$l0$h0; connect.sid=s%3AmgYnQ2SxeenGZrVi_DIeig6OSSoH4o8V.sw84Qz4vg7HpkJihljF148QbfE3oWvHCn9KNV8eOry8'
+}
+Session debug: {
+  hasSession: true,
+  sessionID: '-r--Mgr80_2I3m7i6J03Kqxz_WBiBn6q',
+  isAuthenticated: false,
+  user: null,
+  cookies: '_ga=GA1.1.2132070615.1747205758; _ga_GPVTEJ3641=GS2.1.s1747231658$o3$g0$t1747231658$j0$l0$h0; connect.sid=s%3AmgYnQ2SxeenGZrVi_DIeig6OSSoH4o8V.sw84Qz4vg7HpkJihljF148QbfE3oWvHCn9KNV8eOry8'
+}
+Session debug: {
+  hasSession: true,
+  sessionID: '-r--Mgr80_2I3m7i6J03Kqxz_WBiBn6q',
+  isAuthenticated: false,
+  user: undefined,
+  cookies: '_ga=GA1.1.2132070615.1747205758; _ga_GPVTEJ3641=GS2.1.s1747231658$o3$g0$t1747231658$j0$l0$h0; connect.sid=s%3AmgYnQ2SxeenGZrVi_DIeig6OSSoH4o8V.sw84Qz4vg7HpkJihljF148QbfE3oWvHCn9KNV8eOry8'
+}
+Session debug: {
+  hasSession: true,
+  sessionID: 'STrpY67xHqgnlzN6qudN8vQYHM-_Mxda',
+  isAuthenticated: false,
+  user: null,
+  cookies: '_ga=GA1.1.2132070615.1747205758; _ga_GPVTEJ3641=GS2.1.s1747231658$o3$g0$t1747231658$j0$l0$h0; connect.sid=s%3AmgYnQ2SxeenGZrVi_DIeig6OSSoH4o8V.sw84Qz4vg7HpkJihljF148QbfE3oWvHCn9KNV8eOry8'
+}
+Session debug: {
+  hasSession: true,
+  sessionID: 'STrpY67xHqgnlzN6qudN8vQYHM-_Mxda',
+  isAuthenticated: false,
+  user: undefined,
+  cookies: '_ga=GA1.1.2132070615.1747205758; _ga_GPVTEJ3641=GS2.1.s1747231658$o3$g0$t1747231658$j0$l0$h0; connect.sid=s%3AmgYnQ2SxeenGZrVi_DIeig6OSSoH4o8V.sw84Qz4vg7HpkJihljF148QbfE3oWvHCn9KNV8eOry8'
+}
+Session debug: {
+  hasSession: true,
+  sessionID: '1fRMVuOLAWesS0VfcnbTSCsMNw9925Zs',
+  isAuthenticated: false,
+  user: null,
+  cookies: '_ga=GA1.1.2132070615.1747205758; _ga_GPVTEJ3641=GS2.1.s1747231658$o3$g0$t1747231658$j0$l0$h0; connect.sid=s%3AmgYnQ2SxeenGZrVi_DIeig6OSSoH4o8V.sw84Qz4vg7HpkJihljF148QbfE3oWvHCn9KNV8eOry8'
+}

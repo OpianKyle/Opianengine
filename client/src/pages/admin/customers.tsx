@@ -335,12 +335,13 @@ export default function AdminCustomers() {
       console.timeEnd('customersQuery');
       return data;
     },
-    staleTime: 5 * 1000, // 5 seconds instead of 1 minute - so data becomes stale quickly
-    refetchInterval: 10 * 1000, // Refetch every 10 seconds regardless of window focus
-    refetchIntervalInBackground: true, // Continue refetching even when the browser tab is not focused
-    refetchOnMount: true, // Refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    retryDelay: 1000
+    staleTime: 5 * 60 * 1000, // 5 minutes - much longer cache
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchInterval: false, // Disable automatic refetching
+    refetchIntervalInBackground: false, // Disable background refetching
+    refetchOnMount: false, // Don't refetch on mount if data is fresh
+    refetchOnWindowFocus: false, // Disable refetch on window focus
+    retryDelay: 2000
   });
   
   // Extract data and pagination info - handle both response formats
@@ -404,8 +405,11 @@ export default function AdminCustomers() {
         activities: product.activities || []
       }));
     },
-    staleTime: 1000 * 60 * 3, // 3 minutes
-    retryDelay: 1000
+    staleTime: 10 * 60 * 1000, // 10 minutes - products don't change often
+    gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on mount if data is fresh
+    retryDelay: 2000
   });
 
   const { toast } = useToast();
