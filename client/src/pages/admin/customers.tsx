@@ -344,8 +344,8 @@ export default function AdminCustomers() {
   });
   
   // Extract data and pagination info
-  const customers = customersResponse?.data || [];
-  const pagination = customersResponse?.pagination || { page: 1, limit: 50, totalItems: 0, totalPages: 1 };
+  const customers = customersResponse?.customers || [];
+  const pagination = customersResponse?.pagination || { currentPage: 1, limit: 50, totalCustomers: 0, totalPages: 1 };
 
   const { data: products, isLoading: isProductsLoading } = useQuery({
     queryKey: ["/api/products"],
