@@ -1506,6 +1506,14 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   // Make cache available globally for other modules to access and clear
   global.customersCache = customersCache;
 
+  // Temporary redirect to handle cached requests
+  app.get("/customers", async (req, res) => {
+    // Redirect to the correct endpoint
+    const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
+    const redirectUrl = `/api/admin/customers${queryString ? '?' + queryString : ''}`;
+    return res.redirect(301, redirectUrl);
+  });
+
   app.get("/api/admin/customers", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
