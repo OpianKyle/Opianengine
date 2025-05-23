@@ -78,7 +78,7 @@ export default function CardStatementImportPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch customers for dropdown
-  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>({
+  const { data: customersResponse, isLoading: isLoadingCustomers } = useQuery<any>({
     queryKey: ['/api/admin/customers'], // Keep same query key for cache consistency
     queryFn: async () => {
       const response = await fetch('/api/admin/customers'); // This route maps to admin.ts router
@@ -89,6 +89,11 @@ export default function CardStatementImportPage() {
     },
     staleTime: 60000, // 1 minute
   });
+
+  // Extract customers from response (handle both direct array and nested data structure)
+  const customers: Customer[] = Array.isArray(customersResponse) 
+    ? customersResponse 
+    : customersResponse?.data || customersResponse?.customers || [];
 
   // Filter customers based on search term
   const filteredCustomers = searchTerm 
