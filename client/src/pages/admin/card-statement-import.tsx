@@ -77,11 +77,11 @@ export default function CardStatementImportPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch customers for dropdown
+  // Fetch ALL customers for dropdown (no pagination/filtering)
   const { data: customersResponse, isLoading: isLoadingCustomers } = useQuery<any>({
-    queryKey: ['/api/admin/customers'], // Keep same query key for cache consistency
+    queryKey: ['/api/admin/customers-all'], // Different cache key to avoid conflicts
     queryFn: async () => {
-      const response = await fetch('/api/admin/customers'); // This route maps to admin.ts router
+      const response = await fetch('/api/admin/customers?limit=1000&showTest=false'); // Get all customers
       if (!response.ok) {
         throw new Error('Failed to fetch customers');
       }
