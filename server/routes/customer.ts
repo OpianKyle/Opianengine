@@ -20,7 +20,7 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
   let connection;
   try {
     connection = await createConnection();
-    console.log('Fetching profile data for user:', req.user.id);
+    console.log('🚀 CUSTOMER ROUTER PROFILE ENDPOINT HIT for user:', req.user.id);
 
     // Get complete user profile data matching live API
     const [userData] = await connection.execute(
