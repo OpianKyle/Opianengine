@@ -67,7 +67,7 @@ export default function ContactLionel() {
     <div 
       className="min-h-screen py-12 px-4 relative"
       style={{
-        backgroundImage: `url('/northfolk-Ok76F6yW2iA-unsplash.jpg')`,
+        backgroundImage: `url('/Assets/northfolk-Ok76F6yW2iA-unsplash.jpg')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
