@@ -205,4 +205,251 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+// Sales representative contact form schema
+const salesRepContactSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  surname: z.string().min(1, "Surname is required"),
+  email: z.string().email("Please enter a valid email address"),
+  hearAboutUs: z.string().min(1, "Please tell us where you heard about us"),
+  message: z.string().min(1, "Message is required")
+});
+
+// Contact form for Lionel
+router.post("/lionel", async (req, res, next) => {
+  let connection;
+  
+  try {
+    console.log('Received Lionel contact form submission:', req.body);
+    
+    // Validate the request data
+    const validationResult = salesRepContactSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      const validationError = fromZodError(validationResult.error);
+      throw new ResponseError(validationError.message, 400);
+    }
+    
+    const data = validationResult.data;
+    
+    // Create a direct database connection
+    connection = await mysql.createConnection({
+      host: process.env.DB_HOST || 'dedi1350.jnb1.host-h.net',
+      user: process.env.DB_USER || 'admin',
+      password: process.env.DB_PASSWORD || '8E33U976qa800F',
+      database: process.env.DB_NAME || 'opianrewards',
+      port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
+    });
+    
+    // Start a transaction
+    await connection.beginTransaction();
+    
+    // Prepare the SQL query for leads table
+    const insertQuery = `
+      INSERT INTO leads (
+        first_name, last_name, email, mobile_number, 
+        selected_package, notes, status, created_at, updated_at,
+        source, assigned_to
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)
+    `;
+    
+    // Create comprehensive notes
+    const notes = `Sales Rep Contact - Lionel
+Contact Form Message: ${data.message}
+How they heard about us: ${data.hearAboutUs}
+Submitted via: Lionel's contact form`;
+    
+    // Execute the query
+    const [result] = await connection.execute(insertQuery, [
+      data.name,
+      data.surname,
+      data.email,
+      '', // mobile_number - not collected in this form
+      '', // selected_package - not applicable for sales rep contacts
+      notes,
+      'new',
+      'Lionel Contact Form',
+      'Lionel' // assigned_to
+    ]);
+    
+    // Get the inserted ID
+    const insertId = result.insertId;
+    
+    // Commit the transaction
+    await connection.commit();
+    
+    // Format the lead data for email notification
+    const leadData = {
+      firstName: data.name,
+      lastName: data.surname,
+      email: data.email,
+      mobileNumber: 'Not provided',
+      selectedPackage: 'Sales Inquiry - Lionel',
+      notes: notes,
+      status: 'new',
+      id: insertId,
+      assignedTo: 'Lionel'
+    };
+    
+    // Send notification email
+    try {
+      console.log('Sending notification for Lionel contact form:', leadData);
+      const emailResult = await sendLeadNotificationEmail(leadData);
+      
+      if (emailResult) {
+        console.log(`SUCCESS: Lionel contact notification sent for ${data.name} ${data.surname}`);
+      } else {
+        console.error(`FAILED: Lionel contact notification failed for ${data.name} ${data.surname}`);
+      }
+    } catch (emailError) {
+      console.error('CRITICAL ERROR sending Lionel contact notification:', emailError);
+    }
+    
+    // Return success
+    res.status(201).json({
+      success: true,
+      message: "Your message has been sent to Lionel successfully!",
+      leadId: insertId
+    });
+  } catch (error) {
+    // Rollback transaction if there was an error
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('Error rolling back transaction:', rollbackError);
+      }
+    }
+    
+    console.error('Error in Lionel contact form submission:', error);
+    next(error);
+  } finally {
+    // Close the connection
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (connectionError) {
+        console.error('Error closing database connection:', connectionError);
+      }
+    }
+  }
+});
+
+// Contact form for Cheslin
+router.post("/cheslin", async (req, res, next) => {
+  let connection;
+  
+  try {
+    console.log('Received Cheslin contact form submission:', req.body);
+    
+    // Validate the request data
+    const validationResult = salesRepContactSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      const validationError = fromZodError(validationResult.error);
+      throw new ResponseError(validationError.message, 400);
+    }
+    
+    const data = validationResult.data;
+    
+    // Create a direct database connection
+    connection = await mysql.createConnection({
+      host: process.env.DB_HOST || 'dedi1350.jnb1.host-h.net',
+      user: process.env.DB_USER || 'admin',
+      password: process.env.DB_PASSWORD || '8E33U976qa800F',
+      database: process.env.DB_NAME || 'opianrewards',
+      port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
+    });
+    
+    // Start a transaction
+    await connection.beginTransaction();
+    
+    // Prepare the SQL query for leads table
+    const insertQuery = `
+      INSERT INTO leads (
+        first_name, last_name, email, mobile_number, 
+        selected_package, notes, status, created_at, updated_at,
+        source, assigned_to
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)
+    `;
+    
+    // Create comprehensive notes
+    const notes = `Sales Rep Contact - Cheslin
+Contact Form Message: ${data.message}
+How they heard about us: ${data.hearAboutUs}
+Submitted via: Cheslin's contact form`;
+    
+    // Execute the query
+    const [result] = await connection.execute(insertQuery, [
+      data.name,
+      data.surname,
+      data.email,
+      '', // mobile_number - not collected in this form
+      '', // selected_package - not applicable for sales rep contacts
+      notes,
+      'new',
+      'Cheslin Contact Form',
+      'Cheslin' // assigned_to
+    ]);
+    
+    // Get the inserted ID
+    const insertId = result.insertId;
+    
+    // Commit the transaction
+    await connection.commit();
+    
+    // Format the lead data for email notification
+    const leadData = {
+      firstName: data.name,
+      lastName: data.surname,
+      email: data.email,
+      mobileNumber: 'Not provided',
+      selectedPackage: 'Sales Inquiry - Cheslin',
+      notes: notes,
+      status: 'new',
+      id: insertId,
+      assignedTo: 'Cheslin'
+    };
+    
+    // Send notification email
+    try {
+      console.log('Sending notification for Cheslin contact form:', leadData);
+      const emailResult = await sendLeadNotificationEmail(leadData);
+      
+      if (emailResult) {
+        console.log(`SUCCESS: Cheslin contact notification sent for ${data.name} ${data.surname}`);
+      } else {
+        console.error(`FAILED: Cheslin contact notification failed for ${data.name} ${data.surname}`);
+      }
+    } catch (emailError) {
+      console.error('CRITICAL ERROR sending Cheslin contact notification:', emailError);
+    }
+    
+    // Return success
+    res.status(201).json({
+      success: true,
+      message: "Your message has been sent to Cheslin successfully!",
+      leadId: insertId
+    });
+  } catch (error) {
+    // Rollback transaction if there was an error
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('Error rolling back transaction:', rollbackError);
+      }
+    }
+    
+    console.error('Error in Cheslin contact form submission:', error);
+    next(error);
+  } finally {
+    // Close the connection
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (connectionError) {
+        console.error('Error closing database connection:', connectionError);
+      }
+    }
+  }
+});
+
 export const contactRouter = router;

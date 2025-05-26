@@ -7,6 +7,8 @@ import Home from "@/pages/home";
 import LoginPage from "@/pages/login-page"; // Updated login page
 import Register from "@/pages/register";
 import ContactUsPage from "@/pages/contact-us"; // New contact us page
+import ContactLionel from "@/pages/contact-lionel"; // Sales rep contact form
+import ContactCheslin from "@/pages/contact-cheslin"; // Sales rep contact form
 import ResetPassword from "@/pages/reset-password";
 import ReferralPage from "@/pages/referral"; 
 import HowItWorks from "@/pages/how-it-works";
@@ -307,6 +309,10 @@ function Router() {
       <Route path="/social">
         <SocialDashboard />
       </Route>
+
+      {/* Sales Representative Contact Forms */}
+      <Route path="/contact-lionel" component={ContactLionel} />
+      <Route path="/contact-cheslin" component={ContactCheslin} />
 
       <Route component={NotFound} />
     </Switch>
