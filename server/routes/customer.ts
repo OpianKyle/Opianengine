@@ -36,9 +36,10 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
     const user = userData[0];
     
     console.log('Raw user data from database:', user);
+    console.log('Available columns:', Object.keys(user));
     
-    // Return complete profile data with safe null handling
-    return res.status(200).json({
+    // Return complete profile data with safe null handling for available columns
+    const profileData = {
       id: user.id,
       email: user.email,
       firstName: user.first_name,
@@ -48,22 +49,26 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
       referralCode: user.referral_code,
       cardNumber: user.card_number || "",
       cardStatus: user.card_status || "",
-      address: user.address || "",
-      suburb: user.suburb || "",
-      city: user.city || "",
-      province: user.province || "",
-      postalCode: user.postal_code || "",
-      idNumber: user.id_number || "",
-      dateOfBirth: user.date_of_birth || "",
-      industry: user.industry || "",
-      occupation: user.occupation || "",
-      isSouthAfrican: user.is_south_african || false,
-      selectedPackage: user.selected_package || "BEGINNER",
-      bankName: user.bank_name || "",
-      accountType: user.account_type || "SAVINGS",
-      accountNumber: user.account_number || "",
-      hasCreditCard: user.has_credit_card || false
-    });
+    };
+
+    // Add optional fields if they exist in the database
+    if ('address' in user) profileData.address = user.address || "";
+    if ('suburb' in user) profileData.suburb = user.suburb || "";
+    if ('city' in user) profileData.city = user.city || "";
+    if ('province' in user) profileData.province = user.province || "";
+    if ('postal_code' in user) profileData.postalCode = user.postal_code || "";
+    if ('id_number' in user) profileData.idNumber = user.id_number || "";
+    if ('date_of_birth' in user) profileData.dateOfBirth = user.date_of_birth || "";
+    if ('industry' in user) profileData.industry = user.industry || "";
+    if ('occupation' in user) profileData.occupation = user.occupation || "";
+    if ('is_south_african' in user) profileData.isSouthAfrican = user.is_south_african || false;
+    if ('selected_package' in user) profileData.selectedPackage = user.selected_package || "BEGINNER";
+    if ('bank_name' in user) profileData.bankName = user.bank_name || "";
+    if ('account_type' in user) profileData.accountType = user.account_type || "SAVINGS";
+    if ('account_number' in user) profileData.accountNumber = user.account_number || "";
+    if ('has_credit_card' in user) profileData.hasCreditCard = user.has_credit_card || false;
+
+    return res.status(200).json(profileData);
   } catch (error) {
     console.error('Error fetching profile data:', error);
     return res.status(500).json({ error: 'Failed to fetch profile data' });
