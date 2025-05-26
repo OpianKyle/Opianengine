@@ -348,33 +348,7 @@ function ReferralsPageContent() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="py-3">
-                  <CardTitle className="text-sm font-medium">Level 2 (5%)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    R{calculateLevelCommission(2).toFixed(2)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    From {referralStats?.referralsByLevel[2]?.length || 0} indirect referrals
-                  </p>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader className="py-3">
-                  <CardTitle className="text-sm font-medium">Level 3 (2.5%)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    R{calculateLevelCommission(3).toFixed(2)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    From {referralStats?.referralsByLevel[3]?.length || 0} level 3 referrals
-                  </p>
-                </CardContent>
-              </Card>
 
               <Card className="bg-primary/5">
                 <CardHeader className="py-3">
@@ -521,31 +495,29 @@ function ReferralsPageContent() {
         </CardContent>
       </Card>
 
-      {[1, 2, 3].map(level => (
-        <Card key={level}>
-          <CardHeader>
-            <CardTitle>Level {level} Referral Stats</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Overview of your level {level} referrals by package type and their subsequent referrals.
-              </p>
-              <div className="grid grid-cols-5 gap-4">
-                {Object.entries(referralStats?.packageStatsByLevel[level] || {}).map(([packageType, stats]) => (
-                  <PackageEmblem
-                    key={packageType}
-                    type={packageType}
-                    count={stats.count}
-                    totalReferrals={stats.totalReferrals}
-                    level={level}
-                  />
-                ))}
-              </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Direct Referral Stats</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Overview of your direct referrals by package type and their subsequent referrals.
+            </p>
+            <div className="grid grid-cols-5 gap-4">
+              {Object.entries(referralStats?.packageStatsByLevel[1] || {}).map(([packageType, stats]) => (
+                <PackageEmblem
+                  key={packageType}
+                  type={packageType}
+                  count={stats.count}
+                  totalReferrals={stats.totalReferrals}
+                  level={1}
+                />
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="referral-badges">
         <CardHeader>
