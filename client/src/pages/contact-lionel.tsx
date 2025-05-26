@@ -81,9 +81,11 @@ export default function ContactLionel() {
           <Card className="bg-white shadow-xl">
             <CardHeader className="text-center">
               <div className="mx-auto mb-4">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
-                  L
-                </div>
+                <img 
+                  src="/Lionel.jpg" 
+                  alt="Lionel - Senior Sales Representative"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-blue-200 shadow-lg"
+                />
               </div>
               <CardTitle className="text-2xl text-gray-900">Lionel</CardTitle>
               <CardDescription className="text-lg">Senior Sales Representative</CardDescription>

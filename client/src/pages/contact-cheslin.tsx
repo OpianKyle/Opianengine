@@ -81,9 +81,11 @@ export default function ContactCheslin() {
           <Card className="bg-white shadow-xl">
             <CardHeader className="text-center">
               <div className="mx-auto mb-4">
-                <div className="w-32 h-32 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
-                  C
-                </div>
+                <img 
+                  src="/Cheslin.jpg" 
+                  alt="Cheslin - Senior Sales Representative"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-green-200 shadow-lg"
+                />
               </div>
               <CardTitle className="text-2xl text-gray-900">Cheslin</CardTitle>
               <CardDescription className="text-lg">Senior Sales Representative</CardDescription>
