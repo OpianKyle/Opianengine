@@ -25,18 +25,18 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
     // Get user data with explicit error handling
     const [userData] = await connection.execute(
       `SELECT * FROM users WHERE id = ?`,
-      [req.user.id]
-    );
+      [req.user?.id]
+    ) as any;
 
     console.log('Database query result:', userData);
     console.log('Query result type:', typeof userData, Array.isArray(userData));
 
     if (!userData || !Array.isArray(userData) || userData.length === 0) {
-      console.log('User not found:', req.user.id);
+      console.log('User not found:', req.user?.id);
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const user = userData[0];
+    const user = userData[0] as any;
     
     console.log('Raw user data from database:', user);
     console.log('Available columns:', Object.keys(user));
