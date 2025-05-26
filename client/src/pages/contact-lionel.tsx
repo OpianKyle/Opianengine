@@ -104,7 +104,7 @@ export default function ContactLionel() {
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-3 text-gray-600">
                 <Mail className="w-5 h-5 text-blue-600" />
-                <span>lionel@opianrewards.com</span>
+                <span>lionell@opianfsgroup.com</span>
               </div>
               <div className="flex items-center space-x-3 text-gray-600">
                 <Phone className="w-5 h-5 text-blue-600" />
