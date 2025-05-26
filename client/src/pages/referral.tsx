@@ -134,8 +134,8 @@ export default function ReferralPage() {
     <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-slate-50">
       <Card className="w-full max-w-lg shadow-lg">
         <CardHeader className="bg-primary text-primary-foreground rounded-t-lg">
-          <CardTitle className="text-xl md:text-2xl">You've been referred by {agentName}</CardTitle>
-          <CardDescription className="text-primary-foreground/80">
+          <CardTitle className="text-xl md:text-2xl text-white">You've been referred by {agentName}</CardTitle>
+          <CardDescription className="text-white/80">
             Share your contact details to learn more about OPIAN Rewards
           </CardDescription>
         </CardHeader>
