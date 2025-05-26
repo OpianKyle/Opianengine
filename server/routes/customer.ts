@@ -61,8 +61,8 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
       [req.user?.id]
     ) as any;
 
-    console.log('🔍 CORRECT ENDPOINT CALLED - Database query result:', userData);
-    console.log('Query result type:', typeof userData, Array.isArray(userData));
+    console.log('🔍 CUSTOMER ROUTER ENDPOINT CALLED - Database query result:', userData);
+    console.log('🔍 Query result type:', typeof userData, Array.isArray(userData));
 
     if (!userData || !Array.isArray(userData) || userData.length === 0) {
       console.log('User not found:', req.user?.id);
