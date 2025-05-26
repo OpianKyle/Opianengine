@@ -33,12 +33,12 @@ const profileSchema = z.object({
   date_of_birth: z.string().min(1, "Date of birth is required"),
   industry: z.string().min(1, "Industry is required"),
   occupation: z.string().min(1, "Occupation is required"),
-  is_south_african: z.boolean(),
+  is_south_african: z.boolean().optional(),
   selected_package: z.string(),
   bank_name: z.string().min(1, "Bank name is required"),
   account_type: z.enum(accountTypes),
   account_number: z.string().min(1, "Account number is required"),
-  has_credit_card: z.boolean(),
+  has_credit_card: z.boolean().optional(),
   password: z.string().optional(),
 });
 
