@@ -35,7 +35,9 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
 
     const user = userData[0];
     
-    // Return complete profile data
+    console.log('Raw user data from database:', user);
+    
+    // Return complete profile data with safe null handling
     return res.status(200).json({
       id: user.id,
       email: user.email,
@@ -44,23 +46,23 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
       phoneNumber: user.phone_number,
       points: user.points,
       referralCode: user.referral_code,
-      cardNumber: user.card_number,
-      cardStatus: user.card_status,
-      address: user.address,
-      suburb: user.suburb,
-      city: user.city,
-      province: user.province,
-      postalCode: user.postal_code,
-      idNumber: user.id_number,
-      dateOfBirth: user.date_of_birth,
-      industry: user.industry,
-      occupation: user.occupation,
-      isSouthAfrican: user.is_south_african,
-      selectedPackage: user.selected_package,
-      bankName: user.bank_name,
-      accountType: user.account_type,
-      accountNumber: user.account_number,
-      hasCreditCard: user.has_credit_card
+      cardNumber: user.card_number || "",
+      cardStatus: user.card_status || "",
+      address: user.address || "",
+      suburb: user.suburb || "",
+      city: user.city || "",
+      province: user.province || "",
+      postalCode: user.postal_code || "",
+      idNumber: user.id_number || "",
+      dateOfBirth: user.date_of_birth || "",
+      industry: user.industry || "",
+      occupation: user.occupation || "",
+      isSouthAfrican: user.is_south_african || false,
+      selectedPackage: user.selected_package || "BEGINNER",
+      bankName: user.bank_name || "",
+      accountType: user.account_type || "SAVINGS",
+      accountNumber: user.account_number || "",
+      hasCreditCard: user.has_credit_card || false
     });
   } catch (error) {
     console.error('Error fetching profile data:', error);
