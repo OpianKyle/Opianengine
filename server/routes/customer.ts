@@ -22,13 +22,46 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
     connection = await createConnection();
     console.log('Fetching profile data for user:', req.user.id);
 
-    // Get user data with explicit error handling
+    // Get complete user profile data matching live API
     const [userData] = await connection.execute(
-      `SELECT * FROM users WHERE id = ?`,
+      `SELECT 
+        id,
+        email,
+        first_name,
+        last_name,
+        phone_number,
+        is_south_african,
+        id_number,
+        date_of_birth,
+        gender,
+        occupation,
+        industry,
+        address,
+        suburb,
+        city,
+        province,
+        postal_code,
+        selected_package,
+        bank_name,
+        account_type,
+        account_number,
+        account_holder_name,
+        branch_code,
+        has_credit_card,
+        CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
+        referral_code,
+        card_number,
+        card_status,
+        is_enabled,
+        created_at,
+        mandate_accepted,
+        mandate_accepted_at
+      FROM users 
+      WHERE id = ?`,
       [req.user?.id]
     ) as any;
 
-    console.log('Database query result:', userData);
+    console.log('🔍 CORRECT ENDPOINT CALLED - Database query result:', userData);
     console.log('Query result type:', typeof userData, Array.isArray(userData));
 
     if (!userData || !Array.isArray(userData) || userData.length === 0) {
@@ -38,8 +71,8 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
 
     const user = userData[0] as any;
     
-    console.log('Raw user data from database:', user);
-    console.log('Available columns:', Object.keys(user));
+    console.log('🔍 Raw user data from database:', user);
+    console.log('🔍 Available columns:', Object.keys(user));
     
     // Return complete profile data matching the live API format
     const profileData = {
