@@ -911,6 +911,9 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         rawPoints: user.points,
         pointsType: typeof user.points
       });
+      
+      console.log('Raw database result for profile:', user);
+      console.log('Available database columns:', Object.keys(user));
 
       // Transform data for frontend
       const transformedData = {
