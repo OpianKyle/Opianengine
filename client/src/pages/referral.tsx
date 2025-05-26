@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, User, Mail, Phone, MessageSquare } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Loader2, User, Mail, Phone, MessageSquare, CheckCircle, X } from 'lucide-react';
 
 export default function ReferralPage() {
   const { code } = useParams();
@@ -16,6 +17,7 @@ export default function ReferralPage() {
   const [agentName, setAgentName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -81,12 +83,6 @@ export default function ReferralPage() {
       const data = await response.json();
       
       if (response.ok && data.success) {
-        toast({
-          title: 'Thanks for your interest!',
-          description: `Your details have been sent to ${agentName}, who will contact you shortly to discuss our services and complete your registration.`,
-          variant: 'default'
-        });
-        
         // Reset form
         setFormData({
           firstName: '',
@@ -97,8 +93,8 @@ export default function ReferralPage() {
           referralCode: code
         });
         
-        // Immediate redirect without delay
-        navigate('/');
+        // Show success dialog instead of toast
+        setShowSuccessDialog(true);
       } else {
         toast({
           title: 'Submission Failed',
@@ -241,11 +237,37 @@ export default function ReferralPage() {
               ) : 'Submit Information'}
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              By submitting this form, you agree to be contacted by {agentName} regarding OPIAN Rewards products and services.
+              By submitting this form, you agree to be contacted by a sales agent regarding OPIAN Rewards products and services.
             </p>
           </CardFooter>
         </form>
       </Card>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <DialogTitle className="text-xl font-semibold">Thank You for Your Interest!</DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              Your information has been successfully submitted. A sales agent will contact you shortly to discuss our services and complete your registration.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-center">
+            <Button 
+              onClick={() => {
+                setShowSuccessDialog(false);
+                navigate('/');
+              }}
+              className="bg-[#43EB3E] hover:bg-[#3ad036] text-black px-8"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
