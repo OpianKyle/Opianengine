@@ -856,7 +856,112 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
     }
   });
 
-  // Profile endpoint removed - using customer router instead
+  // Working customer profile endpoint with complete data
+  app.get("/api/customer/profile", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const connection = await createConnection();
+    try {
+      console.log('✅ MAIN PROFILE ENDPOINT HIT for user:', req.user?.id);
+      
+      // Get complete user profile data
+      const [userData] = await connection.execute(
+        `SELECT 
+          id,
+          email,
+          first_name,
+          last_name,
+          phone_number,
+          is_south_african,
+          id_number,
+          date_of_birth,
+          gender,
+          occupation,
+          industry,
+          address,
+          suburb,
+          city,
+          province,
+          postal_code,
+          selected_package,
+          bank_name,
+          account_type,
+          account_number,
+          account_holder_name,
+          branch_code,
+          has_credit_card,
+          CAST(COALESCE(points, 0) as DECIMAL(10,2)) as points,
+          referral_code,
+          card_number,
+          card_status,
+          is_enabled,
+          created_at,
+          mandate_accepted,
+          mandate_accepted_at
+        FROM users 
+        WHERE id = ?`,
+        [req.user?.id]
+      ) as any[];
+
+      if (!userData || !userData[0]) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const user = userData[0];
+      console.log('✅ Complete user data found:', {
+        id: user.id,
+        hasAddress: !!user.address,
+        hasBankName: !!user.bank_name,
+        hasIdNumber: !!user.id_number
+      });
+
+      // Return complete profile data
+      const profileData = {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phoneNumber: user.phone_number,
+        isSouthAfrican: Boolean(user.is_south_african),
+        idNumber: user.id_number,
+        dateOfBirth: user.date_of_birth,
+        gender: user.gender,
+        occupation: user.occupation,
+        industry: user.industry,
+        address: user.address,
+        suburb: user.suburb,
+        city: user.city,
+        province: user.province,
+        postalCode: user.postal_code,
+        selectedPackage: user.selected_package,
+        bankName: user.bank_name,
+        accountType: user.account_type,
+        accountNumber: user.account_number,
+        accountHolderName: user.account_holder_name,
+        branchCode: user.branch_code,
+        hasCreditCard: Boolean(user.has_credit_card),
+        points: parseFloat(user.points || '0'),
+        referralCode: user.referral_code,
+        cardNumber: user.card_number,
+        cardStatus: user.card_status,
+        isEnabled: Boolean(user.is_enabled),
+        createdAt: user.created_at,
+        mandateAccepted: Boolean(user.mandate_accepted),
+        mandateAcceptedAt: user.mandate_accepted_at
+      };
+
+      console.log('✅ Returning complete profile with', Object.keys(profileData).length, 'fields');
+      res.json(profileData);
+
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      res.status(500).json({ error: 'Failed to fetch user profile' });
+    } finally {
+      await connection.end();
+    }
+  });
 
   // Get customer points endpoint
   app.get("/api/customer/points", async (req, res) => {
