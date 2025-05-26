@@ -338,4 +338,51 @@ router.post('/cash-redemptions/request', isAuthenticated, async (req: Request, r
   }
 });
 
+// Temporary endpoint to add missing profile columns
+router.post('/migrate-profile-fields', async (req: Request, res: Response) => {
+  let connection;
+  try {
+    connection = await createConnection();
+    
+    const fieldsToAdd = [
+      'address VARCHAR(255) DEFAULT NULL',
+      'suburb VARCHAR(100) DEFAULT NULL', 
+      'city VARCHAR(100) DEFAULT NULL',
+      'province VARCHAR(50) DEFAULT NULL',
+      'postal_code VARCHAR(10) DEFAULT NULL',
+      'id_number VARCHAR(20) DEFAULT NULL',
+      'date_of_birth DATE DEFAULT NULL',
+      'industry VARCHAR(100) DEFAULT NULL',
+      'occupation VARCHAR(100) DEFAULT NULL',
+      'is_south_african BOOLEAN DEFAULT FALSE',
+      'selected_package VARCHAR(20) DEFAULT "BEGINNER"',
+      'bank_name VARCHAR(100) DEFAULT NULL',
+      'account_type ENUM("SAVINGS", "CHEQUE", "TRANSMISSION") DEFAULT "SAVINGS"',
+      'account_number VARCHAR(20) DEFAULT NULL',
+      'has_credit_card BOOLEAN DEFAULT FALSE'
+    ];
+    
+    const results = [];
+    for (const field of fieldsToAdd) {
+      try {
+        await connection.execute(`ALTER TABLE users ADD COLUMN ${field}`);
+        results.push(`✓ Added: ${field}`);
+      } catch (error: any) {
+        if (error.code === 'ER_DUP_FIELDNAME') {
+          results.push(`- Already exists: ${field}`);
+        } else {
+          results.push(`✗ Error: ${error.message}`);
+        }
+      }
+    }
+    
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ error: 'Migration failed' });
+  } finally {
+    if (connection) await connection.end();
+  }
+});
+
 export default router;
