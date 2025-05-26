@@ -145,8 +145,8 @@ export default function ReferralPage() {
               <p className="mb-2 font-medium">How it works:</p>
               <ol className="list-decimal pl-5 space-y-1">
                 <li>Enter your contact information below</li>
-                <li>{agentName} will contact you to discuss our services</li>
-                <li>Complete your full registration with {agentName}'s assistance</li>
+                <li>A sales agent will contact you to discuss our services</li>
+                <li>Complete your full registration with the sales agent's assistance</li>
                 <li>Start enjoying the benefits of OPIAN Rewards!</li>
               </ol>
             </div>
