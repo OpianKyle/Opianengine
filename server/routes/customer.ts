@@ -73,6 +73,14 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
     
     console.log('🔍 Raw user data from database:', user);
     console.log('🔍 Available columns:', Object.keys(user));
+    console.log('🔍 Complete user data sample:', {
+      id: user.id,
+      email: user.email,
+      address: user.address,
+      bank_name: user.bank_name,
+      id_number: user.id_number,
+      selected_package: user.selected_package
+    });
     
     // Return complete profile data matching the live API format
     const profileData = {
