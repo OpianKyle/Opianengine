@@ -108,8 +108,6 @@ export default function ContactLionel() {
                 <h4 className="font-semibold text-blue-900 mb-2">Specializes in:</h4>
                 <ul className="text-blue-800 space-y-1">
                   <li>• Insurance Solutions</li>
-                  <li>• Rewards Programs</li>
-                  <li>• Customer Onboarding</li>
                   <li>• Account Management</li>
                 </ul>
               </div>

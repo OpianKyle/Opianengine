@@ -108,7 +108,6 @@ export default function ContactCheslin() {
                 <h4 className="font-semibold text-green-900 mb-2">Specializes in:</h4>
                 <ul className="text-green-800 space-y-1">
                   <li>• Insurance Solutions</li>
-                  <li>• Rewards Programs</li>
                   <li>• Business Development</li>
                   <li>• Client Relations</li>
                 </ul>
