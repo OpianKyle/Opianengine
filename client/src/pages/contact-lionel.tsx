@@ -64,14 +64,25 @@ export default function ContactLionel() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div 
+      className="min-h-screen py-12 px-4 relative"
+      style={{
+        backgroundImage: `url('/northfolk-Ok76F6yW2iA-unsplash.jpg')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/60"></div>
+      <div className="relative z-10">
+        <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-white mb-4">
             Connect with Lionel
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-gray-200">
             Your dedicated sales representative
           </p>
         </div>
@@ -216,14 +227,15 @@ export default function ContactLionel() {
           </Card>
         </div>
 
-        {/* Back to main site */}
-        <div className="text-center mt-8">
-          <a
-            href="/"
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            ← Back to Opian Rewards
-          </a>
+          {/* Back to main site */}
+          <div className="text-center mt-8">
+            <a
+              href="/"
+              className="text-blue-200 hover:text-white font-medium"
+            >
+              ← Back to Opian Rewards
+            </a>
+          </div>
         </div>
       </div>
     </div>
