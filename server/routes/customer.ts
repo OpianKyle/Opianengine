@@ -22,11 +22,14 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
     connection = await createConnection();
     console.log('Fetching profile data for user:', req.user.id);
 
-    // Get user data
+    // Get user data with explicit error handling
     const [userData] = await connection.execute(
       `SELECT * FROM users WHERE id = ?`,
       [req.user.id]
     );
+
+    console.log('Database query result:', userData);
+    console.log('Query result type:', typeof userData, Array.isArray(userData));
 
     if (!userData || !Array.isArray(userData) || userData.length === 0) {
       console.log('User not found:', req.user.id);
