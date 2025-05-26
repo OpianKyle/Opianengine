@@ -2,17 +2,13 @@
  * Fix referral lead assignments - assigns leads to proper agents
  */
 
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
 async function createConnection() {
-  const connection = await mysql.createConnection({
-    host: process.env.DATABASE_HOST || 'localhost',
-    user: process.env.DATABASE_USER || 'root',
-    password: process.env.DATABASE_PASSWORD || '',
-    database: process.env.DATABASE_NAME || 'opian_rewards',
-    port: parseInt(process.env.DATABASE_PORT || '3306'),
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
   });
-  return connection;
+  return pool;
 }
 
 async function fixReferralLeadAssignments() {
@@ -23,13 +19,14 @@ async function fixReferralLeadAssignments() {
     console.log('Connected to database');
     
     // Get all leads that don't have an assigned agent but have a referral code
-    const [unassignedLeads] = await connection.query(`
+    const unassignedLeadsResult = await connection.query(`
       SELECT l.id, l.email, l.referral_code, l.first_name, l.last_name
       FROM leads l
       WHERE l.assigned_agent_id IS NULL 
       AND l.referral_code IS NOT NULL
       AND l.referral_code != ''
     `);
+    const unassignedLeads = unassignedLeadsResult.rows;
     
     console.log(`Found ${unassignedLeads.length} leads without assigned agents`);
     
@@ -40,18 +37,18 @@ async function fixReferralLeadAssignments() {
       console.log(`Referral code: ${lead.referral_code}`);
       
       // Find the user who owns this referral code
-      const [referrerResult] = await connection.query(`
+      const referrerResult = await connection.query(`
         SELECT id, email, first_name, last_name, is_agent, agent_id, referred_by
         FROM users 
-        WHERE referral_code = ? AND is_enabled = 1
+        WHERE referral_code = $1 AND is_enabled = true
       `, [lead.referral_code]);
       
-      if (referrerResult.length === 0) {
+      if (referrerResult.rows.length === 0) {
         console.log(`  ❌ No user found with referral code ${lead.referral_code}`);
         continue;
       }
       
-      const referrer = referrerResult[0];
+      const referrer = referrerResult.rows[0];
       console.log(`  📧 Referrer: ${referrer.first_name} ${referrer.last_name} (${referrer.email})`);
       
       let agentId = null;
@@ -62,7 +59,7 @@ async function fixReferralLeadAssignments() {
         console.log(`  ✅ Found agent via agent_id field: ${agentId}`);
       }
       // Method 2: Check if referrer is an agent themselves
-      else if (referrer.is_agent === 1) {
+      else if (referrer.is_agent === true) {
         agentId = referrer.id;
         console.log(`  ✅ Referrer is an agent: ${agentId}`);
       }
@@ -75,17 +72,17 @@ async function fixReferralLeadAssignments() {
         const maxDepth = 10;
         
         while (currentUserId && depth < maxDepth) {
-          const [chainUserResult] = await connection.query(`
+          const chainUserResult = await connection.query(`
             SELECT id, email, is_agent, referred_by
             FROM users 
-            WHERE id = ? AND is_enabled = 1
+            WHERE id = $1 AND is_enabled = true
           `, [currentUserId]);
           
-          if (chainUserResult.length === 0) break;
+          if (chainUserResult.rows.length === 0) break;
           
-          const chainUser = chainUserResult[0];
+          const chainUser = chainUserResult.rows[0];
           
-          if (chainUser.is_agent === 1) {
+          if (chainUser.is_agent === true) {
             agentId = chainUser.id;
             console.log(`  ✅ Found agent in chain: ${agentId} (${chainUser.email})`);
             break;
