@@ -33,17 +33,34 @@ router.get('/profile', isAuthenticated, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Return profile data with points
+    const user = userData[0];
+    
+    // Return complete profile data
     return res.status(200).json({
-      id: userData[0].id,
-      email: userData[0].email,
-      firstName: userData[0].first_name,
-      lastName: userData[0].last_name,
-      phoneNumber: userData[0].phone_number,
-      points: userData[0].points,
-      referralCode: userData[0].referral_code,
-      cardNumber: userData[0].card_number,
-      cardStatus: userData[0].card_status
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phoneNumber: user.phone_number,
+      points: user.points,
+      referralCode: user.referral_code,
+      cardNumber: user.card_number,
+      cardStatus: user.card_status,
+      address: user.address,
+      suburb: user.suburb,
+      city: user.city,
+      province: user.province,
+      postalCode: user.postal_code,
+      idNumber: user.id_number,
+      dateOfBirth: user.date_of_birth,
+      industry: user.industry,
+      occupation: user.occupation,
+      isSouthAfrican: user.is_south_african,
+      selectedPackage: user.selected_package,
+      bankName: user.bank_name,
+      accountType: user.account_type,
+      accountNumber: user.account_number,
+      hasCreditCard: user.has_credit_card
     });
   } catch (error) {
     console.error('Error fetching profile data:', error);
