@@ -84,7 +84,7 @@ export default function ContactCheslin() {
                 <img 
                   src="/Cheslin.jpg" 
                   alt="Cheslin - Senior Sales Representative"
-                  className="w-32 h-32 rounded-full object-cover object-top border-4 border-green-200 shadow-lg"
+                  className="w-40 h-40 rounded-full object-cover object-top border-4 border-green-200 shadow-lg"
                 />
               </div>
               <CardTitle className="text-2xl text-gray-900">Cheslin</CardTitle>
