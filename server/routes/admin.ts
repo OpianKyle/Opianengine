@@ -6,6 +6,7 @@ import { stringify } from 'csv-stringify/sync';
 import { formatRegistrationEmail, sendEmail } from '../utils/emailService';
 import * as xlsx from 'xlsx';
 import fileUpload from 'express-fileupload';
+import { storeTransactionHistory } from './transaction-history';
 // Import will be dynamically loaded in the route handler
 
 // Define interface for card statement import stats

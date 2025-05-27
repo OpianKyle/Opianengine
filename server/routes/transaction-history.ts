@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '@db';
-import { transactions } from '@db/schema';
+import { transactionHistory } from '@db/schema';
 import { eq, and, gte, lte, like, desc, sql } from 'drizzle-orm';
 
 const router = Router();
@@ -8,16 +8,19 @@ const router = Router();
 // Store a transaction in the permanent history
 export async function storeTransactionHistory(transactionData: any) {
   try {
-    await db.insert(transactions).values({
+    await db.insert(transactionHistory).values({
       userId: transactionData.userId,
+      transactionType: transactionData.type === 'credit' ? 'CREDIT' : 'DEBIT',
+      amount: Math.round(transactionData.amount * 100), // Convert to cents
       description: transactionData.description,
-      amount: transactionData.amount,
+      merchantName: transactionData.merchant,
+      merchantCategory: transactionData.category,
       transactionDate: transactionData.transactionDate,
-      merchant: transactionData.merchant,
-      category: transactionData.category,
-      type: transactionData.type || 'CARD_TRANSACTION',
-      metadata: JSON.stringify(transactionData.metadata || {}),
-      createdAt: new Date()
+      pointsEarned: transactionData.points || 0,
+      importBatchId: transactionData.batchId,
+      rawData: JSON.stringify(transactionData.metadata || {}),
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
   } catch (error) {
     console.error('Error storing transaction history:', error);
@@ -45,54 +48,54 @@ router.get('/', async (req, res) => {
 
     // Date range filter
     if (startDate) {
-      whereConditions.push(gte(transactions.transactionDate, new Date(startDate as string)));
+      whereConditions.push(gte(transactionHistory.transactionDate, new Date(startDate as string)));
     }
     if (endDate) {
-      whereConditions.push(lte(transactions.transactionDate, new Date(endDate as string)));
+      whereConditions.push(lte(transactionHistory.transactionDate, new Date(endDate as string)));
     }
 
     // Customer filter
     if (customer) {
-      whereConditions.push(eq(transactions.userId, parseInt(customer as string)));
+      whereConditions.push(eq(transactionHistory.userId, parseInt(customer as string)));
     }
 
     // Merchant filter
     if (merchant) {
-      whereConditions.push(like(transactions.merchant, `%${merchant}%`));
+      whereConditions.push(like(transactionHistory.merchantName, `%${merchant}%`));
     }
 
-    // Amount range filter
+    // Amount range filter (convert to cents)
     if (minAmount) {
-      whereConditions.push(gte(transactions.amount, parseFloat(minAmount as string)));
+      whereConditions.push(gte(transactionHistory.amount, Math.round(parseFloat(minAmount as string) * 100)));
     }
     if (maxAmount) {
-      whereConditions.push(lte(transactions.amount, parseFloat(maxAmount as string)));
+      whereConditions.push(lte(transactionHistory.amount, Math.round(parseFloat(maxAmount as string) * 100)));
     }
 
     // Search filter
     if (search) {
-      whereConditions.push(like(transactions.description, `%${search}%`));
+      whereConditions.push(like(transactionHistory.description, `%${search}%`));
     }
 
     // Get transactions with pagination
-    const transactionHistory = await db
+    const historyRecords = await db
       .select()
-      .from(transactions)
+      .from(transactionHistory)
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(desc(transactions.transactionDate))
+      .orderBy(desc(transactionHistory.transactionDate))
       .limit(parseInt(limit as string))
       .offset(offset);
 
     // Get total count for pagination
     const countResult = await db
       .select({ count: sql<number>`count(*)` })
-      .from(transactions)
+      .from(transactionHistory)
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
 
     const total = countResult[0]?.count || 0;
 
     res.json({
-      transactions: transactionHistory,
+      transactions: historyRecords,
       pagination: {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
