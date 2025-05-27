@@ -38,6 +38,59 @@ const pool = mysql.createPool({
 // Middleware to check if user is an admin
 router.use(checkAdmin);
 
+// Clear activity log for a specific customer
+router.post('/customers/:id/clear-activity', async (req: any, res) => {
+  const customerId = parseInt(req.params.id);
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    // Clear transaction history for this customer
+    await connection.query(
+      'DELETE FROM transaction_history WHERE user_id = ?',
+      [customerId]
+    );
+    
+    // Clear transactions table entries for this customer
+    await connection.query(
+      'DELETE FROM transactions WHERE user_id = ?',
+      [customerId]
+    );
+    
+    // Clear cash deposits for this customer
+    await connection.query(
+      'DELETE FROM cash_deposits WHERE user_id = ?',
+      [customerId]
+    );
+    
+    // Clear cash redemptions for this customer
+    await connection.query(
+      'DELETE FROM cash_redemptions WHERE user_id = ?',
+      [customerId]
+    );
+    
+    await connection.commit();
+    
+    // Log the admin action
+    await logAdminAction({
+      adminId: req.user.id,
+      targetUserId: customerId,
+      actionType: 'ACTIVITY_CLEARED',
+      details: 'Cleared all activity logs for customer',
+      adminRole: req.user.is_super_admin ? 'SUPER_ADMIN' : 'ADMIN'
+    });
+    
+    res.json({ success: true, message: 'Customer activity log cleared successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error clearing customer activity:', error);
+    res.status(500).json({ error: 'Failed to clear customer activity log' });
+  } finally {
+    connection.release();
+  }
+});
+
 // Get all customers with pagination and filtering
 router.get('/customers', async (req: any, res) => {
   const connection = await pool.getConnection();
