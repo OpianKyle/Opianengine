@@ -1281,16 +1281,28 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           for (const value of textColumns) {
             // Skip if it's just a number, date, or transaction type
             if (/^\d+([,.]\d+)?$/.test(value) || 
-                /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(value) ||
+                /^\d{1,2}\/\d{1,2}\/\d{2,4}\/\d{4}.*/.test(value) ||
                 /^(debit|credit|load|deposit|deduct|purchase|payment|deduction)$/i.test(value)) {
               console.log(`Skipping: "${value}" (number/date/type)`);
               continue;
             }
             
-            // This looks like a merchant name or meaningful description
-            if (value.length > 3 && !/^[R\s\d,.]+$/.test(value)) {
-              transactionDescription = value;
-              console.log(`Found merchant description: "${value}"`);
+            // Look for merchant descriptions - these usually contain business names
+            if (value.length > 10 && !/^[R\s\d,.]+$/.test(value)) {
+              // Extract the merchant name (usually the first part before location info)
+              let merchantName = value;
+              
+              // Clean up the merchant name by removing location and other suffixes
+              merchantName = merchantName
+                .replace(/\s+(CAPE TOWN|JOHANNESBURG|DURBAN|PRETORIA|SANDTON|CENTURION).*$/i, '')
+                .replace(/\s+\d{4}\s*ZA.*$/i, '') // Remove postal codes and country
+                .replace(/\s+ZAF.*$/i, '') // Remove ZAF suffix
+                .replace(/,.*$/, '') // Remove everything after comma
+                .trim()
+                .substring(0, 50); // Limit length
+              
+              transactionDescription = merchantName;
+              console.log(`Found merchant description: "${merchantName}" (from: "${value}")`);
               break;
             }
           }
