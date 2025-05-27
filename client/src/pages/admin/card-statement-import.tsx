@@ -45,6 +45,18 @@ const formSchema = z.object({
 interface Transaction {
   type: string;
   amount: number;
+  description?: string;
+  date?: string;
+  merchant?: string;
+}
+
+// Define grouped transaction type for analysis
+interface GroupedTransaction {
+  merchantPattern: string;
+  transactions: Transaction[];
+  totalAmount: number;
+  count: number;
+  averageAmount: number;
 }
 
 // Define the response type for the import stats
@@ -76,6 +88,46 @@ export default function CardStatementImportPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Function to group transactions by similar merchant names/descriptions
+  const groupTransactionsByMerchant = (transactions: Transaction[]): GroupedTransaction[] => {
+    const groups: { [key: string]: Transaction[] } = {};
+    
+    transactions.forEach(transaction => {
+      // Extract merchant pattern from description
+      let merchantPattern = transaction.description || transaction.type || 'Unknown';
+      
+      // Clean and normalize the merchant name
+      merchantPattern = merchantPattern
+        .replace(/\d{2}\/\d{2}\/\d{4}/g, '') // Remove dates
+        .replace(/\d{2}:\d{2}/g, '') // Remove times
+        .replace(/[#\*\-\d]+/g, '') // Remove reference numbers
+        .replace(/\s+/g, ' ') // Normalize spaces
+        .trim()
+        .toUpperCase();
+      
+      // Group similar merchants by first few words
+      const keyWords = merchantPattern.split(' ').slice(0, 2).join(' ');
+      const groupKey = keyWords || 'MISCELLANEOUS';
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(transaction);
+    });
+    
+    // Convert to grouped transaction format
+    return Object.entries(groups).map(([pattern, transactions]) => {
+      const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
+      return {
+        merchantPattern: pattern,
+        transactions,
+        totalAmount,
+        count: transactions.length,
+        averageAmount: totalAmount / transactions.length
+      };
+    }).sort((a, b) => b.totalAmount - a.totalAmount); // Sort by total amount descending
+  };
 
   // Fetch ALL customers for dropdown (no pagination/filtering)
   const { data: customersResponse, isLoading: isLoadingCustomers } = useQuery<any>({
@@ -504,6 +556,134 @@ export default function CardStatementImportPage() {
                         <p><strong>Debit transactions:</strong> Added to regular reward points</p>
                         <p><strong>Credit transactions:</strong> Added to cash deposit points</p>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transaction History Analysis - Grouped Deductions */}
+                {importStats.transactionDetails?.debitTransactions && 
+                 importStats.transactionDetails.debitTransactions.length > 0 && (
+                  <div className="mt-6 border rounded-lg overflow-hidden">
+                    <div className="bg-slate-100 px-4 py-3 border-b">
+                      <h3 className="font-semibold">Transaction Analysis - Grouped Deductions</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Similar transactions grouped by merchant patterns for spending insights
+                      </p>
+                    </div>
+                    
+                    <div className="p-4">
+                      {(() => {
+                        const groupedTransactions = groupTransactionsByMerchant(
+                          importStats.transactionDetails.debitTransactions
+                        );
+                        
+                        return (
+                          <div className="space-y-4">
+                            {groupedTransactions.length > 0 ? (
+                              groupedTransactions.map((group, idx) => (
+                                <div key={idx} className="border rounded-lg p-4 bg-white shadow-sm">
+                                  <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                      <h4 className="font-medium text-gray-900">
+                                        {group.merchantPattern || 'Miscellaneous Transactions'}
+                                      </h4>
+                                      <p className="text-sm text-gray-500">
+                                        {group.count} transaction{group.count !== 1 ? 's' : ''}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-lg font-semibold text-gray-900">
+                                        R {group.totalAmount.toFixed(2)}
+                                      </p>
+                                      <p className="text-sm text-gray-500">
+                                        Avg: R {group.averageAmount.toFixed(2)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Individual transactions in this group */}
+                                  <div className="bg-gray-50 rounded p-3">
+                                    <h5 className="text-xs font-medium text-gray-700 mb-2 uppercase tracking-wide">
+                                      Individual Transactions
+                                    </h5>
+                                    <div className="space-y-1">
+                                      {group.transactions.map((transaction, txIdx) => (
+                                        <div key={txIdx} className="flex justify-between text-sm">
+                                          <span className="text-gray-600">
+                                            Transaction {txIdx + 1}
+                                            {transaction.description && 
+                                             transaction.description !== transaction.type && (
+                                              <span className="text-gray-400 ml-1">
+                                                ({transaction.description.substring(0, 30)}
+                                                {transaction.description.length > 30 ? '...' : ''})
+                                              </span>
+                                            )}
+                                          </span>
+                                          <span className="font-medium">
+                                            R {transaction.amount.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Spending insights */}
+                                  <div className="mt-3 p-2 bg-blue-50 rounded text-sm">
+                                    <div className="flex justify-between">
+                                      <span className="text-blue-700">Points Earned:</span>
+                                      <span className="font-medium text-blue-900">
+                                        {Math.round(group.totalAmount)} points
+                                      </span>
+                                    </div>
+                                    {group.count > 1 && (
+                                      <div className="flex justify-between mt-1">
+                                        <span className="text-blue-700">Frequency:</span>
+                                        <span className="text-blue-900">
+                                          {group.count > 5 ? 'High' : group.count > 2 ? 'Medium' : 'Low'} 
+                                          ({group.count} times)
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-center py-8 text-gray-500">
+                                <p>No transaction patterns found to group.</p>
+                              </div>
+                            )}
+                            
+                            {/* Summary insights */}
+                            {groupedTransactions.length > 0 && (
+                              <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
+                                <h4 className="font-semibold text-gray-900 mb-2">Spending Insights</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-gray-600">Top Merchant Category:</span>
+                                    <p className="font-medium text-gray-900">
+                                      {groupedTransactions[0]?.merchantPattern}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600">Highest Single Amount:</span>
+                                    <p className="font-medium text-gray-900">
+                                      R {Math.max(...importStats.transactionDetails.debitTransactions.map(t => t.amount)).toFixed(2)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600">Most Frequent Merchant:</span>
+                                    <p className="font-medium text-gray-900">
+                                      {groupedTransactions.reduce((prev, current) => 
+                                        prev.count > current.count ? prev : current
+                                      )?.merchantPattern}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
