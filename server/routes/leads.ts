@@ -52,26 +52,8 @@ router.get("/", async (req, res, next) => {
     
     console.time('leadsQuery'); // Start timing the query
     
-    // Execute the query if no cache hit - include referral information
-    let query = db.select({
-      id: leads.id,
-      firstName: leads.firstName,
-      lastName: leads.lastName,
-      email: leads.email,
-      mobileNumber: leads.mobileNumber,
-      selectedPackage: leads.selectedPackage,
-      referralCode: leads.referralCode,
-      notes: leads.notes,
-      status: leads.status,
-      assignedAgentId: leads.assignedAgentId,
-      createdAt: leads.createdAt,
-      updatedAt: leads.updatedAt,
-      referredByName: sql`CONCAT(COALESCE(${users.first_name}, ''), ' ', COALESCE(${users.last_name}, ''))`.as('referredByName'),
-      referredByEmail: sql`${users.email}`.as('referredByEmail')
-    })
-    .from(leads)
-    .leftJoin(users, eq(leads.referralCode, users.referral_code))
-    .orderBy(desc(leads.createdAt));
+    // Execute the query if no cache hit - include referral information from database columns
+    let query = db.select().from(leads).orderBy(desc(leads.createdAt));
 
     // Filter by search term if provided - optimization: consolidate query conditions
     if (search) {

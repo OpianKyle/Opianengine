@@ -14,6 +14,8 @@ export const leads = mysqlTable("leads", {
   notes: text("notes"),
   status: varchar("status", { length: 50 }).default("new").$type<"new" | "contacted" | "converted" | "not_interested">(),
   assignedAgentId: int("assigned_agent_id"),
+  referredByName: varchar("referred_by_name", { length: 255 }),
+  referredByEmail: varchar("referred_by_email", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
