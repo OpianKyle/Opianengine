@@ -66,8 +66,8 @@ router.get("/", async (req, res, next) => {
       assignedAgentId: leads.assignedAgentId,
       createdAt: leads.createdAt,
       updatedAt: leads.updatedAt,
-      referredByName: sql`CONCAT(${users.first_name}, ' ', ${users.last_name})`,
-      referredByEmail: users.email
+      referredByName: sql`CONCAT(COALESCE(${users.first_name}, ''), ' ', COALESCE(${users.last_name}, ''))`.as('referredByName'),
+      referredByEmail: sql`${users.email}`.as('referredByEmail')
     })
     .from(leads)
     .leftJoin(users, eq(leads.referralCode, users.referral_code))
