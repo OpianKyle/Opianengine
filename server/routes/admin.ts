@@ -1267,10 +1267,15 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           // Extract actual merchant/description from Excel data
           transactionDescription = '';
           
+          // Debug: Log all row data to understand Excel structure
+          console.log(`Row ${stats.totalProcessed} data:`, Object.keys(row).map(key => `${key}: "${row[key]}"`).join(', '));
+          
           // Look for actual merchant names in all text columns
           const textColumns = Object.values(row)
             .filter(val => val !== null && val !== undefined && val !== '' && typeof val === 'string')
             .map(val => String(val).trim());
+          
+          console.log(`Text columns found:`, textColumns);
           
           // Find the best merchant description (skip transaction types and amounts)
           for (const value of textColumns) {
@@ -1278,12 +1283,14 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             if (/^\d+([,.]\d+)?$/.test(value) || 
                 /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(value) ||
                 /^(debit|credit|load|deposit|deduct|purchase|payment|deduction)$/i.test(value)) {
+              console.log(`Skipping: "${value}" (number/date/type)`);
               continue;
             }
             
             // This looks like a merchant name or meaningful description
             if (value.length > 3 && !/^[R\s\d,.]+$/.test(value)) {
               transactionDescription = value;
+              console.log(`Found merchant description: "${value}"`);
               break;
             }
           }
