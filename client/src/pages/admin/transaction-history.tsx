@@ -34,27 +34,20 @@ import {
 import { Helmet } from "react-helmet";
 import { format } from "date-fns";
 
-interface TransactionHistory {
+interface Transaction {
   id: number;
-  customer_name: string;
-  customer_email: string;
-  import_date: string;
-  total_transactions: number;
-  total_amount: number;
-  points_allocated: number;
-  cash_deposits: number;
-  merchant_groups: number;
-  processed_by: string;
-}
-
-interface TransactionDetail {
-  id: number;
-  date: string;
-  description: string;
+  user_id: number;
+  transaction_type: string;
   amount: number;
+  description: string;
+  merchant_name: string;
   merchant_category: string;
+  transaction_date: string;
   points_earned: number;
-  cash_deposit: number;
+  import_batch_id: string;
+  raw_data: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function TransactionHistoryPage() {
@@ -63,39 +56,28 @@ export default function TransactionHistoryPage() {
   const [dateFilter, setDateFilter] = useState("all");
   const [selectedImport, setSelectedImport] = useState<number | null>(null);
 
-  // Fetch transaction history summary
+  // Fetch transaction history
   const { 
-    data: historyData, 
-    isLoading: isLoadingHistory 
+    data: transactionData, 
+    isLoading: isLoadingTransactions 
   } = useQuery({
-    queryKey: ['/api/transaction-history/summary'],
+    queryKey: ['/api/transaction-history'],
     queryFn: async () => {
-      const response = await fetch('/api/transaction-history/summary');
+      const response = await fetch('/api/transaction-history');
       if (!response.ok) throw new Error('Failed to fetch transaction history');
       return response.json();
     }
   });
 
-  // Fetch detailed transactions for selected import
-  const { 
-    data: detailsData, 
-    isLoading: isLoadingDetails 
-  } = useQuery({
-    queryKey: ['/api/transaction-history/details', selectedImport],
-    queryFn: async () => {
-      if (!selectedImport) return null;
-      const response = await fetch(`/api/transaction-history/details/${selectedImport}`);
-      if (!response.ok) throw new Error('Failed to fetch transaction details');
-      return response.json();
-    },
-    enabled: !!selectedImport
-  });
+  // Get transactions from API response
+  const transactions = transactionData?.transactions || [];
+  const pagination = transactionData?.pagination || {};
 
-  // Filter history data based on search and filters
-  const filteredHistory = historyData?.filter((item: TransactionHistory) => {
+  // Filter transactions based on search and filters
+  const filteredTransactions = transactions.filter((transaction: Transaction) => {
     const matchesSearch = !searchTerm || 
-      item.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.customer_email.toLowerCase().includes(searchTerm.toLowerCase());
+      transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.merchant_name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCustomer = !selectedCustomer || 
       item.customer_email === selectedCustomer;
