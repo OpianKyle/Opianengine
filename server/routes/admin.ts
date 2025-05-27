@@ -1264,9 +1264,34 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
             continue;
           }
           
-          // Use standard fallbacks for typical Excel format
-          transactionDescription = row.Description || row.Narrative || row.Detail || 
-              `Card statement import - ${typeColumn ? row[typeColumn] : determinedType}`;
+          // Extract actual merchant/description from Excel data
+          transactionDescription = '';
+          
+          // Look for actual merchant names in all text columns
+          const textColumns = Object.values(row)
+            .filter(val => val !== null && val !== undefined && val !== '' && typeof val === 'string')
+            .map(val => String(val).trim());
+          
+          // Find the best merchant description (skip transaction types and amounts)
+          for (const value of textColumns) {
+            // Skip if it's just a number, date, or transaction type
+            if (/^\d+([,.]\d+)?$/.test(value) || 
+                /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(value) ||
+                /^(debit|credit|load|deposit|deduct|purchase|payment|deduction)$/i.test(value)) {
+              continue;
+            }
+            
+            // This looks like a merchant name or meaningful description
+            if (value.length > 3 && !/^[R\s\d,.]+$/.test(value)) {
+              transactionDescription = value;
+              break;
+            }
+          }
+          
+          // Fallback to generic description if no merchant found
+          if (!transactionDescription) {
+            transactionDescription = `Card statement import - ${typeColumn ? row[typeColumn] : determinedType}`;
+          }
         }
         
         // At this point, we should have:
@@ -1284,24 +1309,22 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
         const batchId = `import_${Date.now()}_${customer.id}`;
         
         // Extract merchant name from transaction description
-        let merchantName = 'Unknown Merchant';
-        if (transactionDescription) {
-          // Try to extract merchant name - look for common patterns in transaction descriptions
-          const description = transactionDescription.toString().trim();
-          
-          // Remove common prefixes and suffixes to get merchant name
-          let cleanedDescription = description
+        let merchantName = transactionDescription || 'Unknown Merchant';
+        
+        // Clean up the merchant name if it's not a generic description
+        if (merchantName && !merchantName.includes('Card statement import')) {
+          // Remove common prefixes and suffixes to get clean merchant name
+          merchantName = merchantName
             .replace(/^(POS|PURCHASE|PAYMENT|DEBIT|CREDIT)\s*/i, '')
             .replace(/\s*(CAPE TOWN|JOHANNESBURG|DURBAN|ZA|RSA).*$/i, '')
             .replace(/\s*\d{2}\/\d{2}.*$/i, '') // Remove dates
             .replace(/\s*\d{4}-\d{2}-\d{2}.*$/i, '') // Remove ISO dates
             .replace(/\s*REF\s*:\s*\d+.*$/i, '') // Remove reference numbers
-            .trim();
-          
-          if (cleanedDescription && cleanedDescription.length > 0) {
-            merchantName = cleanedDescription.substring(0, 100); // Limit length
-          }
+            .trim()
+            .substring(0, 100); // Limit length
         }
+        
+        console.log(`Final merchant name for storage: "${merchantName}"`);
         
         try {
           await storeTransactionHistory({
