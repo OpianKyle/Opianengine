@@ -7,11 +7,39 @@ const router = Router();
 // Store a transaction in the permanent history
 export async function storeTransactionHistory(transactionData: any) {
   try {
+    // Extract merchant name from description if merchant is empty or generic
+    let merchantName = transactionData.merchant || '';
+    
+    if (!merchantName || merchantName === 'Unknown Merchant' || merchantName.includes('Card statement import')) {
+      // Try to extract from raw data if available
+      if (transactionData.metadata && transactionData.metadata.rawData && transactionData.metadata.rawData.B) {
+        const rawMerchantData = transactionData.metadata.rawData.B;
+        if (typeof rawMerchantData === 'string' && rawMerchantData.length > 10) {
+          // Extract merchant name from column B data
+          merchantName = rawMerchantData
+            .replace(/\s+\d{4}\s*ZA.*$/i, '') // Remove postal codes and country
+            .replace(/\s+ZAF.*$/i, '') // Remove ZAF suffix  
+            .replace(/\s+MALL.*$/i, '') // Remove mall references
+            .replace(/\s+(CAPE TOWN|JOHANNESBURG|DURBAN|PRETORIA|SANDTON|CENTURION).*$/i, '')
+            .replace(/,.*$/, '') // Remove everything after comma
+            .replace(/[A-Z]\d+.*$/, '') // Remove unit numbers like U26
+            .trim()
+            .substring(0, 50); // Limit length
+        }
+      }
+      
+      // Fallback to description if still empty
+      if (!merchantName && transactionData.description) {
+        merchantName = transactionData.description.substring(0, 50);
+      }
+    }
+
     console.log('Storing transaction history:', {
       userId: transactionData.userId,
       type: transactionData.type,
       amount: transactionData.amount,
-      merchant: transactionData.merchant
+      merchant: merchantName,
+      originalMerchant: transactionData.merchant
     });
 
     // Use direct MySQL query since we're working with MySQL
@@ -37,7 +65,7 @@ export async function storeTransactionHistory(transactionData: any) {
       transactionData.type === 'credit' ? 'CREDIT' : 'DEBIT',
       Math.round(transactionData.amount * 100), // Convert to cents
       transactionData.description,
-      transactionData.merchant,
+      merchantName,
       transactionData.category,
       transactionData.transactionDate,
       transactionData.points || 0,
