@@ -1280,6 +1280,30 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
         // We're using the selected customer instead of searching by card number
         updatedUsers.add(customer.id);
 
+        // Store this transaction in permanent history
+        const batchId = `import_${Date.now()}_${customer.id}`;
+        try {
+          await storeTransactionHistory({
+            userId: customer.id,
+            type: determinedType,
+            amount: transactionAmount,
+            description: transactionDescription,
+            merchant: 'Card Statement Import',
+            category: determinedType === 'debit' ? 'SPENDING' : 'DEPOSIT',
+            transactionDate: transactionDate,
+            points: determinedType === 'debit' ? Math.floor(transactionAmount) : 0,
+            batchId: batchId,
+            metadata: {
+              importSource: 'card_statement',
+              originalRow: stats.totalProcessed,
+              rawData: row
+            }
+          });
+          console.log(`Stored transaction ${stats.totalProcessed} in permanent history`);
+        } catch (error) {
+          console.error(`Failed to store transaction ${stats.totalProcessed} in history:`, error);
+        }
+
         // Process based on the transaction type we determined earlier
         if (determinedType === 'debit') {
           // Money deduction = reward points (1 Rand = 1 point)
