@@ -364,7 +364,7 @@ export default function TransactionHistoryPage() {
                   <SelectValue placeholder="All customers" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All customers</SelectItem>
+                  <SelectItem value="all">All customers</SelectItem>
                   {uniqueCustomers.map((email) => (
                     <SelectItem key={email} value={email}>
                       {email}
