@@ -490,6 +490,7 @@ export default function AdminLeads() {
                       <TableHead>Contact Info</TableHead>
                       <TableHead>Package</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Referred By</TableHead>
                       <TableHead>Assigned To</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -520,6 +521,18 @@ export default function AdminLeads() {
                           <Badge className={getStatusBadgeClass(lead.status)}>
                             {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {lead.referredByName ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">{lead.referredByName}</span>
+                              {lead.referredByEmail && (
+                                <span className="text-xs text-muted-foreground">{lead.referredByEmail}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Direct lead</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {lead.assignedAgentId ? (

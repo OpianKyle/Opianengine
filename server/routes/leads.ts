@@ -3,6 +3,7 @@ import { z } from "zod";
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { db, pool } from "../../db";
 import { insertLeadSchema, leads } from "../../db/leads";
+import { users } from "../../db/schema";
 import { ResponseError } from "../utils/errors";
 import { fromZodError } from "zod-validation-error";
 import { adminLog } from "../utils/adminLog";
@@ -51,8 +52,26 @@ router.get("/", async (req, res, next) => {
     
     console.time('leadsQuery'); // Start timing the query
     
-    // Execute the query if no cache hit
-    let query = db.select().from(leads).orderBy(desc(leads.createdAt));
+    // Execute the query if no cache hit - include referral information
+    let query = db.select({
+      id: leads.id,
+      firstName: leads.firstName,
+      lastName: leads.lastName,
+      email: leads.email,
+      mobileNumber: leads.mobileNumber,
+      selectedPackage: leads.selectedPackage,
+      referralCode: leads.referralCode,
+      notes: leads.notes,
+      status: leads.status,
+      assignedAgentId: leads.assignedAgentId,
+      createdAt: leads.createdAt,
+      updatedAt: leads.updatedAt,
+      referredByName: sql`CONCAT(${users.first_name}, ' ', ${users.last_name})`,
+      referredByEmail: users.email
+    })
+    .from(leads)
+    .leftJoin(users, eq(leads.referralCode, users.referral_code))
+    .orderBy(desc(leads.createdAt));
 
     // Filter by search term if provided - optimization: consolidate query conditions
     if (search) {
