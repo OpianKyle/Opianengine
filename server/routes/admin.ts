@@ -1470,16 +1470,61 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           // For brevity, we're skipping this part since it follows the same pattern
         }
         
+        // Extract merchant name from transaction data
+        let merchantName = 'Unknown Merchant';
+        let transactionDescription = '';
+        
+        // Get all text values from the row to find merchant information
+        const textValues = Object.values(row)
+          .filter(val => val !== null && val !== undefined && val !== '' && typeof val === 'string')
+          .map(val => String(val).trim());
+        
+        // Look for merchant name in description fields
+        for (const value of textValues) {
+          // Skip if it's just a number or date
+          if (/^\d+([,.]\d+)?$/.test(value) || /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(value)) {
+            continue;
+          }
+          
+          // Skip transaction type indicators
+          if (/^(debit|credit|load|deposit|deduct|purchase|payment)$/i.test(value)) {
+            continue;
+          }
+          
+          // This looks like a merchant name or description
+          if (value.length > 3 && !/^[R\s\d,.]+$/.test(value)) {
+            merchantName = value;
+            transactionDescription = value;
+            break;
+          }
+        }
+        
+        // If no merchant found, create a meaningful description
+        if (merchantName === 'Unknown Merchant') {
+          merchantName = `${rowType.toUpperCase()} Transaction`;
+          transactionDescription = `Card statement ${rowType} transaction`;
+        }
+
         // Add to appropriate list and running total if we have a valid amount
         if (rowAmount > 0) {
           if (rowType === 'debit') {
             runningDebitTotal += rowAmount;
-            debitTransactions.push({type: 'debit', amount: rowAmount});
-            console.log(`DEBIT | ${rowAmount.toFixed(2)} | ${runningDebitTotal.toFixed(2)}`);
+            debitTransactions.push({
+              type: 'debit', 
+              amount: rowAmount, 
+              description: transactionDescription,
+              merchant: merchantName
+            });
+            console.log(`DEBIT | ${merchantName} | ${rowAmount.toFixed(2)} | ${runningDebitTotal.toFixed(2)}`);
           } else if (rowType === 'credit') {
             runningCreditTotal += rowAmount;
-            creditTransactions.push({type: 'credit', amount: rowAmount});
-            console.log(`CREDIT | ${rowAmount.toFixed(2)} | ${runningCreditTotal.toFixed(2)}`);
+            creditTransactions.push({
+              type: 'credit', 
+              amount: rowAmount, 
+              description: transactionDescription,
+              merchant: merchantName
+            });
+            console.log(`CREDIT | ${merchantName} | ${rowAmount.toFixed(2)} | ${runningCreditTotal.toFixed(2)}`);
           }
         }
       }
@@ -1525,10 +1570,30 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
           [finalDebitAmount, customer.id]
         );
 
-        // Log in transaction history
+        // Store individual debit transactions in transaction_history
+        for (const transaction of debitTransactions) {
+          try {
+            await storeTransactionHistory({
+              userId: customer.id,
+              transactionType: 'DEBIT',
+              amount: Math.round(transaction.amount * 100), // Convert to cents
+              description: transaction.description || 'Card statement debit transaction',
+              merchantName: transaction.merchant || 'Unknown Merchant',
+              merchantCategory: 'Card Statement Import',
+              transactionDate: new Date().toISOString().split('T')[0],
+              pointsEarned: Math.round(transaction.amount), // 1 Rand = 1 point for debit transactions
+              importBatchId: `import_${Date.now()}`,
+              rawData: JSON.stringify(transaction)
+            });
+          } catch (error) {
+            console.log(`Warning: Could not store transaction history for transaction: ${error}`);
+          }
+        }
+
+        // Log summary in transaction history
         await conn.query(
           'INSERT INTO transactions (user_id, points, description, type) VALUES (?, ?, ?, ?)',
-          [customer.id, finalDebitAmount, `Card statement import - ${finalDebitAmount} reward points`, 'ADMIN_ADJUSTMENT']
+          [customer.id, finalDebitAmount, `Card statement import - ${finalDebitAmount} reward points from ${debitTransactions.length} transactions`, 'ADMIN_ADJUSTMENT']
         );
         
         console.log(`Added ${finalDebitAmount} total reward points to customer ${customer.id} (${customer.first_name} ${customer.last_name})`);
