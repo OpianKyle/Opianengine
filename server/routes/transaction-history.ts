@@ -1,29 +1,54 @@
 import { Router } from 'express';
-import { db } from '@db';
-import { transactionHistory } from '@db/schema';
-import { eq, and, gte, lte, like, desc, sql } from 'drizzle-orm';
+import { db, pool } from '@db';
+import mysql from 'mysql2/promise';
 
 const router = Router();
 
 // Store a transaction in the permanent history
 export async function storeTransactionHistory(transactionData: any) {
   try {
-    await db.insert(transactionHistory).values({
+    console.log('Storing transaction history:', {
       userId: transactionData.userId,
-      transactionType: transactionData.type === 'credit' ? 'CREDIT' : 'DEBIT',
-      amount: Math.round(transactionData.amount * 100), // Convert to cents
-      description: transactionData.description,
-      merchantName: transactionData.merchant,
-      merchantCategory: transactionData.category,
-      transactionDate: transactionData.transactionDate,
-      pointsEarned: transactionData.points || 0,
-      importBatchId: transactionData.batchId,
-      rawData: JSON.stringify(transactionData.metadata || {}),
-      createdAt: new Date(),
-      updatedAt: new Date()
+      type: transactionData.type,
+      amount: transactionData.amount,
+      merchant: transactionData.merchant
     });
+
+    // Use direct MySQL query since we're working with MySQL
+    const query = `
+      INSERT INTO transaction_history (
+        user_id,
+        transaction_type,
+        amount,
+        description,
+        merchant_name,
+        merchant_category,
+        transaction_date,
+        points_earned,
+        import_batch_id,
+        raw_data,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    `;
+
+    const values = [
+      transactionData.userId,
+      transactionData.type === 'credit' ? 'CREDIT' : 'DEBIT',
+      Math.round(transactionData.amount * 100), // Convert to cents
+      transactionData.description,
+      transactionData.merchant,
+      transactionData.category,
+      transactionData.transactionDate,
+      transactionData.points || 0,
+      transactionData.batchId,
+      JSON.stringify(transactionData.metadata || {})
+    ];
+
+    await pool.execute(query, values);
+    console.log('✅ Transaction stored successfully in transaction_history table');
   } catch (error) {
-    console.error('Error storing transaction history:', error);
+    console.error('❌ Error storing transaction history:', error);
     throw error;
   }
 }
@@ -45,54 +70,82 @@ router.get('/', async (req, res) => {
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
     const whereConditions = [];
+    const values = [];
+
+    // Build WHERE clause dynamically
+    let whereClause = '';
 
     // Date range filter
     if (startDate) {
-      whereConditions.push(gte(transactionHistory.transactionDate, new Date(startDate as string)));
+      whereConditions.push('transaction_date >= ?');
+      values.push(new Date(startDate as string));
     }
     if (endDate) {
-      whereConditions.push(lte(transactionHistory.transactionDate, new Date(endDate as string)));
+      whereConditions.push('transaction_date <= ?');
+      values.push(new Date(endDate as string));
     }
 
     // Customer filter
     if (customer) {
-      whereConditions.push(eq(transactionHistory.userId, parseInt(customer as string)));
+      whereConditions.push('user_id = ?');
+      values.push(parseInt(customer as string));
     }
 
     // Merchant filter
     if (merchant) {
-      whereConditions.push(like(transactionHistory.merchantName, `%${merchant}%`));
+      whereConditions.push('merchant_name LIKE ?');
+      values.push(`%${merchant}%`);
     }
 
     // Amount range filter (convert to cents)
     if (minAmount) {
-      whereConditions.push(gte(transactionHistory.amount, Math.round(parseFloat(minAmount as string) * 100)));
+      whereConditions.push('amount >= ?');
+      values.push(Math.round(parseFloat(minAmount as string) * 100));
     }
     if (maxAmount) {
-      whereConditions.push(lte(transactionHistory.amount, Math.round(parseFloat(maxAmount as string) * 100)));
+      whereConditions.push('amount <= ?');
+      values.push(Math.round(parseFloat(maxAmount as string) * 100));
     }
 
     // Search filter
     if (search) {
-      whereConditions.push(like(transactionHistory.description, `%${search}%`));
+      whereConditions.push('description LIKE ?');
+      values.push(`%${search}%`);
+    }
+
+    if (whereConditions.length > 0) {
+      whereClause = 'WHERE ' + whereConditions.join(' AND ');
     }
 
     // Get transactions with pagination
-    const historyRecords = await db
-      .select()
-      .from(transactionHistory)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(desc(transactionHistory.transactionDate))
-      .limit(parseInt(limit as string))
-      .offset(offset);
+    const historyQuery = `
+      SELECT 
+        id,
+        user_id,
+        transaction_type,
+        amount,
+        description,
+        merchant_name,
+        merchant_category,
+        transaction_date,
+        points_earned,
+        import_batch_id,
+        raw_data,
+        created_at,
+        updated_at
+      FROM transaction_history 
+      ${whereClause}
+      ORDER BY transaction_date DESC 
+      LIMIT ? OFFSET ?
+    `;
+
+    const historyValues = [...values, parseInt(limit as string), offset];
+    const [historyRecords] = await pool.execute(historyQuery, historyValues);
 
     // Get total count for pagination
-    const countResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(transactionHistory)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
-
-    const total = countResult[0]?.count || 0;
+    const countQuery = `SELECT COUNT(*) as count FROM transaction_history ${whereClause}`;
+    const [countResult] = await pool.execute(countQuery, values);
+    const total = (countResult as any)[0]?.count || 0;
 
     res.json({
       transactions: historyRecords,
