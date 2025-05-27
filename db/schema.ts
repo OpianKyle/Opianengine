@@ -263,6 +263,30 @@ export const agentCommissions = mysqlTable("agent_commissions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Transaction history types
+const TRANSACTION_HISTORY_TYPES = [
+  "DEBIT",
+  "CREDIT"
+] as const;
+
+// Transaction history table - stores all imported card statement transactions permanently
+export const transactionHistory = mysqlTable("transaction_history", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  transactionType: mysqlEnum("transaction_type", TRANSACTION_HISTORY_TYPES).notNull(),
+  amount: int("amount").notNull(), // Amount in cents
+  description: text("description"),
+  merchantName: text("merchant_name"),
+  merchantCategory: text("merchant_category"),
+  transactionDate: timestamp("transaction_date"),
+  statementDate: timestamp("statement_date"),
+  pointsEarned: int("points_earned").default(0).notNull(),
+  importBatchId: text("import_batch_id"), // Groups transactions from same import
+  rawData: text("raw_data"), // Store original transaction data as JSON
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
 export const productRelations = relations(products, ({ many }) => ({
   activities: many(productActivities),
@@ -271,6 +295,7 @@ export const productRelations = relations(products, ({ many }) => ({
 
 export const userRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
+  transactionHistory: many(transactionHistory),
   adminLogsCreated: many(adminLogs, { relationName: 'adminLogsCreated' }),
   adminLogsTarget: many(adminLogs, { relationName: 'adminLogsTarget' }),
   productAssignments: many(productAssignments),
@@ -290,6 +315,13 @@ export const userRelations = relations(users, ({ many, one }) => ({
     relationName: 'agentCustomers',
     fields: [users.id],
     references: [users.agentId],
+  }),
+}));
+
+export const transactionHistoryRelations = relations(transactionHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [transactionHistory.userId],
+    references: [users.id],
   }),
 }));
 
@@ -316,6 +348,8 @@ export type ReferralLead = typeof referralLeads.$inferSelect;
 export type InsertReferralLead = typeof referralLeads.$inferInsert;
 export type AgentCommission = typeof agentCommissions.$inferSelect;
 export type InsertAgentCommission = typeof agentCommissions.$inferInsert;
+export type TransactionHistory = typeof transactionHistory.$inferSelect;
+export type InsertTransactionHistory = typeof transactionHistory.$inferInsert;
 
 // Schema exports
 export const insertProductSchema = createInsertSchema(products);
@@ -338,3 +372,5 @@ export const insertReferralLeadSchema = createInsertSchema(referralLeads);
 export const selectReferralLeadSchema = createSelectSchema(referralLeads);
 export const insertAgentCommissionSchema = createInsertSchema(agentCommissions);
 export const selectAgentCommissionSchema = createSelectSchema(agentCommissions);
+export const insertTransactionHistorySchema = createInsertSchema(transactionHistory);
+export const selectTransactionHistorySchema = createSelectSchema(transactionHistory);

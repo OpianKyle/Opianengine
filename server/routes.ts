@@ -27,6 +27,7 @@ import analyticsRouter from './routes/analytics';
 import socialUsersRouter from './routes/social-users';
 import specialMigrationsRouter from './routes/special-migrations';
 import customerRouter from './routes/customer';
+import transactionHistoryRouter from './routes/transaction-history';
 import { NotificationService } from './services/notification-service';
 import { whatsappService } from './whatsapp';
 import { scrypt, randomBytes } from "crypto";
@@ -1171,6 +1172,7 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
   app.use('/api/social', socialUsersRouter);
   app.use('/api/special-migrations', specialMigrationsRouter);
   app.use('/api/customer', customerRouter);
+  app.use('/api/transaction-history', transactionHistoryRouter);
   
   // Register test customer routes
   registerTestCustomerRoutes(app);

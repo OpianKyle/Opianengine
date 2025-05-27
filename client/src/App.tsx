@@ -43,6 +43,7 @@ import Migrations from "@/pages/admin/migrations"; // Added import for Migration
 import AdminLeads from "@/pages/admin/leads"; // Added import for Leads management
 import CardStatusTest from "@/pages/admin/card-status-test"; // Added import for card status test page
 import CardStatementImportPage from "@/pages/admin/card-statement-import"; // Added import for card statement import page
+import TransactionHistoryPage from "@/pages/admin/transaction-history"; // Added import for transaction history page
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";
@@ -245,6 +246,11 @@ function Router() {
       <Route path="/admin/card-statement-import">
         <AdminLayout>
           <ProtectedRoute component={CardStatementImportPage} admin />
+        </AdminLayout>
+      </Route>
+      <Route path="/admin/transaction-history">
+        <AdminLayout>
+          <ProtectedRoute component={TransactionHistoryPage} admin />
         </AdminLayout>
       </Route>
 

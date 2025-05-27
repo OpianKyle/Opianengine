@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle, Upload, Search } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Upload, Search, History } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -250,11 +250,19 @@ export default function CardStatementImportPage() {
 
       <div className="container py-8 mx-auto">
         <div className="flex flex-col gap-8">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Card Statement Import</h1>
-            <p className="text-muted-foreground mt-2">
-              Import Excel card statements to allocate reward points and cash deposits for customers.
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Card Statement Import</h1>
+              <p className="text-muted-foreground mt-2">
+                Import Excel card statements to allocate reward points and cash deposits for customers.
+              </p>
+            </div>
+            <Button variant="outline" asChild>
+              <a href="/admin/transaction-history">
+                <History className="mr-2 h-4 w-4" />
+                View Transaction History
+              </a>
+            </Button>
           </div>
 
           <div className="grid gap-8 md:grid-cols-2">
