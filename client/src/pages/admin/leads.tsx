@@ -65,6 +65,8 @@ interface Lead {
   assignedAgentId: number | null;
   createdAt: string;
   updatedAt: string;
+  referredByName?: string | null;
+  referredByEmail?: string | null;
 }
 
 // Agent type definition
