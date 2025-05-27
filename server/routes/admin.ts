@@ -1282,13 +1282,34 @@ router.post('/import-card-statement', checkAdmin, async (req: any, res) => {
 
         // Store this transaction in permanent history
         const batchId = `import_${Date.now()}_${customer.id}`;
+        
+        // Extract merchant name from transaction description
+        let merchantName = 'Unknown Merchant';
+        if (transactionDescription) {
+          // Try to extract merchant name - look for common patterns in transaction descriptions
+          const description = transactionDescription.toString().trim();
+          
+          // Remove common prefixes and suffixes to get merchant name
+          let cleanedDescription = description
+            .replace(/^(POS|PURCHASE|PAYMENT|DEBIT|CREDIT)\s*/i, '')
+            .replace(/\s*(CAPE TOWN|JOHANNESBURG|DURBAN|ZA|RSA).*$/i, '')
+            .replace(/\s*\d{2}\/\d{2}.*$/i, '') // Remove dates
+            .replace(/\s*\d{4}-\d{2}-\d{2}.*$/i, '') // Remove ISO dates
+            .replace(/\s*REF\s*:\s*\d+.*$/i, '') // Remove reference numbers
+            .trim();
+          
+          if (cleanedDescription && cleanedDescription.length > 0) {
+            merchantName = cleanedDescription.substring(0, 100); // Limit length
+          }
+        }
+        
         try {
           await storeTransactionHistory({
             userId: customer.id,
             type: determinedType,
             amount: transactionAmount,
             description: transactionDescription,
-            merchant: 'Card Statement Import',
+            merchant: merchantName,
             category: determinedType === 'debit' ? 'SPENDING' : 'DEPOSIT',
             transactionDate: transactionDate,
             points: determinedType === 'debit' ? Math.floor(transactionAmount) : 0,
