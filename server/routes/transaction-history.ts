@@ -86,7 +86,7 @@ router.get('/', async (req, res) => {
   try {
     const { 
       page = '1', 
-      limit = '50', 
+      limit = '500', 
       startDate, 
       endDate, 
       customer, 
