@@ -103,7 +103,7 @@ export default function TransactionHistoryMerchantPage() {
   const uniqueMerchants = Array.from(new Set(
     transactions
       .map((t: Transaction) => t.merchant_name)
-      .filter((name: string) => name && name.trim() !== '')
+      .filter((name: string) => name && name.trim() !== '' && name !== null && name !== undefined)
   )).sort();
 
   // Group transactions by merchant if grouping is enabled
