@@ -109,9 +109,9 @@ export default function TransactionHistoryMerchantPage() {
     return matchesSearch && matchesMerchant && matchesDate;
   }) || [];
 
-  // Get unique merchants for filter dropdown
+  // Get unique merchants for filter dropdown (from filtered transactions only)
   const uniqueMerchants = Array.from(new Set(
-    transactions
+    filteredTransactions
       .map((t: Transaction) => t.merchant_name)
       .filter((name: string | null | undefined): name is string => 
         typeof name === 'string' && name.trim() !== '' && name.length > 0
