@@ -58,14 +58,14 @@ export default function TransactionHistoryMerchantPage() {
     data: transactionData, 
     isLoading: isLoadingTransactions 
   } = useQuery({
-    queryKey: ['/api/transaction-history', Date.now()], // Force fresh data
+    queryKey: ['/api/transaction-history'],
     queryFn: async () => {
-      const response = await fetch(`/api/transaction-history?_t=${Date.now()}`);
+      const response = await fetch('/api/transaction-history');
       if (!response.ok) throw new Error('Failed to fetch transaction history');
       return response.json();
     },
     staleTime: 0, // Always fetch fresh data
-    gcTime: 0, // Don't cache
+    refetchOnMount: true, // Refetch when component mounts
   });
 
   // Get transactions from API response
