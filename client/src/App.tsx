@@ -44,6 +44,7 @@ import AdminLeads from "@/pages/admin/leads"; // Added import for Leads manageme
 import CardStatusTest from "@/pages/admin/card-status-test"; // Added import for card status test page
 import CardStatementImportPage from "@/pages/admin/card-statement-import"; // Added import for card statement import page
 import TransactionHistoryPage from "@/pages/admin/transaction-history-new"; // Added import for transaction history page
+import TransactionHistoryMerchantPage from "@/pages/admin/transaction-history-merchant"; // Added import for merchant filtering transaction history page
 
 // Customer pages
 import CustomerDashboard from "@/pages/customer/dashboard";

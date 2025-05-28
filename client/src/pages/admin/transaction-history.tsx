@@ -53,7 +53,9 @@ interface Transaction {
 export default function TransactionHistoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [selectedMerchant, setSelectedMerchant] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
+  const [groupByMerchant, setGroupByMerchant] = useState(false);
   const [selectedImport, setSelectedImport] = useState<number | null>(null);
 
   // Fetch transaction history
@@ -80,42 +82,62 @@ export default function TransactionHistoryPage() {
       transaction.merchant_name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCustomer = !selectedCustomer || 
-      item.customer_email === selectedCustomer;
+      transaction.user_id.toString() === selectedCustomer;
+
+    const matchesMerchant = !selectedMerchant || 
+      transaction.merchant_name.toLowerCase().includes(selectedMerchant.toLowerCase());
     
     const matchesDate = dateFilter === 'all' || (() => {
-      const importDate = new Date(item.import_date);
+      const transactionDate = new Date(transaction.transaction_date);
       const now = new Date();
       
       switch (dateFilter) {
         case 'today':
-          return importDate.toDateString() === now.toDateString();
+          return transactionDate.toDateString() === now.toDateString();
         case 'week':
           const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return importDate >= weekAgo;
+          return transactionDate >= weekAgo;
         case 'month':
           const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          return importDate >= monthAgo;
+          return transactionDate >= monthAgo;
         default:
           return true;
       }
     })();
     
-    return matchesSearch && matchesCustomer && matchesDate;
+    return matchesSearch && matchesCustomer && matchesMerchant && matchesDate;
   }) || [];
 
+  // Get unique merchants for filter dropdown
+  const uniqueMerchants = Array.from(new Set(
+    transactions
+      .map((t: Transaction) => t.merchant_name)
+      .filter(name => name && name.trim() !== '')
+  )).sort();
+
+  // Group transactions by merchant if grouping is enabled
+  const groupedTransactions = groupByMerchant 
+    ? filteredTransactions.reduce((groups: Record<string, Transaction[]>, transaction: Transaction) => {
+        const merchantName = transaction.merchant_name || 'Unknown Merchant';
+        if (!groups[merchantName]) {
+          groups[merchantName] = [];
+        }
+        groups[merchantName].push(transaction);
+        return groups;
+      }, {})
+    : null;
+
   // Calculate summary statistics
-  const totalImports = filteredHistory.length;
-  const totalTransactions = filteredHistory.reduce((sum: number, item: TransactionHistory) => 
-    sum + item.total_transactions, 0);
-  const totalAmount = filteredHistory.reduce((sum: number, item: TransactionHistory) => 
-    sum + item.total_amount, 0);
-  const totalPoints = filteredHistory.reduce((sum: number, item: TransactionHistory) => 
-    sum + item.points_allocated, 0);
+  const totalTransactions = filteredTransactions.length;
+  const totalAmount = filteredTransactions.reduce((sum: number, transaction: Transaction) => 
+    sum + transaction.amount, 0);
+  const totalPoints = filteredTransactions.reduce((sum: number, transaction: Transaction) => 
+    sum + transaction.points_earned, 0);
 
   // Get unique customers for filter
   const uniqueCustomers = Array.from(new Set(
-    historyData?.map((item: TransactionHistory) => item.customer_email) || []
-  ));
+    transactions.map((t: Transaction) => t.user_id.toString())
+  )).sort();
 
   if (selectedImport && detailsData) {
     return (
