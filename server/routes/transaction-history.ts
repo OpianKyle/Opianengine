@@ -63,7 +63,7 @@ export async function storeTransactionHistory(transactionData: any) {
     const values = [
       transactionData.userId,
       transactionData.type === 'credit' ? 'CREDIT' : 'DEBIT',
-      Math.round(transactionData.amount * 100), // Convert to cents
+      Math.round(transactionData.amount), // Amount is already in correct format
       transactionData.description,
       merchantName,
       transactionData.category,
@@ -151,7 +151,7 @@ router.get('/', async (req, res) => {
         id,
         user_id,
         transaction_type,
-        ROUND(amount / 100, 2) as amount,
+        amount,
         description,
         merchant_name,
         merchant_category,
