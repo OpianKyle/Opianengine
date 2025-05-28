@@ -75,7 +75,7 @@ export default function TransactionHistoryMerchantPage() {
       transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.merchant_name.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesMerchant = !selectedMerchant || 
+    const matchesMerchant = !selectedMerchant || selectedMerchant === "all" || 
       transaction.merchant_name.toLowerCase().includes(selectedMerchant.toLowerCase());
     
     const matchesDate = dateFilter === 'all' || (() => {
@@ -236,11 +236,13 @@ export default function TransactionHistoryMerchantPage() {
                     <SelectValue placeholder="All merchants" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All merchants</SelectItem>
+                    <SelectItem value="all">All merchants</SelectItem>
                     {uniqueMerchants.map((merchant) => (
-                      <SelectItem key={merchant} value={merchant}>
-                        {merchant}
-                      </SelectItem>
+                      merchant && merchant.trim() && (
+                        <SelectItem key={merchant} value={merchant}>
+                          {merchant}
+                        </SelectItem>
+                      )
                     ))}
                   </SelectContent>
                 </Select>
