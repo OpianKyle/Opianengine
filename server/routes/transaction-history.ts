@@ -151,7 +151,7 @@ router.get('/', async (req, res) => {
         id,
         user_id,
         transaction_type,
-        amount,
+        ROUND(amount / 100, 2) as amount,
         description,
         merchant_name,
         merchant_category,
