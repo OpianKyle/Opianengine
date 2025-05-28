@@ -73,6 +73,14 @@ export default function TransactionHistoryMerchantPage() {
 
   // Filter transactions based on search and filters
   const filteredTransactions = transactions.filter((transaction: Transaction) => {
+    // Exclude load/deposit transactions - only show deductions
+    const isLoad = transaction.merchant_name.toLowerCase().includes('paycard load') ||
+                   transaction.merchant_name.toLowerCase().includes('ir paycard load') ||
+                   transaction.description.toLowerCase().includes('load') ||
+                   transaction.description.toLowerCase().includes('deposit');
+    
+    if (isLoad) return false;
+
     const matchesSearch = !searchTerm || 
       transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.merchant_name.toLowerCase().includes(searchTerm.toLowerCase());
