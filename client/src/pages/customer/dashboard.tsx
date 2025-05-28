@@ -412,7 +412,10 @@ function CustomerDashboardContent() {
                     onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
                     disabled={!canRedeem}
                   >
-                    {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
+                    {canRedeem ? "Redeem for Cash" : 
+                     points < minimumPointsRequired ? "Need R2000 minimum" :
+                     pointsToRedeem > 0 && !meetsMinimum ? "Amount too low" : 
+                     "Insufficient Points"}
                   </Button>
                 </div>
               </div>
@@ -658,9 +661,27 @@ function CustomerDashboardContent() {
                       placeholder="Enter points amount"
                     />
                     {pointsToRedeem > 0 && (
-                      <p className="text-sm font-medium mt-2">
-                        You will receive: <span className="text-green-500">R{randValue}</span>
-                      </p>
+                      <div className="mt-2">
+                        <p className="text-sm font-medium">
+                          You will receive: <span className="text-green-500">R{randValue}</span>
+                        </p>
+                        {!meetsMinimum && (
+                          <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                            Minimum redemption is R2000. You need {minimumPointsRequired.toLocaleString()} points.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {points < minimumPointsRequired && (
+                      <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          <strong>Cash Redemption Requirements:</strong><br/>
+                          • Minimum redemption: R2000<br/>
+                          • Points needed: {minimumPointsRequired.toLocaleString()}<br/>
+                          • You currently have: {points.toLocaleString()} points<br/>
+                          • Still need: {(minimumPointsRequired - points).toLocaleString()} points
+                        </p>
+                      </div>
                     )}
                   </div>
                   <Button
@@ -668,7 +689,10 @@ function CustomerDashboardContent() {
                     onClick={() => redeemCashMutation.mutate(pointsToRedeem)}
                     disabled={!canRedeem}
                   >
-                    {canRedeem ? "Redeem for Cash" : "Insufficient Points"}
+                    {canRedeem ? "Redeem for Cash" : 
+                     points < minimumPointsRequired ? "Need R2000 minimum" :
+                     pointsToRedeem > 0 && !meetsMinimum ? "Amount too low" : 
+                     "Insufficient Points"}
                   </Button>
                 </>
               )}
