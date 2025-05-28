@@ -3301,6 +3301,16 @@ export function registerRoutes(app: Express, sessionMiddleware: any): Server {
         return res.status(400).json({ error: "Invalid points amount" });
       }
 
+      // Calculate cash amount to check minimum requirement
+      const cashAmount = pointsToRedeem * 0.015;
+      
+      // Check minimum R2000 requirement
+      if (cashAmount < 2000) {
+        return res.status(400).json({ 
+          error: `Minimum redemption amount is R2000. You need ${Math.ceil(2000 / 0.015)} points (currently attempting to redeem R${cashAmount.toFixed(2)}).`
+        });
+      }
+
       // Start transaction
       await connection.beginTransaction();
 

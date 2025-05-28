@@ -284,7 +284,10 @@ function CustomerDashboardContent() {
   const points = typeof user?.points === 'number' ? user.points : Number(user?.points || 0);
   const tierInfo = getTierInfo(points);
   const randValue = (pointsToRedeem * 0.015).toFixed(2);
-  const canRedeem = pointsToRedeem > 0 && pointsToRedeem <= points;
+  const minimumPointsRequired = Math.ceil(2000 / 0.015); // 133,334 points for R2000
+  const cashValue = pointsToRedeem * 0.015;
+  const meetsMinimum = cashValue >= 2000;
+  const canRedeem = pointsToRedeem > 0 && pointsToRedeem <= points && meetsMinimum;
 
   // Get current time of day
   const currentDate = new Date();
@@ -381,9 +384,27 @@ function CustomerDashboardContent() {
                       className="h-9 md:h-10 bg-background border-input dark:bg-[#022b5c] dark:border-[#033872] dark:text-white dark:placeholder:text-gray-400"
                     />
                     {pointsToRedeem > 0 && (
-                      <p className="text-sm font-medium mt-2">
-                        You will receive: <span className="text-2xl sm:text-3xl font-bold text-green-500">R{randValue}</span>
-                      </p>
+                      <div className="mt-2">
+                        <p className="text-sm font-medium">
+                          You will receive: <span className="text-2xl sm:text-3xl font-bold text-green-500">R{randValue}</span>
+                        </p>
+                        {!meetsMinimum && (
+                          <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                            Minimum redemption is R2000. You need {minimumPointsRequired.toLocaleString()} points.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {points < minimumPointsRequired && (
+                      <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          <strong>Cash Redemption Requirements:</strong><br/>
+                          • Minimum redemption: R2000<br/>
+                          • Points needed: {minimumPointsRequired.toLocaleString()}<br/>
+                          • You currently have: {points.toLocaleString()} points<br/>
+                          • Still need: {(minimumPointsRequired - points).toLocaleString()} points
+                        </p>
+                      </div>
                     )}
                   </div>
                   <Button 
