@@ -254,6 +254,11 @@ function Router() {
           <ProtectedRoute component={TransactionHistoryPage} admin />
         </AdminLayout>
       </Route>
+      <Route path="/admin/transaction-history-merchant">
+        <AdminLayout>
+          <ProtectedRoute component={TransactionHistoryMerchantPage} admin />
+        </AdminLayout>
+      </Route>
 
       {/* Agent Routes */}
       <Route path="/agent">

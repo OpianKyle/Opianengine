@@ -19,6 +19,7 @@ import {
   Mail,
   RefreshCw,
   Upload,
+  TrendingUp,
 } from "lucide-react";
 import { prefetchAdminData } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -96,6 +97,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: "Rewards", href: "/admin/rewards", icon: <Gift className="h-4 w-4 mr-2" /> },
     { label: "Cash Redemptions", href: "/admin/cash-redemptions", icon: <DollarSign className="h-4 w-4 mr-2" /> },
     { label: "Card Statement Import", href: "/admin/card-statement-import", icon: <Upload className="h-4 w-4 mr-2" /> },
+    { label: "Transaction History", href: "/admin/transaction-history-merchant", icon: <TrendingUp className="h-4 w-4 mr-2" /> },
     { label: "Migrations", href: "/admin/migrations", icon: <RefreshCw className="h-4 w-4 mr-2" /> },
     { label: "Action Logs", href: "/admin/logs", icon: <ScrollText className="h-4 w-4 mr-2" /> },
     { label: "Email Logs", href: "/admin/email-logs", icon: <Mail className="h-4 w-4 mr-2" /> },
