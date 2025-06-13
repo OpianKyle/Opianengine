@@ -63,12 +63,19 @@ export default function TeamPage() {
       image: "/Lance.jpg"
     },
     {
-      id: 2,
-      name: "Andre Visser",
-      title: "Head of Marketing",
-      description: "Andre crafts innovative strategies to promote our reward programs, helping our members maximize their benefits. His background in digital marketing and consumer psychology gives him unique insights into creating campaigns that truly resonate with our audience. Andre believes in data-driven approaches combined with creative storytelling to showcase the value of our rewards platform.",
-      image: "/Andre.jpg"
+      id: 5,
+      name: "Lionel Lottering",
+      title: "Head of Sales",
+      description: "Lionel looks after our investors and ensures the establishment of win-win relationships between investors and the company. With a background in finance and business development, he maintains transparency and alignment between company growth and investor expectations. Lionel has been instrumental in securing the funding that powers our rewards innovation.",
+      image: "/Lionel.jpg"
     },
+    // {
+    //   id: 2,
+    //   name: "Andre Visser",
+    //   title: "Head of Marketing",
+    //   description: "Andre crafts innovative strategies to promote our reward programs, helping our members maximize their benefits. His background in digital marketing and consumer psychology gives him unique insights into creating campaigns that truly resonate with our audience. Andre believes in data-driven approaches combined with creative storytelling to showcase the value of our rewards platform.",
+    //   image: "/Andre.jpg"
+    // },
     {
       id: 3,
       name: "Wessel Krige",
@@ -83,13 +90,7 @@ export default function TeamPage() {
       description: "Mic-Shane focuses on managing internal systems and the team that ensures an unparalleled and rewarding customer experience. His attention to detail and process optimization skills have created a seamless administrative backbone for our operations. Mic-Shane leads a dedicated team that handles everything from member inquiries to complex reward tracking scenarios.",
       image: "/Mic-Shane.jpg"
     },
-    {
-      id: 5,
-      name: "Lionel Lottering",
-      title: "Head of Investor Matters",
-      description: "Lionel looks after our investors and ensures the establishment of win-win relationships between investors and the company. With a background in finance and business development, he maintains transparency and alignment between company growth and investor expectations. Lionel has been instrumental in securing the funding that powers our rewards innovation.",
-      image: "/Lionel.jpg"
-    },
+    
     {
       id: 6,
       name: "Shannon Heugh",
@@ -118,13 +119,13 @@ export default function TeamPage() {
       description: "Kyle is responsible for our programs and systems and ensures the smooth workflows that empower our clients with the correct data. His technical expertise has created the robust platform that powers our rewards tracking and delivery. Kyle continuously innovates to add new features that enhance the member experience and streamline internal operations.",
       image: "/Kyle.jpg"
     },
-    {
-      id: 10,
-      name: "Jamie Koen",
-      title: "Business Development Specialist", 
-      description: "Jamie specializes in optimizing our business operations and implementing strategic initiatives that drive growth and efficiency. With a keen eye for process improvement and a talent for cross-departmental coordination, Jamie ensures that our business objectives align with our commitment to delivering exceptional value to our members.",
-      image: "/Jamie.jpg"
-    },
+    // {
+    //   id: 10,
+    //   name: "Jamie Koen",
+    //   title: "Business Development Specialist", 
+    //   description: "Jamie specializes in optimizing our business operations and implementing strategic initiatives that drive growth and efficiency. With a keen eye for process improvement and a talent for cross-departmental coordination, Jamie ensures that our business objectives align with our commitment to delivering exceptional value to our members.",
+    //   image: "/Jamie.jpg"
+    // },
   ];
 
   return (
