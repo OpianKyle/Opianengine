@@ -493,13 +493,10 @@ export default function HomePage() {
           <div className="flex flex-col lg:flex-row items-center">
             <div className="lg:w-1/2 z-10">
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-foreground dark:text-white">
-                The Card that Works for You
+                The Rewards Program that works for you
               </h1>
               <p className="text-xl mb-6 text-[rgb(8,42,90)] dark:text-white">
-                Make your money go further with Opian Rewards. Earn Rewards when you purchase 
-                and pay accounts with your Opian Rewards Card, and enhance your Rewards when 
-                you make smart financial planning decisions. Reward yourself and effortlessly 
-                put more money in your pocket by doing every day things with Opian Rewards.
+                Make your money go further with Opian Rewards. Our Product linked Rewards program rewards you when you do everyday activities, like shopping and paying accounts. On top of that we reward you with free advice on financial planning and help you make smart decision.
               </p>
               <Button 
                 onClick={() => navigate("/contact-us")}
