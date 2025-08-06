@@ -13,6 +13,7 @@ import ResetPassword from "@/pages/reset-password";
 import ReferralPage from "@/pages/referral"; 
 import HowItWorks from "@/pages/how-it-works";
 import MeetTheTeam from "@/pages/meet-the-team";
+import PrivacyPolicy from "@/pages/privacy-policy";
 import AnalyticsTestPage from "@/pages/analytics-test";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 // Session timeout functionality has been removed
@@ -173,6 +174,9 @@ function Router() {
       </Route>
       <Route path="/meet-the-team">
         <MeetTheTeam />
+      </Route>
+      <Route path="/privacy-policy">
+        <PrivacyPolicy />
       </Route>
       <Route path="/analytics-test">
         <AnalyticsTestPage />
