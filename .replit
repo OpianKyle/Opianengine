@@ -1,14 +1,14 @@
-modules = ["nodejs-20", "web", "postgresql-16"]
+modules = ["bash", "nodejs-20", "web"]
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
-channel = "stable-24_05"
+channel = "stable-25_05"
 
 [deployment]
-deploymentTarget = "cloudrun"
-build = ["npm", "run", "build"]
+deploymentTarget = "autoscale"
 run = ["npm", "run", "start"]
+build = ["npm", "run", "build"]
 
 [[ports]]
 localPort = 3000
@@ -23,7 +23,7 @@ localPort = 24678
 externalPort = 3000
 
 [workflows]
-runButton = "Start application"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -41,9 +41,6 @@ mode = "sequential"
 
 [workflows.workflow.metadata]
 agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
