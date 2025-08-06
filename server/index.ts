@@ -124,7 +124,7 @@ app.use((req: any, res, next) => {
     console.log('Starting server initialization...');
     
     // Start the server early to meet the port opening deadline
-    // Use port 5000 for Replit workflow compatibility, regardless of environment variable
+    // Use port 5000 for Replit workflow compatibility
     const SERVER_PORT = 5000;
     server.listen(Number(SERVER_PORT), '0.0.0.0', () => {
       console.log(`Server running on port ${SERVER_PORT} at ${new Date().toISOString()}`);
