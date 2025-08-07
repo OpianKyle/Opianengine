@@ -235,24 +235,7 @@ export default function PrivacyPolicy() {
               </div>
             </section>
 
-            {/* Legal Information Section */}
-            <section className="p-6 bg-gradient-to-r from-[#011d3d] to-[#022b5c] rounded-xl text-white">
-              <div className="flex items-center mb-4">
-                <Shield className="h-6 w-6 text-[#43EB3E] mr-3" />
-                <h2 className="text-2xl font-semibold">Legal Information</h2>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <p className="mb-2"><strong>Opian Rewards (Pty) Ltd</strong> is a Juristic Representative of Opian Financial Services (Pty) Ltd</p>
-                  <p className="mb-2"><strong>Company Registration Number:</strong> 2021/411623/07</p>
-                </div>
-                <div>
-                  <p className="mb-2"><strong>Opian Financial Services (Pty) Ltd</strong> is an Authorised Financial Services Provider</p>
-                  <p className="mb-2"><strong>Company Registration Number:</strong> 2018/584168/07</p>
-                  <p><strong>FSP No:</strong> 50974</p>
-                </div>
-              </div>
-            </section>
+
 
           </div>
         </div>
