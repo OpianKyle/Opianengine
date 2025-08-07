@@ -33,25 +33,7 @@ export default function PrivacyPolicy() {
           {/* Content */}
           <div className="p-8 md:p-12">
             
-            {/* Key Icons Section */}
-            <div className="grid grid-cols-4 gap-4 mb-12">
-              <div className="flex flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-blue-100 dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl">
-                <Shield className="h-8 w-8 text-[#43EB3E] mb-2" />
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Secure</span>
-              </div>
-              <div className="flex flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-blue-100 dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl">
-                <Lock className="h-8 w-8 text-[#43EB3E] mb-2" />
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Protected</span>
-              </div>
-              <div className="flex flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-blue-100 dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl">
-                <Users className="h-8 w-8 text-[#43EB3E] mb-2" />
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">POPI Compliant</span>
-              </div>
-              <div className="flex flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-blue-100 dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl">
-                <FileText className="h-8 w-8 text-[#43EB3E] mb-2" />
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Transparent</span>
-              </div>
-            </div>
+
 
             {/* Personal Information Section */}
             <section className="mb-12 p-6 bg-gradient-to-br from-blue-50 to-white dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl border border-blue-100 dark:border-[#022b5c]">
