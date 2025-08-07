@@ -1207,17 +1207,7 @@ export default function HomePage() {
               </div>
             </div>
             
-            {/* Right column - Legal Information */}
-            <div className="md:col-span-2 lg:col-span-1 flex flex-col items-center lg:items-start">
-              <h3 className="font-semibold mb-4">Legal Information</h3>
-              <div className="text-center lg:text-left w-full max-w-xs">
-                <p className="mb-2 text-sm">Opian Rewards (Pty) Ltd is a Juristic Representative of Opian Financial Services (Pty) Ltd</p>
-                <p className="mb-2 text-sm">Company Registration Number: 2021/411623/07</p>
-                <p className="mb-2 text-sm">Opian Financial Services (Pty) Ltd is an Authorised Financial Services Provider</p>
-                <p className="mb-2 text-sm">Company Registration Number: 2018/584168/07</p>
-                <p className="text-sm">FSP No: 50974</p>
-              </div>
-            </div>
+
           </div>
           
           <div className="border-t border-gray-200 dark:border-gray-800 pt-6 text-center text-gray-500 dark:text-gray-400">
