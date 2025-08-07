@@ -34,25 +34,7 @@ export default function TermsAndConditions() {
             
 
 
-            {/* Service Provider Information */}
-            <section className="mb-12 p-6 bg-gradient-to-r from-[#011d3d] to-[#022b5c] rounded-xl text-white">
-              <div className="flex items-center mb-4">
-                <Shield className="h-6 w-6 text-[#43EB3E] mr-3" />
-                <h2 className="text-2xl font-semibold">Service Provider Information</h2>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <p className="mb-2"><strong>Service Provider:</strong> Opian Rewards (Pty) Ltd</p>
-                  <p className="mb-2"><strong>Juristic Representative of:</strong> Opian Financial Services (Pty) Ltd</p>
-                  <p className="mb-2"><strong>Company Reg. No. (Opian Rewards):</strong> 2021/411623/07</p>
-                </div>
-                <div>
-                  <p className="mb-2"><strong>Company Reg. No. (Opian Financial Services):</strong> 2018/584168/07</p>
-                  <p className="mb-2"><strong>FSP No.:</strong> 50974</p>
-                  <p className="text-[#43EB3E] font-semibold">Authorized Financial Services Provider</p>
-                </div>
-              </div>
-            </section>
+
 
             {/* General Definitions */}
             <section className="mb-12 p-6 bg-gradient-to-br from-blue-50 to-white dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl border border-blue-100 dark:border-[#022b5c]">
