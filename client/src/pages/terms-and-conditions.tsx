@@ -32,25 +32,7 @@ export default function TermsAndConditions() {
           {/* Content */}
           <div className="p-8 md:p-12">
             
-            {/* Key Icons Section */}
-            <div className="grid grid-cols-4 gap-4 mb-12">
-              <div className="flex flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-blue-100 dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl">
-                <FileText className="h-8 w-8 text-[#43EB3E] mb-2" />
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Legal Terms</span>
-              </div>
-              <div className="flex flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-blue-100 dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl">
-                <Shield className="h-8 w-8 text-[#43EB3E] mb-2" />
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Coverage</span>
-              </div>
-              <div className="flex flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-blue-100 dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl">
-                <Users className="h-8 w-8 text-[#43EB3E] mb-2" />
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Benefits</span>
-              </div>
-              <div className="flex flex-col items-center p-4 bg-gradient-to-b from-blue-50 to-blue-100 dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl">
-                <Clock className="h-8 w-8 text-[#43EB3E] mb-2" />
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Claims</span>
-              </div>
-            </div>
+
 
             {/* Service Provider Information */}
             <section className="mb-12 p-6 bg-gradient-to-r from-[#011d3d] to-[#022b5c] rounded-xl text-white">
