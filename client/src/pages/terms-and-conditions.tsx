@@ -36,35 +36,7 @@ export default function TermsAndConditions() {
 
 
 
-            {/* General Definitions */}
-            <section className="mb-12 p-6 bg-gradient-to-br from-blue-50 to-white dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl border border-blue-100 dark:border-[#022b5c]">
-              <div className="flex items-center mb-4">
-                <FileText className="h-6 w-6 text-[#43EB3E] mr-3" />
-                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">General Definitions</h2>
-              </div>
-              <div className="space-y-4">
-                <div className="p-4 bg-white dark:bg-[#011d3d] rounded-lg border border-gray-200 dark:border-[#022b5c]">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Policyholder</h3>
-                  <p className="text-gray-700 dark:text-gray-300">The individual whose name appears on the policy or cover document.</p>
-                </div>
-                <div className="p-4 bg-white dark:bg-[#011d3d] rounded-lg border border-gray-200 dark:border-[#022b5c]">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Beneficiary</h3>
-                  <p className="text-gray-700 dark:text-gray-300">The person(s) entitled to claim benefits under the cover.</p>
-                </div>
-                <div className="p-4 bg-white dark:bg-[#011d3d] rounded-lg border border-gray-200 dark:border-[#022b5c]">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Cover</h3>
-                  <p className="text-gray-700 dark:text-gray-300">Refers to the insured benefits listed in this agreement.</p>
-                </div>
-                <div className="p-4 bg-white dark:bg-[#011d3d] rounded-lg border border-gray-200 dark:border-[#022b5c]">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Waiting Period</h3>
-                  <p className="text-gray-700 dark:text-gray-300">A period after the policy start date during which certain benefits may not be claimable.</p>
-                </div>
-                <div className="p-4 bg-white dark:bg-[#011d3d] rounded-lg border border-gray-200 dark:border-[#022b5c]">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Accidental Event</h3>
-                  <p className="text-gray-700 dark:text-gray-300">An unforeseen, external, violent, and visible event leading to injury or death.</p>
-                </div>
-              </div>
-            </section>
+
 
             {/* Covered Products and Benefits */}
             <section className="mb-12 p-6 bg-gradient-to-br from-green-50 to-white dark:from-[#022b5c] dark:to-[#011d3d] rounded-xl border border-green-100 dark:border-[#022b5c]">
