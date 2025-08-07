@@ -278,33 +278,23 @@ export default function TermsAndConditions() {
               </p>
             </div>
             
-            {/* Middle columns - Package/Resources/Legal */}
-            <div className="lg:col-span-2 grid grid-cols-3 gap-4">
+            {/* Middle columns - Package/Legal */}
+            <div className="lg:col-span-2 grid grid-cols-2 gap-8">
               <div className="flex flex-col items-center lg:items-center">
                 <h3 className="text-lg font-semibold mb-4">Packages</h3>
                 <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Momentum</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prosper</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prestige</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
-                </ul>
-              </div>
-              <div className="flex flex-col items-center lg:items-center">
-                <h3 className="text-lg font-semibold mb-4">Resources</h3>
-                <ul className="space-y-2">
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Help Center</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">FAQs</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Blog</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Contact</a></li>
+                  <li><a href="/#packages" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Opportunity</a></li>
+                  <li><a href="/#packages" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Momentum</a></li>
+                  <li><a href="/#packages" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prosper</a></li>
+                  <li><a href="/#packages" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Prestige</a></li>
+                  <li><a href="/#packages" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Pinnacle</a></li>
                 </ul>
               </div>
               <div className="flex flex-col items-center lg:items-center">
                 <h3 className="text-lg font-semibold mb-4">Legal</h3>
                 <ul className="space-y-2">
-                  <li><a href="/terms-and-conditions" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
-                  <li><a href="/privacy-policy" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Privacy Policy</a></li>
-                  <li><a href="#" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Cookie Policy</a></li>
+                  <li><a href="/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Terms of Service</a></li>
+                  <li><a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-gray-500 dark:text-gray-400 hover:text-[#43EB3E] transition-colors">Privacy Policy</a></li>
                 </ul>
               </div>
             </div>
